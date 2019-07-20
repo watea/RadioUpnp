@@ -1,0 +1,151 @@
+/*
+ * Copyright (c) 2018. Stephane Treuchot
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to
+ * do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+package com.watea.radio_upnp.service;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.ConnectivityManager;
+import android.net.Uri;
+import android.net.wifi.WifiManager;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.util.Log;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.nio.ByteOrder;
+
+import static android.content.Context.WIFI_SERVICE;
+
+@SuppressWarnings("WeakerAccess")
+public class NetworkTester {
+  private static final String SCHEME = "http";
+  private static final String LOG_TAG = NetworkTester.class.getSimpleName();
+
+  // Static class, no instance
+  private NetworkTester() {
+  }
+
+  @Nullable
+  private static String ipAddressToString(int ipAddress) {
+    try {
+      return InetAddress.getByAddress(
+        BigInteger.valueOf(ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN) ?
+          Integer.reverseBytes(ipAddress) : ipAddress).toByteArray()).getHostAddress();
+    } catch (UnknownHostException unknownHostException) {
+      Log.e(LOG_TAG, "Error decoding IP address", unknownHostException);
+      return null;
+    }
+  }
+
+  @NonNull
+  static private Uri getUri(@NonNull String address, int port) {
+    return new Uri
+      .Builder()
+      .scheme(SCHEME)
+      .appendEncodedPath("/" + address + ":" + port)
+      .build();
+  }
+
+  static public boolean isDeviceOffline(Context context) {
+    ConnectivityManager connectivityManager;
+    // Robustness; to be multithread safe
+    try {
+      connectivityManager =
+        (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+      return (connectivityManager == null) ||
+        (connectivityManager.getActiveNetworkInfo() == null) ||
+        !connectivityManager.getActiveNetworkInfo().isAvailable() ||
+        !connectivityManager.getActiveNetworkInfo().isConnected();
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "Error testing ConnectivityManager", exception);
+      return true;
+    }
+  }
+
+  @Nullable
+  private static String getIpAddress(Context context) {
+    WifiManager wifiManager;
+    // Robustness; to be multithread safe
+    try {
+      wifiManager =
+        (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
+      return (wifiManager == null) ?
+        null : ipAddressToString(wifiManager.getConnectionInfo().getIpAddress());
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "Error getting IP address", exception);
+      return null;
+    }
+  }
+
+  static public boolean hasWifiIpAddress(Context context) {
+    return (getIpAddress(context) != null);
+  }
+
+  @NonNull
+  public static Uri getLoopbackUri(int port) {
+    return getUri("127.0.0.1", port);
+  }
+
+  public static Uri getUri(Context context, int port) {
+    String ipAddress = getIpAddress(context);
+    return (ipAddress == null) ? null : getUri(ipAddress, port);
+  }
+
+  // Handle redirection
+  @NonNull
+  public static HttpURLConnection getActualHttpURLConnection(@NonNull URL uRL) throws IOException {
+    HttpURLConnection httpURLConnection = (HttpURLConnection) uRL.openConnection();
+    int status = httpURLConnection.getResponseCode();
+    if ((status == HttpURLConnection.HTTP_MOVED_TEMP) ||
+      (status == HttpURLConnection.HTTP_MOVED_PERM) ||
+      (status == HttpURLConnection.HTTP_SEE_OTHER)) {
+      httpURLConnection = (HttpURLConnection)
+        new URL(httpURLConnection.getHeaderField("Location")).openConnection();
+    }
+    return httpURLConnection;
+  }
+
+  @Nullable
+  public static Bitmap getBitmapFromUrl(@NonNull URL uRL) {
+    HttpURLConnection httpURLConnection = null;
+    Bitmap bitmap = null;
+    try {
+      httpURLConnection = getActualHttpURLConnection(uRL);
+      bitmap = BitmapFactory.decodeStream(httpURLConnection.getInputStream());
+    } catch (IOException iOException) {
+      Log.i(LOG_TAG, "Error decoding image: " + uRL);
+    } finally {
+      if (httpURLConnection != null) {
+        httpURLConnection.disconnect();
+      }
+    }
+    return bitmap;
+  }
+}

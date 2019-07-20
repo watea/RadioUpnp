@@ -1,0 +1,89 @@
+/*
+ * Copyright (c) 2018. Stephane Treuchot
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to
+ * do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 28
+    defaultConfig {
+        applicationId "com.watea.radio_upnp"
+        minSdkVersion 23
+        targetSdkVersion 28
+        versionCode 7
+        versionName "Test 7"
+        vectorDrawables.useSupportLibrary = true
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
+        }
+    }
+    packagingOptions {
+        exclude 'META-INF/DEPENDENCIES'
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "http://4thline.org/m2/"
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+
+    implementation "com.android.support:support-compat:28.0.0"
+    implementation "com.android.support:support-media-compat:28.0.0"
+    implementation 'com.android.support:gridlayout-v7:28.0.0'
+    implementation 'com.android.support:recyclerview-v7:28.0.0'
+    implementation 'com.android.support:design:28.0.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
+    // jsoup HTML parser library @ http://jsoup.org/
+    implementation 'org.jsoup:jsoup:1.10.2'
+    // exoplayer
+    implementation 'com.google.android.exoplayer:exoplayer:2.8.2'
+    // apache
+    implementation 'org.apache.commons:commons-io:1.3.2'
+    // https://mvnrepository.com/artifact/org.fourthline.cling/cling-core
+    implementation group: 'org.fourthline.cling', name: 'cling-core', version: '2.1.1'
+    implementation group: 'org.seamless', name: 'seamless-util', version: '1.1.1'
+    implementation group: 'org.seamless', name: 'seamless-http', version: '1.1.1'
+    implementation group: 'org.seamless', name: 'seamless-xml', version: '1.1.1'
+    // jetty
+    implementation group: 'org.eclipse.jetty', name: 'jetty-server', version: '8.2.0.v20160908'
+    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '8.2.0.v20160908'
+    implementation group: 'org.eclipse.jetty', name: 'jetty-client', version: '8.2.0.v20160908'
+    // Playstore
+    implementation 'com.google.apis:google-api-services-androidpublisher:v3-rev93-1.25.0'
+    // Test
+    testImplementation 'junit:junit:4.12'
+}

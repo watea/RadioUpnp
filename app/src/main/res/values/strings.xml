@@ -1,0 +1,97 @@
+<!--
+  ~ Copyright (c) 2018. Stephane Treuchot
+  ~
+  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+  ~ of this software and associated documentation files (the "Software"), to deal
+  ~ in the Software without restriction, including without limitation the rights to
+  ~ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+  ~ of the Software, and to permit persons to whom the Software is furnished to
+  ~ do so, subject to the following conditions:
+  ~
+  ~ The above copyright notice and this permission notice shall be included in
+  ~ all copies or substantial portions of the Software.
+  ~
+  ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  ~ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+  ~ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  ~ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  ~ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+  ~ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  ~ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  ~ OTHER DEALINGS IN THE SOFTWARE.
+  -->
+
+<resources>
+    <string name="app_name">RadioUpnp</string>
+    <string name="copyright">Copyright &#169; 2018 Stephane Treuchot.</string>
+    <string name="credit">Credit:</string>
+    <string name="credit_0">- Icon by shareicon.net</string>
+    <string name="credit_1">- Cling [CDDL]</string>
+    <string name="credit_2">- Jetty [Apache License 2.0]</string>
+    <string name="credit_3">- Apache Commons IO [Apache License 2.0]</string>
+    <string name="credit_4">- Jsoup [MIT License]</string>
+    <string name="credit_5">- Android Donations Lib [Apache License 2.0]</string>
+    <string name="license">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
+    <string name="free_software">This is a free software; see sources for copying conditions.</string>
+    <string name="version">Version: </string>
+    <string name="void_string"> </string>
+    <string name="no_web_page">No web page for this radio</string>
+    <string name="radio_connection_error">Radio connection error</string>
+    <string name="no_internet">Internet connexion not available</string>
+    <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
+    <string name="radio_no_radio">No radio found, please add a radio</string>
+    <string name="dlna_reset">DLNA selection reset</string>
+    <string name="legend_name">MY RADIO</string>
+    <string name="legend_streaming_url">Streaming URL - MP3 only (mandatory)</string>
+    <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
+    <string name="legend_page_url">Web page URL (mandatory for icon search)</string>
+    <string name="legend_page_url_example">http://direct.myradio.fr</string>
+    <string name="malformed_url_error">Malformed URL</string>
+    <string name="radio_definition_error">Radio definition not well formed</string>
+    <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>
+    <string name="live_streaming">Live streaming</string>
+    <string name="no_icon_found">Icon search failed, check if Web page URL is valid</string>
+    <string name="connection_test_in_progress">Connection test in progress; please wait, may take a long&#8230;</string>
+    <string name="connection_test_failed">Connection test failed</string>
+    <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
+    <string name="connection_test_successful">Connection test successful</string>
+    <string name="LAN_required">No LAN/Wifi connection found for DLNA function</string>
+    <string name="radio_long_press">Long press opens web site</string>
+    <string name="play_long_press">Long press stops radio</string>
+    <string name="dlna_enable">Short press: choose remote DLNA device.\nLong press: cancel choice.\nThe phone may need connection authorization.\nBad Wifi may hinder communication.</string>
+    <string name="radio_icon_updated">Radio icon updated!</string>
+    <string name="got_it">Got it!</string>
+    <string name="donation_button_close">Close</string>
+    <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer!</string>
+    <string name="donation_google_android_market">Google Play Store</string>
+    <string name="donation_google_android_market_not_supported_title">In-App Donations are not supported.</string>
+    <string name="donation_google_android_market_not_supported">In-App Donations are not supported. Is Google Play Store installed correctly?</string>
+    <string name="donation_google_android_market_description">Google charges a fee of 30%</string>
+    <string name="donation_google_android_market_text">How much?</string>
+    <string name="donation_thanks_dialog_title">Thanks!</string>
+    <string name="donation_thanks_dialog">Thanks for donating!\nI really appreciate this!</string>
+    <string name="donation_alert_dialog_title">Error occurred</string>
+    <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
+    <string name="donation_alert_tip">Clue: </string>
+    <string-array name="donation_google_catalog_values">
+        <item>0,50 €</item>
+        <item>1,00 €</item>
+        <item>1,50 €</item>
+    </string-array>
+    <!-- Menu titles -->
+    <string name="title_preferred">Preferred radios</string>
+    <string name="title_main">Play</string>
+    <string name="title_item_add">Add</string>
+    <string name="title_modify">Modify</string>
+    <string name="title_donate">Donate</string>
+    <string name="title_about">About</string>
+    <string name="title_item_modify">Edit</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_done">OK</string>
+    <string name="action_test">Test URL</string>
+    <string name="action_move">Move</string>
+    <string name="drawer_open">Open navigation drawer</string>
+    <string name="drawer_close">Close navigation drawer</string>
+</resources>
