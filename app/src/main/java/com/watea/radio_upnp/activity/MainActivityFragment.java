@@ -27,6 +27,7 @@ import android.app.Fragment;
 import android.support.annotation.NonNull;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.View;
 
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -37,6 +38,11 @@ public abstract class MainActivityFragment<C> extends Fragment {
   // Required empty constructor
   public MainActivityFragment() {
     super();
+  }
+
+  // Utility to test if view actually exists (not diposed) and is on screen
+  protected static boolean isActuallyShown(View view) {
+    return ((view != null) && view.isShown());
   }
 
   public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {

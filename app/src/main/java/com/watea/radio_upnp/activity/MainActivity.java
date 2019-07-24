@@ -117,23 +117,17 @@ public class MainActivity
     public void onServiceConnected(ComponentName className, IBinder service) {
       mAndroidUpnpService = (AndroidUpnpService) service;
       // Add all devices to the list we already know about
-      new Thread() {
-        @Override
-        public void run() {
-          super.run();
-          Registry registry = mAndroidUpnpService.getRegistry();
-          MainFragment.RegistryListener listener = mMainFragment.mBrowseRegistryListener;
-          listener.init(mAndroidUpnpService);
-          for (Device device : registry.getDevices()) {
-            if (device instanceof RemoteDevice) {
-              listener.remoteDeviceAdded(registry, (RemoteDevice) device);
-            }
-          }
-          // Get ready for future device advertisements
-          registry.addListener(listener);
-          mAndroidUpnpService.getControlPoint().search();
+      Registry registry = mAndroidUpnpService.getRegistry();
+      MainFragment.RegistryListener listener = mMainFragment.mBrowseRegistryListener;
+      listener.init(mAndroidUpnpService);
+      for (Device device : registry.getDevices()) {
+        if (device instanceof RemoteDevice) {
+          listener.remoteDeviceAdded(registry, (RemoteDevice) device);
         }
-      }.start();
+      }
+      // Get ready for future device advertisements
+      registry.addListener(listener);
+      mAndroidUpnpService.getControlPoint().search();
     }
 
     @Override

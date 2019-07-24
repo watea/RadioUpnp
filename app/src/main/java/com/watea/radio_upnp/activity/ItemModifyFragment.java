@@ -290,24 +290,26 @@ public class ItemModifyFragment
       mHandler.post(new Runnable() {
         @Override
         public void run() {
-          if (icon == null) {
-            Snackbar.make(mView, R.string.no_icon_found, Snackbar.LENGTH_LONG).show();
-          } else {
-            // Resize bitmap as a square
-            int height = icon.getHeight();
-            int width = icon.getWidth();
-            int min = Math.min(height, width);
-            mRadioIcon = Bitmap.createBitmap(
-              icon,
-              (width - min) / 2,
-              (height - min) / 2,
-              min,
-              min,
-              null,
-              false);
-            mIsRadioIconNew = true;
-            setNameEditTextIcon();
-            Snackbar.make(mView, R.string.radio_icon_updated, Snackbar.LENGTH_LONG).show();
+          if (isActuallyShown(mView)) {
+            if (icon == null) {
+              Snackbar.make(mView, R.string.no_icon_found, Snackbar.LENGTH_LONG).show();
+            } else {
+              // Resize bitmap as a square
+              int height = icon.getHeight();
+              int width = icon.getWidth();
+              int min = Math.min(height, width);
+              mRadioIcon = Bitmap.createBitmap(
+                icon,
+                (width - min) / 2,
+                (height - min) / 2,
+                min,
+                min,
+                null,
+                false);
+              mIsRadioIconNew = true;
+              setNameEditTextIcon();
+              Snackbar.make(mView, R.string.radio_icon_updated, Snackbar.LENGTH_LONG).show();
+            }
           }
         }
       });
@@ -337,7 +339,7 @@ public class ItemModifyFragment
       mHandler.post(new Runnable() {
         @Override
         public void run() {
-          if (mView.isShown()) { // Not shown if user leaves the fragment
+          if (isActuallyShown(mView)) {
             String msg = getResources().getString(isTestOK ?
               R.string.connection_test_successful :
               R.string.connection_test_failed) +

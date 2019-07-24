@@ -232,14 +232,90 @@ public class MainFragment
     new View.OnLongClickListener() {
       @Override
       public boolean onLongClick(View view) {
-        if (mAndroidUpnpService != null) {
-          mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
+        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+          Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
+          return true;
         }
+        if (mAndroidUpnpService == null) {
+          Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
+          return true;
+        }
+        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
         mDlnaDevicesAdapter.removeChosenDlnaDevice();
         Snackbar.make(mView, R.string.dlna_reset, Snackbar.LENGTH_LONG).show();
         return true;
       }
     };
+
+  @Override
+  public Radio getRadioFromId(@NonNull Long radioId) {
+    return mRadioLibrary.getFrom(radioId);
+  }
+
+  @Override
+  public void onRowClick(@NonNull Radio radio) {
+    if (NetworkTester.isDeviceOffline(getActivity())) {
+      Snackbar.make(mView, R.string.no_internet, Snackbar.LENGTH_LONG).show();
+      return;
+    }
+    startReading(radio);
+    if (!mGotItRadioLongPress) {
+      mRadioLongPressAlertDialog.show();
+    }
+  }
+
+  @Override
+  public boolean onPreferredClick(@NonNull Long radioId, Boolean isPreferred) {
+    ContentValues values = new ContentValues();
+    values.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
+    if (mRadioLibrary.updateFrom(radioId, values) > 0) {
+      return true;
+    } else {
+      Log.w(LOG_TAG, "Internal failure, radio database update failed");
+      return false;
+    }
+  }
+
+  // MainActivityFragment
+  @Override
+  public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
+    // Inflate the menu; this adds items to the action bar if it is present
+    menuInflater.inflate(R.menu.menu_main, menu);
+    // Init Preferred MenuItem...
+    mPreferredMenuItem = menu.findItem(R.id.action_preferred);
+    // ...set it
+    setPreferredMenuItem();
+  }
+
+  @Override
+  public void onResume() {
+    super.onResume();
+    // Update view
+    mMediaBrowserConnectionCallback.viewSync();
+    setRadiosView();
+    // Decorate
+    mCallback.onResume(
+      mFABOnClickListener,
+      mFABOnLongClickListenerClickListener,
+      R.drawable.ic_cast_black_24dp);
+  }
+
+  @Override
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    // Restore saved state, if any
+    if (savedInstanceState != null) {
+      mIsPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
+    }
+    // Shared preferences
+    SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
+    mGotItRadioLongPress =
+      sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
+    mGotItPlayLongPress =
+      sharedPreferences.getBoolean(getString(R.string.key_play_long_press_got_it), false);
+    mGotItDlnaEnable =
+      sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
+  }
 
   @Nullable
   @Override
@@ -320,19 +396,6 @@ public class MainFragment
   }
 
   @Override
-  public void onResume() {
-    super.onResume();
-    // Update view
-    mMediaBrowserConnectionCallback.viewSync();
-    setRadiosView();
-    // Decorate
-    mCallback.onResume(
-      mFABOnClickListener,
-      mFABOnLongClickListenerClickListener,
-      R.drawable.ic_cast_black_24dp);
-  }
-
-  @Override
   public void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), mIsPreferredRadios);
@@ -357,63 +420,6 @@ public class MainFragment
       // If we got here, the user's action was not recognized
       return false;
     }
-  }
-
-  @Override
-  public Radio getRadioFromId(@NonNull Long radioId) {
-    return mRadioLibrary.getFrom(radioId);
-  }
-
-  @Override
-  public void onRowClick(@NonNull Radio radio) {
-    if (NetworkTester.isDeviceOffline(getActivity())) {
-      Snackbar.make(mView, R.string.no_internet, Snackbar.LENGTH_LONG).show();
-      return;
-    }
-    startReading(radio);
-    if (!mGotItRadioLongPress) {
-      mRadioLongPressAlertDialog.show();
-    }
-  }
-
-  @Override
-  public boolean onPreferredClick(@NonNull Long radioId, Boolean isPreferred) {
-    ContentValues values = new ContentValues();
-    values.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
-    if (mRadioLibrary.updateFrom(radioId, values) > 0) {
-      return true;
-    } else {
-      Log.w(LOG_TAG, "Internal failure, radio database update failed");
-      return false;
-    }
-  }
-
-  // MainActivityFragment
-  @Override
-  public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
-    // Inflate the menu; this adds items to the action bar if it is present
-    menuInflater.inflate(R.menu.menu_main, menu);
-    // Init Preferred MenuItem...
-    mPreferredMenuItem = menu.findItem(R.id.action_preferred);
-    // ...set it
-    setPreferredMenuItem();
-  }
-
-  @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    // Restore saved state, if any
-    if (savedInstanceState != null) {
-      mIsPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
-    }
-    // Shared preferences
-    SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
-    mGotItRadioLongPress =
-      sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
-    mGotItPlayLongPress =
-      sharedPreferences.getBoolean(getString(R.string.key_play_long_press_got_it), false);
-    mGotItDlnaEnable =
-      sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
   }
 
   @Override
@@ -568,35 +574,40 @@ public class MainFragment
   public class RegistryListener extends DefaultRegistryListener {
     @Override
     public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
-      // Do nothing if we were disposed
-      if (mAndroidUpnpService == null) {
-        return;
-      }
       for (Service service : remoteDevice.getServices()) {
         if (service.getServiceId().toString().equals(AVTTRANSPORT_SERVICE_ID)) {
           final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
-          // Search for icon
-          if (remoteDevice.isFullyHydrated()) {
-            Icon deviceIcon = getLargestIcon(remoteDevice.getIcons());
-            dlnaDevice.setIcon((deviceIcon == null) ? null :
-              NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri())));
-          }
-          // Add DlnaDevice to Adapter
-          mHandler.post(
-            new Runnable() {
-              public void run() {
-                int position = mDlnaDevicesAdapter.getPosition(dlnaDevice);
-                if (position >= 0) {
-                  DlnaDevice foundDlnaDevice = mDlnaDevicesAdapter.getItem(position);
-                  if (foundDlnaDevice != null) {
-                    foundDlnaDevice.setDevice(remoteDevice);
-                    foundDlnaDevice.setIcon(dlnaDevice.getIcon());
-                  }
-                } else {
-                  mDlnaDevicesAdapter.add(dlnaDevice);
-                }
+          // Do in standalone thread as method can be called from main loop
+          new Thread() {
+            @Override
+            public void run() {
+              super.run();
+              // Search for icon
+              if (remoteDevice.isFullyHydrated()) {
+                Icon deviceIcon = getLargestIcon(remoteDevice.getIcons());
+                dlnaDevice.setIcon((deviceIcon == null) ? null :
+                  NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri())));
               }
-            });
+              // Add DlnaDevice to Adapter
+              mHandler.post(new Runnable() {
+                public void run() {
+                  // Do nothing if we were disposed
+                  if (mDlnaDevicesAdapter != null) {
+                    int position = mDlnaDevicesAdapter.getPosition(dlnaDevice);
+                    if (position >= 0) {
+                      DlnaDevice foundDlnaDevice = mDlnaDevicesAdapter.getItem(position);
+                      if (foundDlnaDevice != null) {
+                        foundDlnaDevice.setDevice(remoteDevice);
+                        foundDlnaDevice.setIcon(dlnaDevice.getIcon());
+                      }
+                    } else {
+                      mDlnaDevicesAdapter.add(dlnaDevice);
+                    }
+                  }
+                }
+              });
+            }
+          }.start();
           break;
         }
       }
@@ -604,13 +615,12 @@ public class MainFragment
 
     @Override
     public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
-      // Do nothing if we were disposed
-      if (mAndroidUpnpService == null) {
-        return;
-      }
       mHandler.post(new Runnable() {
         public void run() {
-          mDlnaDevicesAdapter.remove(new DlnaDevice(remoteDevice));
+          // Do nothing if we were disposed
+          if (mDlnaDevicesAdapter != null) {
+            mDlnaDevicesAdapter.remove(new DlnaDevice(remoteDevice));
+          }
         }
       });
     }
