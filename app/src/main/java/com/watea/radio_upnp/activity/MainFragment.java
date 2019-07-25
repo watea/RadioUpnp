@@ -84,7 +84,6 @@ public class MainFragment
   public final MediaBrowserCompatConnectionCallback mMediaBrowserConnectionCallback =
     new MediaBrowserCompatConnectionCallback();
   private final Handler mHandler = new Handler();
-  protected MediaControllerCompat mMediaController = null;
   // <HMI assets
   private View mView;
   private ImageButton mPlayButton;
@@ -95,14 +94,6 @@ public class MainFragment
   private View mRadiosDefaultView;
   private MenuItem mPreferredMenuItem;
   private int mScreenWidthDp;
-  private AlertDialog mDlnaAlertDialog;
-  private AlertDialog mRadioLongPressAlertDialog;
-  private AlertDialog mPlayLongPressAlertDialog;
-  private AlertDialog mDlnaEnableAlertDialog;
-  // />
-  private RadiosAdapter mRadiosAdapter;
-  private long mTimeDlnaSearch = 0;
-  private DlnaDevice mChosenDlnaDevice = null;
   // Callback from media control
   private final MediaControllerCompat.Callback mMediaControllerCallback =
     new MediaControllerCompat.Callback() {
@@ -131,14 +122,13 @@ public class MainFragment
             mPlayedRadioNameTextView.setVisibility(View.VISIBLE);
             mPlayedRadioInformationTextView.setVisibility(View.VISIBLE);
             mAlbumArt.setVisibility(View.VISIBLE);
-            // DLNA mode?
-            if (mChosenDlnaDevice == null) {
-              mPlayButton.setImageResource(R.drawable.ic_pause_black_24dp);
-              mPlayButton.setTag(PlaybackStateCompat.STATE_PAUSED);
-            } else {
+            if (mIsDlnaMode) {
               // DLNA device doesn't support PAUSE but STOP
               mPlayButton.setImageResource(R.drawable.ic_stop_black_24dp);
               mPlayButton.setTag(PlaybackStateCompat.STATE_STOPPED);
+            } else {
+              mPlayButton.setImageResource(R.drawable.ic_pause_black_24dp);
+              mPlayButton.setTag(PlaybackStateCompat.STATE_PAUSED);
             }
             mPlayButton.setVisibility(View.VISIBLE);
             mProgressBar.setVisibility(View.INVISIBLE);
@@ -197,11 +187,40 @@ public class MainFragment
             false));
       }
     };
-  private AndroidUpnpService mAndroidUpnpService = null;
+  private AlertDialog mDlnaAlertDialog;
+  private AlertDialog mRadioLongPressAlertDialog;
+  private AlertDialog mPlayLongPressAlertDialog;
+  private AlertDialog mDlnaEnableAlertDialog;
+  // />
   private boolean mIsPreferredRadios = false;
   private boolean mGotItRadioLongPress;
   private boolean mGotItPlayLongPress;
   private boolean mGotItDlnaEnable;
+  private MediaControllerCompat mMediaController = null;
+  private RadiosAdapter mRadiosAdapter;
+  private AndroidUpnpService mAndroidUpnpService = null;
+  // DLNA devices management
+  private DlnaDevicesAdapter mDlnaDevicesAdapter;
+  // FAB callback
+  private final View.OnLongClickListener mFABOnLongClickListenerClickListener =
+    new View.OnLongClickListener() {
+      @Override
+      public boolean onLongClick(View view) {
+        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+          Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
+          return true;
+        }
+        if (mAndroidUpnpService == null) {
+          Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
+          return true;
+        }
+        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
+        mDlnaDevicesAdapter.removeChosenDlnaDevice();
+        Snackbar.make(mView, R.string.dlna_reset, Snackbar.LENGTH_LONG).show();
+        return true;
+      }
+    };
+  private long mTimeDlnaSearch = 0;
   // FAB callback
   private final View.OnClickListener mFABOnClickListener = new View.OnClickListener() {
     @Override
@@ -225,27 +244,7 @@ public class MainFragment
       }
     }
   };
-  // DLNA devices management
-  private DlnaDevicesAdapter mDlnaDevicesAdapter;
-  // FAB callback
-  private final View.OnLongClickListener mFABOnLongClickListenerClickListener =
-    new View.OnLongClickListener() {
-      @Override
-      public boolean onLongClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-          Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
-          return true;
-        }
-        if (mAndroidUpnpService == null) {
-          Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
-          return true;
-        }
-        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
-        mDlnaDevicesAdapter.removeChosenDlnaDevice();
-        Snackbar.make(mView, R.string.dlna_reset, Snackbar.LENGTH_LONG).show();
-        return true;
-      }
-    };
+  private boolean mIsDlnaMode;
 
   @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
@@ -487,10 +486,12 @@ public class MainFragment
       return;
     }
     Bundle bundle = new Bundle();
-    mChosenDlnaDevice = mDlnaDevicesAdapter.getChosenDlnaDevice();
-    // DLNA mode?
-    if (mChosenDlnaDevice != null) {
-      bundle.putInt(getString(R.string.key_dlna_device), mChosenDlnaDevice.hashCode());
+    DlnaDevice chosenDlnaDevice = mDlnaDevicesAdapter.getChosenDlnaDevice();
+    mIsDlnaMode = (mAndroidUpnpService != null) &&
+      NetworkTester.hasWifiIpAddress(getActivity()) &&
+      (chosenDlnaDevice != null);
+    if (mIsDlnaMode) {
+      bundle.putInt(getString(R.string.key_dlna_device), chosenDlnaDevice.hashCode());
     }
     mMediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
   }

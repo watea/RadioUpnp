@@ -28,6 +28,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.LayoutInflater;
@@ -76,6 +77,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
+    //noinspection ConstantConditions
     viewHolder.setView(mListener.getRadioFromId(mRadioIds.get(position)));
   }
 
@@ -85,6 +87,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   }
 
   public interface Listener {
+    @Nullable
     Radio getRadioFromId(@NonNull Long radioId);
 
     void onModifyClick(@NonNull Long radioId);

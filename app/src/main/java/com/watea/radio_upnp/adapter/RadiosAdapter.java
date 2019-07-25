@@ -79,7 +79,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    Radio radio = mListener.getRadioFromId(mRadioIds.get(position));
+    //noinspection ConstantConditions
     viewHolder.setView(mListener.getRadioFromId(mRadioIds.get(position)));
   }
 
