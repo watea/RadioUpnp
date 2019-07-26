@@ -64,11 +64,13 @@ import com.watea.radio_upnp.model.RadioSQLContract;
 import com.watea.radio_upnp.service.NetworkTester;
 
 import org.fourthline.cling.android.AndroidUpnpService;
+import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Icon;
 import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.model.meta.Service;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
+import org.fourthline.cling.registry.RegistryListener;
 
 import java.util.List;
 
@@ -80,7 +82,6 @@ public class MainFragment
   View.OnLongClickListener {
   private static final String LOG_TAG = MainFragment.class.getSimpleName();
   private static final String AVTTRANSPORT_SERVICE_ID = "urn:upnp-org:serviceId:AVTransport";
-  public final RegistryListener mBrowseRegistryListener = new RegistryListener();
   public final MediaBrowserCompatConnectionCallback mMediaBrowserConnectionCallback =
     new MediaBrowserCompatConnectionCallback();
   private final Handler mHandler = new Handler();
@@ -94,6 +95,126 @@ public class MainFragment
   private View mRadiosDefaultView;
   private MenuItem mPreferredMenuItem;
   private int mScreenWidthDp;
+  private AlertDialog mDlnaAlertDialog;
+  private AlertDialog mRadioLongPressAlertDialog;
+  private AlertDialog mPlayLongPressAlertDialog;
+  private AlertDialog mDlnaEnableAlertDialog;
+  // />
+  private boolean mIsPreferredRadios = false;
+  private boolean mGotItRadioLongPress;
+  private boolean mGotItPlayLongPress;
+  private boolean mGotItDlnaEnable;
+  private MediaControllerCompat mMediaController = null;
+  private RadiosAdapter mRadiosAdapter;
+  private AndroidUpnpService mAndroidUpnpService = null;
+  // DLNA devices management
+  private DlnaDevicesAdapter mDlnaDevicesAdapter;
+  // FAB callback
+  private final View.OnLongClickListener mFABOnLongClickListenerClickListener =
+    new View.OnLongClickListener() {
+      @Override
+      public boolean onLongClick(View view) {
+        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+          Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
+          return true;
+        }
+        if (mAndroidUpnpService == null) {
+          Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
+          return true;
+        }
+        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
+        mDlnaDevicesAdapter.removeChosenDlnaDevice();
+        Snackbar.make(mView, R.string.dlna_reset, Snackbar.LENGTH_LONG).show();
+        return true;
+      }
+    };
+  // UPnP service listener
+  private final RegistryListener mBrowseRegistryListener = new DefaultRegistryListener() {
+    @Override
+    public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
+      for (Service service : remoteDevice.getServices()) {
+        if (service.getServiceId().toString().equals(AVTTRANSPORT_SERVICE_ID)) {
+          final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
+          // Search for icon
+          if (remoteDevice.isFullyHydrated()) {
+            Icon deviceIcon = getLargestIcon(remoteDevice.getIcons());
+            dlnaDevice.setIcon((deviceIcon == null) ? null :
+              NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri())));
+          }
+          // Add DlnaDevice to Adapter
+          mHandler.post(new Runnable() {
+            public void run() {
+              // Do nothing if we were disposed
+              if (mDlnaDevicesAdapter != null) {
+                int position = mDlnaDevicesAdapter.getPosition(dlnaDevice);
+                if (position >= 0) {
+                  DlnaDevice foundDlnaDevice = mDlnaDevicesAdapter.getItem(position);
+                  if (foundDlnaDevice != null) {
+                    foundDlnaDevice.setDevice(remoteDevice);
+                    foundDlnaDevice.setIcon(dlnaDevice.getIcon());
+                  }
+                } else {
+                  mDlnaDevicesAdapter.add(dlnaDevice);
+                }
+              }
+            }
+          });
+          break;
+        }
+      }
+    }
+
+    @Override
+    public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
+      mHandler.post(new Runnable() {
+        public void run() {
+          // Do nothing if we were disposed
+          if (mDlnaDevicesAdapter != null) {
+            mDlnaDevicesAdapter.remove(new DlnaDevice(remoteDevice));
+          }
+        }
+      });
+    }
+
+    @Nullable
+    private Icon getLargestIcon(Icon[] deviceIcons) {
+      Icon icon = null;
+      int maxWidth = 0;
+      for (Icon deviceIcon : deviceIcons) {
+        int width = deviceIcon.getWidth();
+        if (width > maxWidth) {
+          maxWidth = width;
+          icon = deviceIcon;
+        }
+      }
+      return icon;
+    }
+  };
+  private long mTimeDlnaSearch = 0;
+  // FAB callback
+  private final View.OnClickListener mFABOnClickListener = new View.OnClickListener() {
+    @Override
+    public void onClick(View view) {
+      if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+        Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
+        return;
+      }
+      if (mAndroidUpnpService == null) {
+        Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
+        return;
+      }
+      // Do not search more than 1 peer 5 s
+      if (System.currentTimeMillis() - mTimeDlnaSearch > 5000) {
+        mTimeDlnaSearch = System.currentTimeMillis();
+        mAndroidUpnpService.getControlPoint().search();
+      }
+      mDlnaAlertDialog.show();
+      if (!mGotItDlnaEnable) {
+        mDlnaEnableAlertDialog.show();
+      }
+    }
+  };
+  private boolean mIsDlnaMode;
   // Callback from media control
   private final MediaControllerCompat.Callback mMediaControllerCallback =
     new MediaControllerCompat.Callback() {
@@ -187,64 +308,6 @@ public class MainFragment
             false));
       }
     };
-  private AlertDialog mDlnaAlertDialog;
-  private AlertDialog mRadioLongPressAlertDialog;
-  private AlertDialog mPlayLongPressAlertDialog;
-  private AlertDialog mDlnaEnableAlertDialog;
-  // />
-  private boolean mIsPreferredRadios = false;
-  private boolean mGotItRadioLongPress;
-  private boolean mGotItPlayLongPress;
-  private boolean mGotItDlnaEnable;
-  private MediaControllerCompat mMediaController = null;
-  private RadiosAdapter mRadiosAdapter;
-  private AndroidUpnpService mAndroidUpnpService = null;
-  // DLNA devices management
-  private DlnaDevicesAdapter mDlnaDevicesAdapter;
-  // FAB callback
-  private final View.OnLongClickListener mFABOnLongClickListenerClickListener =
-    new View.OnLongClickListener() {
-      @Override
-      public boolean onLongClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-          Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
-          return true;
-        }
-        if (mAndroidUpnpService == null) {
-          Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
-          return true;
-        }
-        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
-        mDlnaDevicesAdapter.removeChosenDlnaDevice();
-        Snackbar.make(mView, R.string.dlna_reset, Snackbar.LENGTH_LONG).show();
-        return true;
-      }
-    };
-  private long mTimeDlnaSearch = 0;
-  // FAB callback
-  private final View.OnClickListener mFABOnClickListener = new View.OnClickListener() {
-    @Override
-    public void onClick(View view) {
-      if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-        Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
-        return;
-      }
-      if (mAndroidUpnpService == null) {
-        Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
-        return;
-      }
-      // Do not search more than 1 peer 5 s
-      if (System.currentTimeMillis() - mTimeDlnaSearch > 5000) {
-        mTimeDlnaSearch = System.currentTimeMillis();
-        mAndroidUpnpService.getControlPoint().search();
-      }
-      mDlnaAlertDialog.show();
-      if (!mGotItDlnaEnable) {
-        mDlnaEnableAlertDialog.show();
-      }
-    }
-  };
-  private boolean mIsDlnaMode;
 
   @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
@@ -459,6 +522,49 @@ public class MainFragment
     return true;
   }
 
+  // Must be called on UPnP service connection
+  public void onAndroidUpnpServiceConnected(@NonNull AndroidUpnpService androidUpnpService) {
+    mAndroidUpnpService = androidUpnpService;
+    mHandler.post(new Runnable() {
+      public void run() {
+        // Do nothing if we were disposed
+        if (mAndroidUpnpService == null) {
+          return;
+        }
+        final Registry registry = mAndroidUpnpService.getRegistry();
+        // May be null if onCreateView() not yet called
+        if (mDlnaDevicesAdapter == null) {
+          registry.removeAllRemoteDevices();
+        } else {
+          mDlnaDevicesAdapter.clear();
+          // Add all devices to the list we already know about
+          new Thread() {
+            @Override
+            public void run() {
+              super.run();
+              for (Device device : registry.getDevices()) {
+                if (device instanceof RemoteDevice) {
+                  mBrowseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
+                }
+              }
+            }
+          }.start();
+        }
+        // Get ready for future device advertisements
+        registry.addListener(mBrowseRegistryListener);
+        mAndroidUpnpService.getControlPoint().search();
+      }
+    });
+  }
+
+  // Must be called on UPnP service release
+  public void onAndroidUpnpServiceRelease() {
+    if (mAndroidUpnpService != null) {
+      mAndroidUpnpService.getRegistry().removeListener(mBrowseRegistryListener);
+      mAndroidUpnpService = null;
+    }
+  }
+
   // MediaController controls played radio
   @Nullable
   private Radio getCurrentRadio() {
@@ -567,95 +673,6 @@ public class MainFragment
         mMediaControllerCallback.onMetadataChanged(mMediaController.getMetadata());
         mMediaControllerCallback.onPlaybackStateChanged(mMediaController.getPlaybackState());
       }
-    }
-  }
-
-  // Listener for DLNA devices
-  @SuppressWarnings("WeakerAccess")
-  public class RegistryListener extends DefaultRegistryListener {
-    @Override
-    public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
-      for (Service service : remoteDevice.getServices()) {
-        if (service.getServiceId().toString().equals(AVTTRANSPORT_SERVICE_ID)) {
-          final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
-          // Do in standalone thread as method can be called from main loop
-          new Thread() {
-            @Override
-            public void run() {
-              super.run();
-              // Search for icon
-              if (remoteDevice.isFullyHydrated()) {
-                Icon deviceIcon = getLargestIcon(remoteDevice.getIcons());
-                dlnaDevice.setIcon((deviceIcon == null) ? null :
-                  NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri())));
-              }
-              // Add DlnaDevice to Adapter
-              mHandler.post(new Runnable() {
-                public void run() {
-                  // Do nothing if we were disposed
-                  if (mDlnaDevicesAdapter != null) {
-                    int position = mDlnaDevicesAdapter.getPosition(dlnaDevice);
-                    if (position >= 0) {
-                      DlnaDevice foundDlnaDevice = mDlnaDevicesAdapter.getItem(position);
-                      if (foundDlnaDevice != null) {
-                        foundDlnaDevice.setDevice(remoteDevice);
-                        foundDlnaDevice.setIcon(dlnaDevice.getIcon());
-                      }
-                    } else {
-                      mDlnaDevicesAdapter.add(dlnaDevice);
-                    }
-                  }
-                }
-              });
-            }
-          }.start();
-          break;
-        }
-      }
-    }
-
-    @Override
-    public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
-      mHandler.post(new Runnable() {
-        public void run() {
-          // Do nothing if we were disposed
-          if (mDlnaDevicesAdapter != null) {
-            mDlnaDevicesAdapter.remove(new DlnaDevice(remoteDevice));
-          }
-        }
-      });
-    }
-
-    // Must be called on service connection
-    public void init(@NonNull AndroidUpnpService androidUpnpService) {
-      mAndroidUpnpService = androidUpnpService;
-      mHandler.post(new Runnable() {
-        public void run() {
-          // May be null if adapter onCreateView() not yet called
-          if (mDlnaDevicesAdapter != null) {
-            mDlnaDevicesAdapter.clear();
-          }
-        }
-      });
-    }
-
-    // Must be called on service dispose
-    public void release() {
-      mAndroidUpnpService = null;
-    }
-
-    @Nullable
-    private Icon getLargestIcon(Icon[] deviceIcons) {
-      Icon icon = null;
-      int maxWidth = 0;
-      for (Icon deviceIcon : deviceIcons) {
-        int width = deviceIcon.getWidth();
-        if (width > maxWidth) {
-          maxWidth = width;
-          icon = deviceIcon;
-        }
-      }
-      return icon;
     }
   }
 }
