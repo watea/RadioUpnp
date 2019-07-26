@@ -60,9 +60,6 @@ import com.watea.radio_upnp.service.RadioService;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
-import org.fourthline.cling.model.meta.Device;
-import org.fourthline.cling.model.meta.RemoteDevice;
-import org.fourthline.cling.registry.Registry;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -116,18 +113,7 @@ public class MainActivity
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) {
       mAndroidUpnpService = (AndroidUpnpService) service;
-      // Add all devices to the list we already know about
-      Registry registry = mAndroidUpnpService.getRegistry();
-      MainFragment.RegistryListener listener = mMainFragment.mBrowseRegistryListener;
-      listener.init(mAndroidUpnpService);
-      for (Device device : registry.getDevices()) {
-        if (device instanceof RemoteDevice) {
-          listener.remoteDeviceAdded(registry, (RemoteDevice) device);
-        }
-      }
-      // Get ready for future device advertisements
-      registry.addListener(listener);
-      mAndroidUpnpService.getControlPoint().search();
+      mMainFragment.onAndroidUpnpServiceConnected(mAndroidUpnpService);
     }
 
     @Override
@@ -221,7 +207,7 @@ public class MainActivity
     super.onPause();
     // Stop MediaBrowser
     mMainFragment.mMediaBrowserConnectionCallback.releaseMediaBrowser();
-    // Release UPNP service
+    // Release UPnP service
     if (mAndroidUpnpService != null) {
       releaseUpnpServiceResource();
       unbindService(mUpnpConnection);
@@ -265,7 +251,7 @@ public class MainActivity
         // Launch the media service, will create a MediaController
         .connect();
     }
-    // Start the UPNP service
+    // Start the UPnP service
     if (!bindService(
       new Intent(this, AndroidUpnpServiceImpl.class),
       mUpnpConnection,
@@ -419,12 +405,8 @@ public class MainActivity
   }
 
   private void releaseUpnpServiceResource() {
-    if (mAndroidUpnpService != null) {
-      MainFragment.RegistryListener listener = mMainFragment.mBrowseRegistryListener;
-      listener.release();
-      mAndroidUpnpService.getRegistry().removeListener(listener);
-      mAndroidUpnpService = null;
-    }
+    mMainFragment.onAndroidUpnpServiceRelease();
+    mAndroidUpnpService = null;
   }
 
   private static class DefaultRadio {
