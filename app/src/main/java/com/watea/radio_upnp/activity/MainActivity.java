@@ -26,20 +26,16 @@ package com.watea.radio_upnp.activity;
 import android.annotation.SuppressLint;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -56,10 +52,6 @@ import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
-import com.watea.radio_upnp.service.RadioService;
-
-import org.fourthline.cling.android.AndroidUpnpService;
-import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -108,19 +100,6 @@ public class MainActivity
   private RadioLibrary mRadioLibrary;
   private int mNavigationMenuCheckedId;
   private MainFragment mMainFragment;
-  private AndroidUpnpService mAndroidUpnpService = null;
-  private final ServiceConnection mUpnpConnection = new ServiceConnection() {
-    @Override
-    public void onServiceConnected(ComponentName className, IBinder service) {
-      mAndroidUpnpService = (AndroidUpnpService) service;
-      mMainFragment.onAndroidUpnpServiceConnected(mAndroidUpnpService);
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName className) {
-      releaseUpnpServiceResource();
-    }
-  };
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
@@ -205,13 +184,7 @@ public class MainActivity
   @Override
   protected void onPause() {
     super.onPause();
-    // Stop MediaBrowser
-    mMainFragment.mMediaBrowserConnectionCallback.releaseMediaBrowser();
-    // Release UPnP service
-    if (mAndroidUpnpService != null) {
-      releaseUpnpServiceResource();
-      unbindService(mUpnpConnection);
-    }
+    mMainFragment.onActivityPause();
     // Close radios database
     mRadioLibrary.close();
   }
@@ -237,27 +210,7 @@ public class MainActivity
       setFragment(R.layout.content_main) :
       // Shall exists as MainFragment always created
       getFragmentManager().findFragmentByTag(getTagFromId(R.layout.content_main)));
-    // MediaBrowser creation
-    MainFragment.MediaBrowserCompatConnectionCallback mediaBrowserConnectionCallback =
-      mMainFragment.mMediaBrowserConnectionCallback;
-    if (mediaBrowserConnectionCallback.getMediaBrowser() == null) {
-      mediaBrowserConnectionCallback
-        .setMediaBrowser(
-          new MediaBrowserCompat(
-            this,
-            new ComponentName(this, RadioService.class),
-            mediaBrowserConnectionCallback,
-            null))
-        // Launch the media service, will create a MediaController
-        .connect();
-    }
-    // Start the UPnP service
-    if (!bindService(
-      new Intent(this, AndroidUpnpServiceImpl.class),
-      mUpnpConnection,
-      BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "onResume: internal failure; AndroidUpnpService not bound");
-    }
+    mMainFragment.onActivityResume(this);
   }
 
   @Override
@@ -402,11 +355,6 @@ public class MainActivity
   private void checkNavigationMenu(int id) {
     mNavigationMenuCheckedId = id;
     mNavigationMenu.findItem(mNavigationMenuCheckedId).setChecked(true);
-  }
-
-  private void releaseUpnpServiceResource() {
-    mMainFragment.onAndroidUpnpServiceRelease();
-    mAndroidUpnpService = null;
   }
 
   private static class DefaultRadio {

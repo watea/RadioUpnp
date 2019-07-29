@@ -24,13 +24,17 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
@@ -62,8 +66,10 @@ import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioSQLContract;
 import com.watea.radio_upnp.service.NetworkTester;
+import com.watea.radio_upnp.service.RadioService;
 
 import org.fourthline.cling.android.AndroidUpnpService;
+import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Icon;
 import org.fourthline.cling.model.meta.RemoteDevice;
@@ -74,6 +80,8 @@ import org.fourthline.cling.registry.RegistryListener;
 
 import java.util.List;
 
+import static android.content.Context.BIND_AUTO_CREATE;
+
 public class MainFragment
   extends MainActivityFragment<MainFragment.Callback>
   implements
@@ -82,8 +90,6 @@ public class MainFragment
   View.OnLongClickListener {
   private static final String LOG_TAG = MainFragment.class.getSimpleName();
   private static final String AVTTRANSPORT_SERVICE_ID = "urn:upnp-org:serviceId:AVTransport";
-  public final MediaBrowserCompatConnectionCallback mMediaBrowserConnectionCallback =
-    new MediaBrowserCompatConnectionCallback();
   private final Handler mHandler = new Handler();
   // <HMI assets
   private View mView;
@@ -107,6 +113,9 @@ public class MainFragment
   private MediaControllerCompat mMediaController = null;
   private RadiosAdapter mRadiosAdapter;
   private AndroidUpnpService mAndroidUpnpService = null;
+  private MediaBrowserCompat mMediaBrowser = null;
+  // Forced context has getActivity(), used when getActivity() may be null
+  private Context mContext = null;
   // DLNA devices management
   private DlnaDevicesAdapter mDlnaDevicesAdapter;
   // FAB callback
@@ -188,6 +197,47 @@ public class MainFragment
         }
       }
       return icon;
+    }
+  };
+  private final ServiceConnection mUpnpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName className, IBinder service) {
+      mAndroidUpnpService = (AndroidUpnpService) service;
+      mHandler.post(new Runnable() {
+        public void run() {
+          // Do nothing if we were disposed
+          if (mAndroidUpnpService == null) {
+            return;
+          }
+          final Registry registry = mAndroidUpnpService.getRegistry();
+          // May be null if onCreateView() not yet called
+          if (mDlnaDevicesAdapter == null) {
+            registry.removeAllRemoteDevices();
+          } else {
+            mDlnaDevicesAdapter.clear();
+            // Add all devices to the list we already know about
+            new Thread() {
+              @Override
+              public void run() {
+                super.run();
+                for (Device device : registry.getDevices()) {
+                  if (device instanceof RemoteDevice) {
+                    mBrowseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
+                  }
+                }
+              }
+            }.start();
+          }
+          // Get ready for future device advertisements
+          registry.addListener(mBrowseRegistryListener);
+          mAndroidUpnpService.getControlPoint().search();
+        }
+      });
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName className) {
+      releaseUpnpResources();
     }
   };
   private long mTimeDlnaSearch = 0;
@@ -308,6 +358,41 @@ public class MainFragment
             false));
       }
     };
+  // MediaController from the MediaBrowser when it has successfully connected
+  private final MediaBrowserCompat.ConnectionCallback mMediaBrowserConnectionCallback =
+    new MediaBrowserCompat.ConnectionCallback() {
+      @Override
+      public void onConnected() {
+        try {
+          // Get a MediaController for the MediaSession
+          mMediaController = new MediaControllerCompat(
+            mContext,
+            mMediaBrowser.getSessionToken());
+          // Link to the callback controller
+          mMediaController.registerCallback(mMediaControllerCallback);
+          // Sync existing MediaSession state to the UI
+          viewSync();
+        } catch (RemoteException remoteException) {
+          Log.d(LOG_TAG, String.format("onConnected: problem: %s", remoteException.toString()));
+          throw new RuntimeException(remoteException);
+        }
+        // Nota: no mMediaBrowser.subscribe here needed
+      }
+
+      @Override
+      public void onConnectionSuspended() {
+        if (mMediaController != null) {
+          mMediaController.unregisterCallback(mMediaControllerCallback);
+          mMediaController = null;
+        }
+        mMediaBrowser = null;
+      }
+
+      @Override
+      public void onConnectionFailed() {
+        Log.d(LOG_TAG, "Connection to RadioService failed");
+      }
+    };
 
   @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
@@ -350,19 +435,6 @@ public class MainFragment
   }
 
   @Override
-  public void onResume() {
-    super.onResume();
-    // Update view
-    mMediaBrowserConnectionCallback.viewSync();
-    setRadiosView();
-    // Decorate
-    mCallback.onResume(
-      mFABOnClickListener,
-      mFABOnLongClickListenerClickListener,
-      R.drawable.ic_cast_black_24dp);
-  }
-
-  @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // Restore saved state, if any
@@ -377,6 +449,19 @@ public class MainFragment
       sharedPreferences.getBoolean(getString(R.string.key_play_long_press_got_it), false);
     mGotItDlnaEnable =
       sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
+  }
+
+  @Override
+  public void onResume() {
+    super.onResume();
+    // Update view
+    viewSync();
+    setRadiosView();
+    // Decorate
+    mCallback.onResume(
+      mFABOnClickListener,
+      mFABOnLongClickListenerClickListener,
+      R.drawable.ic_cast_black_24dp);
   }
 
   @Nullable
@@ -522,46 +607,61 @@ public class MainFragment
     return true;
   }
 
-  // Must be called on UPnP service connection
-  public void onAndroidUpnpServiceConnected(@NonNull AndroidUpnpService androidUpnpService) {
-    mAndroidUpnpService = androidUpnpService;
-    mHandler.post(new Runnable() {
-      public void run() {
-        // Do nothing if we were disposed
-        if (mAndroidUpnpService == null) {
-          return;
-        }
-        final Registry registry = mAndroidUpnpService.getRegistry();
-        // May be null if onCreateView() not yet called
-        if (mDlnaDevicesAdapter == null) {
-          registry.removeAllRemoteDevices();
-        } else {
-          mDlnaDevicesAdapter.clear();
-          // Add all devices to the list we already know about
-          new Thread() {
-            @Override
-            public void run() {
-              super.run();
-              for (Device device : registry.getDevices()) {
-                if (device instanceof RemoteDevice) {
-                  mBrowseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
-                }
-              }
-            }
-          }.start();
-        }
-        // Get ready for future device advertisements
-        registry.addListener(mBrowseRegistryListener);
-        mAndroidUpnpService.getControlPoint().search();
-      }
-    });
+  // Must be called on activity resume
+  // Handle services
+  public void onActivityResume(@NonNull Context context) {
+    // Force context setting to ensure it is known by MainFragment (getActivity() may be null)
+    mContext = context;
+    // Start the UPnP service
+    if (!mContext.bindService(
+      new Intent(mContext, AndroidUpnpServiceImpl.class),
+      mUpnpConnection,
+      BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "startUpnp: internal failure; AndroidUpnpService not bound");
+    }
+    // MediaBrowser creation
+    if (mMediaBrowser == null) {
+      mMediaBrowser = new MediaBrowserCompat(
+        mContext,
+        new ComponentName(mContext, RadioService.class),
+        mMediaBrowserConnectionCallback,
+        null);
+      mMediaBrowser.connect();
+    }
   }
 
-  // Must be called on UPnP service release
-  public void onAndroidUpnpServiceRelease() {
-    if (mAndroidUpnpService != null) {
+  // Must be called on activity pause
+  // Handle services
+  public void onActivityPause() {
+    // Stop MediaBrowser
+    if (mMediaBrowser != null) {
+      if (mMediaBrowser.isConnected()) {
+        mMediaBrowser.disconnect();
+      }
+      // Force resource release
+      mMediaBrowserConnectionCallback.onConnectionSuspended();
+    }
+    // Release UPnP service
+    if (releaseUpnpResources()) {
+      mContext.unbindService(mUpnpConnection);
+    }
+  }
+
+  private void viewSync() {
+    if (mMediaController != null) {
+      mMediaControllerCallback.onMetadataChanged(mMediaController.getMetadata());
+      mMediaControllerCallback.onPlaybackStateChanged(mMediaController.getPlaybackState());
+    }
+  }
+
+  // True if something is done
+  private boolean releaseUpnpResources() {
+    if (mAndroidUpnpService == null) {
+      return false;
+    } else {
       mAndroidUpnpService.getRegistry().removeListener(mBrowseRegistryListener);
       mAndroidUpnpService = null;
+      return true;
     }
   }
 
@@ -607,72 +707,5 @@ public class MainFragment
       @NonNull View.OnClickListener floatingActionButtonOnClickListener,
       @NonNull View.OnLongClickListener floatingActionButtonOnLongClickListener,
       int floatingActionButtonResource);
-  }
-
-  // MediaController from the MediaBrowser when it has successfully connected
-  @SuppressWarnings("WeakerAccess")
-  public class MediaBrowserCompatConnectionCallback extends MediaBrowserCompat.ConnectionCallback {
-    private MediaBrowserCompat mMediaBrowser = null;
-
-    @Override
-    public void onConnected() {
-      try {
-        // Get a MediaController for the MediaSession
-        mMediaController = new MediaControllerCompat(
-          getActivity(),
-          mMediaBrowser.getSessionToken());
-        // Link to the callback controller
-        mMediaController.registerCallback(mMediaControllerCallback);
-        // Sync existing MediaSession state to the UI
-        viewSync();
-      } catch (RemoteException remoteException) {
-        Log.d(LOG_TAG, String.format("onConnected: problem: %s", remoteException.toString()));
-        throw new RuntimeException(remoteException);
-      }
-      // Nota: no mMediaBrowser.subscribe here needed
-    }
-
-    @Override
-    public void onConnectionSuspended() {
-      if (mMediaController != null) {
-        mMediaController.unregisterCallback(mMediaControllerCallback);
-        mMediaController = null;
-      }
-      mMediaBrowser = null;
-    }
-
-    @Override
-    public void onConnectionFailed() {
-      Log.d(LOG_TAG, "Connection to RadioService failed");
-    }
-
-    // Must be called on session creation
-    @NonNull
-    public MediaBrowserCompat setMediaBrowser(@NonNull MediaBrowserCompat mediaBrowserCompat) {
-      return mMediaBrowser = mediaBrowserCompat;
-    }
-
-    @Nullable
-    public MediaBrowserCompat getMediaBrowser() {
-      return mMediaBrowser;
-    }
-
-    // Must be called on activity release
-    public void releaseMediaBrowser() {
-      if (mMediaBrowser != null) {
-        if (mMediaBrowser.isConnected()) {
-          mMediaBrowser.disconnect();
-        }
-        // Force resource release
-        onConnectionSuspended();
-      }
-    }
-
-    public void viewSync() {
-      if (mMediaController != null) {
-        mMediaControllerCallback.onMetadataChanged(mMediaController.getMetadata());
-        mMediaControllerCallback.onPlaybackStateChanged(mMediaController.getPlaybackState());
-      }
-    }
   }
 }

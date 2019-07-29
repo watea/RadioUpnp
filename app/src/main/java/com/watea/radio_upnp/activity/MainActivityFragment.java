@@ -24,7 +24,9 @@
 package com.watea.radio_upnp.activity;
 
 import android.app.Fragment;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
@@ -48,13 +50,19 @@ public abstract class MainActivityFragment<C> extends Fragment {
   public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
   }
 
-  // Setup, also in case we were disposed
+  @Override
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    mRadioLibrary = ((MainActivity) getActivity()).getRadioLibrary();
+  }
+
   @Override
   public void onResume() {
     super.onResume();
     MainActivity mainActivity = (MainActivity) getActivity();
+    // In case we were disposed
     mRadioLibrary = mainActivity.getRadioLibrary();
     //noinspection unchecked
-    mCallback = (C) mainActivity.getFragmentCallback(this);
+    mCallback = (C) ((MainActivity) getActivity()).getFragmentCallback(this);
   }
 }
