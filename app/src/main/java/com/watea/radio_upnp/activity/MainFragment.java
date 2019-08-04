@@ -187,7 +187,7 @@ public class MainFragment
     }
 
     @Nullable
-    private Icon getLargestIcon(Icon[] deviceIcons) {
+    private Icon getLargestIcon(@NonNull Icon[] deviceIcons) {
       Icon icon = null;
       int maxWidth = 0;
       for (Icon deviceIcon : deviceIcons) {
@@ -479,8 +479,11 @@ public class MainFragment
     // Inflate the view so that graphical objects exists
     mView = inflater.inflate(R.layout.content_main, container, false);
     // Fill content including recycler
-    mDlnaDevicesAdapter = new DlnaDevicesAdapter(
-      getActivity(), R.layout.row_dlna_device, mSavedChosenDlnaDeviceIdentity);
+    // A an exception, DlnaAdapter created only if necessary as handle UPnP events
+    if (mDlnaDevicesAdapter == null) {
+      mDlnaDevicesAdapter = new DlnaDevicesAdapter(
+        getActivity(), R.layout.row_dlna_device, mSavedChosenDlnaDeviceIdentity);
+    }
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
       .setAdapter(
@@ -552,6 +555,11 @@ public class MainFragment
     outState.putString(
       getString(R.string.key_selected_device), mDlnaDevicesAdapter.getChosenDlnaDeviceIdentity());
     outState.putBoolean(getString(R.string.key_dlna_mode), mIsDlnaMode);
+  }
+
+  @Override
+  public void onPause() {
+    super.onPause();
     // Shared preferences
     getActivity()
       .getPreferences(Context.MODE_PRIVATE)
@@ -623,7 +631,7 @@ public class MainFragment
       new Intent(mContext, AndroidUpnpServiceImpl.class),
       mUpnpConnection,
       BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "startUpnp: internal failure; AndroidUpnpService not bound");
+      Log.e(LOG_TAG, "onActivityResume: internal failure; AndroidUpnpService not bound");
     }
     // MediaBrowser creation
     if (mMediaBrowser == null) {

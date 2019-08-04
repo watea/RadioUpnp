@@ -27,6 +27,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -240,8 +241,11 @@ public class RadioHandler extends AbstractHandler {
                   metaData = charsetDecoder
                     .decode(ByteBuffer.wrap(Arrays.copyOf(metaDataBuffer, metaDataSize)))
                     .toString();
-                  Log.d(LOG_TAG, "Metadata found at index [" + metaDataOffset +
-                    "], size[" + metaDataSize + "]: " + metaData);
+                  if (BuildConfig.DEBUG) {
+                    Log.d(LOG_TAG,
+                      "Metadata found at index [" + metaDataOffset +
+                        "], size[" + metaDataSize + "]: " + metaData);
+                  }
                 } catch (Exception exception) {
                   Log.w(LOG_TAG, "Error decoding metadata", exception);
                 }
