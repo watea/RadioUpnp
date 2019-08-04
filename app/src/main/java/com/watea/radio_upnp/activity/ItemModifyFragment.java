@@ -99,13 +99,6 @@ public class ItemModifyFragment
   }
 
   @Override
-  public void onResume() {
-    super.onResume();
-    // Decorate
-    mCallback.onResume((mRadio == null), this, R.drawable.ic_image_black_24dp);
-  }
-
-  @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // Restore saved state, if any
@@ -120,6 +113,13 @@ public class ItemModifyFragment
         savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
       mIsRadioIconNew = savedInstanceState.getBoolean(getString(R.string.key_is_radio_icon_new));
     }
+  }
+
+  @Override
+  public void onResume() {
+    super.onResume();
+    // Decorate
+    mCallback.onResume((mRadio == null), this, R.drawable.ic_image_black_24dp);
   }
 
   @Nullable

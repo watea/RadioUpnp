@@ -110,6 +110,7 @@ public class MainFragment
   private boolean mGotItRadioLongPress;
   private boolean mGotItPlayLongPress;
   private boolean mGotItDlnaEnable;
+  private String mSavedChosenDlnaDeviceIdentity = null;
   private MediaControllerCompat mMediaController = null;
   private RadiosAdapter mRadiosAdapter;
   private AndroidUpnpService mAndroidUpnpService = null;
@@ -264,7 +265,7 @@ public class MainFragment
       }
     }
   };
-  private boolean mIsDlnaMode;
+  private boolean mIsDlnaMode = false;
   // Callback from media control
   private final MediaControllerCompat.Callback mMediaControllerCallback =
     new MediaControllerCompat.Callback() {
@@ -285,77 +286,77 @@ public class MainFragment
       @SuppressLint("SwitchIntDef")
       @Override
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
-        int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
-        Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
-        // Play button stores state to reach
-        switch (intState) {
-          case PlaybackStateCompat.STATE_PLAYING:
-            mPlayedRadioNameTextView.setVisibility(View.VISIBLE);
-            mPlayedRadioInformationTextView.setVisibility(View.VISIBLE);
-            mAlbumArt.setVisibility(View.VISIBLE);
-            if (mIsDlnaMode) {
+        // Do nothing if view not defined
+        if (isActuallyShown(mView)) {
+          int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
+          Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
+          // Play button stores state to reach
+          switch (intState) {
+            case PlaybackStateCompat.STATE_PLAYING:
+              mPlayedRadioNameTextView.setVisibility(View.VISIBLE);
+              mPlayedRadioInformationTextView.setVisibility(View.VISIBLE);
+              mAlbumArt.setVisibility(View.VISIBLE);
               // DLNA device doesn't support PAUSE but STOP
-              mPlayButton.setImageResource(R.drawable.ic_stop_black_24dp);
-              mPlayButton.setTag(PlaybackStateCompat.STATE_STOPPED);
-            } else {
-              mPlayButton.setImageResource(R.drawable.ic_pause_black_24dp);
-              mPlayButton.setTag(PlaybackStateCompat.STATE_PAUSED);
-            }
-            mPlayButton.setVisibility(View.VISIBLE);
-            mProgressBar.setVisibility(View.INVISIBLE);
-            break;
-          case PlaybackStateCompat.STATE_PAUSED:
-            mPlayedRadioNameTextView.setVisibility(View.VISIBLE);
-            mPlayedRadioInformationTextView.setVisibility(View.VISIBLE);
-            mAlbumArt.setVisibility(View.VISIBLE);
-            mPlayButton.setImageResource(R.drawable.ic_play_arrow_black_24dp);
-            mPlayButton.setTag(PlaybackStateCompat.STATE_PLAYING);
-            mPlayButton.setVisibility(View.VISIBLE);
-            mProgressBar.setVisibility(View.INVISIBLE);
-            break;
-          case PlaybackStateCompat.STATE_BUFFERING:
-          case PlaybackStateCompat.STATE_CONNECTING:
-            mPlayedRadioNameTextView.setVisibility(View.VISIBLE);
-            mPlayedRadioInformationTextView.setVisibility(View.VISIBLE);
-            mAlbumArt.setVisibility(View.VISIBLE);
-            mPlayButton.setVisibility(View.INVISIBLE);
-            mProgressBar.setVisibility(View.VISIBLE);
-            break;
-          case PlaybackStateCompat.STATE_NONE:
-          case PlaybackStateCompat.STATE_STOPPED:
-            mPlayedRadioNameTextView.setVisibility(View.INVISIBLE);
-            mPlayedRadioInformationTextView.setVisibility(View.INVISIBLE);
-            mAlbumArt.setVisibility(View.INVISIBLE);
-            mPlayButton.setVisibility(View.INVISIBLE);
-            mProgressBar.setVisibility(View.INVISIBLE);
-            break;
-          default:
-            mPlayedRadioNameTextView.setVisibility(View.INVISIBLE);
-            mPlayedRadioInformationTextView.setVisibility(View.INVISIBLE);
-            mAlbumArt.setVisibility(View.INVISIBLE);
-            mPlayButton.setVisibility(View.INVISIBLE);
-            mProgressBar.setVisibility(View.INVISIBLE);
-            Snackbar.make(mView, R.string.radio_connection_error, Snackbar.LENGTH_LONG).show();
+              mPlayButton.setImageResource(mIsDlnaMode ?
+                R.drawable.ic_stop_black_24dp : R.drawable.ic_pause_black_24dp);
+              mPlayButton.setTag(mIsDlnaMode ?
+                PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
+              mPlayButton.setVisibility(View.VISIBLE);
+              mProgressBar.setVisibility(View.INVISIBLE);
+              break;
+            case PlaybackStateCompat.STATE_PAUSED:
+              mPlayedRadioNameTextView.setVisibility(View.VISIBLE);
+              mPlayedRadioInformationTextView.setVisibility(View.VISIBLE);
+              mAlbumArt.setVisibility(View.VISIBLE);
+              mPlayButton.setImageResource(R.drawable.ic_play_arrow_black_24dp);
+              mPlayButton.setTag(PlaybackStateCompat.STATE_PLAYING);
+              mPlayButton.setVisibility(View.VISIBLE);
+              mProgressBar.setVisibility(View.INVISIBLE);
+              break;
+            case PlaybackStateCompat.STATE_BUFFERING:
+            case PlaybackStateCompat.STATE_CONNECTING:
+              mPlayedRadioNameTextView.setVisibility(View.VISIBLE);
+              mPlayedRadioInformationTextView.setVisibility(View.VISIBLE);
+              mAlbumArt.setVisibility(View.VISIBLE);
+              mPlayButton.setVisibility(View.INVISIBLE);
+              mProgressBar.setVisibility(View.VISIBLE);
+              break;
+            case PlaybackStateCompat.STATE_NONE:
+            case PlaybackStateCompat.STATE_STOPPED:
+              mPlayedRadioNameTextView.setVisibility(View.INVISIBLE);
+              mPlayedRadioInformationTextView.setVisibility(View.INVISIBLE);
+              mAlbumArt.setVisibility(View.INVISIBLE);
+              mPlayButton.setVisibility(View.INVISIBLE);
+              mProgressBar.setVisibility(View.INVISIBLE);
+              break;
+            default:
+              mPlayedRadioNameTextView.setVisibility(View.INVISIBLE);
+              mPlayedRadioInformationTextView.setVisibility(View.INVISIBLE);
+              mAlbumArt.setVisibility(View.INVISIBLE);
+              mPlayButton.setVisibility(View.INVISIBLE);
+              mProgressBar.setVisibility(View.INVISIBLE);
+              Snackbar.make(mView, R.string.radio_connection_error, Snackbar.LENGTH_LONG).show();
+          }
         }
       }
 
       @Override
       public void onMetadataChanged(final MediaMetadataCompat mediaMetadata) {
-        if (mediaMetadata == null) {
-          return;
+        // Do nothing if view not defined or nothing to change
+        if (isActuallyShown(mView) && (mediaMetadata != null)) {
+          mPlayedRadioNameTextView.setText(
+            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
+          String radioInformation =
+            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
+          mPlayedRadioInformationTextView.setText(radioInformation);
+          //noinspection SuspiciousNameCombination
+          mAlbumArt.setImageBitmap(
+            Bitmap.createScaledBitmap(
+              mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
+              mScreenWidthDp,
+              mScreenWidthDp,
+              false));
         }
-        mPlayedRadioNameTextView.setText(
-          mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
-        String radioInformation =
-          mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
-        mPlayedRadioInformationTextView.setText(radioInformation);
-        //noinspection SuspiciousNameCombination
-        mAlbumArt.setImageBitmap(
-          Bitmap.createScaledBitmap(
-            mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
-            mScreenWidthDp,
-            mScreenWidthDp,
-            false));
       }
     };
   // MediaController from the MediaBrowser when it has successfully connected
@@ -363,6 +364,10 @@ public class MainFragment
     new MediaBrowserCompat.ConnectionCallback() {
       @Override
       public void onConnected() {
+        // Do nothing if we were disposed
+        if (mMediaBrowser == null) {
+          return;
+        }
         try {
           // Get a MediaController for the MediaSession
           mMediaController = new MediaControllerCompat(
@@ -371,7 +376,7 @@ public class MainFragment
           // Link to the callback controller
           mMediaController.registerCallback(mMediaControllerCallback);
           // Sync existing MediaSession state to the UI
-          viewSync();
+          browserViewSync();
         } catch (RemoteException remoteException) {
           Log.d(LOG_TAG, String.format("onConnected: problem: %s", remoteException.toString()));
           throw new RuntimeException(remoteException);
@@ -381,10 +386,7 @@ public class MainFragment
 
       @Override
       public void onConnectionSuspended() {
-        if (mMediaController != null) {
-          mMediaController.unregisterCallback(mMediaControllerCallback);
-          mMediaController = null;
-        }
+        releaseBrowserResources();
         mMediaBrowser = null;
       }
 
@@ -440,6 +442,9 @@ public class MainFragment
     // Restore saved state, if any
     if (savedInstanceState != null) {
       mIsPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
+      mSavedChosenDlnaDeviceIdentity =
+        savedInstanceState.getString(getString(R.string.key_selected_device));
+      mIsDlnaMode = savedInstanceState.getBoolean(getString(R.string.key_dlna_mode));
     }
     // Shared preferences
     SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
@@ -455,7 +460,7 @@ public class MainFragment
   public void onResume() {
     super.onResume();
     // Update view
-    viewSync();
+    browserViewSync();
     setRadiosView();
     // Decorate
     mCallback.onResume(
@@ -474,10 +479,8 @@ public class MainFragment
     // Inflate the view so that graphical objects exists
     mView = inflater.inflate(R.layout.content_main, container, false);
     // Fill content including recycler
-    // Adapter for DLNA list, created only if we were disposed (known devices lost anyway)
-    if (mDlnaDevicesAdapter == null) {
-      mDlnaDevicesAdapter = new DlnaDevicesAdapter(getActivity(), R.layout.row_dlna_device);
-    }
+    mDlnaDevicesAdapter = new DlnaDevicesAdapter(
+      getActivity(), R.layout.row_dlna_device, mSavedChosenDlnaDeviceIdentity);
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
       .setAdapter(
@@ -487,7 +490,7 @@ public class MainFragment
           public void onClick(DialogInterface dialogInterface, int i) {
             mDlnaDevicesAdapter.onSelection(i);
             Radio radio = getCurrentRadio();
-            if ((mDlnaDevicesAdapter.getChosenDlnaDevice() != null) && (radio != null)) {
+            if (mDlnaDevicesAdapter.hasChosenDlnaDevice() && (radio != null)) {
               startReading(radio);
             }
             mDlnaAlertDialog.dismiss();
@@ -546,6 +549,9 @@ public class MainFragment
   public void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), mIsPreferredRadios);
+    outState.putString(
+      getString(R.string.key_selected_device), mDlnaDevicesAdapter.getChosenDlnaDeviceIdentity());
+    outState.putBoolean(getString(R.string.key_dlna_mode), mIsDlnaMode);
     // Shared preferences
     getActivity()
       .getPreferences(Context.MODE_PRIVATE)
@@ -633,35 +639,33 @@ public class MainFragment
   // Must be called on activity pause
   // Handle services
   public void onActivityPause() {
-    // Stop MediaBrowser
+    releaseBrowserResources();
     if (mMediaBrowser != null) {
-      if (mMediaBrowser.isConnected()) {
-        mMediaBrowser.disconnect();
-      }
-      // Force resource release
-      mMediaBrowserConnectionCallback.onConnectionSuspended();
+      mMediaBrowser.disconnect();
+      mMediaBrowser = null;
     }
-    // Release UPnP service
-    if (releaseUpnpResources()) {
-      mContext.unbindService(mUpnpConnection);
-    }
+    releaseUpnpResources();
+    mContext.unbindService(mUpnpConnection);
   }
 
-  private void viewSync() {
+  private void browserViewSync() {
     if (mMediaController != null) {
       mMediaControllerCallback.onMetadataChanged(mMediaController.getMetadata());
       mMediaControllerCallback.onPlaybackStateChanged(mMediaController.getPlaybackState());
     }
   }
 
-  // True if something is done
-  private boolean releaseUpnpResources() {
-    if (mAndroidUpnpService == null) {
-      return false;
-    } else {
+  private void releaseUpnpResources() {
+    if (mAndroidUpnpService != null) {
       mAndroidUpnpService.getRegistry().removeListener(mBrowseRegistryListener);
       mAndroidUpnpService = null;
-      return true;
+    }
+  }
+
+  private void releaseBrowserResources() {
+    if (mMediaController != null) {
+      mMediaController.unregisterCallback(mMediaControllerCallback);
+      mMediaController = null;
     }
   }
 
@@ -692,12 +696,10 @@ public class MainFragment
       return;
     }
     Bundle bundle = new Bundle();
-    DlnaDevice chosenDlnaDevice = mDlnaDevicesAdapter.getChosenDlnaDevice();
-    mIsDlnaMode = (mAndroidUpnpService != null) &&
+    if (mIsDlnaMode = (mAndroidUpnpService != null) &&
       NetworkTester.hasWifiIpAddress(getActivity()) &&
-      (chosenDlnaDevice != null);
-    if (mIsDlnaMode) {
-      bundle.putInt(getString(R.string.key_dlna_device), chosenDlnaDevice.hashCode());
+      mDlnaDevicesAdapter.hasChosenDlnaDevice()) {
+      bundle.putString(getString(R.string.key_dlna_device), mDlnaDevicesAdapter.getChosenDlnaDeviceIdentity());
     }
     mMediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
   }

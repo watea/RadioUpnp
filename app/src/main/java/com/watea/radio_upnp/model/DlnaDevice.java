@@ -44,7 +44,7 @@ public class DlnaDevice {
     return mIcon;
   }
 
-  public void setIcon(Bitmap icon) {
+  public void setIcon(@Nullable Bitmap icon) {
     mIcon = icon;
   }
 
@@ -57,9 +57,9 @@ public class DlnaDevice {
     mDevice = device;
   }
 
-  @Override
-  public int hashCode() {
-    return (mDevice == null) ? -1 : mDevice.hashCode();
+  @Nullable
+  public String getIdentity() {
+    return (mDevice == null) ? null : mDevice.getIdentity().getUdn().getIdentifierString();
   }
 
   @Override

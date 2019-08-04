@@ -215,7 +215,7 @@ public class Radio {
     return mQuality;
   }
 
-  public void setQuality(Quality quality) {
+  public void setQuality(@NonNull Quality quality) {
     mQuality = quality;
   }
 

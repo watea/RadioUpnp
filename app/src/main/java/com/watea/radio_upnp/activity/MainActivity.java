@@ -60,6 +60,7 @@ public class MainActivity
   extends
   AppCompatActivity
   implements
+  MainActivityFragment.Provider<Object>,
   NavigationView.OnNavigationItemSelectedListener {
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final DefaultRadio[] DEFAULT_RADIOS = {
@@ -68,6 +69,21 @@ public class MainActivity
       R.drawable.logo_france_inter,
       "http://direct.franceinter.fr/live/franceinter-midfi.mp3",
       "https://www.franceinter.fr/"),
+    new DefaultRadio(
+      "FRANCE CULTURE",
+      R.drawable.logo_france_culture,
+      "http://direct.franceculture.fr/live/franceculture-midfi.mp3",
+      "https://www.franceculture.fr/"),
+    new DefaultRadio(
+      "OUI FM",
+      R.drawable.logo_oui_fm,
+      "http://target-ad-2.cdn.dvmr.fr/ouifm-high.mp3",
+      "https://www.ouifm.fr/"),
+    new DefaultRadio(
+      "EUROPE1",
+      R.drawable.logo_europe1,
+      "http://mp3lg4.tdf-cdn.com/9240/lag_180945.mp3",
+      "https://www.europe1.fr/"),
     new DefaultRadio(
       "RFM",
       R.drawable.logo_rfm,
@@ -99,11 +115,86 @@ public class MainActivity
   // />
   private RadioLibrary mRadioLibrary;
   private int mNavigationMenuCheckedId;
+  private final MainFragment.Callback mMainFragmentCallback =
+    new MainFragment.Callback() {
+      // Shall decorate
+      @Override
+      public void onResume(
+        @NonNull View.OnClickListener floatingActionButtonOnClickListener,
+        @NonNull View.OnLongClickListener floatingActionButtonOnLongClickListener,
+        int floatingActionButtonResource) {
+        invalidateOptionsMenu();
+        mActionBar.setTitle(R.string.title_main);
+        mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
+        mFloatingActionButton.setOnLongClickListener(floatingActionButtonOnLongClickListener);
+        mFloatingActionButton.setImageResource(floatingActionButtonResource);
+        checkNavigationMenu(R.id.action_home);
+      }
+    };
+  private final DonationFragment.Callback mDonationFragmentCallback =
+    new DonationFragment.Callback() {
+      // Shall decorate
+      // FloatingAction defined by fragment
+      @Override
+      public void onResume(
+        @NonNull View.OnClickListener floatingActionButtonOnClickListener,
+        int floatingActionButtonResource) {
+        invalidateOptionsMenu();
+        mActionBar.setTitle(R.string.title_donate);
+        mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
+        mFloatingActionButton.setImageResource(floatingActionButtonResource);
+        checkNavigationMenu(R.id.action_donate);
+      }
+    };
+  private final ItemModifyFragment.Callback mItemModifyFragmentCallback =
+    new ItemModifyFragment.Callback() {
+      // Shall decorate
+      // FloatingAction defined by fragment
+      @Override
+      public void onResume(
+        boolean isAddMode,
+        @NonNull View.OnClickListener floatingActionButtonOnClickListener,
+        int floatingActionButtonResource) {
+        invalidateOptionsMenu();
+        mActionBar.setTitle(isAddMode ? R.string.title_item_add : R.string.title_item_modify);
+        mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
+        mFloatingActionButton.setImageResource(floatingActionButtonResource);
+        checkNavigationMenu(isAddMode ? R.id.action_add_item : R.id.action_modify);
+      }
+    };
+  private final ModifyFragment.Callback mModifyFragmentCallback =
+    new ModifyFragment.Callback() {
+      // Shall decorate
+      @Override
+      public void onResume() {
+        invalidateOptionsMenu();
+        mActionBar.setTitle(R.string.title_modify);
+        mFloatingActionButton.setOnClickListener(
+          new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+              setFragment(R.layout.content_item_modify);
+            }
+          });
+        mFloatingActionButton.setImageResource(R.drawable.ic_playlist_add_black_24dp);
+        checkNavigationMenu(R.id.action_modify);
+      }
+
+      @Override
+      public void onModifyRequest(@NonNull Long radioId) {
+        //noinspection ConstantConditions
+        setFragment(
+          ((ItemModifyFragment) getFragmentFromId(R.layout.content_item_modify))
+            .set(mRadioLibrary.getFrom(radioId)),
+          R.layout.content_item_modify);
+      }
+    };
   private MainFragment mMainFragment;
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
     // MainActivityFragment instantiates the menu
+    //noinspection ConstantConditions
     getCurrentFragment().onCreateOptionsMenu(getMenuInflater(), menu);
     return true;
   }
@@ -112,6 +203,7 @@ public class MainActivity
   public boolean onOptionsItemSelected(MenuItem item) {
     // Pass the event to ActionBarDrawerToggle, if it returns
     // true, then it has handled the app icon touch event
+    //noinspection ConstantConditions
     return
       mDrawerToggle.onOptionsItemSelected(item) ||
         // Handle action bar item clicks here. The action bar will
@@ -150,25 +242,30 @@ public class MainActivity
     return true;
   }
 
+  // FragmentCallback
+  @Override
   @NonNull
-  public Object getFragmentCallback(@NonNull Fragment fragment) {
-    if (fragment instanceof MainFragment) {
-      return new MainFragmentCallback();
-    } else if (fragment instanceof ModifyFragment) {
-      return new ModifyFragmentCallback();
-    } else if (fragment instanceof ItemModifyFragment) {
-      return new ItemModifyFragmentCallback();
-    } else if (fragment instanceof DonationFragment) {
-      return new DonationFragmentCallback();
+  public RadioLibrary getRadioLibrary() {
+    return mRadioLibrary;
+  }
+
+  // FragmentCallback
+  @Override
+  @NonNull
+  public Object getFragmentCallback(@NonNull MainActivityFragment<?> mainActivityFragment) {
+    if (mainActivityFragment instanceof MainFragment) {
+      return mMainFragmentCallback;
+    } else if (mainActivityFragment instanceof ModifyFragment) {
+      return mModifyFragmentCallback;
+    } else if (mainActivityFragment instanceof ItemModifyFragment) {
+      return mItemModifyFragmentCallback;
+    } else if (mainActivityFragment instanceof DonationFragment) {
+      return mDonationFragmentCallback;
     } else {
       // Should not happen
       Log.e(LOG_TAG, "fragmentSet: internal failure, wrong fragment");
       throw new RuntimeException();
     }
-  }
-
-  public RadioLibrary getRadioLibrary() {
-    return mRadioLibrary;
   }
 
   @Override
@@ -185,8 +282,6 @@ public class MainActivity
   protected void onPause() {
     super.onPause();
     mMainFragment.onActivityPause();
-    // Close radios database
-    mRadioLibrary.close();
   }
 
   @Override
@@ -194,8 +289,6 @@ public class MainActivity
     super.onResume();
     // Shared preferences
     SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    // Open radios database
-    mRadioLibrary = new RadioLibrary(this);
     // Create default radios on first start
     if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
       setDefaultRadios()) {
@@ -215,6 +308,9 @@ public class MainActivity
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
+    // First create library as may be needed in fragments
+    mRadioLibrary = new RadioLibrary(this);
+    // Then create hierarchy
     super.onCreate(savedInstanceState);
     // Inflate view
     setContentView(R.layout.activity_main);
@@ -269,6 +365,13 @@ public class MainActivity
     mDrawerToggle.onConfigurationChanged(newConfig);
   }
 
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+    // Close radios database
+    mRadioLibrary.close();
+  }
+
   private boolean setDefaultRadios() {
     boolean result = false;
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
@@ -291,6 +394,7 @@ public class MainActivity
     return result;
   }
 
+  @Nullable
   private MainActivityFragment getCurrentFragment() {
     return (MainActivityFragment) getFragmentManager().findFragmentById(R.id.content_frame);
   }
@@ -375,80 +479,6 @@ public class MainActivity
       this.drawable = drawable;
       this.uRL = uRL;
       this.webPageURL = webPageURL;
-    }
-  }
-
-  private class MainFragmentCallback implements MainFragment.Callback {
-    // Shall decorate
-    @Override
-    public void onResume(
-      @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-      @NonNull View.OnLongClickListener floatingActionButtonOnLongClickListener,
-      int floatingActionButtonResource) {
-      invalidateOptionsMenu();
-      mActionBar.setTitle(R.string.title_main);
-      mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
-      mFloatingActionButton.setOnLongClickListener(floatingActionButtonOnLongClickListener);
-      mFloatingActionButton.setImageResource(floatingActionButtonResource);
-      checkNavigationMenu(R.id.action_home);
-    }
-  }
-
-  private class DonationFragmentCallback implements DonationFragment.Callback {
-    // Shall decorate
-    // FloatingAction defined by fragment
-    @Override
-    public void onResume(
-      @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-      int floatingActionButtonResource) {
-      invalidateOptionsMenu();
-      mActionBar.setTitle(R.string.title_donate);
-      mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
-      mFloatingActionButton.setImageResource(floatingActionButtonResource);
-      checkNavigationMenu(R.id.action_donate);
-    }
-  }
-
-  private class ItemModifyFragmentCallback implements ItemModifyFragment.Callback {
-    // Shall decorate
-    // FloatingAction defined by fragment
-    @Override
-    public void onResume(
-      boolean isAddMode,
-      @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-      int floatingActionButtonResource) {
-      invalidateOptionsMenu();
-      mActionBar.setTitle(isAddMode ? R.string.title_item_add : R.string.title_item_modify);
-      mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
-      mFloatingActionButton.setImageResource(floatingActionButtonResource);
-      checkNavigationMenu(isAddMode ? R.id.action_add_item : R.id.action_modify);
-    }
-  }
-
-  private class ModifyFragmentCallback implements ModifyFragment.Callback {
-    // Shall decorate
-    @Override
-    public void onResume() {
-      invalidateOptionsMenu();
-      mActionBar.setTitle(R.string.title_modify);
-      mFloatingActionButton.setOnClickListener(
-        new View.OnClickListener() {
-          @Override
-          public void onClick(View view) {
-            setFragment(R.layout.content_item_modify);
-          }
-        });
-      mFloatingActionButton.setImageResource(R.drawable.ic_playlist_add_black_24dp);
-      checkNavigationMenu(R.id.action_modify);
-    }
-
-    @Override
-    public void onModifyRequest(@NonNull Long radioId) {
-      //noinspection ConstantConditions
-      setFragment(
-        ((ItemModifyFragment) getFragmentFromId(R.layout.content_item_modify))
-          .set(mRadioLibrary.getFrom(radioId)),
-        R.layout.content_item_modify);
     }
   }
 }

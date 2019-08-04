@@ -25,6 +25,8 @@
     <!-- Preferences -->
     <string name="key_first_start">key_first_start</string>
     <string name="key_preferred_radios">key_preferred_radios</string>
+    <string name="key_selected_device">key_selected_device</string>
+    <string name="key_dlna_mode">key_dlna_mode</string>
     <string name="key_radio_id">key_radio_id</string>
     <string name="key_radio_name">key_radio_name</string>
     <string name="key_radio_url">key_radio_url</string>

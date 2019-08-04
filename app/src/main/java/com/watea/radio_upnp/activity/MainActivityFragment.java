@@ -53,16 +53,28 @@ public abstract class MainActivityFragment<C> extends Fragment {
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    mRadioLibrary = ((MainActivity) getActivity()).getRadioLibrary();
+    mRadioLibrary = getProvider().getRadioLibrary();
   }
 
   @Override
   public void onResume() {
     super.onResume();
-    MainActivity mainActivity = (MainActivity) getActivity();
-    // In case we were disposed
-    mRadioLibrary = mainActivity.getRadioLibrary();
+    // Activity may have been re-created, so new library instance is used
+    mRadioLibrary = getProvider().getRadioLibrary();
+    mCallback = getProvider().getFragmentCallback(this);
+  }
+
+  @NonNull
+  private Provider<C> getProvider() {
     //noinspection unchecked
-    mCallback = (C) ((MainActivity) getActivity()).getFragmentCallback(this);
+    return (Provider<C>) getActivity();
+  }
+
+  public interface Provider<C> {
+    @NonNull
+    RadioLibrary getRadioLibrary();
+
+    @NonNull
+    C getFragmentCallback(@NonNull MainActivityFragment<?> mainActivityFragment);
   }
 }

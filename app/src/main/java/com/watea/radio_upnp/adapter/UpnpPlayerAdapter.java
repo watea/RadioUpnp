@@ -65,15 +65,15 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   // Must be called
-  public void setAndroidUpnpService(AndroidUpnpService androidUpnpService) {
+  public void setAndroidUpnpService(@NonNull AndroidUpnpService androidUpnpService) {
     mAndroidUpnpService = androidUpnpService;
   }
 
   // Must be called
-  public boolean setDlnaDevice(int hashcode) {
+  public boolean setDlnaDevice(@Nullable String identity) {
     if (mAndroidUpnpService != null) {
       for (Device device : mAndroidUpnpService.getRegistry().getDevices()) {
-        if (device.hashCode() == hashcode) {
+        if (device.getIdentity().getUdn().getIdentifierString().equals(identity)) {
           mDlnaDevice = device;
           return true;
         }

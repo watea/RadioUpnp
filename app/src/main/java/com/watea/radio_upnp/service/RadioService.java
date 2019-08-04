@@ -330,8 +330,9 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       if (extras.isEmpty()) {
         mPlayerAdapter = mLocalPlayerAdapter;
       } else {
-        // Extra shall contain DLNA device hashcode
-        if (mUpnpPlayerAdapter.setDlnaDevice(extras.getInt(getString(R.string.key_dlna_device)))) {
+        // Extra shall contain DLNA device UDN
+        if (mUpnpPlayerAdapter.setDlnaDevice(
+          extras.getString(getString(R.string.key_dlna_device)))) {
           mPlayerAdapter = mUpnpPlayerAdapter;
         } else {
           Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");

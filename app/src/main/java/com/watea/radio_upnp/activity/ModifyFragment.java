@@ -80,6 +80,7 @@ public class ModifyFragment
   }
 
   @Override
+  @Nullable
   public Radio getRadioFromId(@NonNull Long radioId) {
     return mRadioLibrary.getFrom(radioId);
   }

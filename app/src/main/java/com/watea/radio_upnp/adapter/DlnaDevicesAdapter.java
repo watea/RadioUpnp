@@ -39,45 +39,59 @@ import android.widget.TextView;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.DlnaDevice;
 
+import java.util.Objects;
+
 public class DlnaDevicesAdapter extends ArrayAdapter<DlnaDevice> {
   private static final int ICON_SIZE = 100;
   @NonNull
   private final Context mContext;
-  // Keeps track of chosen device
   @Nullable
-  private DlnaDevice mChosenDlnaDevice;
+  private String mChosenDlnaDeviceIdentity;
 
-  public DlnaDevicesAdapter(@NonNull Context context, int resource) {
+  public DlnaDevicesAdapter(
+    @NonNull Context context, int resource, @Nullable String chosenDlnaDeviceIdentity) {
     super(context, resource);
     mContext = context;
-    mChosenDlnaDevice = null;
+    mChosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
     clear();
   }
 
   // Null if device no longer online
   @Nullable
-  public DlnaDevice getChosenDlnaDevice() {
-    return (getPosition(mChosenDlnaDevice) < 0) ? null : mChosenDlnaDevice;
+  public String getChosenDlnaDeviceIdentity() {
+    for (int i = 0; i < getCount(); i++) {
+      String identity = Objects.requireNonNull(getItem(i)).getIdentity();
+      if ((identity != null) && identity.equals(mChosenDlnaDeviceIdentity)) {
+        return mChosenDlnaDeviceIdentity;
+      }
+    }
+    return null;
+  }
+
+  public boolean hasChosenDlnaDevice() {
+    return (getChosenDlnaDeviceIdentity() != null);
   }
 
   public void removeChosenDlnaDevice() {
-    mChosenDlnaDevice = null;
+    mChosenDlnaDeviceIdentity = null;
   }
 
   public void onSelection(int position) {
-    DlnaDevice dlnaDevice = getItem(position);
-    mChosenDlnaDevice = (mChosenDlnaDevice == dlnaDevice) ? null : dlnaDevice;
+    String identity = Objects.requireNonNull(getItem(position)).getIdentity();
+    if (identity != null) {
+      mChosenDlnaDeviceIdentity = identity.equals(mChosenDlnaDeviceIdentity) ? null : identity;
+    }
   }
 
   @Override
   public void add(@Nullable DlnaDevice object) {
-    // Remove dummy device
-    // Device is never null
-    //noinspection ConstantConditions
-    if ((getCount() > 0) && (getItem(0).getDevice() == null)) {
-      super.clear();
+    if (object != null) {
+      // Remove dummy device if any
+      if ((getCount() > 0) && (Objects.requireNonNull(getItem(0)).getDevice() == null)) {
+        super.clear();
+      }
+      super.add(object);
     }
-    super.add(object);
   }
 
   @Override
@@ -109,8 +123,7 @@ public class DlnaDevicesAdapter extends ArrayAdapter<DlnaDevice> {
       viewHolder = (ViewHolder) convertView.getTag();
     }
     // Device is never null
-    //noinspection ConstantConditions
-    viewHolder.setView(getItem(position));
+    viewHolder.setView(Objects.requireNonNull(getItem(position)));
     return convertView;
   }
 
@@ -145,8 +158,9 @@ public class DlnaDevicesAdapter extends ArrayAdapter<DlnaDevice> {
           null, null, null);
       }
       isWaiting = (isWaiting || !dlnaDevice.isFullyHydrated());
-      mDlnaDeviceNameView.setTextColor(
-        ContextCompat.getColor(mContext, (isWaiting || !dlnaDevice.equals(mChosenDlnaDevice)) ?
+      mDlnaDeviceNameView.setTextColor(ContextCompat.getColor(mContext,
+        (isWaiting ||
+          !Objects.requireNonNull(dlnaDevice.getIdentity()).equals(mChosenDlnaDeviceIdentity)) ?
           R.color.colorPrimaryText : R.color.colorPrimary));
       // Note: for some reason, is sometimes not animated...
       mProgressbar.setVisibility(isWaiting ? View.VISIBLE : View.INVISIBLE);

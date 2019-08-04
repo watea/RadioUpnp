@@ -61,9 +61,9 @@ public class RadioHandler extends AbstractHandler {
   private final String mUserAgent;
   @NonNull
   private final RadioLibrary mRadioLibrary;
+  private final boolean mIsBuffered;
   @Nullable
   private Listener mListener;
-  private final boolean mIsBuffered;
 
   RadioHandler(@NonNull String userAgent, @NonNull RadioLibrary radioLibrary, boolean isBuffered) {
     super();
@@ -265,11 +265,12 @@ public class RadioHandler extends AbstractHandler {
     Log.d(LOG_TAG, "handleStreaming: leaving for " + radioName);
   }
 
-  private synchronized boolean hasLockKey(Object lockKey) {
+  private synchronized boolean hasLockKey(@NonNull Object lockKey) {
     return (mListener != null) && (mListener == lockKey);
   }
 
-  private synchronized void sendError(String radioName, Object lockKey, IOException iOException) {
+  private synchronized void sendError(
+    @NonNull String radioName, @NonNull Object lockKey, @NonNull IOException iOException) {
     Log.d(LOG_TAG, "IOException for: " + radioName, iOException);
     // Error thrown only if allowed to run
     if (hasLockKey(lockKey)) {

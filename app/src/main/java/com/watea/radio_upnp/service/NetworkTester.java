@@ -73,7 +73,7 @@ public class NetworkTester {
       .build();
   }
 
-  static public boolean isDeviceOffline(Context context) {
+  static public boolean isDeviceOffline(@NonNull Context context) {
     ConnectivityManager connectivityManager;
     // Robustness; to be multithread safe
     try {
@@ -90,7 +90,7 @@ public class NetworkTester {
   }
 
   @Nullable
-  private static String getIpAddress(Context context) {
+  private static String getIpAddress(@NonNull Context context) {
     WifiManager wifiManager;
     // Robustness; to be multithread safe
     try {
@@ -104,7 +104,7 @@ public class NetworkTester {
     }
   }
 
-  static public boolean hasWifiIpAddress(Context context) {
+  static public boolean hasWifiIpAddress(@NonNull Context context) {
     return (getIpAddress(context) != null);
   }
 
@@ -113,7 +113,7 @@ public class NetworkTester {
     return getUri("127.0.0.1", port);
   }
 
-  public static Uri getUri(Context context, int port) {
+  public static Uri getUri(@NonNull Context context, int port) {
     String ipAddress = getIpAddress(context);
     return (ipAddress == null) ? null : getUri(ipAddress, port);
   }
