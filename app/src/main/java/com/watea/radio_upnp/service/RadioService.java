@@ -93,7 +93,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     // Notification
     mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     // Cancel all notifications to handle the case where the Service was killed and
-    // restarted by the system.
+    // restarted by the system
     if (mNotificationManager == null) {
       Log.d(LOG_TAG, "onCreate: NotificationManager error");
       stopSelf();
@@ -115,7 +115,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         }
       });
     mHttpServer.start();
-    // Bind to Upnp service, launch if not already
+    // Bind to UPnP service, launch if not already
     if (!bindService(
       new Intent(this, AndroidUpnpServiceImpl.class),
       mUpnpConnection,
@@ -352,6 +352,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       mPlayerAdapter.prepareFromMediaId(radio);
       // Synchronize session data
       mSession.setMetadata(mPlayerAdapter.getCurrentMedia());
+      mSession.setExtras(extras);
     }
 
     @Override

@@ -174,7 +174,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         @Override
         public void success(ActionInvocation invocation) {
           String action = actionInvocation.getAction().getName();
-          Log.d(LOG_TAG, "Successfully called Upnp action: " + action);
+          Log.d(LOG_TAG, "Successfully called UPnP action: " + action);
           for (ActionArgumentValue value : actionInvocation.getOutput()) {
             Log.d(LOG_TAG, value.toString());
           }
