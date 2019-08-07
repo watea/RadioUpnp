@@ -42,16 +42,16 @@
     <string name="radio_no_radio">No radio found, please add a radio</string>
     <string name="dlna_reset">DLNA selection reset</string>
     <string name="legend_name">MY RADIO</string>
-    <string name="legend_streaming_url">Streaming URL - MP3 only (mandatory)</string>
+    <string name="legend_streaming_url">Streaming URL - MP3 only</string>
     <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
-    <string name="legend_page_url">Web page URL (mandatory for icon search)</string>
+    <string name="legend_page_url">Web page URL (Mandatory for icon search)</string>
     <string name="legend_page_url_example">http://direct.myradio.fr</string>
     <string name="malformed_url_error">Malformed URL</string>
     <string name="radio_definition_error">Radio definition not well formed</string>
     <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>
     <string name="live_streaming">Live streaming</string>
     <string name="no_icon_found">Icon search failed, check if Web page URL is valid</string>
-    <string name="connection_test_in_progress">Connection test in progress; please wait, may take a long&#8230;</string>
+    <string name="dar_fm_no_icon_found">Done!\nIcon search failed, try unchecking OnRad.io</string>
     <string name="connection_test_failed">Connection test failed</string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
     <string name="connection_test_successful">Connection test successful</string>
@@ -59,7 +59,10 @@
     <string name="radio_long_press">Long press opens web site</string>
     <string name="play_long_press">Long press stops radio</string>
     <string name="dlna_enable">Short press: choose remote DLNA device.\nLong press: cancel choice.\nThe phone may need connection authorization.\nBad Wifi may hinder communication.</string>
-    <string name="radio_icon_updated">Radio icon updated!</string>
+    <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>
+    <string name="icon_updated">Icon updated!</string>
+    <string name="dar_fm_in_progress">Action already in progress, please wait&#8230;</string>
+    <string name="dar_fm_done">Done!</string>
     <string name="got_it">Got it!</string>
     <string name="donation_button_close">Close</string>
     <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer!</string>
@@ -73,6 +76,8 @@
     <string name="donation_alert_dialog_title">Error occurred</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
     <string name="donation_alert_tip">Clue: </string>
+    <string name="dar_fm_checkbox">Search URL(s) with <b>OnRad.io</b></string>
+    <string name="dar_fm_failed">OnRad.io search failed</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>

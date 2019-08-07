@@ -153,13 +153,18 @@ public class MainActivity
       @Override
       public void onResume(
         boolean isAddMode,
-        @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-        int floatingActionButtonResource) {
+        @NonNull View.OnClickListener floatingActionButtonOnClickListener) {
         invalidateOptionsMenu();
         mActionBar.setTitle(isAddMode ? R.string.title_item_add : R.string.title_item_modify);
         mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
-        mFloatingActionButton.setImageResource(floatingActionButtonResource);
         checkNavigationMenu(isAddMode ? R.id.action_add_item : R.id.action_modify);
+      }
+
+      // Shall decorate
+      // FloatingAction layout defined by fragment
+      @Override
+      public void onFABChange(int floatingActionButtonResource) {
+        mFloatingActionButton.setImageResource(floatingActionButtonResource);
       }
     };
   private final ModifyFragment.Callback mModifyFragmentCallback =

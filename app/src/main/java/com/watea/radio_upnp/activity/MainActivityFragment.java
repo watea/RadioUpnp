@@ -27,11 +27,13 @@ import android.app.Fragment;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.Snackbar;
 import android.view.Menu;
 import android.view.MenuInflater;
-import android.view.View;
 
 import com.watea.radio_upnp.model.RadioLibrary;
+
+import java.util.Objects;
 
 public abstract class MainActivityFragment<C> extends Fragment {
   protected RadioLibrary mRadioLibrary = null;
@@ -42,32 +44,40 @@ public abstract class MainActivityFragment<C> extends Fragment {
     super();
   }
 
-  // Utility to test if view actually exists (not diposed) and is on screen
-  protected static boolean isActuallyShown(View view) {
-    return ((view != null) && view.isShown());
-  }
-
   public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
   }
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    mRadioLibrary = getProvider().getRadioLibrary();
+    setMembers();
   }
 
   @Override
   public void onResume() {
     super.onResume();
     // Activity may have been re-created, so new library instance is used
-    mRadioLibrary = getProvider().getRadioLibrary();
-    mCallback = getProvider().getFragmentCallback(this);
+    setMembers();
   }
 
-  @NonNull
-  private Provider<C> getProvider() {
+  // Utility to test if view actually exists (not disposed) and is on screen
+  protected boolean isActuallyShown() {
+    return ((getView() != null) && getView().isShown());
+  }
+
+  protected void tell(int message) {
+    Snackbar.make(Objects.requireNonNull(getView()), message, Snackbar.LENGTH_LONG).show();
+  }
+
+  protected void tell(@NonNull String message) {
+    Snackbar.make(Objects.requireNonNull(getView()), message, Snackbar.LENGTH_LONG).show();
+  }
+
+  private void setMembers() {
     //noinspection unchecked
-    return (Provider<C>) getActivity();
+    Provider<C> provider = (Provider<C>) getActivity();
+    mRadioLibrary = provider.getRadioLibrary();
+    mCallback = provider.getFragmentCallback(this);
   }
 
   public interface Provider<C> {

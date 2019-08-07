@@ -203,7 +203,7 @@ public class DonationFragment
     }
   }
 
-  private void openDialog(int icon, int title, String message) {
+  private void openDialog(int icon, int title, @NonNull String message) {
     new AlertDialog.Builder(getActivity())
       .setIcon(icon)
       .setTitle(title)
@@ -221,7 +221,7 @@ public class DonationFragment
       .show();
   }
 
-  private void complaign(String message) {
+  private void complaign(@NonNull String message) {
     openDialog(
       android.R.drawable.ic_dialog_alert,
       R.string.donation_alert_dialog_title,

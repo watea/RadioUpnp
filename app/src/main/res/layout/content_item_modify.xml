@@ -41,12 +41,19 @@
             android:layout_margin="@dimen/app_margin"
             android:drawablePadding="@dimen/app_horizontal_margin"
             android:hint="@string/legend_name"
+            android:textAllCaps="true"
             android:inputType="textCapCharacters"
             android:maxLength="30" />
+
+        <CheckBox android:id="@+id/dar_fm_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dar_fm_checkbox" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="@dimen/app_horizontal_margin"
             android:text="@string/legend_page_url" />
 
         <EditText
@@ -59,6 +66,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="@dimen/app_horizontal_margin"
             android:text="@string/legend_streaming_url" />
 
         <EditText

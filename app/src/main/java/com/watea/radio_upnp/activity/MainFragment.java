@@ -39,7 +39,6 @@ import android.os.RemoteException;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
@@ -92,7 +91,6 @@ public class MainFragment
   private static final String AVTTRANSPORT_SERVICE_ID = "urn:upnp-org:serviceId:AVTransport";
   private final Handler mHandler = new Handler();
   // <HMI assets
-  private View mView;
   private ImageButton mPlayButton;
   private ProgressBar mProgressBar;
   private ImageView mAlbumArt;
@@ -133,7 +131,7 @@ public class MainFragment
       @Override
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
         // Do nothing if view not defined
-        if (isActuallyShown(mView)) {
+        if (isActuallyShown()) {
           int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
           Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
           // Play button stores state to reach
@@ -183,7 +181,7 @@ public class MainFragment
               mAlbumArt.setVisibility(View.INVISIBLE);
               mPlayButton.setVisibility(View.INVISIBLE);
               mProgressBar.setVisibility(View.INVISIBLE);
-              Snackbar.make(mView, R.string.radio_connection_error, Snackbar.LENGTH_LONG).show();
+              tell(R.string.radio_connection_error);
           }
         }
       }
@@ -191,7 +189,7 @@ public class MainFragment
       @Override
       public void onMetadataChanged(final MediaMetadataCompat mediaMetadata) {
         // Do nothing if view not defined or nothing to change
-        if (isActuallyShown(mView) && (mediaMetadata != null)) {
+        if (isActuallyShown() && (mediaMetadata != null)) {
           mPlayedRadioNameTextView.setText(
             mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
           String radioInformation =
@@ -256,16 +254,16 @@ public class MainFragment
       @Override
       public boolean onLongClick(View view) {
         if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-          Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
+          tell(R.string.LAN_required);
           return true;
         }
         if (mAndroidUpnpService == null) {
-          Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
+          tell(R.string.device_no_device_yet);
           return true;
         }
         mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
         mDlnaDevicesAdapter.removeChosenDlnaDevice();
-        Snackbar.make(mView, R.string.dlna_reset, Snackbar.LENGTH_LONG).show();
+        tell(R.string.dlna_reset);
         return true;
       }
     };
@@ -378,11 +376,11 @@ public class MainFragment
     @Override
     public void onClick(View view) {
       if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-        Snackbar.make(mView, R.string.LAN_required, Snackbar.LENGTH_LONG).show();
+        tell(R.string.LAN_required);
         return;
       }
       if (mAndroidUpnpService == null) {
-        Snackbar.make(mView, R.string.device_no_device_yet, Snackbar.LENGTH_LONG).show();
+        tell(R.string.device_no_device_yet);
         return;
       }
       // Do not search more than 1 peer 5 s
@@ -405,7 +403,7 @@ public class MainFragment
   @Override
   public void onRowClick(@NonNull Radio radio) {
     if (NetworkTester.isDeviceOffline(getActivity())) {
-      Snackbar.make(mView, R.string.no_internet, Snackbar.LENGTH_LONG).show();
+      tell(R.string.no_internet);
       return;
     }
     startReading(radio);
@@ -477,7 +475,7 @@ public class MainFragment
     // Display metrics
     mScreenWidthDp = getResources().getConfiguration().screenWidthDp;
     // Inflate the view so that graphical objects exists
-    mView = inflater.inflate(R.layout.content_main, container, false);
+    View view = inflater.inflate(R.layout.content_main, container, false);
     // Fill content including recycler
     // A an exception, created only if necessary as handles UPnP events
     if (mDlnaDevicesAdapter == null) {
@@ -528,24 +526,24 @@ public class MainFragment
         }
       });
     mDlnaEnableAlertDialog = alertDialogBuilder.create();
-    mAlbumArt = mView.findViewById(R.id.album_art);
-    mPlayedRadioNameTextView = mView.findViewById(R.id.played_radio_name);
+    mAlbumArt = view.findViewById(R.id.album_art);
+    mPlayedRadioNameTextView = view.findViewById(R.id.played_radio_name);
     mPlayedRadioNameTextView.setSelected(true); // For scrolling
-    mPlayedRadioInformationTextView = mView.findViewById(R.id.played_radio_information);
+    mPlayedRadioInformationTextView = view.findViewById(R.id.played_radio_information);
     mPlayedRadioInformationTextView.setSelected(true); // For scrolling
     mRadiosAdapter = new RadiosAdapter(getActivity(), this);
-    RecyclerView radiosView = mView.findViewById(R.id.radios_view);
+    RecyclerView radiosView = view.findViewById(R.id.radios_view);
     radiosView.setLayoutManager(
       new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
     radiosView.setAdapter(mRadiosAdapter);
-    mRadiosDefaultView = mView.findViewById(R.id.radios_default_view);
-    mProgressBar = mView.findViewById(R.id.play_waiting);
+    mRadiosDefaultView = view.findViewById(R.id.radios_default_view);
+    mProgressBar = view.findViewById(R.id.play_waiting);
     mProgressBar.setVisibility(View.INVISIBLE);
-    mPlayButton = mView.findViewById(R.id.play);
+    mPlayButton = view.findViewById(R.id.play);
     mPlayButton.setVisibility(View.INVISIBLE);
     mPlayButton.setOnClickListener(this);
     mPlayButton.setOnLongClickListener(this);
-    return mView;
+    return view;
   }
 
   @Override
@@ -586,7 +584,7 @@ public class MainFragment
   public void onClick(View view) {
     // Should not happen
     if (mMediaController == null) {
-      Snackbar.make(mView, R.string.radio_connection_waiting, Snackbar.LENGTH_LONG).show();
+      tell(R.string.radio_connection_waiting);
     } else {
       // Tag on button has stored state to reach
       switch ((int) mPlayButton.getTag()) {
@@ -613,7 +611,7 @@ public class MainFragment
   public boolean onLongClick(View view) {
     // Should not happen
     if (mMediaController == null) {
-      Snackbar.make(mView, R.string.radio_connection_waiting, Snackbar.LENGTH_LONG).show();
+      tell(R.string.radio_connection_waiting);
     } else {
       mMediaController.getTransportControls().stop();
     }
@@ -699,7 +697,7 @@ public class MainFragment
 
   private void startReading(@NonNull Radio radio) {
     if (mMediaController == null) {
-      Snackbar.make(mView, R.string.radio_connection_waiting, Snackbar.LENGTH_LONG).show();
+      tell(R.string.radio_connection_waiting);
       return;
     }
     Bundle bundle = new Bundle();

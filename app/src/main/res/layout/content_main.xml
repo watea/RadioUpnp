@@ -63,6 +63,7 @@
             android:layout_gravity="center"
             android:ellipsize="marquee"
             android:singleLine="true"
+            android:textAllCaps="true"
             android:textStyle="bold" />
 
         <TextView
