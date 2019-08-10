@@ -76,25 +76,28 @@ public class ItemModifyFragment
   implements View.OnClickListener {
   private static final String LOG_TAG = ItemModifyFragment.class.getSimpleName();
   private static final String DAR_FM_API = "http://api.dar.fm/";
-  private static final String DAR_FM_PLAYLIST_REQUEST = DAR_FM_API + "playlist.php?q=@callsign ^";
+  private static final String DAR_FM_PLAYLIST_REQUEST = DAR_FM_API + "playlist.php?q=@callsign%20";
   private static final String DAR_FM_STATIONS_REQUEST = DAR_FM_API + "darstations.php?station_id=";
   private static final String WILDCARD = "*";
+  private static final String SPACE_FOR_SEARCH = "%20";
   private static final String DAR_FM_PARTNER_TOKEN = "&partner_token=6453742475";
   private static final String DAR_FM_BASE_URL = "http://stream.dar.fm/";
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_SITE_URL = "site";
   private static final String DAR_FM_IMAGE_URL = "image";
   private static final String DAR_FM_ID = "id";
+  private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
+  private static final Map<String, String> DEFAULT_MESSAGE = new Hashtable<>();
   private final Handler mHandler = new Handler();
-  private final List<Map<String, String>> mDarfmRadios = new Vector<>();
+  private final List<Map<String, String>> mDarFmRadios = new Vector<>();
   // <HMI assets
   private EditText mNameEditText;
   private EditText mUrlEditText;
   private EditText mWebPageEditText;
-  private CheckBox mDarfmCheckbox;
+  private CheckBox mDarFmCheckbox;
   private UrlWatcher mUrlWatcher;
   private UrlWatcher mWebPageWatcher;
-  private AlertDialog mDarfmAlertDialog;
+  private AlertDialog mDarFmAlertDialog;
   // />
   // Default values; ADD mode
   private Radio mRadio = null;
@@ -102,11 +105,8 @@ public class ItemModifyFragment
   private String mRadioUrl = null;
   private String mRadioWebPage = null;
   private Bitmap mRadioIcon = null;
-  private Map<String, String> mFoundRadio;
   private Bitmap mFoundIcon;
   private final Runnable mIconSearchBackground = new Runnable() {
-    private final Pattern pattern = Pattern.compile(".*(http.*\\.(png|jpg)).*");
-
     @Override
     public void run() {
       mFoundIcon = null;
@@ -114,7 +114,7 @@ public class ItemModifyFragment
         Element head = Jsoup.connect(mWebPageEditText.getText().toString()).get().head();
         // Parse site data
         if (head != null) {
-          Matcher matcher = pattern.matcher(head.toString());
+          Matcher matcher = PATTERN.matcher(head.toString());
           if (matcher.find()) {
             mFoundIcon = NetworkTester.getBitmapFromUrl(new URL(matcher.group(1)));
           }
@@ -127,44 +127,24 @@ public class ItemModifyFragment
   private final Runnable mIconSearchForeground = new Runnable() {
     @Override
     public void run() {
-      setRadioIcon(mFoundIcon);
-      tell((mFoundIcon == null) ? R.string.no_icon_found : R.string.icon_updated);
-    }
-  };
-  private final Runnable mDarFmSearchForeground = new Runnable() {
-    @SuppressLint("SetTextI18n")
-    @Override
-    public void run() {
-      switch (mDarfmRadios.size()) {
-        case 0:
-          tell(R.string.dar_fm_failed);
-          break;
-        case 1:
-          // Cannot be null
-          //noinspection ConstantConditions
-          mNameEditText.setText(mFoundRadio.get(DAR_FM_NAME).toUpperCase());
-          mUrlEditText.setText(DAR_FM_BASE_URL + mFoundRadio.get(DAR_FM_ID));
-          mWebPageEditText.setText(mFoundRadio.get(DAR_FM_SITE_URL));
-          setRadioIcon(mFoundIcon);
-          tell((mFoundIcon == null) ? R.string.dar_fm_no_icon_found : R.string.dar_fm_done);
-          break;
-        default:
-          mDarfmAlertDialog.show();
+      if (mFoundIcon == null) {
+        tell(R.string.no_icon_found);
+      } else {
+        setRadioIcon(mFoundIcon);
+        tell(R.string.icon_updated);
       }
     }
   };
-  private boolean mIsRunningDarFmSearch;
-  // mFoundRadio not null if only icon bitmap to be searched
   private final Runnable mDarFmSearchBackground = new Runnable() {
     @Override
     public void run() {
-      mIsRunningDarFmSearch = true;
-      mDarfmRadios.clear();
-      mFoundIcon = null;
-      try {
-        if (mFoundRadio == null) {
+      if (mDarFmRadios.get(0) == DEFAULT_MESSAGE) {
+        boolean isFound = false;
+        try {
           Element stations = Jsoup
-            .connect(DAR_FM_PLAYLIST_REQUEST + getRadioName() + WILDCARD + DAR_FM_PARTNER_TOKEN)
+            .connect(
+              DAR_FM_PLAYLIST_REQUEST + getRadioName().replace(" ", SPACE_FOR_SEARCH) +
+                WILDCARD + DAR_FM_PARTNER_TOKEN)
             .get();
           // Parse data
           if (stations != null) {
@@ -178,29 +158,71 @@ public class ItemModifyFragment
               map.put(DAR_FM_NAME, extractValue(station, "callsign"));
               map.put(DAR_FM_SITE_URL, extractValue(station, "websiteurl"));
               map.put(DAR_FM_IMAGE_URL, extractValue(station, "imageurl"));
-              mDarfmRadios.add(map);
+              // Remove DEFAULT_MESSAGE
+              if (!isFound) {
+                mDarFmRadios.clear();
+                isFound = true;
+              }
+              mDarFmRadios.add(map);
             }
           }
-          // Radio is found?
-          if (mDarfmRadios.size() == 1) {
-            mFoundRadio = mDarfmRadios.get(0);
-          }
-        } else {
-          mDarfmRadios.add(mFoundRadio);
+        } catch (IOException iOexception) {
+          Log.i(LOG_TAG, "Error performing DAR FM search", iOexception);
         }
-        // When radio is known, fetch icon
-        if (mDarfmRadios.size() == 1) {
-          mFoundIcon = NetworkTester.getBitmapFromUrl(new URL(mFoundRadio.get(DAR_FM_IMAGE_URL)));
+        // List void if nothing found
+        if (!isFound) {
+          mDarFmRadios.clear();
         }
-      } catch (Exception exception) {
-        Log.i(LOG_TAG, "Error performing DAR FM search");
+      }
+      // When radio is known, fetch icon
+      if (mDarFmRadios.size() == 1) {
+        mFoundIcon = null;
+        try {
+          mFoundIcon = NetworkTester.getBitmapFromUrl(
+            new URL(mDarFmRadios.get(0).get(DAR_FM_IMAGE_URL)));
+        } catch (MalformedURLException malformedURLException) {
+          Log.i(LOG_TAG, "Error performing icon search");
+        }
       }
     }
   };
-  private final Runnable mEndRunningDarFmSearch = new Runnable() {
+  private boolean mIsDarFmSearchRunning;
+  private final Runnable mDarFmSearchLast = new Runnable() {
     @Override
     public void run() {
-      mIsRunningDarFmSearch = false;
+      mIsDarFmSearchRunning = false;
+      // Clear if we were disposed
+      if (!isActuallyShown() && (mDarFmAlertDialog != null)) {
+        mDarFmAlertDialog.dismiss();
+      }
+    }
+  };
+  private SimpleAdapter mSimpleAdapter;
+  private final Runnable mDarFmSearchForeground = new Runnable() {
+    @SuppressLint("SetTextI18n")
+    @Override
+    public void run() {
+      switch (mDarFmRadios.size()) {
+        case 0:
+          mDarFmAlertDialog.dismiss();
+          tell(R.string.dar_fm_failed);
+          break;
+        case 1:
+          Map<String, String> foundRadio = mDarFmRadios.get(0);
+          mNameEditText.setText(Objects.requireNonNull(foundRadio.get(DAR_FM_NAME)).toUpperCase());
+          mUrlEditText.setText(DAR_FM_BASE_URL + foundRadio.get(DAR_FM_ID));
+          mWebPageEditText.setText(foundRadio.get(DAR_FM_SITE_URL));
+          mDarFmAlertDialog.dismiss();
+          if (mFoundIcon == null) {
+            tell(R.string.dar_fm_no_icon_found);
+          } else {
+            setRadioIcon(mFoundIcon);
+            tell(R.string.dar_fm_done);
+          }
+          break;
+        default:
+          mSimpleAdapter.notifyDataSetChanged();
+      }
     }
   };
   private boolean mIsTestOK;
@@ -245,15 +267,14 @@ public class ItemModifyFragment
     if (NetworkTester.isDeviceOffline(getActivity())) {
       tell(R.string.no_internet);
     } else {
-      if (mDarfmCheckbox.isChecked()) {
-        // Only one search at a time
-        if (mIsRunningDarFmSearch) {
+      if (mDarFmCheckbox.isChecked()) {
+        if (mIsDarFmSearchRunning) {
           tell(R.string.dar_fm_in_progress);
         } else {
-          darFmSearch(null);
+          darFmSearch(DEFAULT_MESSAGE);
         }
       } else {
-        new Searcher(mIconSearchBackground, mIconSearchForeground).start();
+        new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
       }
     }
   }
@@ -279,8 +300,9 @@ public class ItemModifyFragment
       mRadioIcon = BitmapFactory.decodeFile(
         savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
     }
-    // At the beginning, no processing is running
-    mIsRunningDarFmSearch = false;
+    DEFAULT_MESSAGE.clear();
+    DEFAULT_MESSAGE.put(DAR_FM_NAME, getActivity().getResources().getString(R.string.wait_search));
+    mIsDarFmSearchRunning = false;
   }
 
   @Override
@@ -303,7 +325,7 @@ public class ItemModifyFragment
     mWebPageEditText = view.findViewById(R.id.web_page_edit_text);
     mWebPageWatcher = new UrlWatcher(mWebPageEditText);
     mWebPageEditText.addTextChangedListener(mWebPageWatcher);
-    mDarfmCheckbox = view.findViewById(R.id.dar_fm_checkbox);
+    mDarFmCheckbox = view.findViewById(R.id.dar_fm_checkbox);
     // Fill content including recycler
     mNameEditText.setText(mRadioName);
     setRadioIcon((mRadioIcon == null) ?
@@ -311,7 +333,7 @@ public class ItemModifyFragment
     mUrlEditText.setText(mRadioUrl);
     mWebPageEditText.setText(mRadioWebPage);
     // Order matters!
-    mDarfmCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+    mDarFmCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
       @Override
       public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
         mCallback.onFABChange(b ? R.drawable.ic_search_black_24dp : R.drawable.ic_image_black_24dp);
@@ -319,21 +341,23 @@ public class ItemModifyFragment
         mUrlEditText.setEnabled(!b);
       }
     });
-    mDarfmCheckbox.setChecked(
+    mDarFmCheckbox.setChecked(
       (savedInstanceState == null) ||
         savedInstanceState.getBoolean(getString(R.string.key_dar_fm_checked)));
-    String[] from = {DAR_FM_NAME};
-    int[] to = {R.id.row_darfm_radio_name};
     // Build alert dialog for DAR FM
-    mDarfmAlertDialog = new AlertDialog
+    mDarFmAlertDialog = new AlertDialog
       .Builder(getActivity())
       .setAdapter(
-        new SimpleAdapter(getActivity(), mDarfmRadios, R.layout.row_darfm_radio, from, to),
+        mSimpleAdapter = new SimpleAdapter(
+          getActivity(),
+          mDarFmRadios,
+          R.layout.row_darfm_radio,
+          new String[]{DAR_FM_NAME},
+          new int[]{R.id.row_darfm_radio_name}),
         new DialogInterface.OnClickListener() {
           @Override
           public void onClick(DialogInterface dialogInterface, int i) {
-            darFmSearch(mDarfmRadios.get(i));
-            mDarfmAlertDialog.dismiss();
+            darFmSearch(mDarFmRadios.get(i));
           }
         })
       .setCancelable(true)
@@ -352,7 +376,7 @@ public class ItemModifyFragment
     outState.putString(getString(R.string.key_radio_web_page), mWebPageEditText.getText().toString());
     outState.putString(getString(R.string.key_radio_icon_file),
       mRadioLibrary.bitmapToFile(mRadioIcon, Integer.toString(hashCode())).getPath());
-    outState.putBoolean(getString(R.string.key_dar_fm_checked), mDarfmCheckbox.isChecked());
+    outState.putBoolean(getString(R.string.key_dar_fm_checked), mDarFmCheckbox.isChecked());
   }
 
   @Override
@@ -372,7 +396,7 @@ public class ItemModifyFragment
           if (mUrlWatcher.isNull()) {
             tell(R.string.connection_test_aborted);
           } else {
-            new Searcher(mTestRadioURLBackground, mTestRadioURLForeground).start();
+            new Searcher(mTestRadioURLBackground, mTestRadioURLForeground, null, true).start();
           }
         }
         break;
@@ -429,10 +453,14 @@ public class ItemModifyFragment
     return this;
   }
 
-  // foundRadio not null if only icon bitmap to be searched
-  private void darFmSearch(@Nullable Map<String, String> foundRadio) {
-    mFoundRadio = foundRadio;
-    new Searcher(mDarFmSearchBackground, mDarFmSearchForeground, mEndRunningDarFmSearch).start();
+  private void darFmSearch(@NonNull Map<String, String> radio) {
+    mIsDarFmSearchRunning = true;
+    mDarFmRadios.clear();
+    mDarFmRadios.add(radio);
+    if (radio == DEFAULT_MESSAGE) {
+      mDarFmAlertDialog.show();
+    }
+    new Searcher(mDarFmSearchBackground, mDarFmSearchForeground, mDarFmSearchLast, false).start();
   }
 
   @NonNull
@@ -448,32 +476,29 @@ public class ItemModifyFragment
     }
   }
 
-  // As a convenience, do nothing if null
-  private void setRadioIcon(@Nullable Bitmap icon) {
-    if (icon != null) {
-      // Resize bitmap as a square
-      int height = icon.getHeight();
-      int width = icon.getWidth();
-      int min = Math.min(height, width);
-      mRadioIcon = Bitmap.createBitmap(
-        icon,
-        (width - min) / 2,
-        (height - min) / 2,
-        min,
-        min,
-        null,
-        false);
-      // Image size same order as screen size to get reasonable layout
-      int screenWidthDp = getResources().getConfiguration().screenWidthDp;
-      //noinspection SuspiciousNameCombination
-      mNameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        null,
-        new BitmapDrawable(
-          getResources(),
-          Bitmap.createScaledBitmap(mRadioIcon, screenWidthDp, screenWidthDp, false)),
-        null,
-        null);
-    }
+  private void setRadioIcon(@NonNull Bitmap icon) {
+    // Resize bitmap as a square
+    int height = icon.getHeight();
+    int width = icon.getWidth();
+    int min = Math.min(height, width);
+    mRadioIcon = Bitmap.createBitmap(
+      icon,
+      (width - min) / 2,
+      (height - min) / 2,
+      min,
+      min,
+      null,
+      false);
+    // Image size same order as screen size to get reasonable layout
+    int screenWidthDp = getResources().getConfiguration().screenWidthDp;
+    //noinspection SuspiciousNameCombination
+    mNameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
+      null,
+      new BitmapDrawable(
+        getResources(),
+        Bitmap.createScaledBitmap(mRadioIcon, screenWidthDp, screenWidthDp, false)),
+      null,
+      null);
   }
 
   public interface Callback {
@@ -489,16 +514,16 @@ public class ItemModifyFragment
     private final Runnable mBackground, mForeground, mLast;
 
     private Searcher(
-      @NonNull Runnable background, @NonNull Runnable foreground) {
-      this(background, foreground, null);
-    }
-
-    private Searcher(
-      @NonNull Runnable background, @NonNull Runnable foreground, @Nullable Runnable last) {
+      @NonNull Runnable background,
+      @NonNull Runnable foreground,
+      @Nullable Runnable last,
+      boolean isWaitToTell) {
       mBackground = background;
       mForeground = foreground;
       mLast = last;
-      tell(R.string.wait_search);
+      if (isWaitToTell) {
+        tell(R.string.wait_search);
+      }
     }
 
     @Override

@@ -41,6 +41,8 @@ import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.types.ServiceId;
 import org.fourthline.cling.model.types.UDAServiceId;
 
+import java.util.Objects;
+
 public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getSimpleName();
   private static final ServiceId aVTransportServiceId = new UDAServiceId("AVTransport");
@@ -85,14 +87,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPrepareFromMediaId() {
-    assert mDlnaDevice != null;
-    assert mRadio != null;
     // Shall not be null
     mLockKey = getLockKey();
-    String radioUri = mHttpServer.getRadioUri(mRadio).toString();
+    String radioUri = mHttpServer.getRadioUri(Objects.requireNonNull(mRadio)).toString();
     String radioName = mRadio.getName();
-    ActionInvocation actionInvocation =
-      getUpnpActionInvocation(mDlnaDevice, UPNP_ACTION_SET_AV_TRANSPORT_URI);
+    ActionInvocation actionInvocation = getUpnpActionInvocation(
+      Objects.requireNonNull(mDlnaDevice), UPNP_ACTION_SET_AV_TRANSPORT_URI);
     actionInvocation.setInput("CurrentURI", radioUri);
     actionInvocation.setInput("CurrentURIMetaData",
       "<DIDL-Lite " +
@@ -205,7 +205,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
           Log.d(LOG_TAG, defaultMsg);
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mLockKey);
-          release();
         }
       });
     }

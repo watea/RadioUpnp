@@ -44,6 +44,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaDescriptionCompat;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -168,7 +169,9 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @SuppressLint("SwitchIntDef")
   @Override
-  public void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
+  public void onPlaybackStateChange(
+    @NonNull PlaybackStateCompat state, @Nullable MediaMetadataCompat mediaMetadataCompat) {
+    Log.d(LOG_TAG, "onPlaybackStateChange: state: " + state);
     // Report the state to the MediaSession
     mSession.setPlaybackState(state);
     // Manage the started state of this service
@@ -183,13 +186,13 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
             new Intent(this, RadioService.class));
           mServiceInStartedState = true;
         }
-        startForeground(NOTIFICATION_ID, getNotification());
+        startForeground(NOTIFICATION_ID, getNotification(mediaMetadataCompat));
         break;
       case PlaybackStateCompat.STATE_PAUSED:
         // Move service out started state
         stopForeground(false);
         // Update notification for pause
-        mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+        mNotificationManager.notify(NOTIFICATION_ID, getNotification(mediaMetadataCompat));
         break;
       case PlaybackStateCompat.STATE_ERROR:
       case PlaybackStateCompat.STATE_STOPPED:
@@ -209,11 +212,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   }
 
   @Override
-  public void onInformationChange() {
-    mSession.setMetadata(mPlayerAdapter.getCurrentMedia());
+  public void onInformationChange(@Nullable MediaMetadataCompat mediaMetadataCompat) {
+    mSession.setMetadata(mediaMetadataCompat);
     // Update notification, if any
     if (mServiceInStartedState) {
-      mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+      mNotificationManager.notify(NOTIFICATION_ID, getNotification(mediaMetadataCompat));
     }
   }
 
@@ -245,12 +248,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   }
 
   @Nullable
-  private Notification getNotification() {
-    if (mPlayerAdapter.getCurrentMedia() == null) {
+  private Notification getNotification(@Nullable MediaMetadataCompat mediaMetadataCompat) {
+    if (mediaMetadataCompat == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
       return null;
     }
-    MediaDescriptionCompat description = mPlayerAdapter.getCurrentMedia().getDescription();
+    MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
     NotificationCompat.Action ActionPause =
       new NotificationCompat.Action(
         R.drawable.ic_pause_black_24dp,
@@ -324,7 +327,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
-      // Stop if any
+      // Stop if any, avoid any cross acquisition of multithread lock
       mPlayerAdapter.stop();
       // Set actual player: local or DLNA?
       if (extras.isEmpty()) {
@@ -351,7 +354,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       }
       mPlayerAdapter.prepareFromMediaId(radio);
       // Synchronize session data
-      mSession.setMetadata(mPlayerAdapter.getCurrentMedia());
+      mSession.setMetadata(radio.getMediaMetadataBuilder().build());
       mSession.setExtras(extras);
     }
 

@@ -36,6 +36,7 @@ import android.util.Log;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Objects;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Radio {
@@ -121,11 +122,10 @@ public class Radio {
   // Add radio ID to given URI as query parameter
   @NonNull
   public Uri getHandledUri(@NonNull Uri uri) {
-    assert getUri().getPath() != null;
     return uri
       .buildUpon()
       // Add path to target to type the stream, remove first "/"
-      .appendEncodedPath(getUri().getPath().substring(1))
+      .appendEncodedPath(Objects.requireNonNull(getUri().getPath()).substring(1))
       // Add radio ID as query parameter
       .appendQueryParameter(RADIO_ID, mId.toString())
       .build();

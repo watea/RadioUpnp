@@ -40,10 +40,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,10 +55,11 @@ public class RadioHandler extends AbstractHandler {
   private static final String LOG_TAG = RadioHandler.class.getName();
   private static final int CONNECT_TIMEOUT = 5000;
   private static final int READ_TIMEOUT = 30000;
+  private static final int METADATA_MAX = 256;
   private static final String GET = "GET";
   private static final String HEAD = "HEAD";
   // For ICY metadata
-  private static final Pattern pattern = Pattern.compile(".*StreamTitle='([^;]*)';.*");
+  private static final Pattern PATTERN = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String mUserAgent;
   @NonNull
@@ -83,10 +85,12 @@ public class RadioHandler extends AbstractHandler {
 
   // Shall be called before proxying
   public synchronized void setListener(@NonNull Listener listener) {
+    Log.d(LOG_TAG, "setListener");
     mListener = listener;
   }
 
   public synchronized void removeListener() {
+    Log.d(LOG_TAG, "removeListener");
     mListener = null;
   }
 
@@ -96,11 +100,13 @@ public class RadioHandler extends AbstractHandler {
     Request baseRequest,
     HttpServletRequest request,
     HttpServletResponse response) {
+    // Tag this handle with current listener
+    final Listener listenerAsLockKey = mListener;
     // Request must contain a query with radio ID
     String radioId = baseRequest.getParameter(Radio.RADIO_ID);
-    if ((radioId == null) || (mListener == null)) {
+    if ((radioId == null) || (listenerAsLockKey == null)) {
       Log.d(LOG_TAG,
-        "Unexpected request received. RadioId: " + radioId + " Listener: " + mListener);
+        "Unexpected request received. RadioId: " + radioId + " Listener: " + listenerAsLockKey);
     } else {
       Radio radio = mRadioLibrary.getFrom(Long.decode(radioId));
       if (radio == null) {
@@ -112,7 +118,7 @@ public class RadioHandler extends AbstractHandler {
         switch (method) {
           case HEAD:
           case GET:
-            handleConnection(method.equals(GET), response, radio, mListener);
+            handleConnection(method.equals(GET), response, radio, listenerAsLockKey);
             break;
           default:
             Log.d(LOG_TAG, "Unknown radio request received:" + method);
@@ -126,9 +132,10 @@ public class RadioHandler extends AbstractHandler {
     @NonNull HttpServletResponse response,
     @NonNull Radio radio,
     @NonNull Object lockKey) {
+    Log.d(LOG_TAG,
+      "handleConnection: entering for " + radio.getName() + "; " + (isGet ? GET : HEAD));
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
-    String radioName = radio.getName();
     try (OutputStream outputStream = mIsBuffered ?
       new BufferedOutputStream(response.getOutputStream()) : response.getOutputStream()) {
       httpURLConnection = (HttpURLConnection) radio.getURL().openConnection();
@@ -139,9 +146,10 @@ public class RadioHandler extends AbstractHandler {
       httpURLConnection.setRequestProperty("User-Agent", mUserAgent);
       httpURLConnection.setRequestProperty("GetContentFeatures.dlna.org", "1");
       if (isGet) {
-        httpURLConnection.setRequestProperty("Icy-MetaData", "1");
+        httpURLConnection.setRequestProperty("Icy-metadata", "1");
       }
       httpURLConnection.connect();
+      Log.d(LOG_TAG, "handleConnection: connected to radio URL");
       // Response to LAN
       response.setContentType("audio/mpeg");
       response.setHeader("Server", mUserAgent);
@@ -172,116 +180,122 @@ public class RadioHandler extends AbstractHandler {
       response.setHeader("TransferMode.dlna.org", "Streaming");
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
+      Log.d(LOG_TAG, "handleConnection: response sent to LAN client");
       if (isGet) {
-        handleStreaming(httpURLConnection, outputStream, radioName, lockKey);
+        // Try to find charset
+        String contentType = httpURLConnection.getContentEncoding();
+        Charset charset = (contentType == null) ?
+          Charset.defaultCharset() : Charset.forName(contentType);
+        // Find metadata place, 0 if undefined
+        int metadataOffset = 0;
+        List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
+        try {
+          metadataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
+        } catch (NumberFormatException numberFormatException) {
+          Log.w(LOG_TAG, "Malformed header icy-metaint");
+        }
+        if (metadataOffset > 0) {
+          Log.d(LOG_TAG, "Metadata expected at index: " + metadataOffset);
+        } else if (metadataOffset == 0) {
+          Log.d(LOG_TAG, "No metadata expected");
+        } else {
+          metadataOffset = 0;
+          Log.w(LOG_TAG, "Wrong metadata value");
+        }
+        handleStreaming(
+          httpURLConnection.getInputStream(),
+          charset.newDecoder(),
+          metadataOffset,
+          outputStream,
+          lockKey);
       }
     } catch (IOException iOException) {
-      sendError(radioName, lockKey, iOException);
+      // Error thrown if allowed to run
+      Log.d(LOG_TAG, "IOException", iOException);
+      // Multithread safe!
+      synchronized (this) {
+        if (hasLockKey(lockKey)) {
+          Log.d(LOG_TAG, "Error sent to listener");
+          Objects.requireNonNull(mListener).onError();
+        }
+      }
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
       }
     }
+    Log.d(LOG_TAG, "handleConnection: leaving");
   }
 
+  // Forward stream data and handle metadata
+  // metadataOffset = 0 if no metadata
   private void handleStreaming(
-    @NonNull HttpURLConnection httpURLConnection,
+    @NonNull InputStream inputStream,
+    @NonNull CharsetDecoder charsetDecoder,
+    int metadataOffset,
     @NonNull OutputStream outputStream,
-    @NonNull String radioName,
-    @NonNull Object lockKey) {
-    Log.d(LOG_TAG, "handleStreaming: entering for " + radioName);
-    try (InputStream inputStream = httpURLConnection.getInputStream()) {
-      // Try to find charset
-      String contentType = httpURLConnection.getContentEncoding();
-      Charset charset =
-        (contentType == null) ? Charset.defaultCharset() : Charset.forName(contentType);
-      CharsetDecoder charsetDecoder = charset.newDecoder();
-      // Find metadata place, 0 if undefined
-      int metaDataOffset = 0;
-      List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
-      try {
-        metaDataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
-      } catch (NumberFormatException numberFormatException) {
-        Log.w(LOG_TAG, "Malformed header icy-metaint");
-      }
-      Log.d(LOG_TAG, (metaDataOffset > 0) ? "Metadata expected at index: " + metaDataOffset :
-        "No metadata expected");
-      // Forward stream data and handle metadata
-      byte[] buffer = new byte[1];
-      int bytesRead = 0; // Only used for metadata
-      int metaDataSize = 0;
-      byte[] metaDataBuffer = null;
-      while (inputStream.read(buffer) != -1) {
-        // Multithread safe!
-        synchronized (this) {
-          if (hasLockKey(lockKey)) {
-            // Only stream data are transferred
-            if ((metaDataOffset == 0) || (++bytesRead <= metaDataOffset)) {
-              outputStream.write(buffer);
+    @NonNull Object lockKey) throws IOException {
+    Log.d(LOG_TAG, "handleStreaming: entering");
+    final byte[] buffer = new byte[1];
+    final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
+    int metadataBlockBytesRead = 0;
+    int metadataSize = 0;
+    while (inputStream.read(buffer) != -1) {
+      // Multithread safe!
+      synchronized (this) {
+        if (hasLockKey(lockKey)) {
+          // Only stream data are transferred
+          if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+            outputStream.write(buffer);
+          } else {
+            // Metadata: look for title information
+            int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+            // First byte gives size (16 bytes chunks) to read for metadata
+            if (metadataIndex == 0) {
+              metadataSize = buffer[0] * 16;
+              metadataBuffer.clear();
             } else {
-              // Metadata: look for title information
-              int metaDataIndex = bytesRead - metaDataOffset - 1;
-              // First byte gives size (16 bytes chunks) to read for metadata
-              if (metaDataIndex == 0) {
-                metaDataSize = buffer[0] * 16;
-                metaDataBuffer = new byte[metaDataSize];
-              } else {
-                // Other bytes are metadata
-                if (metaDataBuffer == null) {
-                  Log.e(LOG_TAG, "Internal error; metaDataBuffer not instantiated");
-                } else {
-                  metaDataBuffer[metaDataIndex - 1] = buffer[0];
-                }
-              }
-              // End of metadata
-              // Extract ICY title
-              if (metaDataIndex == metaDataSize) {
-                String metaData = null;
-                try {
-                  metaData = charsetDecoder
-                    .decode(ByteBuffer.wrap(Arrays.copyOf(metaDataBuffer, metaDataSize)))
-                    .toString();
-                  if (BuildConfig.DEBUG) {
-                    Log.d(LOG_TAG,
-                      "Metadata found at index [" + metaDataOffset +
-                        "], size[" + metaDataSize + "]: " + metaData);
-                  }
-                } catch (Exception exception) {
-                  Log.w(LOG_TAG, "Error decoding metadata", exception);
-                }
-                Matcher matcher = (metaData == null) ? null : pattern.matcher(metaData);
-                // Output radio information
-                if ((matcher != null) && matcher.find() && (mListener != null)) {
-                  mListener.onNewInformation(matcher.group(1));
-                }
-                bytesRead = 0;
+              // Other bytes are metadata
+              if (metadataIndex <= METADATA_MAX) {
+                metadataBuffer.put(buffer[0]);
               }
             }
-          } else {
-            Log.d(LOG_TAG, "Proxying requested to stop");
-            break;
+            // End of metadata, extract pattern
+            if (metadataIndex == metadataSize) {
+              CharBuffer metadata = null;
+              metadataBuffer.flip();
+               // Exception blocked on metadata
+              try {
+                metadata = charsetDecoder.decode(metadataBuffer);
+              } catch (Exception exception) {
+                if (BuildConfig.DEBUG) {
+                  Log.w(LOG_TAG, "Error decoding metadata", exception);
+                }
+              }
+              if ((metadata != null) && (metadata.length() > 0)) {
+                if (BuildConfig.DEBUG) {
+                  Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+                }
+                Matcher matcher = PATTERN.matcher(metadata);
+                // Tell listener
+                if ((mListener != null) && matcher.find()) {
+                  mListener.onNewInformation(matcher.group(1));
+                }
+              }
+              metadataBlockBytesRead = 0;
+            }
           }
+        } else {
+          Log.d(LOG_TAG, "handleStreaming: requested to stop");
+          break;
         }
       }
-    } catch (IOException iOException) {
-      sendError(radioName, lockKey, iOException);
     }
-    Log.d(LOG_TAG, "handleStreaming: leaving for " + radioName);
+    Log.d(LOG_TAG, "handleStreaming: leaving");
   }
 
-  private synchronized boolean hasLockKey(@NonNull Object lockKey) {
+  private boolean hasLockKey(@NonNull Object lockKey) {
     return (mListener != null) && (mListener == lockKey);
-  }
-
-  private synchronized void sendError(
-    @NonNull String radioName, @NonNull Object lockKey, @NonNull IOException iOException) {
-    Log.d(LOG_TAG, "IOException for: " + radioName, iOException);
-    // Error thrown only if allowed to run
-    if (hasLockKey(lockKey)) {
-      Log.d(LOG_TAG, "Error sent to listener for: " + radioName);
-      assert mListener != null;
-      mListener.onError();
-    }
   }
 
   public interface Listener {

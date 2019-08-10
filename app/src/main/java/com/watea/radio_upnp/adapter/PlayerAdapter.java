@@ -33,6 +33,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
 
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
@@ -42,6 +43,7 @@ import com.watea.radio_upnp.service.RadioHandler;
 // and audio focus
 @SuppressWarnings("WeakerAccess")
 public abstract class PlayerAdapter {
+  private static final String LOG_TAG = PlayerAdapter.class.getSimpleName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
@@ -80,6 +82,7 @@ public abstract class PlayerAdapter {
       }
     }
   };
+  private boolean mIsRerunTryed;
   @NonNull
   private String mCurrentRadioInformation;
 
@@ -108,40 +111,40 @@ public abstract class PlayerAdapter {
     mAudioNoisyReceiverRegistered = false;
   }
 
-  @Nullable
-  public synchronized MediaMetadataCompat getCurrentMedia() {
-    // We add current radio information to current media data
-    return (mRadio == null) ? null : mRadio
-      .getMediaMetadataBuilder()
-      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, mCurrentRadioInformation)
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, mCurrentRadioInformation)
-      .build();
-  }
-
   public boolean isPlaying() {
     return (mState == PlaybackStateCompat.STATE_PLAYING);
   }
 
   // Must be called
   public synchronized final void prepareFromMediaId(@NonNull Radio radio) {
+    Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
     mRadio = radio;
     mCurrentRadioInformation = "";
     mState = PlaybackStateCompat.STATE_NONE;
     // Audio focus management
     mAudioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
+    mIsRerunTryed = false;
     // New listener for each actual renderer
     mRadioHandlerListener = new RadioHandler.Listener() {
       @Override
       public void onNewInformation(@NonNull String information) {
         mCurrentRadioInformation = information;
-        mListener.onInformationChange();
+        mListener.onInformationChange(getCurrentMedia());
       }
 
+      // Try to relaunch in case of remote playing error.
+      // Just once till Playing state received.
       @Override
       public void onError() {
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, this);
-        release();
+        Log.d(LOG_TAG, "RadioHandler error received");
+        if (mIsLocal || mIsRerunTryed || (mState != PlaybackStateCompat.STATE_PLAYING)) {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, this);
+        } else {
+          Log.d(LOG_TAG, "Try to relaunch remote reader");
+          mIsRerunTryed = true;
+          onPrepareFromMediaId();
+        }
       }
     };
     // Listen for RadioHandler
@@ -208,20 +211,38 @@ public abstract class PlayerAdapter {
   // Set the current capabilities available on this session
   protected abstract long getAvailableActions();
 
+  // Transmit state only for current process, just one time
   protected synchronized void changeAndNotifyState(int newState, @Nullable Object lockKey) {
-    // Throw error only for current process,  just one time
+    Log.d(LOG_TAG, "New state received: " + newState);
     if ((lockKey == mRadioHandlerListener) && (mState != newState)) {
+      Log.d(LOG_TAG, "=> new state transmitted to listener");
+      // Re-run allowed if "Playing" received
+      if (mState == PlaybackStateCompat.STATE_PLAYING) {
+        mIsRerunTryed = false;
+      }
       mState = newState;
       mListener.onPlaybackStateChange(
         new PlaybackStateCompat.Builder()
           .setActions(getAvailableActions())
           .setState(mState, 0, 1.0f, SystemClock.elapsedRealtime())
-          .build());
+          .build(),
+        getCurrentMedia());
     }
   }
 
+  @Nullable
   protected Object getLockKey() {
     return mRadioHandlerListener;
+  }
+
+  // We add current radio information to current media data
+  @Nullable
+  private synchronized MediaMetadataCompat getCurrentMedia() {
+    return (mRadio == null) ? null : mRadio
+      .getMediaMetadataBuilder()
+      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, mCurrentRadioInformation)
+      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, mCurrentRadioInformation)
+      .build();
   }
 
   private void registerAudioNoisyReceiver() {
@@ -248,9 +269,10 @@ public abstract class PlayerAdapter {
   }
 
   public interface Listener {
-    void onPlaybackStateChange(@NonNull PlaybackStateCompat state);
+    void onPlaybackStateChange(
+      @NonNull PlaybackStateCompat state, @Nullable MediaMetadataCompat mediaMetadataCompat);
 
-    void onInformationChange();
+    void onInformationChange(@Nullable MediaMetadataCompat mediaMetadataCompat);
   }
 
   // Helper class for managing audio focus related tasks

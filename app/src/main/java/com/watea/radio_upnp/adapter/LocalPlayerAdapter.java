@@ -48,6 +48,8 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.service.HttpServer;
 
+import java.util.Objects;
+
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getSimpleName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
@@ -76,8 +78,6 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPrepareFromMediaId() {
-    assert mRadio != null;
-    Log.d(LOG_TAG, "onPrepareFromMediaId");
     mSimpleExoPlayer = ExoPlayerFactory.newSimpleInstance(
       new DefaultRenderersFactory(mContext),
       new DefaultTrackSelector(),
@@ -92,7 +92,8 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
         DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO,
         false))
       .setExtractorsFactory(new DefaultExtractorsFactory())
-      .createMediaSource(mRadio.getHandledUri(HttpServer.getLoopbackUri())));
+      .createMediaSource(
+        Objects.requireNonNull(mRadio).getHandledUri(HttpServer.getLoopbackUri())));
   }
 
   @Override
@@ -151,6 +152,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   private class PlayerEventListener implements Player.EventListener {
+    @Nullable
     private final Object mLockKey;
 
     private PlayerEventListener() {
@@ -207,7 +209,6 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     public void onPlayerError(ExoPlaybackException exoPlaybackException) {
       Log.d(LOG_TAG, "ExoPlayer: onPlayerError " + exoPlaybackException);
       changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mLockKey);
-      release();
     }
 
     @Override
