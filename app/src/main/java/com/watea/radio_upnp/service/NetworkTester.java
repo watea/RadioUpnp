@@ -46,7 +46,7 @@ import static android.content.Context.WIFI_SERVICE;
 @SuppressWarnings("WeakerAccess")
 public class NetworkTester {
   private static final String SCHEME = "http";
-  private static final String LOG_TAG = NetworkTester.class.getSimpleName();
+  private static final String LOG_TAG = NetworkTester.class.getName();
 
   // Static class, no instance
   private NetworkTester() {

@@ -43,7 +43,7 @@ import com.watea.radio_upnp.service.RadioHandler;
 // and audio focus
 @SuppressWarnings("WeakerAccess")
 public abstract class PlayerAdapter {
-  private static final String LOG_TAG = PlayerAdapter.class.getSimpleName();
+  private static final String LOG_TAG = PlayerAdapter.class.getName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
@@ -133,12 +133,11 @@ public abstract class PlayerAdapter {
         mListener.onInformationChange(getCurrentMedia());
       }
 
-      // Try to relaunch in case of remote playing error.
-      // Just once till Playing state received.
+      // Try to relaunch, just once till Playing state received
       @Override
       public void onError() {
         Log.d(LOG_TAG, "RadioHandler error received");
-        if (mIsLocal || mIsRerunTryed || (mState != PlaybackStateCompat.STATE_PLAYING)) {
+        if (mIsRerunTryed || (mState != PlaybackStateCompat.STATE_PLAYING)) {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, this);
         } else {
           Log.d(LOG_TAG, "Try to relaunch remote reader");

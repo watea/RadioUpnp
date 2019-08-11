@@ -62,6 +62,7 @@
     <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>
     <string name="icon_updated">Icon updated!</string>
     <string name="dar_fm_in_progress">Action already in progress, please wait&#8230;</string>
+    <string name="dar_fm_went_wrong">Done!\nIcon or web page were not found, please check.</string>
     <string name="dar_fm_done">Done!</string>
     <string name="got_it">Got it!</string>
     <string name="donation_button_close">Close</string>

@@ -45,10 +45,8 @@ import com.watea.radio_upnp.util.Purchase;
 import static com.watea.radio_upnp.util.IabHelper.BILLING_RESPONSE_RESULT_USER_CANCELED;
 import static com.watea.radio_upnp.util.IabHelper.IABHELPER_USER_CANCELLED;
 
-public class DonationFragment
-  extends MainActivityFragment<DonationFragment.Callback>
-  implements View.OnClickListener {
-  private static final String LOG_TAG = DonationFragment.class.getSimpleName();
+public class DonationFragment extends MainActivityFragment {
+  private static final String LOG_TAG = DonationFragment.class.getName();
   private static final String PUBKEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqPtND+7yhoE27XNfflnFLzGRaDZFJBt+xVkhxUeTa7YifViIWBUpBkTpCyl/DjWvNSLH7rqXHeU11NFFFmuTFn6GKpooh8GE2BJX1jxMxny3UBjIW3LwIb+PecWKeNB4B0goheE6jf49xcrrpLxeakfo+0x6WRbRP275+vcYutbqEIgEHPwCZpkzTwZgOlWHP4d0YAll7B8dG+lU4VZ8amaYAMsH5FNSluggmu/MJK+Icz2yOf1ogRivrnFbz6so+3t/3pKqsR9I76b0pabuMWslfF7H4BIrjxfm3K5g39PJh2DcMMiKaCu5k+MA8ZMUFN7wgUh5dBh4kVKus7x6VwIDAQAB";
   private static final String[] GOOGLE_CATALOG = new String[]{
     "radio_upnp.donation.1",
@@ -171,36 +169,46 @@ public class DonationFragment
     mIabHelper.startSetup(mSetupFinishedListener);
   }
 
+  @NonNull
   @Override
-  public void onResume() {
-    super.onResume();
-    // Decorate
-    mCallback.onResume(this, R.drawable.ic_payment_black_24dp);
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+
+      @Override
+      public void onClick(View view) {
+        int index = mGoogleSpinner.getSelectedItemPosition();
+        Log.d(LOG_TAG, "selected item in spinner: " + index);
+        // When debugging, choose android.test.x item
+        try {
+          mIabHelper.launchPurchaseFlow(
+            getActivity(),
+            BuildConfig.DEBUG ? DEBUG_CATALOG[index] : GOOGLE_CATALOG[index],
+            0,
+            mPurchaseFinishedListener);
+        } catch (IabHelper.IabAsyncInProgressException iabAsyncInProgressException) {
+          // In some devices, it is impossible to setup IAB Helper
+          // and this exception is thrown, being almost "impossible"
+          // to the user to control it and forcing app close
+          Log.e(LOG_TAG, iabAsyncInProgressException.getMessage());
+          openDialog(
+            android.R.drawable.ic_dialog_alert,
+            R.string.donation_google_android_market_not_supported_title,
+            getActivity()
+              .getResources()
+              .getString(R.string.donation_google_android_market_not_supported));
+        }
+      }
+    };
   }
 
   @Override
-  public void onClick(View view) {
-    int index = mGoogleSpinner.getSelectedItemPosition();
-    Log.d(LOG_TAG, "selected item in spinner: " + index);
-    // When debugging, choose android.test.x item
-    try {
-      mIabHelper.launchPurchaseFlow(
-        getActivity(),
-        BuildConfig.DEBUG ? DEBUG_CATALOG[index] : GOOGLE_CATALOG[index],
-        0,
-        mPurchaseFinishedListener);
-    } catch (IabHelper.IabAsyncInProgressException iabAsyncInProgressException) {
-      // In some devices, it is impossible to setup IAB Helper
-      // and this exception is thrown, being almost "impossible"
-      // to the user to control it and forcing app close
-      Log.e(LOG_TAG, iabAsyncInProgressException.getMessage());
-      openDialog(
-        android.R.drawable.ic_dialog_alert,
-        R.string.donation_google_android_market_not_supported_title,
-        getActivity()
-          .getResources()
-          .getString(R.string.donation_google_android_market_not_supported));
-    }
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_payment_black_24dp;
+  }
+
+  @Override
+  public int getTitle() {
+    return R.string.title_donate;
   }
 
   private void openDialog(int icon, int title, @NonNull String message) {
@@ -226,11 +234,5 @@ public class DonationFragment
       android.R.drawable.ic_dialog_alert,
       R.string.donation_alert_dialog_title,
       getActivity().getResources().getString(R.string.donation_alert_tip) + message);
-  }
-
-  public interface Callback {
-    void onResume(
-      @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-      int floatingActionButtonResource);
   }
 }

@@ -56,6 +56,7 @@ import com.watea.radio_upnp.service.NetworkTester;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -71,10 +72,8 @@ import java.util.regex.Pattern;
 
 // ADD or MODIFY modes
 // mRadio = null for ADD
-public class ItemModifyFragment
-  extends MainActivityFragment<ItemModifyFragment.Callback>
-  implements View.OnClickListener {
-  private static final String LOG_TAG = ItemModifyFragment.class.getSimpleName();
+public class ItemModifyFragment extends MainActivityFragment {
+  private static final String LOG_TAG = ItemModifyFragment.class.getName();
   private static final String DAR_FM_API = "http://api.dar.fm/";
   private static final String DAR_FM_PLAYLIST_REQUEST = DAR_FM_API + "playlist.php?q=@callsign%20";
   private static final String DAR_FM_STATIONS_REQUEST = DAR_FM_API + "darstations.php?station_id=";
@@ -83,8 +82,6 @@ public class ItemModifyFragment
   private static final String DAR_FM_PARTNER_TOKEN = "&partner_token=6453742475";
   private static final String DAR_FM_BASE_URL = "http://stream.dar.fm/";
   private static final String DAR_FM_NAME = "name";
-  private static final String DAR_FM_SITE_URL = "site";
-  private static final String DAR_FM_IMAGE_URL = "image";
   private static final String DAR_FM_ID = "id";
   private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
   private static final Map<String, String> DEFAULT_MESSAGE = new Hashtable<>();
@@ -113,11 +110,9 @@ public class ItemModifyFragment
       try {
         Element head = Jsoup.connect(mWebPageEditText.getText().toString()).get().head();
         // Parse site data
-        if (head != null) {
-          Matcher matcher = PATTERN.matcher(head.toString());
-          if (matcher.find()) {
-            mFoundIcon = NetworkTester.getBitmapFromUrl(new URL(matcher.group(1)));
-          }
+        Matcher matcher = PATTERN.matcher(head.toString());
+        if (matcher.find()) {
+          mFoundIcon = NetworkTester.getBitmapFromUrl(new URL(matcher.group(1)));
         }
       } catch (Exception exception) {
         Log.i(LOG_TAG, "Error performing radio site search");
@@ -135,65 +130,54 @@ public class ItemModifyFragment
       }
     }
   };
+  private String mDarFmWebPage;
+  // Generic search if list == DEFAULT_MESSAGE
   private final Runnable mDarFmSearchBackground = new Runnable() {
     @Override
     public void run() {
-      if (mDarFmRadios.get(0) == DEFAULT_MESSAGE) {
-        boolean isFound = false;
+      Map<String, String> map;
+      if (mDarFmRadios.contains(DEFAULT_MESSAGE)) {
+        Elements stations = new Elements();
         try {
-          Element stations = Jsoup
+          Element search = Jsoup
             .connect(
               DAR_FM_PLAYLIST_REQUEST + getRadioName().replace(" ", SPACE_FOR_SEARCH) +
                 WILDCARD + DAR_FM_PARTNER_TOKEN)
             .get();
           // Parse data
-          if (stations != null) {
-            for (Element element : stations.getElementsByTag("station")) {
-              String id = extractValue(element, "station_id");
-              Map<String, String> map = new Hashtable<>();
-              map.put(DAR_FM_ID, id);
-              Element station = Jsoup
-                .connect(DAR_FM_STATIONS_REQUEST + id + DAR_FM_PARTNER_TOKEN)
-                .get();
-              map.put(DAR_FM_NAME, extractValue(station, "callsign"));
-              map.put(DAR_FM_SITE_URL, extractValue(station, "websiteurl"));
-              map.put(DAR_FM_IMAGE_URL, extractValue(station, "imageurl"));
-              // Remove DEFAULT_MESSAGE
-              if (!isFound) {
-                mDarFmRadios.clear();
-                isFound = true;
-              }
-              mDarFmRadios.add(map);
-            }
+          stations = search.getElementsByTag("station");
+          for (Element station : stations) {
+            map = new Hashtable<>();
+            map.put(DAR_FM_ID, extractValue(station, "station_id"));
+            map.put(DAR_FM_NAME, extractValue(station, "callsign"));
+            mDarFmRadios.add(map);
           }
         } catch (IOException iOexception) {
-          Log.i(LOG_TAG, "Error performing DAR FM search", iOexception);
+          Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST search", iOexception);
         }
-        // List void if nothing found
-        if (!isFound) {
+        // Clear list, void if nothing found
+        if (stations.size() > 0) {
+          mDarFmRadios.remove(DEFAULT_MESSAGE);
+        } else {
           mDarFmRadios.clear();
         }
       }
-      // When radio is known, fetch icon
+      // When radio is known, fetch data
       if (mDarFmRadios.size() == 1) {
         mFoundIcon = null;
+        mDarFmWebPage = null;
+        map = mDarFmRadios.get(0);
         try {
-          mFoundIcon = NetworkTester.getBitmapFromUrl(
-            new URL(mDarFmRadios.get(0).get(DAR_FM_IMAGE_URL)));
+          Element station = Jsoup
+            .connect(DAR_FM_STATIONS_REQUEST + map.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
+            .get();
+          mDarFmWebPage = extractValue(station, "websiteurl");
+          mFoundIcon = NetworkTester.getBitmapFromUrl(new URL(extractValue(station, "imageurl")));
         } catch (MalformedURLException malformedURLException) {
           Log.i(LOG_TAG, "Error performing icon search");
+        } catch (IOException iOexception) {
+          Log.i(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOexception);
         }
-      }
-    }
-  };
-  private boolean mIsDarFmSearchRunning;
-  private final Runnable mDarFmSearchLast = new Runnable() {
-    @Override
-    public void run() {
-      mIsDarFmSearchRunning = false;
-      // Clear if we were disposed
-      if (!isActuallyShown() && (mDarFmAlertDialog != null)) {
-        mDarFmAlertDialog.dismiss();
       }
     }
   };
@@ -211,14 +195,15 @@ public class ItemModifyFragment
           Map<String, String> foundRadio = mDarFmRadios.get(0);
           mNameEditText.setText(Objects.requireNonNull(foundRadio.get(DAR_FM_NAME)).toUpperCase());
           mUrlEditText.setText(DAR_FM_BASE_URL + foundRadio.get(DAR_FM_ID));
-          mWebPageEditText.setText(foundRadio.get(DAR_FM_SITE_URL));
-          mDarFmAlertDialog.dismiss();
-          if (mFoundIcon == null) {
-            tell(R.string.dar_fm_no_icon_found);
-          } else {
-            setRadioIcon(mFoundIcon);
-            tell(R.string.dar_fm_done);
+          if (mDarFmWebPage != null) {
+            mWebPageEditText.setText(mDarFmWebPage);
           }
+          if (mFoundIcon != null) {
+            setRadioIcon(mFoundIcon);
+          }
+          mDarFmAlertDialog.dismiss();
+          tell(((mFoundIcon == null) || (mDarFmWebPage == null)) ?
+            R.string.dar_fm_went_wrong : R.string.dar_fm_done);
           break;
         default:
           mSimpleAdapter.notifyDataSetChanged();
@@ -256,30 +241,23 @@ public class ItemModifyFragment
         mUrlWatcher.mUrl.toString());
     }
   };
+  private boolean mIsDarFmSearchRunning;
+  private final Runnable mDarFmSearchLast = new Runnable() {
+    @Override
+    public void run() {
+      mIsDarFmSearchRunning = false;
+      // Clear if we were disposed
+      if (!isActuallyShown() && (mDarFmAlertDialog != null)) {
+        mDarFmAlertDialog.dismiss();
+      }
+    }
+  };
 
   @NonNull
   private static String extractValue(@NonNull Element element, @NonNull String tag) {
     return element.getElementsByTag(tag).first().ownText();
   }
 
-  @Override
-  public void onClick(View view) {
-    if (NetworkTester.isDeviceOffline(getActivity())) {
-      tell(R.string.no_internet);
-    } else {
-      if (mDarFmCheckbox.isChecked()) {
-        if (mIsDarFmSearchRunning) {
-          tell(R.string.dar_fm_in_progress);
-        } else {
-          darFmSearch(DEFAULT_MESSAGE);
-        }
-      } else {
-        new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
-      }
-    }
-  }
-
-  // MainActivityFragment
   @Override
   public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
     // Inflate the menu; this adds items to the action bar if it is present.
@@ -305,11 +283,32 @@ public class ItemModifyFragment
     mIsDarFmSearchRunning = false;
   }
 
+  @NonNull
   @Override
-  public void onResume() {
-    super.onResume();
-    // Decorate
-    mCallback.onResume((mRadio == null), this);
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        if (NetworkTester.isDeviceOffline(getActivity())) {
+          tell(R.string.no_internet);
+        } else {
+          if (mDarFmCheckbox.isChecked()) {
+            if (mIsDarFmSearchRunning) {
+              tell(R.string.dar_fm_in_progress);
+            } else {
+              darFmSearch(DEFAULT_MESSAGE);
+            }
+          } else {
+            new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
+          }
+        }
+      }
+    };
+  }
+
+  @Override
+  public int getTitle() {
+    return isAddMode() ? R.string.title_item_add : R.string.title_item_modify;
   }
 
   @Nullable
@@ -336,7 +335,8 @@ public class ItemModifyFragment
     mDarFmCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
       @Override
       public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-        mCallback.onFABChange(b ? R.drawable.ic_search_black_24dp : R.drawable.ic_image_black_24dp);
+        mProvider.setFloatingActionButtonResource(b ?
+          R.drawable.ic_search_black_24dp : R.drawable.ic_image_black_24dp);
         mWebPageEditText.setEnabled(!b);
         mUrlEditText.setEnabled(!b);
       }
@@ -369,7 +369,7 @@ public class ItemModifyFragment
   public void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
     // "set" values...
-    outState.putLong(getString(R.string.key_radio_id), (mRadio == null) ? -1 : mRadio.getId());
+    outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : mRadio.getId());
     // ...others
     outState.putString(getString(R.string.key_radio_name), mNameEditText.getText().toString());
     outState.putString(getString(R.string.key_radio_url), mUrlEditText.getText().toString());
@@ -404,7 +404,7 @@ public class ItemModifyFragment
         if (mUrlWatcher.isNull()) {
           tell(R.string.radio_definition_error);
         } else {
-          if (mRadio == null) {
+          if (isAddMode()) {
             //noinspection ConstantConditions
             mRadio = new Radio(
               getRadioName(),
@@ -442,17 +442,20 @@ public class ItemModifyFragment
   }
 
   // Must be called before MODIFY mode
-  @NonNull
-  public ItemModifyFragment set(@NonNull Radio radio) {
+  public void set(@NonNull Radio radio) {
     mRadio = radio;
     mRadioName = mRadio.getName();
     mRadioUrl = mRadio.getURL().toString();
     URL webPageURL = mRadio.getWebPageURL();
     mRadioWebPage = (webPageURL == null) ? null : webPageURL.toString();
     mRadioIcon = mRadio.getIcon();
-    return this;
   }
 
+  public boolean isAddMode() {
+    return (mRadio == null);
+  }
+
+  // radio == DEFAULT_MESSAGE to display the search dialog
   private void darFmSearch(@NonNull Map<String, String> radio) {
     mIsDarFmSearchRunning = true;
     mDarFmRadios.clear();
@@ -499,14 +502,6 @@ public class ItemModifyFragment
         Bitmap.createScaledBitmap(mRadioIcon, screenWidthDp, screenWidthDp, false)),
       null,
       null);
-  }
-
-  public interface Callback {
-    void onResume(
-      boolean isAddMode,
-      @NonNull View.OnClickListener floatingActionButtonOnClickListener);
-
-    void onFABChange(int floatingActionButtonResource);
   }
 
   // Utility to properly handle asynchronous actions

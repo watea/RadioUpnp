@@ -44,7 +44,7 @@ import org.fourthline.cling.model.types.UDAServiceId;
 import java.util.Objects;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
-  private static final String LOG_TAG = UpnpPlayerAdapter.class.getSimpleName();
+  private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
   private static final ServiceId aVTransportServiceId = new UDAServiceId("AVTransport");
   private static final String UPNP_ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
   private static final String UPNP_ACTION_PLAY = "Play";

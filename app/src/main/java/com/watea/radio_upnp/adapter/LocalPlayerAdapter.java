@@ -51,7 +51,7 @@ import com.watea.radio_upnp.service.HttpServer;
 import java.util.Objects;
 
 public final class LocalPlayerAdapter extends PlayerAdapter {
-  private static final String LOG_TAG = LocalPlayerAdapter.class.getSimpleName();
+  private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
   @Nullable
   private SimpleExoPlayer mSimpleExoPlayer;
@@ -84,16 +84,18 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
       new DefaultLoadControl());
     mSimpleExoPlayer.addListener(mPlayerEventListener = new PlayerEventListener());
     mSimpleExoPlayer.setPlayWhenReady(true);
-    mSimpleExoPlayer.prepare(new ExtractorMediaSource.Factory(
-      // Better management of bad wifi connection
-      new DefaultHttpDataSourceFactory(mContext.getResources().getString(R.string.app_name),
-        new DefaultBandwidthMeter(),
-        DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
-        DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO,
-        false))
-      .setExtractorsFactory(new DefaultExtractorsFactory())
-      .createMediaSource(
-        Objects.requireNonNull(mRadio).getHandledUri(HttpServer.getLoopbackUri())));
+    mSimpleExoPlayer.prepare(
+      new ExtractorMediaSource.Factory(
+        // Better management of bad wifi connection
+        new DefaultHttpDataSourceFactory(
+          mContext.getResources().getString(R.string.app_name),
+          new DefaultBandwidthMeter(),
+          DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
+          DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO,
+          false))
+        .setExtractorsFactory(new DefaultExtractorsFactory())
+        .createMediaSource(
+          Objects.requireNonNull(mRadio).getHandledUri(HttpServer.getLoopbackUri())));
   }
 
   @Override

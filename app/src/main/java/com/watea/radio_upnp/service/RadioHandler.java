@@ -264,7 +264,7 @@ public class RadioHandler extends AbstractHandler {
             if (metadataIndex == metadataSize) {
               CharBuffer metadata = null;
               metadataBuffer.flip();
-               // Exception blocked on metadata
+              // Exception blocked on metadata
               try {
                 metadata = charsetDecoder.decode(metadataBuffer);
               } catch (Exception exception) {

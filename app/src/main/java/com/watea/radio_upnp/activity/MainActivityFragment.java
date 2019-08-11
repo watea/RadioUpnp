@@ -30,14 +30,16 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.View;
 
 import com.watea.radio_upnp.model.RadioLibrary;
 
 import java.util.Objects;
 
-public abstract class MainActivityFragment<C> extends Fragment {
+public abstract class MainActivityFragment extends Fragment {
+  public static final int DEFAULT_RESOURCE = -1;
   protected RadioLibrary mRadioLibrary = null;
-  protected C mCallback = null;
+  protected Provider mProvider = null;
 
   // Required empty constructor
   public MainActivityFragment() {
@@ -58,7 +60,34 @@ public abstract class MainActivityFragment<C> extends Fragment {
     super.onResume();
     // Activity may have been re-created, so new library instance is used
     setMembers();
+    // Decorate
+    mProvider.onFragmentResume(this);
   }
+
+  @NonNull
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+      }
+    };
+  }
+
+  @NonNull
+  public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
+    return new View.OnLongClickListener() {
+      @Override
+      public boolean onLongClick(View view) {
+        return false;
+      }
+    };
+  }
+
+  public int getFloatingActionButtonResource() {
+    return DEFAULT_RESOURCE;
+  }
+
+  public abstract int getTitle();
 
   // Utility to test if view actually exists (not disposed) and is on screen
   protected boolean isActuallyShown() {
@@ -74,17 +103,16 @@ public abstract class MainActivityFragment<C> extends Fragment {
   }
 
   private void setMembers() {
-    //noinspection unchecked
-    Provider<C> provider = (Provider<C>) getActivity();
-    mRadioLibrary = provider.getRadioLibrary();
-    mCallback = provider.getFragmentCallback(this);
+    mProvider = (Provider) getActivity();
+    mRadioLibrary = mProvider.getRadioLibrary();
   }
 
-  public interface Provider<C> {
+  public interface Provider {
     @NonNull
     RadioLibrary getRadioLibrary();
 
-    @NonNull
-    C getFragmentCallback(@NonNull MainActivityFragment<?> mainActivityFragment);
+    void onFragmentResume(MainActivityFragment mainActivityFragment);
+
+    void setFloatingActionButtonResource(int resource);
   }
 }

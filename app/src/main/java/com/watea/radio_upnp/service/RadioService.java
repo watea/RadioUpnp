@@ -64,7 +64,7 @@ import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import java.util.List;
 
 public class RadioService extends MediaBrowserServiceCompat implements PlayerAdapter.Listener {
-  private static final String LOG_TAG = RadioService.class.getSimpleName();
+  private static final String LOG_TAG = RadioService.class.getName();
   private static final int NOTIFICATION_ID = 412;
   private static final int REQUEST_CODE = 501;
   private static String CHANNEL_ID;
@@ -294,7 +294,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         PlaybackStateCompat.ACTION_STOP))
       // Show controls on lock screen even when user hides sensitive content.
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      // UPNP device doesn't support PAUSE action but STOP
+      // UPnP device doesn't support PAUSE action but STOP
       .addAction(
         mPlayerAdapter.isPlaying() ?
           mPlayerAdapter instanceof UpnpPlayerAdapter ?

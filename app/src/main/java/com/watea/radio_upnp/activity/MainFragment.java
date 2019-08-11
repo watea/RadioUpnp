@@ -82,12 +82,12 @@ import java.util.List;
 import static android.content.Context.BIND_AUTO_CREATE;
 
 public class MainFragment
-  extends MainActivityFragment<MainFragment.Callback>
+  extends MainActivityFragment
   implements
   RadiosAdapter.Listener,
   View.OnClickListener,
   View.OnLongClickListener {
-  private static final String LOG_TAG = MainFragment.class.getSimpleName();
+  private static final String LOG_TAG = MainFragment.class.getName();
   private static final String AVTTRANSPORT_SERVICE_ID = "urn:upnp-org:serviceId:AVTransport";
   private final Handler mHandler = new Handler();
   // <HMI assets
@@ -248,25 +248,6 @@ public class MainFragment
     };
   // DLNA devices management
   private DlnaDevicesAdapter mDlnaDevicesAdapter;
-  // FAB callback
-  private final View.OnLongClickListener mFABOnLongClickListenerClickListener =
-    new View.OnLongClickListener() {
-      @Override
-      public boolean onLongClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-          tell(R.string.LAN_required);
-          return true;
-        }
-        if (mAndroidUpnpService == null) {
-          tell(R.string.device_no_device_yet);
-          return true;
-        }
-        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
-        mDlnaDevicesAdapter.removeChosenDlnaDevice();
-        tell(R.string.dlna_reset);
-        return true;
-      }
-    };
   // UPnP service listener
   private final RegistryListener mBrowseRegistryListener = new DefaultRegistryListener() {
     @Override
@@ -371,29 +352,6 @@ public class MainFragment
     }
   };
   private long mTimeDlnaSearch = 0;
-  // FAB callback
-  private final View.OnClickListener mFABOnClickListener = new View.OnClickListener() {
-    @Override
-    public void onClick(View view) {
-      if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-        tell(R.string.LAN_required);
-        return;
-      }
-      if (mAndroidUpnpService == null) {
-        tell(R.string.device_no_device_yet);
-        return;
-      }
-      // Do not search more than 1 peer 5 s
-      if (System.currentTimeMillis() - mTimeDlnaSearch > 5000) {
-        mTimeDlnaSearch = System.currentTimeMillis();
-        mAndroidUpnpService.getControlPoint().search();
-      }
-      mDlnaAlertDialog.show();
-      if (!mGotItDlnaEnable) {
-        mDlnaEnableAlertDialog.show();
-      }
-    }
-  };
 
   @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
@@ -424,7 +382,6 @@ public class MainFragment
     }
   }
 
-  // MainActivityFragment
   @Override
   public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
     // Inflate the menu; this adds items to the action bar if it is present
@@ -460,11 +417,65 @@ public class MainFragment
     // Update view
     browserViewSync();
     setRadiosView();
-    // Decorate
-    mCallback.onResume(
-      mFABOnClickListener,
-      mFABOnLongClickListenerClickListener,
-      R.drawable.ic_cast_black_24dp);
+  }
+
+  @NonNull
+  @Override
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+          tell(R.string.LAN_required);
+          return;
+        }
+        if (mAndroidUpnpService == null) {
+          tell(R.string.device_no_device_yet);
+          return;
+        }
+        // Do not search more than 1 peer 5 s
+        if (System.currentTimeMillis() - mTimeDlnaSearch > 5000) {
+          mTimeDlnaSearch = System.currentTimeMillis();
+          mAndroidUpnpService.getControlPoint().search();
+        }
+        mDlnaAlertDialog.show();
+        if (!mGotItDlnaEnable) {
+          mDlnaEnableAlertDialog.show();
+        }
+      }
+    };
+  }
+
+  @NonNull
+  @Override
+  public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
+    return new View.OnLongClickListener() {
+      @Override
+      public boolean onLongClick(View view) {
+        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+          tell(R.string.LAN_required);
+          return true;
+        }
+        if (mAndroidUpnpService == null) {
+          tell(R.string.device_no_device_yet);
+          return true;
+        }
+        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
+        mDlnaDevicesAdapter.removeChosenDlnaDevice();
+        tell(R.string.dlna_reset);
+        return true;
+      }
+    };
+  }
+
+  @Override
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_cast_black_24dp;
+  }
+
+  @Override
+  public int getTitle() {
+    return R.string.title_main;
   }
 
   @Nullable
@@ -707,12 +718,5 @@ public class MainFragment
       bundle.putString(getString(R.string.key_dlna_device), mDlnaDevicesAdapter.getChosenDlnaDeviceIdentity());
     }
     mMediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
-  }
-
-  public interface Callback {
-    void onResume(
-      @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-      @NonNull View.OnLongClickListener floatingActionButtonOnLongClickListener,
-      int floatingActionButtonResource);
   }
 }

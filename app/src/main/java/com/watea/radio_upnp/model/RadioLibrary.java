@@ -47,7 +47,7 @@ import static com.watea.radio_upnp.model.RadioSQLContract.SQL_CREATE_ENTRIES;
 import static com.watea.radio_upnp.model.RadioSQLContract.SQL_DELETE_ENTRIES;
 
 public class RadioLibrary {
-  private static final String LOG_TAG = RadioLibrary.class.getSimpleName();
+  private static final String LOG_TAG = RadioLibrary.class.getName();
   private static final int ICON_SIZE = 300;
   @NonNull
   private final SQLiteDatabase mRadioDataBase;

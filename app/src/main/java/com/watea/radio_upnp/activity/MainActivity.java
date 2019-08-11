@@ -55,14 +55,25 @@ import com.watea.radio_upnp.model.RadioLibrary;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.Objects;
 
 public class MainActivity
   extends
   AppCompatActivity
   implements
-  MainActivityFragment.Provider<Object>,
+  MainActivityFragment.Provider,
+  ModifyFragment.Callback,
   NavigationView.OnNavigationItemSelectedListener {
-  private static final String LOG_TAG = MainActivity.class.getSimpleName();
+  private static final String LOG_TAG = MainActivity.class.getName();
+  private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
+    new Hashtable<Class<? extends Fragment>, Integer>() {{
+      put(MainFragment.class, R.id.action_home);
+      put(ItemModifyFragment.class, R.id.action_add_item);
+      put(ModifyFragment.class, R.id.action_modify);
+      put(DonationFragment.class, R.id.action_donate);
+    }};
   private static final DefaultRadio[] DEFAULT_RADIOS = {
     new DefaultRadio(
       "FRANCE INTER",
@@ -114,86 +125,7 @@ public class MainActivity
   private AlertDialog mAboutAlertDialog;
   // />
   private RadioLibrary mRadioLibrary;
-  private int mNavigationMenuCheckedId;
-  private final MainFragment.Callback mMainFragmentCallback =
-    new MainFragment.Callback() {
-      // Shall decorate
-      @Override
-      public void onResume(
-        @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-        @NonNull View.OnLongClickListener floatingActionButtonOnLongClickListener,
-        int floatingActionButtonResource) {
-        invalidateOptionsMenu();
-        mActionBar.setTitle(R.string.title_main);
-        mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
-        mFloatingActionButton.setOnLongClickListener(floatingActionButtonOnLongClickListener);
-        mFloatingActionButton.setImageResource(floatingActionButtonResource);
-        checkNavigationMenu(R.id.action_home);
-      }
-    };
-  private final DonationFragment.Callback mDonationFragmentCallback =
-    new DonationFragment.Callback() {
-      // Shall decorate
-      // FloatingAction defined by fragment
-      @Override
-      public void onResume(
-        @NonNull View.OnClickListener floatingActionButtonOnClickListener,
-        int floatingActionButtonResource) {
-        invalidateOptionsMenu();
-        mActionBar.setTitle(R.string.title_donate);
-        mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
-        mFloatingActionButton.setImageResource(floatingActionButtonResource);
-        checkNavigationMenu(R.id.action_donate);
-      }
-    };
-  private final ItemModifyFragment.Callback mItemModifyFragmentCallback =
-    new ItemModifyFragment.Callback() {
-      // Shall decorate
-      // FloatingAction defined by fragment
-      @Override
-      public void onResume(
-        boolean isAddMode,
-        @NonNull View.OnClickListener floatingActionButtonOnClickListener) {
-        invalidateOptionsMenu();
-        mActionBar.setTitle(isAddMode ? R.string.title_item_add : R.string.title_item_modify);
-        mFloatingActionButton.setOnClickListener(floatingActionButtonOnClickListener);
-        checkNavigationMenu(isAddMode ? R.id.action_add_item : R.id.action_modify);
-      }
-
-      // Shall decorate
-      // FloatingAction layout defined by fragment
-      @Override
-      public void onFABChange(int floatingActionButtonResource) {
-        mFloatingActionButton.setImageResource(floatingActionButtonResource);
-      }
-    };
-  private final ModifyFragment.Callback mModifyFragmentCallback =
-    new ModifyFragment.Callback() {
-      // Shall decorate
-      @Override
-      public void onResume() {
-        invalidateOptionsMenu();
-        mActionBar.setTitle(R.string.title_modify);
-        mFloatingActionButton.setOnClickListener(
-          new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-              setFragment(R.layout.content_item_modify);
-            }
-          });
-        mFloatingActionButton.setImageResource(R.drawable.ic_playlist_add_black_24dp);
-        checkNavigationMenu(R.id.action_modify);
-      }
-
-      @Override
-      public void onModifyRequest(@NonNull Long radioId) {
-        //noinspection ConstantConditions
-        setFragment(
-          ((ItemModifyFragment) getFragmentFromId(R.layout.content_item_modify))
-            .set(mRadioLibrary.getFrom(radioId)),
-          R.layout.content_item_modify);
-      }
-    };
+  private Integer mNavigationMenuCheckedId;
   private MainFragment mMainFragment;
 
   @Override
@@ -222,55 +154,51 @@ public class MainActivity
 
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-    switch (menuItem.getItemId()) {
-      case R.id.action_home:
-        setFragment(R.layout.content_main);
-        break;
-      case R.id.action_add_item:
-        // Default mode: ADD
-        setFragment(R.layout.content_item_modify);
-        break;
-      case R.id.action_modify:
-        setFragment(R.layout.content_modify);
-        break;
-      case R.id.action_donate:
-        setFragment(R.layout.content_donation);
-        break;
-      case R.id.action_about:
-        mAboutAlertDialog.show();
-        break;
-      default:
-        // Should not happen
-        Log.e(LOG_TAG, "onNavigationItemSelected: internal failure, wrong navigation menu id");
+    int id = menuItem.getItemId();
+    if (id == R.id.action_about) {
+      mAboutAlertDialog.show();
+    } else {
+      setFragment(getFragmentClassFromMenuId(id));
     }
     mDrawerLayout.closeDrawers();
     return true;
   }
 
-  // FragmentCallback
+  // radioId is null if ADD mode
+  @Override
+  public void onModifyRequest(@Nullable Long radioId) {
+    ItemModifyFragment itemModifyFragment = new ItemModifyFragment();
+    if (radioId != null) {
+      itemModifyFragment.set(Objects.requireNonNull(mRadioLibrary.getFrom(radioId)));
+    }
+    setFragment(itemModifyFragment);
+  }
+
   @Override
   @NonNull
   public RadioLibrary getRadioLibrary() {
     return mRadioLibrary;
   }
 
-  // FragmentCallback
   @Override
-  @NonNull
-  public Object getFragmentCallback(@NonNull MainActivityFragment<?> mainActivityFragment) {
-    if (mainActivityFragment instanceof MainFragment) {
-      return mMainFragmentCallback;
-    } else if (mainActivityFragment instanceof ModifyFragment) {
-      return mModifyFragmentCallback;
-    } else if (mainActivityFragment instanceof ItemModifyFragment) {
-      return mItemModifyFragmentCallback;
-    } else if (mainActivityFragment instanceof DonationFragment) {
-      return mDonationFragmentCallback;
-    } else {
-      // Should not happen
-      Log.e(LOG_TAG, "fragmentSet: internal failure, wrong fragment");
-      throw new RuntimeException();
+  public void onFragmentResume(MainActivityFragment mainActivityFragment) {
+    invalidateOptionsMenu();
+    mActionBar.setTitle(mainActivityFragment.getTitle());
+    mFloatingActionButton.setOnClickListener(
+      mainActivityFragment.getFloatingActionButtonOnClickListener());
+    mFloatingActionButton.setOnLongClickListener(
+      mainActivityFragment.getFloatingActionButtonOnLongClickListener());
+    int resource = mainActivityFragment.getFloatingActionButtonResource();
+    if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
+      mFloatingActionButton.setImageResource(resource);
     }
+    checkNavigationMenu(
+      Objects.requireNonNull(FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass())));
+  }
+
+  @Override
+  public void setFloatingActionButtonResource(int resource) {
+    mFloatingActionButton.setImageResource(resource);
   }
 
   @Override
@@ -305,9 +233,9 @@ public class MainActivity
     }
     // Retrieve main fragment
     mMainFragment = (MainFragment) ((getCurrentFragment() == null) ?
-      setFragment(R.layout.content_main) :
+      setFragment(MainFragment.class) :
       // Shall exists as MainFragment always created
-      getFragmentManager().findFragmentByTag(getTagFromId(R.layout.content_main)));
+      getFragmentManager().findFragmentByTag(MainFragment.class.getSimpleName()));
     mMainFragment.onActivityResume(this);
   }
 
@@ -377,6 +305,17 @@ public class MainActivity
     mRadioLibrary.close();
   }
 
+  private Class<? extends Fragment> getFragmentClassFromMenuId(@NonNull Integer menuId) {
+    for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
+      if (menuId.equals(FRAGMENT_MENU_IDS.get(fragment))) {
+        return fragment;
+      }
+    }
+    // Should not happen
+    Log.e(LOG_TAG, "getFragmentIdFrom: internal failure, wrong menu id");
+    throw new RuntimeException();
+  }
+
   private boolean setDefaultRadios() {
     boolean result = false;
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
@@ -404,47 +343,28 @@ public class MainActivity
     return (MainActivityFragment) getFragmentManager().findFragmentById(R.id.content_frame);
   }
 
-  // Utility to retrieve fragment
-  // Set mMainFragment
   @NonNull
-  private Fragment getFragmentFromId(int fragmentId) {
-    // MODIFY or ADD: always a new fragment
-    Fragment fragment = (fragmentId == R.layout.content_item_modify) ?
-      new ItemModifyFragment() :
-      getFragmentManager().findFragmentByTag(getTagFromId(fragmentId));
-    if (fragment == null) {
-      switch (fragmentId) {
-        case R.layout.content_main:
-          fragment = new MainFragment();
-          break;
-        case R.layout.content_modify:
-          fragment = new ModifyFragment();
-          break;
-        case R.layout.content_donation:
-          fragment = new DonationFragment();
-          break;
-        default:
-          // Should not happen
-          Log.e(LOG_TAG, "setFragment: internal failure, wrong fragment id");
-          throw new RuntimeException();
+  private Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
+    Fragment fragment = getFragmentManager().findFragmentByTag(fragmentClass.getSimpleName());
+    // ItemModifyFragment always a new fragment
+    if ((fragment == null) || (fragmentClass == ItemModifyFragment.class)) {
+      try {
+        fragment = fragmentClass.getConstructor().newInstance();
+      } catch (Exception exception) {
+        // Should not happen
+        Log.e(LOG_TAG, "getFragmentFromClass: internal failure, wrong fragment id");
+        throw new RuntimeException();
       }
     }
-    return fragment;
+    return setFragment(fragment);
   }
 
-  // Utility to change content fragment
   @NonNull
-  private Fragment setFragment(int fragmentId) {
-    return setFragment(getFragmentFromId(fragmentId), fragmentId);
-  }
-
-  // Utility to change content fragment
-  @NonNull
-  private Fragment setFragment(@NonNull Fragment fragment, int fragmentId) {
+  private Fragment setFragment(@NonNull Fragment fragment) {
     // Replace fragment setting tag to retrieve it later
     FragmentTransaction fragmentTransaction = getFragmentManager()
       .beginTransaction()
-      .replace(R.id.content_frame, fragment, getTagFromId(fragmentId));
+      .replace(R.id.content_frame, fragment, fragment.getClass().getSimpleName());
     // First fragment transaction not saved to enable back leaving the app
     if (getCurrentFragment() != null) {
       // Works properly only with AndroidManifest options:
@@ -456,12 +376,7 @@ public class MainActivity
     return fragment;
   }
 
-  @NonNull
-  private String getTagFromId(int fragmentId) {
-    return Integer.toString(fragmentId);
-  }
-
-  private void checkNavigationMenu(int id) {
+  private void checkNavigationMenu(@NonNull Integer id) {
     mNavigationMenuCheckedId = id;
     mNavigationMenu.findItem(mNavigationMenuCheckedId).setChecked(true);
   }

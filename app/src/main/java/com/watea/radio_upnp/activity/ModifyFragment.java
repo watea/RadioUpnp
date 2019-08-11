@@ -41,12 +41,8 @@ import com.watea.radio_upnp.model.RadioSQLContract;
 
 import java.util.List;
 
-public class ModifyFragment
-  extends
-  MainActivityFragment<ModifyFragment.Callback>
-  implements
-  RadiosModifyAdapter.Listener {
-  private static final String LOG_TAG = ModifyFragment.class.getSimpleName();
+public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
+  private static final String LOG_TAG = ModifyFragment.class.getName();
   // <HMI assets
   private View mRadiosDefaultView;
   // />
@@ -75,8 +71,27 @@ public class ModifyFragment
     List<Long> radioIds = mRadioLibrary.getAllRadioIds();
     mRadiosModifyAdapter.setRadioIds(radioIds);
     mRadiosDefaultView.setVisibility((radioIds.size() == 0) ? View.VISIBLE : View.INVISIBLE);
-    // Decorate
-    mCallback.onResume();
+  }
+
+  @NonNull
+  @Override
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        ((Callback) mProvider).onModifyRequest(null);
+      }
+    };
+  }
+
+  @Override
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_playlist_add_black_24dp;
+  }
+
+  @Override
+  public int getTitle() {
+    return R.string.title_modify;
   }
 
   @Override
@@ -87,7 +102,7 @@ public class ModifyFragment
 
   @Override
   public void onModifyClick(@NonNull Long radioId) {
-    mCallback.onModifyRequest(radioId);
+    ((Callback) mProvider).onModifyRequest(radioId);
   }
 
   @Override
@@ -126,8 +141,6 @@ public class ModifyFragment
   }
 
   public interface Callback {
-    void onResume();
-
-    void onModifyRequest(@NonNull Long radioId);
+    void onModifyRequest(@Nullable Long radioId);
   }
 }

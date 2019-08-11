@@ -41,7 +41,7 @@ import java.util.Objects;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Radio {
   public static final String RADIO_ID = "radio_id";
-  private static final String LOG_TAG = Radio.class.getSimpleName();
+  private static final String LOG_TAG = Radio.class.getName();
   @NonNull
   private Long mId;
   @NonNull
