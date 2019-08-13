@@ -56,15 +56,16 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Vector;
 
 public class MainActivity
   extends
   AppCompatActivity
   implements
   MainActivityFragment.Provider,
-  ModifyFragment.Callback,
   NavigationView.OnNavigationItemSelectedListener {
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
@@ -73,6 +74,10 @@ public class MainActivity
       put(ItemModifyFragment.class, R.id.action_add_item);
       put(ModifyFragment.class, R.id.action_modify);
       put(DonationFragment.class, R.id.action_donate);
+    }};
+  private static final List<Class<? extends Fragment>> ALWAYS_NEW_FRAGMENTS =
+    new Vector<Class<? extends Fragment>>() {{
+      add(ItemModifyFragment.class);
     }};
   private static final DefaultRadio[] DEFAULT_RADIOS = {
     new DefaultRadio(
@@ -130,9 +135,16 @@ public class MainActivity
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
-    // MainActivityFragment instantiates the menu
-    //noinspection ConstantConditions
-    getCurrentFragment().onCreateOptionsMenu(getMenuInflater(), menu);
+    MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
+    if (currentFragment == null) {
+      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
+    } else {
+      int menuId = currentFragment.getMenuId();
+      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
+        getMenuInflater().inflate(menuId, menu);
+        currentFragment.onCreateOptionsMenu(menu);
+      }
+    }
     return true;
   }
 
@@ -154,24 +166,19 @@ public class MainActivity
 
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-    int id = menuItem.getItemId();
+    Integer id = menuItem.getItemId();
     if (id == R.id.action_about) {
       mAboutAlertDialog.show();
     } else {
-      setFragment(getFragmentClassFromMenuId(id));
+      // Shall not fail to find!
+      for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
+        if (id.equals(FRAGMENT_MENU_IDS.get(fragment))) {
+          setFragment(fragment);
+        }
+      }
     }
     mDrawerLayout.closeDrawers();
     return true;
-  }
-
-  // radioId is null if ADD mode
-  @Override
-  public void onModifyRequest(@Nullable Long radioId) {
-    ItemModifyFragment itemModifyFragment = new ItemModifyFragment();
-    if (radioId != null) {
-      itemModifyFragment.set(Objects.requireNonNull(mRadioLibrary.getFrom(radioId)));
-    }
-    setFragment(itemModifyFragment);
   }
 
   @Override
@@ -181,7 +188,7 @@ public class MainActivity
   }
 
   @Override
-  public void onFragmentResume(MainActivityFragment mainActivityFragment) {
+  public void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
     invalidateOptionsMenu();
     mActionBar.setTitle(mainActivityFragment.getTitle());
     mFloatingActionButton.setOnClickListener(
@@ -199,6 +206,30 @@ public class MainActivity
   @Override
   public void setFloatingActionButtonResource(int resource) {
     mFloatingActionButton.setImageResource(resource);
+  }
+
+  @NonNull
+  public Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
+    Fragment fragment;
+    String tag = fragmentClass.getSimpleName();
+    if (ALWAYS_NEW_FRAGMENTS.contains(fragmentClass) ||
+      ((fragment = getFragmentManager().findFragmentByTag(tag)) == null)) {
+      try {
+        fragment = fragmentClass.getConstructor().newInstance();
+      } catch (Exception exception) {
+        // Should not happen
+        Log.e(LOG_TAG, "setFragment: internal failure", exception);
+        throw new RuntimeException();
+      }
+    }
+    FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
+    fragmentTransaction.replace(R.id.content_frame, fragment, tag);
+    // First fragment transaction not saved to enable back leaving the app
+    if (getCurrentFragment() != null) {
+      fragmentTransaction.addToBackStack(null);
+    }
+    fragmentTransaction.commit();
+    return fragment;
   }
 
   @Override
@@ -241,10 +272,8 @@ public class MainActivity
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
-    // First create library as may be needed in fragments
-    mRadioLibrary = new RadioLibrary(this);
-    // Then create hierarchy
     super.onCreate(savedInstanceState);
+    mRadioLibrary = new RadioLibrary(this);
     // Inflate view
     setContentView(R.layout.activity_main);
     mDrawerLayout = findViewById(R.id.main_activity);
@@ -305,26 +334,15 @@ public class MainActivity
     mRadioLibrary.close();
   }
 
-  private Class<? extends Fragment> getFragmentClassFromMenuId(@NonNull Integer menuId) {
-    for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
-      if (menuId.equals(FRAGMENT_MENU_IDS.get(fragment))) {
-        return fragment;
-      }
-    }
-    // Should not happen
-    Log.e(LOG_TAG, "getFragmentIdFrom: internal failure, wrong menu id");
-    throw new RuntimeException();
-  }
-
   private boolean setDefaultRadios() {
     boolean result = false;
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
       try {
-        //noinspection ConstantConditions
         result = (mRadioLibrary.insertAndSaveIcon(
           new Radio(
             defaultRadio.name,
-            null, // Filename not known yet
+            // Filename not known yet
+            null,
             Radio.Type.MISC,
             Radio.Language.OTHER,
             new URL(defaultRadio.uRL),
@@ -332,48 +350,15 @@ public class MainActivity
             Radio.Quality.LOW),
           mRadioLibrary.resourceToBitmap(defaultRadio.drawable)) >= 0) || result;
       } catch (MalformedURLException malformedURLException) {
-        Log.e(LOG_TAG, "setDefaultRadios: internal error, bad URL definition", malformedURLException);
+        Log.e(LOG_TAG, "setDefaultRadios: bad URL definition", malformedURLException);
       }
     }
     return result;
   }
 
   @Nullable
-  private MainActivityFragment getCurrentFragment() {
-    return (MainActivityFragment) getFragmentManager().findFragmentById(R.id.content_frame);
-  }
-
-  @NonNull
-  private Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
-    Fragment fragment = getFragmentManager().findFragmentByTag(fragmentClass.getSimpleName());
-    // ItemModifyFragment always a new fragment
-    if ((fragment == null) || (fragmentClass == ItemModifyFragment.class)) {
-      try {
-        fragment = fragmentClass.getConstructor().newInstance();
-      } catch (Exception exception) {
-        // Should not happen
-        Log.e(LOG_TAG, "getFragmentFromClass: internal failure, wrong fragment id");
-        throw new RuntimeException();
-      }
-    }
-    return setFragment(fragment);
-  }
-
-  @NonNull
-  private Fragment setFragment(@NonNull Fragment fragment) {
-    // Replace fragment setting tag to retrieve it later
-    FragmentTransaction fragmentTransaction = getFragmentManager()
-      .beginTransaction()
-      .replace(R.id.content_frame, fragment, fragment.getClass().getSimpleName());
-    // First fragment transaction not saved to enable back leaving the app
-    if (getCurrentFragment() != null) {
-      // Works properly only with AndroidManifest options:
-      // android:configChanges="keyboardHidden|orientation|screenSize".
-      // Otherwise back state added in case of orientation change
-      fragmentTransaction.addToBackStack(null);
-    }
-    fragmentTransaction.commit();
-    return fragment;
+  private Fragment getCurrentFragment() {
+    return getFragmentManager().findFragmentById(R.id.content_frame);
   }
 
   private void checkNavigationMenu(@NonNull Integer id) {

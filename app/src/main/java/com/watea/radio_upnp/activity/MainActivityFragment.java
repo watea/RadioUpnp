@@ -28,9 +28,10 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
+import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.View;
+import android.view.ViewGroup;
 
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -38,21 +39,24 @@ import java.util.Objects;
 
 public abstract class MainActivityFragment extends Fragment {
   public static final int DEFAULT_RESOURCE = -1;
-  protected RadioLibrary mRadioLibrary = null;
-  protected Provider mProvider = null;
+  protected RadioLibrary mRadioLibrary;
+  protected Provider mProvider;
 
   // Required empty constructor
   public MainActivityFragment() {
     super();
   }
 
-  public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
+  public void onCreateOptionsMenu(@NonNull Menu menu) {
   }
 
+  @Nullable
   @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  public View onCreateView(
+    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    super.onCreateView(inflater, container, savedInstanceState);
     setMembers();
+    return null;
   }
 
   @Override
@@ -87,6 +91,10 @@ public abstract class MainActivityFragment extends Fragment {
     return DEFAULT_RESOURCE;
   }
 
+  public int getMenuId() {
+    return DEFAULT_RESOURCE;
+  }
+
   public abstract int getTitle();
 
   // Utility to test if view actually exists (not disposed) and is on screen
@@ -111,8 +119,11 @@ public abstract class MainActivityFragment extends Fragment {
     @NonNull
     RadioLibrary getRadioLibrary();
 
-    void onFragmentResume(MainActivityFragment mainActivityFragment);
+    void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment);
 
     void setFloatingActionButtonResource(int resource);
+
+    @NonNull
+    Fragment setFragment(@NonNull Class<? extends Fragment> fragment);
   }
 }

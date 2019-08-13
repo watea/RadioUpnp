@@ -52,18 +52,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String UPNP_ACTION_STOP = "Stop";
   private static final int REMOTE_LOGO_SIZE = 140;
   @Nullable
-  private Device mDlnaDevice;
+  private Device mDlnaDevice = null;
   @Nullable
-  private AndroidUpnpService mAndroidUpnpService;
-  @Nullable
-  private Object mLockKey;
+  private AndroidUpnpService mAndroidUpnpService = null;
 
   public UpnpPlayerAdapter(
     @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
     super(context, httpServer, listener, false);
-    mAndroidUpnpService = null;
-    mDlnaDevice = null;
-    mLockKey = null;
   }
 
   // Must be called
@@ -87,8 +82,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPrepareFromMediaId() {
-    // Shall not be null
-    mLockKey = getLockKey();
     String radioUri = mHttpServer.getRadioUri(Objects.requireNonNull(mRadio)).toString();
     String radioName = mRadio.getName();
     ActionInvocation actionInvocation = getUpnpActionInvocation(
@@ -168,45 +161,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private void upnpExecuteAction(@NonNull ActionInvocation actionInvocation) {
     if (mAndroidUpnpService == null) {
       Log.d(LOG_TAG, "upnpExecuteAction: AndroidUpnpService is null");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mLockKey);
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, getLockKey());
     } else {
-      mAndroidUpnpService.getControlPoint().execute(new ActionCallback(actionInvocation) {
-        @Override
-        public void success(ActionInvocation invocation) {
-          String action = actionInvocation.getAction().getName();
-          Log.d(LOG_TAG, "Successfully called UPnP action: " + action);
-          for (ActionArgumentValue value : actionInvocation.getOutput()) {
-            Log.d(LOG_TAG, value.toString());
-          }
-          switch (action) {
-            case UpnpPlayerAdapter.UPNP_ACTION_SET_AV_TRANSPORT_URI:
-              changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, mLockKey);
-              // Now we can call Play
-              onPlay();
-              break;
-            case UpnpPlayerAdapter.UPNP_ACTION_STOP:
-              changeAndNotifyState(PlaybackStateCompat.STATE_NONE, mLockKey);
-              break;
-            case UpnpPlayerAdapter.UPNP_ACTION_PLAY:
-              changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING, mLockKey);
-              break;
-            // Should not happen as PAUSE not allowed
-            case UpnpPlayerAdapter.UPNP_ACTION_PAUSE:
-              changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED, mLockKey);
-              break;
-            // Should not happen
-            default:
-              Log.e(LOG_TAG, "RadioActionCallback.success: state not managed: " + action);
-          }
-        }
-
-        @Override
-        public void failure(
-          ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
-          Log.d(LOG_TAG, defaultMsg);
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mLockKey);
-        }
-      });
+      mAndroidUpnpService.getControlPoint().execute(new TaggedActionCallback(actionInvocation));
     }
   }
 
@@ -218,5 +175,50 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       new ActionInvocation(dlnaDevice.findService(aVTransportServiceId).getAction(action));
     actionInvocation.setInput("InstanceID", "0");
     return actionInvocation;
+  }
+
+  private class TaggedActionCallback extends ActionCallback {
+    private final Object mLockKey;
+
+    private TaggedActionCallback(@NonNull ActionInvocation actionInvocation) {
+      super(actionInvocation);
+      mLockKey = getLockKey();
+    }
+
+    @Override
+    public void success(ActionInvocation invocation) {
+      String action = actionInvocation.getAction().getName();
+      Log.d(LOG_TAG, "Successfully called UPnP action: " + action);
+      for (ActionArgumentValue value : actionInvocation.getOutput()) {
+        Log.d(LOG_TAG, value.toString());
+      }
+      switch (action) {
+        case UpnpPlayerAdapter.UPNP_ACTION_SET_AV_TRANSPORT_URI:
+          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, mLockKey);
+          // Now we can call Play
+          onPlay();
+          break;
+        case UpnpPlayerAdapter.UPNP_ACTION_STOP:
+          changeAndNotifyState(PlaybackStateCompat.STATE_NONE, mLockKey);
+          break;
+        case UpnpPlayerAdapter.UPNP_ACTION_PLAY:
+          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING, mLockKey);
+          break;
+        // Should not happen as PAUSE not allowed
+        case UpnpPlayerAdapter.UPNP_ACTION_PAUSE:
+          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED, mLockKey);
+          break;
+        // Should not happen
+        default:
+          Log.e(LOG_TAG, "RadioActionCallback.success: state not managed: " + action);
+      }
+    }
+
+    @Override
+    public void failure(
+      ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+      Log.d(LOG_TAG, defaultMsg);
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mLockKey);
+    }
   }
 }

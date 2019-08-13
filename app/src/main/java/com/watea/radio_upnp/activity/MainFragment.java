@@ -49,7 +49,6 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -104,11 +103,10 @@ public class MainFragment
   private AlertDialog mPlayLongPressAlertDialog;
   private AlertDialog mDlnaEnableAlertDialog;
   // />
-  private boolean mIsPreferredRadios = false;
+  private boolean mIsPreferredRadios;
   private boolean mGotItRadioLongPress;
   private boolean mGotItPlayLongPress;
   private boolean mGotItDlnaEnable;
-  private String mSavedChosenDlnaDeviceIdentity = null;
   private MediaControllerCompat mMediaController = null;
   // Callback from media control
   private final MediaControllerCompat.Callback mMediaControllerCallback =
@@ -229,7 +227,7 @@ public class MainFragment
           // Sync existing MediaSession state to the UI
           browserViewSync();
         } catch (RemoteException remoteException) {
-          Log.d(LOG_TAG, String.format("onConnected: problem: %s", remoteException.toString()));
+          Log.d(LOG_TAG, "onConnected: problem: ", remoteException);
           throw new RuntimeException(remoteException);
         }
         // Nota: no mMediaBrowser.subscribe here needed
@@ -383,23 +381,23 @@ public class MainFragment
   }
 
   @Override
-  public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
-    // Inflate the menu; this adds items to the action bar if it is present
-    menuInflater.inflate(R.menu.menu_main, menu);
+  public void onCreateOptionsMenu(@NonNull Menu menu) {
     // Init Preferred MenuItem...
     mPreferredMenuItem = menu.findItem(R.id.action_preferred);
     // ...set it
     setPreferredMenuItem();
   }
 
+  @Nullable
   @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  public View onCreateView(
+    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    super.onCreateView(inflater, container, savedInstanceState);
     // Restore saved state, if any
-    if (savedInstanceState != null) {
+    if (savedInstanceState == null) {
+      mIsPreferredRadios = false;
+    } else {
       mIsPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
-      mSavedChosenDlnaDeviceIdentity =
-        savedInstanceState.getString(getString(R.string.key_selected_device));
     }
     // Shared preferences
     SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
@@ -409,6 +407,85 @@ public class MainFragment
       sharedPreferences.getBoolean(getString(R.string.key_play_long_press_got_it), false);
     mGotItDlnaEnable =
       sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
+    // Display metrics
+    mScreenWidthDp = getResources().getConfiguration().screenWidthDp;
+    // Inflate the view so that graphical objects exists
+    View view = inflater.inflate(R.layout.content_main, container, false);
+    // Fill content including recycler
+    // A an exception, created only if necessary as handles UPnP events
+    if (mDlnaDevicesAdapter == null) {
+      mDlnaDevicesAdapter = new DlnaDevicesAdapter(
+        getActivity(),
+        R.layout.row_dlna_device,
+        (savedInstanceState == null) ?
+          null : savedInstanceState.getString(getString(R.string.key_selected_device)));
+    }
+    // Build alert dialogs
+    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
+      .setAdapter(
+        mDlnaDevicesAdapter,
+        new DialogInterface.OnClickListener() {
+          @Override
+          public void onClick(DialogInterface dialogInterface, int i) {
+            mDlnaDevicesAdapter.onSelection(i);
+            if (mDlnaDevicesAdapter.hasChosenDlnaDevice()) {
+              Radio radio = getCurrentRadio();
+              if (radio != null) {
+                startReading(radio);
+              }
+              tell(
+                getResources().getString(R.string.dlna_selection) + mDlnaDevicesAdapter.getItem(i));
+            } else {
+              tell(R.string.no_dlna_selection);
+            }
+          }
+        });
+    mDlnaAlertDialog = alertDialogBuilder.create();
+    alertDialogBuilder = new AlertDialog.Builder(getActivity())
+      .setMessage(R.string.radio_long_press)
+      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialogInterface, int i) {
+          mGotItRadioLongPress = true;
+        }
+      });
+    mRadioLongPressAlertDialog = alertDialogBuilder.create();
+    alertDialogBuilder = new AlertDialog.Builder(getActivity())
+      .setMessage(R.string.play_long_press)
+      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialogInterface, int i) {
+          mGotItPlayLongPress = true;
+        }
+      });
+    mPlayLongPressAlertDialog = alertDialogBuilder.create();
+    alertDialogBuilder = new AlertDialog.Builder(getActivity())
+      .setMessage(R.string.dlna_enable)
+      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialogInterface, int i) {
+          mGotItDlnaEnable = true;
+        }
+      });
+    mDlnaEnableAlertDialog = alertDialogBuilder.create();
+    mAlbumArt = view.findViewById(R.id.album_art);
+    mPlayedRadioNameTextView = view.findViewById(R.id.played_radio_name);
+    mPlayedRadioNameTextView.setSelected(true); // For scrolling
+    mPlayedRadioInformationTextView = view.findViewById(R.id.played_radio_information);
+    mPlayedRadioInformationTextView.setSelected(true); // For scrolling
+    mRadiosAdapter = new RadiosAdapter(getActivity(), this);
+    RecyclerView radiosView = view.findViewById(R.id.radios_view);
+    radiosView.setLayoutManager(
+      new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+    radiosView.setAdapter(mRadiosAdapter);
+    mRadiosDefaultView = view.findViewById(R.id.radios_default_view);
+    mProgressBar = view.findViewById(R.id.play_waiting);
+    mProgressBar.setVisibility(View.INVISIBLE);
+    mPlayButton = view.findViewById(R.id.play);
+    mPlayButton.setVisibility(View.INVISIBLE);
+    mPlayButton.setOnClickListener(this);
+    mPlayButton.setOnLongClickListener(this);
+    return view;
   }
 
   @Override
@@ -474,87 +551,13 @@ public class MainFragment
   }
 
   @Override
-  public int getTitle() {
-    return R.string.title_main;
+  public int getMenuId() {
+    return R.menu.menu_main;
   }
 
-  @Nullable
   @Override
-  public View onCreateView(
-    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
-    // Display metrics
-    mScreenWidthDp = getResources().getConfiguration().screenWidthDp;
-    // Inflate the view so that graphical objects exists
-    View view = inflater.inflate(R.layout.content_main, container, false);
-    // Fill content including recycler
-    // A an exception, created only if necessary as handles UPnP events
-    if (mDlnaDevicesAdapter == null) {
-      mDlnaDevicesAdapter = new DlnaDevicesAdapter(
-        getActivity(), R.layout.row_dlna_device, mSavedChosenDlnaDeviceIdentity);
-    }
-    // Build alert dialogs
-    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setAdapter(
-        mDlnaDevicesAdapter,
-        new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(DialogInterface dialogInterface, int i) {
-            mDlnaDevicesAdapter.onSelection(i);
-            Radio radio = getCurrentRadio();
-            if (mDlnaDevicesAdapter.hasChosenDlnaDevice() && (radio != null)) {
-              startReading(radio);
-            }
-            mDlnaAlertDialog.dismiss();
-          }
-        });
-    alertDialogBuilder.setCancelable(true);
-    mDlnaAlertDialog = alertDialogBuilder.create();
-    alertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setMessage(R.string.radio_long_press)
-      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-          mGotItRadioLongPress = true;
-        }
-      });
-    mRadioLongPressAlertDialog = alertDialogBuilder.create();
-    alertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setMessage(R.string.play_long_press)
-      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-          mGotItPlayLongPress = true;
-        }
-      });
-    mPlayLongPressAlertDialog = alertDialogBuilder.create();
-    alertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setMessage(R.string.dlna_enable)
-      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-          mGotItDlnaEnable = true;
-        }
-      });
-    mDlnaEnableAlertDialog = alertDialogBuilder.create();
-    mAlbumArt = view.findViewById(R.id.album_art);
-    mPlayedRadioNameTextView = view.findViewById(R.id.played_radio_name);
-    mPlayedRadioNameTextView.setSelected(true); // For scrolling
-    mPlayedRadioInformationTextView = view.findViewById(R.id.played_radio_information);
-    mPlayedRadioInformationTextView.setSelected(true); // For scrolling
-    mRadiosAdapter = new RadiosAdapter(getActivity(), this);
-    RecyclerView radiosView = view.findViewById(R.id.radios_view);
-    radiosView.setLayoutManager(
-      new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
-    radiosView.setAdapter(mRadiosAdapter);
-    mRadiosDefaultView = view.findViewById(R.id.radios_default_view);
-    mProgressBar = view.findViewById(R.id.play_waiting);
-    mProgressBar.setVisibility(View.INVISIBLE);
-    mPlayButton = view.findViewById(R.id.play);
-    mPlayButton.setVisibility(View.INVISIBLE);
-    mPlayButton.setOnClickListener(this);
-    mPlayButton.setOnLongClickListener(this);
-    return view;
+  public int getTitle() {
+    return R.string.title_main;
   }
 
   @Override
@@ -641,7 +644,7 @@ public class MainFragment
       BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "onActivityResume: internal failure; AndroidUpnpService not bound");
     }
-    // MediaBrowser creation
+    // MediaBrowser creation, launch RadioService
     if (mMediaBrowser == null) {
       mMediaBrowser = new MediaBrowserCompat(
         mContext,

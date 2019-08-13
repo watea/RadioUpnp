@@ -41,8 +41,10 @@
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio found, please add a radio</string>
     <string name="dlna_reset">DLNA selection reset</string>
+    <string name="dlna_selection">DLNA device selection:\n</string>
+    <string name="no_dlna_selection">No DLNA device selected</string>
     <string name="legend_name">MY RADIO</string>
-    <string name="legend_streaming_url">Streaming URL - MP3 only</string>
+    <string name="legend_streaming_url">Streaming URL</string>
     <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
     <string name="legend_page_url">Web page URL (Mandatory for icon search)</string>
     <string name="legend_page_url_example">http://direct.myradio.fr</string>
@@ -54,7 +56,7 @@
     <string name="dar_fm_no_icon_found">Done!\nIcon search failed, try unchecking OnRad.io</string>
     <string name="connection_test_failed">Connection test failed</string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
-    <string name="connection_test_successful">Connection test successful</string>
+    <string name="connection_test_successful">Connection test successful.\nAudio content: </string>
     <string name="LAN_required">No LAN/Wifi connection found for DLNA function</string>
     <string name="radio_long_press">Long press opens web site</string>
     <string name="play_long_press">Long press stops radio</string>

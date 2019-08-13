@@ -65,7 +65,7 @@ import java.util.List;
 
 public class RadioService extends MediaBrowserServiceCompat implements PlayerAdapter.Listener {
   private static final String LOG_TAG = RadioService.class.getName();
-  private static final int NOTIFICATION_ID = 412;
+  private static final int NOTIFICATION_ID = 9;
   private static final int REQUEST_CODE = 501;
   private static String CHANNEL_ID;
   private final UpnpServiceConnection mUpnpConnection = new UpnpServiceConnection();
@@ -77,6 +77,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private LocalPlayerAdapter mLocalPlayerAdapter;
   private UpnpPlayerAdapter mUpnpPlayerAdapter;
   private HttpServer mHttpServer;
+  private MediaMetadataCompat mMediaMetadataCompat;
 
   @Override
   public void onCreate() {
@@ -84,6 +85,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
     // Create a new MediaSession...
     mSession = new MediaSessionCompat(this, LOG_TAG);
+    mMediaMetadataCompat = null;
     mServiceInStartedState = false;
     // Link to callback where actual media controls are called...
     mSession.setCallback(new MediaSessionCompatCallback());
@@ -132,7 +134,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       createChannel();
     }
-    Log.d(LOG_TAG, "onCreate: RadioService creating MediaSession, and MediaNotificationManager");
+    Log.d(LOG_TAG, "onCreate: done!");
   }
 
   @Override
@@ -150,6 +152,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   }
 
   @Override
+  public int onStartCommand(Intent intent, int flags, int startId) {
+    startForeground(NOTIFICATION_ID, getNotification());
+    return START_REDELIVER_INTENT;
+  }
+
+  @Override
   public void onDestroy() {
     super.onDestroy();
     mLocalPlayerAdapter.release();
@@ -158,7 +166,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     mUpnpConnection.release();
     mRadioLibrary.close();
     mSession.release();
-    Log.d(LOG_TAG, "onDestroy: PlayerAdapter stopped, and MediaSession released");
+    Log.d(LOG_TAG, "onDestroy: done!");
   }
 
   @Override
@@ -172,34 +180,33 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   public void onPlaybackStateChange(
     @NonNull PlaybackStateCompat state, @Nullable MediaMetadataCompat mediaMetadataCompat) {
     Log.d(LOG_TAG, "onPlaybackStateChange: state: " + state);
+    mMediaMetadataCompat = mediaMetadataCompat;
     // Report the state to the MediaSession
-    mSession.setPlaybackState(state);
-    // Manage the started state of this service
+    if (mSession.isActive()) {
+      mSession.setPlaybackState(state);
+    }
+    // Manage the started state of this service, and session activity
     switch (state.getState()) {
       case PlaybackStateCompat.STATE_BUFFERING:
         break;
       case PlaybackStateCompat.STATE_PLAYING:
         // Move service to started state
         if (!mServiceInStartedState) {
-          ContextCompat.startForegroundService(
-            this,
-            new Intent(this, RadioService.class));
+          ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
           mServiceInStartedState = true;
         }
-        startForeground(NOTIFICATION_ID, getNotification(mediaMetadataCompat));
         break;
       case PlaybackStateCompat.STATE_PAUSED:
         // Move service out started state
         stopForeground(false);
         // Update notification for pause
-        mNotificationManager.notify(NOTIFICATION_ID, getNotification(mediaMetadataCompat));
+        mNotificationManager.notify(NOTIFICATION_ID, getNotification());
         break;
-      case PlaybackStateCompat.STATE_ERROR:
-      case PlaybackStateCompat.STATE_STOPPED:
-        mSession.setMetadata(null);
       default:
+        mMediaMetadataCompat = null;
         // Cancel session
         if (mSession.isActive()) {
+          mSession.setMetadata(null);
           mSession.setActive(false);
         }
         // Move service out started state, if any
@@ -213,10 +220,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @Override
   public void onInformationChange(@Nullable MediaMetadataCompat mediaMetadataCompat) {
-    mSession.setMetadata(mediaMetadataCompat);
+    mMediaMetadataCompat = mediaMetadataCompat;
+    mSession.setMetadata(mMediaMetadataCompat);
     // Update notification, if any
     if (mServiceInStartedState) {
-      mNotificationManager.notify(NOTIFICATION_ID, getNotification(mediaMetadataCompat));
+      mNotificationManager.notify(NOTIFICATION_ID, getNotification());
     }
   }
 
@@ -248,12 +256,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   }
 
   @Nullable
-  private Notification getNotification(@Nullable MediaMetadataCompat mediaMetadataCompat) {
-    if (mediaMetadataCompat == null) {
+  private Notification getNotification() {
+    if (mMediaMetadataCompat == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
       return null;
     }
-    MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
+    MediaDescriptionCompat description = mMediaMetadataCompat.getDescription();
     NotificationCompat.Action ActionPause =
       new NotificationCompat.Action(
         R.drawable.ic_pause_black_24dp,

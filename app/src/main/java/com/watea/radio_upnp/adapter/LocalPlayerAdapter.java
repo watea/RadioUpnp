@@ -54,17 +54,15 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
   @Nullable
-  private SimpleExoPlayer mSimpleExoPlayer;
+  private SimpleExoPlayer mSimpleExoPlayer = null;
   @Nullable
-  private PlayerEventListener mPlayerEventListener;
+  private PlayerEventListener mPlayerEventListener = null;
 
   public LocalPlayerAdapter(
     @NonNull Context context,
     @NonNull HttpServer httpServer,
     @NonNull Listener listener) {
     super(context, httpServer, listener, true);
-    mSimpleExoPlayer = null;
-    mPlayerEventListener = null;
   }
 
   @Override

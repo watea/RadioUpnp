@@ -138,6 +138,19 @@ public class DonationFragment extends MainActivityFragment {
     }
   }
 
+  @Override
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
+    // Create the helper, passing it our context and the public key to verify signatures with
+    mIabHelper = new IabHelper(getActivity(), PUBKEY);
+    // Enable debug logging (for a production application, you should set this to false)
+    mIabHelper.enableDebugLogging(BuildConfig.DEBUG);
+    // Start setup. This is asynchronous and the specified listener
+    // will be called once setup completes.
+    Log.d(LOG_TAG, "Starting setup");
+    mIabHelper.startSetup(mSetupFinishedListener);
+  }
+
   @Nullable
   @Override
   public View onCreateView(
@@ -154,19 +167,6 @@ public class DonationFragment extends MainActivityFragment {
     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     mGoogleSpinner.setAdapter(adapter);
     return view;
-  }
-
-  @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
-    // Create the helper, passing it our context and the public key to verify signatures with
-    mIabHelper = new IabHelper(getActivity(), PUBKEY);
-    // Enable debug logging (for a production application, you should set this to false)
-    mIabHelper.enableDebugLogging(BuildConfig.DEBUG);
-    // Start setup. This is asynchronous and the specified listener
-    // will be called once setup completes.
-    Log.d(LOG_TAG, "Starting setup");
-    mIabHelper.startSetup(mSetupFinishedListener);
   }
 
   @NonNull

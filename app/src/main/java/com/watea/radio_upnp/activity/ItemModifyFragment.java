@@ -39,8 +39,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -210,18 +208,19 @@ public class ItemModifyFragment extends MainActivityFragment {
       }
     }
   };
-  private boolean mIsTestOK;
+  private String mStreamContent;
   private final Runnable mTestRadioURLBackground = new Runnable() {
     @Override
     public void run() {
-      String contentType = null;
+      mStreamContent = null;
       HttpURLConnection httpURLConnection = null;
       try {
         httpURLConnection = NetworkTester.getActualHttpURLConnection(mUrlWatcher.mUrl);
         // Actual connection test: header must be audio/mpeg
-        contentType = httpURLConnection.getHeaderField("Content-Type");
+        mStreamContent = httpURLConnection.getHeaderField("Content-Type");
         // If we get there, connection has occurred
-        Log.d(LOG_TAG, "Connection test status: " + httpURLConnection.getResponseCode());
+        Log.d(LOG_TAG,"Connection test status/contentType: " +
+          httpURLConnection.getResponseCode() + "/" + mStreamContent);
       } catch (IOException iOException) {
         // Fires also in case of timeout
         Log.i(LOG_TAG, "Radio URL IO exception");
@@ -230,15 +229,16 @@ public class ItemModifyFragment extends MainActivityFragment {
           httpURLConnection.disconnect();
         }
       }
-      mIsTestOK = (contentType != null) && contentType.equals("audio/mpeg");
     }
   };
   private final Runnable mTestRadioURLForeground = new Runnable() {
     @Override
     public void run() {
-      tell(getResources().getString(
-        mIsTestOK ? R.string.connection_test_successful : R.string.connection_test_failed) + ": " +
-        mUrlWatcher.mUrl.toString());
+      if (mStreamContent == null) {
+        tell(R.string.connection_test_failed);
+      } else {
+        tell(getResources().getString(R.string.connection_test_successful) + mStreamContent + ".");
+      }
     }
   };
   private boolean mIsDarFmSearchRunning;
@@ -258,20 +258,14 @@ public class ItemModifyFragment extends MainActivityFragment {
     return element.getElementsByTag(tag).first().ownText();
   }
 
+  @Nullable
   @Override
-  public void onCreateOptionsMenu(@NonNull MenuInflater menuInflater, @NonNull Menu menu) {
-    // Inflate the menu; this adds items to the action bar if it is present.
-    menuInflater.inflate(R.menu.menu_item_modify, menu);
-  }
-
-  @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  public View onCreateView(
+    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    super.onCreateView(inflater, container, savedInstanceState);
     // Restore saved state, if any
     if (savedInstanceState != null) {
-      // "set" values...
       mRadio = mRadioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
-      // ...others
       mRadioName = savedInstanceState.getString(getString(R.string.key_radio_name));
       mRadioUrl = savedInstanceState.getString(getString(R.string.key_radio_url));
       mRadioWebPage = savedInstanceState.getString(getString(R.string.key_radio_web_page));
@@ -281,42 +275,9 @@ public class ItemModifyFragment extends MainActivityFragment {
     DEFAULT_MESSAGE.clear();
     DEFAULT_MESSAGE.put(DAR_FM_NAME, getActivity().getResources().getString(R.string.wait_search));
     mIsDarFmSearchRunning = false;
-  }
-
-  @NonNull
-  @Override
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        if (NetworkTester.isDeviceOffline(getActivity())) {
-          tell(R.string.no_internet);
-        } else {
-          if (mDarFmCheckbox.isChecked()) {
-            if (mIsDarFmSearchRunning) {
-              tell(R.string.dar_fm_in_progress);
-            } else {
-              darFmSearch(DEFAULT_MESSAGE);
-            }
-          } else {
-            new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
-          }
-        }
-      }
-    };
-  }
-
-  @Override
-  public int getTitle() {
-    return isAddMode() ? R.string.title_item_add : R.string.title_item_modify;
-  }
-
-  @Nullable
-  @Override
-  public View onCreateView(
-    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
+    // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_item_modify, container, false);
+    // Fill content including recycler
     mNameEditText = view.findViewById(R.id.name_edit_text);
     mUrlEditText = view.findViewById(R.id.url_edit_text);
     mUrlWatcher = new UrlWatcher(mUrlEditText);
@@ -325,7 +286,6 @@ public class ItemModifyFragment extends MainActivityFragment {
     mWebPageWatcher = new UrlWatcher(mWebPageEditText);
     mWebPageEditText.addTextChangedListener(mWebPageWatcher);
     mDarFmCheckbox = view.findViewById(R.id.dar_fm_checkbox);
-    // Fill content including recycler
     mNameEditText.setText(mRadioName);
     setRadioIcon((mRadioIcon == null) ?
       BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_radio) : mRadioIcon);
@@ -363,6 +323,39 @@ public class ItemModifyFragment extends MainActivityFragment {
       .setCancelable(true)
       .create();
     return view;
+  }
+
+  @NonNull
+  @Override
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        if (NetworkTester.isDeviceOffline(getActivity())) {
+          tell(R.string.no_internet);
+        } else {
+          if (mDarFmCheckbox.isChecked()) {
+            if (mIsDarFmSearchRunning) {
+              tell(R.string.dar_fm_in_progress);
+            } else {
+              darFmSearch(DEFAULT_MESSAGE);
+            }
+          } else {
+            new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
+          }
+        }
+      }
+    };
+  }
+
+  @Override
+  public int getMenuId() {
+    return R.menu.menu_item_modify;
+  }
+
+  @Override
+  public int getTitle() {
+    return isAddMode() ? R.string.title_item_add : R.string.title_item_modify;
   }
 
   @Override
@@ -405,10 +398,9 @@ public class ItemModifyFragment extends MainActivityFragment {
           tell(R.string.radio_definition_error);
         } else {
           if (isAddMode()) {
-            //noinspection ConstantConditions
             mRadio = new Radio(
               getRadioName(),
-              null, // File name not known yet
+              null,
               Radio.Type.MISC,
               Radio.Language.OTHER,
               mUrlWatcher.mUrl,
@@ -422,7 +414,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             // Same file name reused to store icon
             mRadioLibrary.bitmapToFile(
               mRadioIcon,
-              mRadio.getIconFile().getName().replace(".png", ""));
+              Objects.requireNonNull(mRadio.getIconFile()).getName().replace(".png", ""));
             mRadio.setURL(mUrlWatcher.mUrl);
             mRadio.setWebPageURL(mWebPageWatcher.mUrl);
             if (mRadioLibrary.updateFrom(mRadio.getId(), mRadio.toContentValues()) <= 0) {

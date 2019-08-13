@@ -46,7 +46,7 @@ public class Radio {
   private Long mId;
   @NonNull
   private String mName;
-  @NonNull
+  @Nullable
   private File mIconFile;
   @NonNull
   private Type mType;
@@ -58,11 +58,11 @@ public class Radio {
   private URL mWebPageURL;
   @NonNull
   private Quality mQuality;
-  private Boolean mIsPreferred;
+  private Boolean mIsPreferred = false;
 
   public Radio(
     @NonNull String name,
-    @NonNull File iconFile, // Null allowed on transition
+    @Nullable File iconFile,
     @NonNull URL uRL,
     @Nullable URL webPageURL) {
     this(name, iconFile, Type.MISC, Language.OTHER, uRL, webPageURL, Quality.LOW);
@@ -70,7 +70,7 @@ public class Radio {
 
   public Radio(
     @NonNull String name,
-    @SuppressWarnings("NullableProblems") @NonNull File iconFile, // Null allowed on transition
+    @Nullable File iconFile,
     @NonNull Type type,
     @NonNull Language language,
     @NonNull URL uRL,
@@ -84,7 +84,6 @@ public class Radio {
     mURL = uRL;
     mWebPageURL = webPageURL;
     mQuality = quality;
-    mIsPreferred = false;
   }
 
   // SQL constructor
@@ -195,7 +194,7 @@ public class Radio {
     return (mWebPageURL == null) ? null : Uri.parse(mWebPageURL.toString());
   }
 
-  @NonNull
+  @Nullable
   public File getIconFile() {
     return mIconFile;
   }
@@ -205,9 +204,9 @@ public class Radio {
   }
 
   // Note: no defined size for icon
-  @NonNull
+  @Nullable
   public Bitmap getIcon() {
-    return BitmapFactory.decodeFile(mIconFile.getPath());
+    return (mIconFile == null) ? null : BitmapFactory.decodeFile(mIconFile.getPath());
   }
 
   @NonNull
@@ -233,7 +232,6 @@ public class Radio {
     ContentValues contentValues = new ContentValues();
     contentValues.put(RadioSQLContract.Columns.COLUMN_NAME, mName);
     // Null allowed on transition
-    //noinspection ConstantConditions
     contentValues.put(RadioSQLContract.Columns.COLUMN_ICON,
       (mIconFile == null) ? null : mIconFile.getPath());
     contentValues.put(RadioSQLContract.Columns.COLUMN_TYPE, mType.toString());

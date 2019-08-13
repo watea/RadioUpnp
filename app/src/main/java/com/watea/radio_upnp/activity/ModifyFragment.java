@@ -53,7 +53,9 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   public View onCreateView(
     LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
     super.onCreateView(inflater, container, savedInstanceState);
+    // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_modify, container, false);
+    // Fill content including recycler
     RecyclerView radiosView = view.findViewById(R.id.radios_view);
     radiosView.setLayoutManager(new LinearLayoutManager(getActivity()));
     // RecyclerView shall be defined for Adapter
@@ -79,7 +81,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     return new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        ((Callback) mProvider).onModifyRequest(null);
+        mProvider.setFragment(ItemModifyFragment.class);
       }
     };
   }
@@ -101,8 +103,8 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   }
 
   @Override
-  public void onModifyClick(@NonNull Long radioId) {
-    ((Callback) mProvider).onModifyRequest(radioId);
+  public void onModifyClick(@NonNull Radio radio) {
+    ((ItemModifyFragment) mProvider.setFragment(ItemModifyFragment.class)).set(radio);
   }
 
   @Override
@@ -138,9 +140,5 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     contentValues.put(
       RadioSQLContract.Columns.COLUMN_POSITION, mRadioLibrary.getPositionFrom(radioId));
     return contentValues;
-  }
-
-  public interface Callback {
-    void onModifyRequest(@Nullable Long radioId);
   }
 }

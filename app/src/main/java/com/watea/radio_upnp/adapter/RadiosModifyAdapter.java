@@ -40,6 +40,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Vector;
 
 public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder> {
@@ -48,8 +49,9 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   private final int mIconSize;
   @NonNull
   private final Listener mListener;
+  // Dummy default
   @NonNull
-  private List<Long> mRadioIds = new Vector<>(); // Dummy default
+  private List<Long> mRadioIds = new Vector<>();
 
   public RadiosModifyAdapter(
     @NonNull Context context, @NonNull Listener listener, @NonNull RecyclerView recyclerView) {
@@ -77,8 +79,8 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    //noinspection ConstantConditions
-    viewHolder.setView(mListener.getRadioFromId(mRadioIds.get(position)));
+    Objects.requireNonNull(viewHolder).setView(
+      Objects.requireNonNull(mListener.getRadioFromId(mRadioIds.get(position))));
   }
 
   @Override
@@ -90,7 +92,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     @Nullable
     Radio getRadioFromId(@NonNull Long radioId);
 
-    void onModifyClick(@NonNull Long radioId);
+    void onModifyClick(@NonNull Radio radio);
 
     boolean onDelete(@NonNull Long radioId);
 
@@ -150,6 +152,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
     private final TextView mRadioNameTextView;
+    @Nullable
     private Radio mRadio;
 
     ViewHolder(@NonNull View itemView) {
@@ -160,7 +163,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
         new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-            mListener.onModifyClick(mRadio.getId());
+            mListener.onModifyClick(mRadio);
           }
         });
     }
@@ -170,7 +173,8 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       mRadioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         new BitmapDrawable(
           mContext.getResources(),
-          Bitmap.createScaledBitmap(mRadio.getIcon(), mIconSize, mIconSize, false)),
+          Bitmap.createScaledBitmap(
+            Objects.requireNonNull(mRadio.getIcon()), mIconSize, mIconSize, false)),
         null,
         null,
         null);

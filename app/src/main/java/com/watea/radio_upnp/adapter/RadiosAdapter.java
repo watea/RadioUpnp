@@ -44,6 +44,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Vector;
 
 public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder> {
@@ -52,8 +53,9 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
   private final int mIconSize;
   @NonNull
   private final Listener mListener;
+  // Dummy default
   @NonNull
-  private List<Long> mRadioIds = new Vector<>(); // Dummy default
+  private List<Long> mRadioIds = new Vector<>();
 
   public RadiosAdapter(@NonNull Context context, @NonNull Listener listener) {
     mContext = context;
@@ -79,8 +81,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    //noinspection ConstantConditions
-    viewHolder.setView(mListener.getRadioFromId(mRadioIds.get(position)));
+    viewHolder.setView(Objects.requireNonNull(mListener.getRadioFromId(mRadioIds.get(position))));
   }
 
   @Override
@@ -145,15 +146,12 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {
-      Bitmap newBitmap = Bitmap.createScaledBitmap(bitmap, 1, 1, true);
-      final int color = newBitmap.getPixel(0, 0);
-      newBitmap.recycle();
-      return color;
+      return Bitmap.createScaledBitmap(bitmap, 1, 1, true).getPixel(0, 0);
     }
 
     private void setView(@NonNull Radio radio) {
       mRadio = radio;
-      mLinearLayout.setBackgroundColor(getDominantColor(mRadio.getIcon()));
+      mLinearLayout.setBackgroundColor(getDominantColor(Objects.requireNonNull(mRadio.getIcon())));
       mRadioNameView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         null,
         new BitmapDrawable(

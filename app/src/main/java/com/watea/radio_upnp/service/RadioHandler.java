@@ -66,13 +66,12 @@ public class RadioHandler extends AbstractHandler {
   private final RadioLibrary mRadioLibrary;
   private final boolean mIsBuffered;
   @Nullable
-  private Listener mListener;
+  private Listener mListener = null;
 
   RadioHandler(@NonNull String userAgent, @NonNull RadioLibrary radioLibrary, boolean isBuffered) {
     super();
     mUserAgent = userAgent;
     mRadioLibrary = radioLibrary;
-    mListener = null;
     mIsBuffered = isBuffered;
   }
 

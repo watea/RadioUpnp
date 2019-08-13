@@ -33,7 +33,7 @@ public class DlnaDevice {
   @Nullable
   private Device mDevice;
   @Nullable
-  private Bitmap mIcon;
+  private Bitmap mIcon = null;
 
   public DlnaDevice(@Nullable Device device) {
     mDevice = device;

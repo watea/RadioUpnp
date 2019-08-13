@@ -38,6 +38,7 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 
 import java.io.FileOutputStream;
+import java.util.Objects;
 
 @SuppressWarnings("WeakerAccess")
 public class HttpServer extends Thread {
@@ -109,7 +110,7 @@ public class HttpServer extends Thread {
     String name = LOGO_FILE + ".jpg";
     try (FileOutputStream fileOutputStream = mContext.openFileOutput(name, Context.MODE_PRIVATE)) {
       Bitmap
-        .createScaledBitmap(radio.getIcon(), size, size, false)
+        .createScaledBitmap(Objects.requireNonNull(radio.getIcon()), size, size, false)
         .compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
     } catch (Exception exception) {
       Log.e(LOG_TAG, "createLogoFile: internal failure creating logo file");

@@ -58,19 +58,18 @@ public abstract class PlayerAdapter {
   @NonNull
   private final AudioManager mAudioManager;
   @NonNull
-  private final AudioFocusHelper mAudioFocusHelper;
+  private final AudioFocusHelper mAudioFocusHelper = new AudioFocusHelper();
   @NonNull
   private final Listener mListener;
   @Nullable
-  protected Radio mRadio;
-  protected int mState;
+  protected Radio mRadio = null;
+  protected int mState = PlaybackStateCompat.STATE_NONE;
   // Only one radio listened at a time
-  // Used as process tag by implementations, as a new one is created for each new
-  // actual renderer
+  // Used as process tag by implementations, as a new one is created for each new actual renderer
   @Nullable
-  private RadioHandler.Listener mRadioHandlerListener;
-  private boolean mPlayOnAudioFocus;
-  private boolean mAudioNoisyReceiverRegistered;
+  private RadioHandler.Listener mRadioHandlerListener = null;
+  private boolean mPlayOnAudioFocus = false;
+  private boolean mAudioNoisyReceiverRegistered = false;
   @NonNull
   private final BroadcastReceiver mAudioNoisyReceiver = new BroadcastReceiver() {
     @Override
@@ -82,9 +81,9 @@ public abstract class PlayerAdapter {
       }
     }
   };
-  private boolean mIsRerunTryed;
+  private boolean mIsRerunAllowed = false;
   @NonNull
-  private String mCurrentRadioInformation;
+  private String mCurrentRadioInformation = "";
 
   public PlayerAdapter(
     @NonNull Context context,
@@ -96,19 +95,10 @@ public abstract class PlayerAdapter {
     mRadioHandler = mHttpServer.getRadioHandler();
     mListener = listener;
     mIsLocal = isLocal;
-    AudioManager audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-    if (audioManager == null) {
-      throw new RuntimeException();
-    } else {
-      mAudioManager = audioManager;
+    mAudioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+    if (mAudioManager == null) {
+      Log.e(LOG_TAG, "AudioManager is null");
     }
-    mAudioFocusHelper = new AudioFocusHelper();
-    mRadio = null;
-    mRadioHandlerListener = null;
-    mCurrentRadioInformation = "";
-    mState = PlaybackStateCompat.STATE_NONE;
-    mPlayOnAudioFocus = false;
-    mAudioNoisyReceiverRegistered = false;
   }
 
   public boolean isPlaying() {
@@ -121,10 +111,10 @@ public abstract class PlayerAdapter {
     mRadio = radio;
     mCurrentRadioInformation = "";
     mState = PlaybackStateCompat.STATE_NONE;
+    mIsRerunAllowed = false;
     // Audio focus management
     mAudioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
-    mIsRerunTryed = false;
     // New listener for each actual renderer
     mRadioHandlerListener = new RadioHandler.Listener() {
       @Override
@@ -137,12 +127,14 @@ public abstract class PlayerAdapter {
       @Override
       public void onError() {
         Log.d(LOG_TAG, "RadioHandler error received");
-        if (mIsRerunTryed || (mState != PlaybackStateCompat.STATE_PLAYING)) {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, this);
-        } else {
-          Log.d(LOG_TAG, "Try to relaunch remote reader");
-          mIsRerunTryed = true;
+        if (mIsRerunAllowed && (mState == PlaybackStateCompat.STATE_PLAYING)) {
+          Log.d(LOG_TAG, "=> Try to relaunch");
+          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, this);
+          mIsRerunAllowed = false;
           onPrepareFromMediaId();
+        } else {
+          Log.d(LOG_TAG, "=> Error");
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, this);
         }
       }
     };
@@ -214,12 +206,10 @@ public abstract class PlayerAdapter {
   protected synchronized void changeAndNotifyState(int newState, @Nullable Object lockKey) {
     Log.d(LOG_TAG, "New state received: " + newState);
     if ((lockKey == mRadioHandlerListener) && (mState != newState)) {
-      Log.d(LOG_TAG, "=> new state transmitted to listener");
-      // Re-run allowed if "Playing" received
-      if (mState == PlaybackStateCompat.STATE_PLAYING) {
-        mIsRerunTryed = false;
-      }
+      Log.d(LOG_TAG, "=> Transmitted to listener");
       mState = newState;
+      // Re-run allowed if "Playing" received
+      mIsRerunAllowed = (mState == PlaybackStateCompat.STATE_PLAYING);
       mListener.onPlaybackStateChange(
         new PlaybackStateCompat.Builder()
           .setActions(getAvailableActions())
