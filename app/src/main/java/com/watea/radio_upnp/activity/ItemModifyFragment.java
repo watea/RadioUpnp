@@ -43,9 +43,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.SimpleAdapter;
 
 import com.watea.radio_upnp.R;
@@ -89,7 +90,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   private EditText mNameEditText;
   private EditText mUrlEditText;
   private EditText mWebPageEditText;
-  private CheckBox mDarFmCheckbox;
+  private RadioButton mDarFmRadioButton;
   private UrlWatcher mUrlWatcher;
   private UrlWatcher mWebPageWatcher;
   private AlertDialog mDarFmAlertDialog;
@@ -179,11 +180,12 @@ public class ItemModifyFragment extends MainActivityFragment {
       }
     }
   };
-  private SimpleAdapter mSimpleAdapter;
+  private SimpleAdapter mDarFmSimpleAdapter;
   private final Runnable mDarFmSearchForeground = new Runnable() {
     @SuppressLint("SetTextI18n")
     @Override
     public void run() {
+      mDarFmSimpleAdapter.notifyDataSetChanged();
       switch (mDarFmRadios.size()) {
         case 0:
           mDarFmAlertDialog.dismiss();
@@ -204,7 +206,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             R.string.dar_fm_went_wrong : R.string.dar_fm_done);
           break;
         default:
-          mSimpleAdapter.notifyDataSetChanged();
+          // Nothing to do
       }
     }
   };
@@ -219,7 +221,7 @@ public class ItemModifyFragment extends MainActivityFragment {
         // Actual connection test: header must be audio/mpeg
         mStreamContent = httpURLConnection.getHeaderField("Content-Type");
         // If we get there, connection has occurred
-        Log.d(LOG_TAG,"Connection test status/contentType: " +
+        Log.d(LOG_TAG, "Connection test status/contentType: " +
           httpURLConnection.getResponseCode() + "/" + mStreamContent);
       } catch (IOException iOException) {
         // Fires also in case of timeout
@@ -276,39 +278,62 @@ public class ItemModifyFragment extends MainActivityFragment {
     DEFAULT_MESSAGE.put(DAR_FM_NAME, getActivity().getResources().getString(R.string.wait_search));
     mIsDarFmSearchRunning = false;
     // Inflate the view so that graphical objects exists
-    View view = inflater.inflate(R.layout.content_item_modify, container, false);
+    final View view = inflater.inflate(R.layout.content_item_modify, container, false);
     // Fill content including recycler
     mNameEditText = view.findViewById(R.id.name_edit_text);
     mUrlEditText = view.findViewById(R.id.url_edit_text);
-    mUrlWatcher = new UrlWatcher(mUrlEditText);
-    mUrlEditText.addTextChangedListener(mUrlWatcher);
     mWebPageEditText = view.findViewById(R.id.web_page_edit_text);
-    mWebPageWatcher = new UrlWatcher(mWebPageEditText);
-    mWebPageEditText.addTextChangedListener(mWebPageWatcher);
-    mDarFmCheckbox = view.findViewById(R.id.dar_fm_checkbox);
+    mDarFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
+    final ImageButton searchButton = view.findViewById(R.id.search_button);
     mNameEditText.setText(mRadioName);
     setRadioIcon((mRadioIcon == null) ?
       BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_radio) : mRadioIcon);
     mUrlEditText.setText(mRadioUrl);
     mWebPageEditText.setText(mRadioWebPage);
+    mUrlWatcher = new UrlWatcher(mUrlEditText);
+    mWebPageWatcher = new UrlWatcher(mWebPageEditText);
+    mUrlEditText.setText(mRadioUrl);
+    mWebPageEditText.setText(mRadioWebPage);
     // Order matters!
-    mDarFmCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-      @Override
-      public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-        mProvider.setFloatingActionButtonResource(b ?
-          R.drawable.ic_search_black_24dp : R.drawable.ic_image_black_24dp);
-        mWebPageEditText.setEnabled(!b);
-        mUrlEditText.setEnabled(!b);
-      }
-    });
-    mDarFmCheckbox.setChecked(
+    ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
+      new RadioGroup.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(RadioGroup group, int checkedId) {
+          boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
+          searchButton.setImageResource(
+            isDarFmSelected ? R.drawable.ic_search_black_40dp : R.drawable.ic_image_black_40dp);
+          mWebPageEditText.setEnabled(!isDarFmSelected);
+          mUrlEditText.setEnabled(!isDarFmSelected);
+        }
+
+      });
+    mDarFmRadioButton.setChecked(
       (savedInstanceState == null) ||
         savedInstanceState.getBoolean(getString(R.string.key_dar_fm_checked)));
+    searchButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        flushKeyboard(Objects.requireNonNull(getView()));
+        if (NetworkTester.isDeviceOffline(getActivity())) {
+          tell(R.string.no_internet);
+        } else {
+          if (mDarFmRadioButton.isChecked()) {
+            if (mIsDarFmSearchRunning) {
+              tell(R.string.dar_fm_in_progress);
+            } else {
+              darFmSearch(DEFAULT_MESSAGE);
+            }
+          } else {
+            new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
+          }
+        }
+      }
+    });
     // Build alert dialog for DAR FM
     mDarFmAlertDialog = new AlertDialog
       .Builder(getActivity())
       .setAdapter(
-        mSimpleAdapter = new SimpleAdapter(
+        mDarFmSimpleAdapter = new SimpleAdapter(
           getActivity(),
           mDarFmRadios,
           R.layout.row_darfm_radio,
@@ -334,18 +359,19 @@ public class ItemModifyFragment extends MainActivityFragment {
         if (NetworkTester.isDeviceOffline(getActivity())) {
           tell(R.string.no_internet);
         } else {
-          if (mDarFmCheckbox.isChecked()) {
-            if (mIsDarFmSearchRunning) {
-              tell(R.string.dar_fm_in_progress);
-            } else {
-              darFmSearch(DEFAULT_MESSAGE);
-            }
+          if (mUrlWatcher.isNull()) {
+            tell(R.string.connection_test_aborted);
           } else {
-            new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
+            new Searcher(mTestRadioURLBackground, mTestRadioURLForeground, null, true).start();
           }
         }
       }
     };
+  }
+
+  @Override
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_radio_black_24dp;
   }
 
   @Override
@@ -369,7 +395,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     outState.putString(getString(R.string.key_radio_web_page), mWebPageEditText.getText().toString());
     outState.putString(getString(R.string.key_radio_icon_file),
       mRadioLibrary.bitmapToFile(mRadioIcon, Integer.toString(hashCode())).getPath());
-    outState.putBoolean(getString(R.string.key_dar_fm_checked), mDarFmCheckbox.isChecked());
+    outState.putBoolean(getString(R.string.key_dar_fm_checked), mDarFmRadioButton.isChecked());
   }
 
   @Override
@@ -381,54 +407,41 @@ public class ItemModifyFragment extends MainActivityFragment {
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
     flushKeyboard(Objects.requireNonNull(getView()));
-    switch (item.getItemId()) {
-      case R.id.action_test:
-        if (NetworkTester.isDeviceOffline(getActivity())) {
-          tell(R.string.no_internet);
+    if (item.getItemId() == R.id.action_done) {
+      if (mUrlWatcher.isNull()) {
+        tell(R.string.radio_definition_error);
+      } else {
+        if (isAddMode()) {
+          mRadio = new Radio(
+            getRadioName(),
+            null,
+            Radio.Type.MISC,
+            Radio.Language.OTHER,
+            mUrlWatcher.mUrl,
+            mWebPageWatcher.mUrl,
+            Radio.Quality.MEDIUM);
+          if (mRadioLibrary.insertAndSaveIcon(mRadio, mRadioIcon) <= 0) {
+            Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding in database");
+          }
         } else {
-          if (mUrlWatcher.isNull()) {
-            tell(R.string.connection_test_aborted);
-          } else {
-            new Searcher(mTestRadioURLBackground, mTestRadioURLForeground, null, true).start();
+          mRadio.setName(getRadioName());
+          // Same file name reused to store icon
+          mRadioLibrary.bitmapToFile(
+            mRadioIcon,
+            Objects.requireNonNull(mRadio.getIconFile()).getName().replace(".png", ""));
+          mRadio.setURL(mUrlWatcher.mUrl);
+          mRadio.setWebPageURL(mWebPageWatcher.mUrl);
+          if (mRadioLibrary.updateFrom(mRadio.getId(), mRadio.toContentValues()) <= 0) {
+            Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
           }
         }
-        break;
-      case R.id.action_done:
-        if (mUrlWatcher.isNull()) {
-          tell(R.string.radio_definition_error);
-        } else {
-          if (isAddMode()) {
-            mRadio = new Radio(
-              getRadioName(),
-              null,
-              Radio.Type.MISC,
-              Radio.Language.OTHER,
-              mUrlWatcher.mUrl,
-              mWebPageWatcher.mUrl,
-              Radio.Quality.MEDIUM);
-            if (mRadioLibrary.insertAndSaveIcon(mRadio, mRadioIcon) <= 0) {
-              Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding in database");
-            }
-          } else {
-            mRadio.setName(getRadioName());
-            // Same file name reused to store icon
-            mRadioLibrary.bitmapToFile(
-              mRadioIcon,
-              Objects.requireNonNull(mRadio.getIconFile()).getName().replace(".png", ""));
-            mRadio.setURL(mUrlWatcher.mUrl);
-            mRadio.setWebPageURL(mWebPageWatcher.mUrl);
-            if (mRadioLibrary.updateFrom(mRadio.getId(), mRadio.toContentValues()) <= 0) {
-              Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
-            }
-          }
-          // Back to previous fragment
-          getFragmentManager().popBackStack();
-        }
-        break;
-      default:
-        // If we got here, the user's action was not recognized
-        // Invoke the superclass to handle it
-        return super.onOptionsItemSelected(item);
+        // Back to previous fragment
+        getFragmentManager().popBackStack();
+      }
+    } else {
+      // If we got here, the user's action was not recognized
+      // Invoke the superclass to handle it
+      return super.onOptionsItemSelected(item);
     }
     return true;
   }
@@ -453,6 +466,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     mDarFmRadios.clear();
     mDarFmRadios.add(radio);
     if (radio == DEFAULT_MESSAGE) {
+      mDarFmSimpleAdapter.notifyDataSetChanged();
       mDarFmAlertDialog.show();
     }
     new Searcher(mDarFmSearchBackground, mDarFmSearchForeground, mDarFmSearchLast, false).start();
@@ -541,6 +555,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     // mayBeVoid: is empty field allowed?
     private UrlWatcher(EditText editText) {
       mEditText = editText;
+      mEditText.addTextChangedListener(this);
       mDefaultColor = mEditText.getCurrentTextColor();
       mUrl = null;
     }

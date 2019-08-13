@@ -158,8 +158,11 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="outputName" value="ic_search_black_24dp" />
+                            <entry key="height" value="40" />
+                            <entry key="outputName" value="ic_search_black_40dp" />
+                            <entry key="overrideSize" value="true" />
                             <entry key="sourceFile" value="C:\Users\Stephane" />
+                            <entry key="width" value="40" />
                           </map>
                         </option>
                       </PersistentState>

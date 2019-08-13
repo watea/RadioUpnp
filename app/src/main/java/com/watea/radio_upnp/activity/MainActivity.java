@@ -203,9 +203,10 @@ public class MainActivity
       Objects.requireNonNull(FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass())));
   }
 
+  @NonNull
   @Override
-  public void setFloatingActionButtonResource(int resource) {
-    mFloatingActionButton.setImageResource(resource);
+  public FloatingActionButton getFloatingActionButton() {
+    return mFloatingActionButton;
   }
 
   @NonNull

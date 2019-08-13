@@ -108,13 +108,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   public void onPlay() {
-    if (mDlnaDevice == null) {
-      Log.i(LOG_TAG, "onPlay on null DlnaDevice");
-      return;
-    }
-    ActionInvocation actionInvocation = getUpnpActionInvocation(mDlnaDevice, UPNP_ACTION_PLAY);
-    actionInvocation.setInput("Speed", "1");
-    upnpExecuteAction(actionInvocation);
+    onPlay(getLockKey());
   }
 
   // Nota: as tested, not supported by DLNA device
@@ -157,13 +151,30 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     return actions;
   }
 
+  private void onPlay(@Nullable Object lockKey) {
+    if (mDlnaDevice == null) {
+      Log.i(LOG_TAG, "onPlay on null DlnaDevice");
+      return;
+    }
+    ActionInvocation actionInvocation = getUpnpActionInvocation(mDlnaDevice, UPNP_ACTION_PLAY);
+    actionInvocation.setInput("Speed", "1");
+    upnpExecuteAction(actionInvocation, lockKey);
+  }
+
   // Execute asynchronous in the background
   private void upnpExecuteAction(@NonNull ActionInvocation actionInvocation) {
+    upnpExecuteAction(actionInvocation, getLockKey());
+  }
+
+  // Execute asynchronous in the background
+  private void upnpExecuteAction(
+    @NonNull ActionInvocation actionInvocation, @Nullable Object lockKey) {
     if (mAndroidUpnpService == null) {
       Log.d(LOG_TAG, "upnpExecuteAction: AndroidUpnpService is null");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, getLockKey());
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
     } else {
-      mAndroidUpnpService.getControlPoint().execute(new TaggedActionCallback(actionInvocation));
+      mAndroidUpnpService.getControlPoint().execute(
+        new TaggedActionCallback(actionInvocation, lockKey));
     }
   }
 
@@ -178,11 +189,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   private class TaggedActionCallback extends ActionCallback {
+    @Nullable
     private final Object mLockKey;
 
-    private TaggedActionCallback(@NonNull ActionInvocation actionInvocation) {
+    private TaggedActionCallback(
+      @NonNull ActionInvocation actionInvocation, @Nullable Object lockKey) {
       super(actionInvocation);
-      mLockKey = getLockKey();
+      mLockKey = lockKey;
     }
 
     @Override
@@ -195,8 +208,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       switch (action) {
         case UpnpPlayerAdapter.UPNP_ACTION_SET_AV_TRANSPORT_URI:
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, mLockKey);
-          // Now we can call Play
-          onPlay();
+          // Now we can call Play with same tag
+          onPlay(mLockKey);
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_STOP:
           changeAndNotifyState(PlaybackStateCompat.STATE_NONE, mLockKey);

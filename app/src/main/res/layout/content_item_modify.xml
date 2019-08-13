@@ -23,6 +23,7 @@
 
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
 
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -41,14 +42,48 @@
             android:layout_margin="@dimen/app_margin"
             android:drawablePadding="@dimen/app_horizontal_margin"
             android:hint="@string/legend_name"
-            android:textAllCaps="true"
             android:inputType="textCapCharacters"
-            android:maxLength="30" />
+            android:maxLength="30"
+            android:textAllCaps="true"
+            tools:ignore="Autofill" />
 
-        <CheckBox android:id="@+id/dar_fm_checkbox"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/dar_fm_checkbox" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <RadioGroup
+                android:id="@+id/search_radio_group"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/app_margin">
+
+                <RadioButton
+                    android:id="@+id/dar_fm_radio_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/colorPrimaryDark"
+                    android:text="@string/dar_fm_radio_button" />
+
+                <RadioButton
+                    android:id="@+id/image_from_url_radio_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/colorPrimaryDark"
+                    android:text="@string/image_from_url_radio_button" />
+
+            </RadioGroup>
+
+            <ImageButton
+                android:id="@+id/search_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end|center"
+                android:tint="@color/colorPrimaryDark"
+                app:srcCompat="@drawable/ic_search_black_40dp"
+                tools:ignore="ContentDescription" />
+
+        </FrameLayout>
 
         <TextView
             android:layout_width="match_parent"
@@ -61,7 +96,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/legend_page_url_example"
-            android:inputType="textUri" />
+            android:inputType="textUri"
+            tools:ignore="Autofill" />
 
         <TextView
             android:layout_width="match_parent"
@@ -74,7 +110,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/legend_streaming_url_example"
-            android:inputType="textUri" />
+            android:inputType="textUri"
+            tools:ignore="Autofill" />
 
     </LinearLayout>
 
