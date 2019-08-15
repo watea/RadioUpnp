@@ -31,14 +31,14 @@
     android:padding="@dimen/app_margin">
 
     <TextView
-        android:id="@+id/row_radio_name"
+        android:id="@+id/row_radio_name_text_view"
         style="@style/Widget.AppCompat.Button.Borderless"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textStyle="bold" />
 
     <ImageButton
-        android:id="@+id/row_radio_preferred_button"
+        android:id="@+id/row_radio_preferred_image_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"

@@ -93,7 +93,7 @@
         android:text="@string/version" />
 
     <TextView
-        android:id="@+id/version_name"
+        android:id="@+id/version_name_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"

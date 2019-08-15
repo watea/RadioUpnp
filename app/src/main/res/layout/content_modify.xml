@@ -38,14 +38,14 @@
             android:layout_height="?android:attr/actionBarSize" />
 
         <android.support.v7.widget.RecyclerView
-            android:id="@+id/radios_view"
+            android:id="@+id/radios_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="fill_parent" />
 
     </LinearLayout>
 
     <include
-        layout="@layout/radios_default_view"
+        layout="@layout/view_radios_default"
         app:layout_constraintTop_toTopOf="parent" />
 
 </android.support.constraint.ConstraintLayout>

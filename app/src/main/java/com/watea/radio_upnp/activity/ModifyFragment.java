@@ -56,20 +56,19 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_modify, container, false);
     // Fill content including recycler
-    RecyclerView radiosView = view.findViewById(R.id.radios_view);
+    RecyclerView radiosView = view.findViewById(R.id.radios_recycler_view);
     radiosView.setLayoutManager(new LinearLayoutManager(getActivity()));
     // RecyclerView shall be defined for Adapter
     mRadiosModifyAdapter = new RadiosModifyAdapter(getActivity(), this, radiosView);
     // Adapter shall be defined for RecyclerView
     radiosView.setAdapter(mRadiosModifyAdapter);
-    mRadiosDefaultView = view.findViewById(R.id.radios_default_view);
+    mRadiosDefaultView = view.findViewById(R.id.view_radios_default);
     return view;
   }
 
   @Override
   public void onResume() {
     super.onResume();
-    // Update view even if no change
     List<Long> radioIds = mRadioLibrary.getAllRadioIds();
     mRadiosModifyAdapter.setRadioIds(radioIds);
     mRadiosDefaultView.setVisibility((radioIds.size() == 0) ? View.VISIBLE : View.INVISIBLE);

@@ -35,7 +35,7 @@
         app:columnCount="2">
 
         <TextView
-            android:id="@+id/row_modify_radio_name"
+            android:id="@+id/row_modify_radio_name_text_view"
             android:layout_width="250dp"
             android:clickable="false"
             android:drawablePadding="@dimen/app_horizontal_margin"
@@ -45,7 +45,7 @@
             app:layout_gravity="start|center_vertical" />
 
         <ImageButton
-            android:id="@+id/row_modify_radio_move_button"
+            android:id="@+id/row_modify_radio_move_image_button"
             android:contentDescription="@string/action_move"
             android:src="@drawable/ic_reorder_black_24dp"
             app:layout_gravity="end|center_vertical" />

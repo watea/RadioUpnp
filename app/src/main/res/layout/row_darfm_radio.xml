@@ -27,7 +27,7 @@
     android:layout_height="wrap_content">
 
     <TextView
-        android:id="@+id/row_darfm_radio_name"
+        android:id="@+id/row_darfm_radio_name_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="@dimen/app_vertical_margin"

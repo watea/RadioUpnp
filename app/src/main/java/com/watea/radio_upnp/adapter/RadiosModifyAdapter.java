@@ -157,9 +157,9 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
-      mRadioNameTextView = itemView.findViewById(R.id.row_modify_radio_name);
+      mRadioNameTextView = itemView.findViewById(R.id.row_modify_radio_name_text_view);
       // Edit action
-      itemView.findViewById(R.id.row_modify_radio_name).setOnClickListener(
+      itemView.findViewById(R.id.row_modify_radio_name_text_view).setOnClickListener(
         new View.OnClickListener() {
           @Override
           public void onClick(View view) {

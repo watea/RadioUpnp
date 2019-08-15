@@ -129,41 +129,41 @@ public class DlnaDevicesAdapter extends ArrayAdapter<DlnaDevice> {
 
   private class ViewHolder {
     @NonNull
-    private final TextView mDlnaDeviceNameView;
+    private final TextView mDlnaDeviceNameTextView;
     @NonNull
-    private final ProgressBar mProgressbar;
+    private final ProgressBar mProgressBar;
 
     private ViewHolder(@NonNull View itemView) {
-      mDlnaDeviceNameView = itemView.findViewById(R.id.row_dlna_device_name);
-      mProgressbar = itemView.findViewById(R.id.dlna_waiting);
+      mDlnaDeviceNameTextView = itemView.findViewById(R.id.row_dlna_device_name_text_view);
+      mProgressBar = itemView.findViewById(R.id.progressbar);
     }
 
     private void setView(@NonNull DlnaDevice dlnaDevice) {
       // Dummy device for waiting message
       boolean isWaiting = (dlnaDevice.getDevice() == null);
       if (isWaiting) {
-        mDlnaDeviceNameView.setText(R.string.device_no_device_yet);
+        mDlnaDeviceNameTextView.setText(R.string.device_no_device_yet);
       } else {
-        mDlnaDeviceNameView.setText(dlnaDevice.toString());
+        mDlnaDeviceNameTextView.setText(dlnaDevice.toString());
       }
       if (isWaiting || (dlnaDevice.getIcon() == null)) {
-        mDlnaDeviceNameView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+        mDlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
           R.drawable.ic_cast_black_24dp,
           0, 0, 0);
       } else {
-        mDlnaDeviceNameView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+        mDlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
           new BitmapDrawable(
             getContext().getResources(),
             Bitmap.createScaledBitmap(dlnaDevice.getIcon(), ICON_SIZE, ICON_SIZE, false)),
           null, null, null);
       }
       isWaiting = (isWaiting || !dlnaDevice.isFullyHydrated());
-      mDlnaDeviceNameView.setTextColor(ContextCompat.getColor(mContext,
+      mDlnaDeviceNameTextView.setTextColor(ContextCompat.getColor(mContext,
         (isWaiting ||
           !Objects.requireNonNull(dlnaDevice.getIdentity()).equals(mChosenDlnaDeviceIdentity)) ?
           R.color.colorPrimaryText : R.color.colorPrimary));
       // Note: for some reason, is sometimes not animated...
-      mProgressbar.setVisibility(isWaiting ? View.VISIBLE : View.INVISIBLE);
+      mProgressBar.setVisibility(isWaiting ? View.VISIBLE : View.INVISIBLE);
     }
   }
 }

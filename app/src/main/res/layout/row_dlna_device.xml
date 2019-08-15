@@ -29,7 +29,7 @@
     android:orientation="vertical">
 
     <TextView
-        android:id="@+id/row_dlna_device_name"
+        android:id="@+id/row_dlna_device_name_text_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:drawablePadding="@dimen/app_horizontal_margin"
@@ -39,7 +39,7 @@
         app:layout_gravity="start|center_vertical" />
 
     <ProgressBar
-        android:id="@+id/dlna_waiting"
+        android:id="@+id/progressbar"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

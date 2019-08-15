@@ -28,10 +28,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <include layout="@layout/radios_default_view" />
+    <include layout="@layout/view_radios_default" />
 
     <ImageView
-        android:id="@+id/album_art"
+        android:id="@+id/album_art_image_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="@dimen/app_margin"
@@ -42,13 +42,13 @@
         tools:ignore="ContentDescription" />
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/radios_view"
+        android:id="@+id/radios_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <LinearLayout
-        android:id="@+id/played_radio_data"
+        android:id="@+id/played_radio_data_linear_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
@@ -56,10 +56,10 @@
         android:padding="@dimen/app_margin"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/album_art">
+        app:layout_constraintTop_toBottomOf="@id/album_art_image_view">
 
         <TextView
-            android:id="@+id/played_radio_name"
+            android:id="@+id/played_radio_name_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
@@ -69,7 +69,7 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/played_radio_information"
+            android:id="@+id/played_radio_information_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="marquee"
@@ -82,10 +82,10 @@
         android:layout_height="wrap_content"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/played_radio_data">
+        app:layout_constraintTop_toBottomOf="@id/played_radio_data_linear_layout">
 
         <ImageButton
-            android:id="@+id/play"
+            android:id="@+id/play_image_button"
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:layout_gravity="center"
@@ -95,7 +95,7 @@
             tools:ignore="ContentDescription" />
 
         <ProgressBar
-            android:id="@+id/play_waiting"
+            android:id="@+id/progressbar"
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:layout_gravity="center" />

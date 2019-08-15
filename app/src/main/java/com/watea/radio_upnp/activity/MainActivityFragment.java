@@ -27,7 +27,6 @@ import android.app.Fragment;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -98,9 +97,8 @@ public abstract class MainActivityFragment extends Fragment {
 
   public abstract int getTitle();
 
-  // Utility to test if view actually exists (not disposed) and is on screen
-  protected boolean isActuallyShown() {
-    return ((getView() != null) && getView().isShown());
+  protected boolean isActuallyAdded() {
+    return ((getActivity() != null) && isAdded());
   }
 
   protected void tell(int message) {
@@ -121,9 +119,6 @@ public abstract class MainActivityFragment extends Fragment {
     RadioLibrary getRadioLibrary();
 
     void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment);
-
-    @NonNull
-    FloatingActionButton getFloatingActionButton();
 
     @NonNull
     Fragment setFragment(@NonNull Class<? extends Fragment> fragment);

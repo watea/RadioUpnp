@@ -102,25 +102,25 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     @NonNull
     private final LinearLayout mLinearLayout;
     @NonNull
-    private final TextView mRadioNameView;
+    private final TextView mRadioNameTextView;
     @NonNull
-    private final ImageButton mPreferredButton;
+    private final ImageButton mPreferredImageButton;
     private Radio mRadio;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
       mLinearLayout = (LinearLayout) itemView;
-      mRadioNameView = itemView.findViewById(R.id.row_radio_name);
-      mPreferredButton = itemView.findViewById(R.id.row_radio_preferred_button);
+      mRadioNameTextView = itemView.findViewById(R.id.row_radio_name_text_view);
+      mPreferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
       // Listener on radio
-      mRadioNameView.setOnClickListener(new View.OnClickListener() {
+      mRadioNameTextView.setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View v) {
           mListener.onRowClick(mRadio);
         }
       });
       // Listener on web link
-      mRadioNameView.setOnLongClickListener(new View.OnLongClickListener() {
+      mRadioNameTextView.setOnLongClickListener(new View.OnLongClickListener() {
         @Override
         public boolean onLongClick(View v) {
           Uri webPageUri = mRadio.getWebPageUri();
@@ -133,7 +133,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
         }
       });
       // Listener on preferred device icon
-      mPreferredButton.setOnClickListener(new View.OnClickListener() {
+      mPreferredImageButton.setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View view) {
           if (mListener.onPreferredClick(mRadio.getId(), !mRadio.isPreferred())) {
@@ -152,19 +152,19 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     private void setView(@NonNull Radio radio) {
       mRadio = radio;
       mLinearLayout.setBackgroundColor(getDominantColor(Objects.requireNonNull(mRadio.getIcon())));
-      mRadioNameView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+      mRadioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         null,
         new BitmapDrawable(
           mContext.getResources(),
           Bitmap.createScaledBitmap(mRadio.getIcon(), mIconSize, mIconSize, false)),
         null,
         null);
-      mRadioNameView.setText(mRadio.getName());
+      mRadioNameTextView.setText(mRadio.getName());
       setPreferredButton();
     }
 
     private void setPreferredButton() {
-      mPreferredButton.setImageResource(mRadio.isPreferred() ?
+      mPreferredImageButton.setImageResource(mRadio.isPreferred() ?
         R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp);
     }
   }

@@ -29,7 +29,6 @@
     android:layout_height="match_parent">
 
     <LinearLayout
-        android:id="@+id/edit_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -74,14 +73,28 @@
 
             </RadioGroup>
 
-            <ImageButton
-                android:id="@+id/search_button"
+            <FrameLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end|center"
-                android:tint="@color/colorPrimaryDark"
-                app:srcCompat="@drawable/ic_search_black_40dp"
-                tools:ignore="ContentDescription" />
+                android:layout_gravity="end|center">
+
+                <ImageButton
+                    android:id="@+id/search_image_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:tint="@color/colorPrimaryDark"
+                    app:srcCompat="@drawable/ic_search_black_40dp"
+                    tools:ignore="ContentDescription" />
+
+                <ProgressBar
+                    android:id="@+id/progressbar"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:tint="@color/colorPrimaryDark" />
+
+            </FrameLayout>
 
         </FrameLayout>
 

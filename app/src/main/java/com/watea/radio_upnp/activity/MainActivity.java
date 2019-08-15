@@ -204,12 +204,6 @@ public class MainActivity
   }
 
   @NonNull
-  @Override
-  public FloatingActionButton getFloatingActionButton() {
-    return mFloatingActionButton;
-  }
-
-  @NonNull
   public Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
     Fragment fragment;
     String tag = fragmentClass.getSimpleName();
@@ -300,7 +294,8 @@ public class MainActivity
     // Build alert about dialog
     @SuppressLint("InflateParams")
     View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
-    ((TextView) aboutView.findViewById(R.id.version_name)).setText(BuildConfig.VERSION_NAME);
+    ((TextView) aboutView.findViewById(R.id.version_name_text_view))
+      .setText(BuildConfig.VERSION_NAME);
     mAboutAlertDialog = new AlertDialog.Builder(this)
       .setView(aboutView)
       .setOnDismissListener(new DialogInterface.OnDismissListener() {
@@ -312,7 +307,7 @@ public class MainActivity
       })
       .create();
     // FAB
-    mFloatingActionButton = findViewById(R.id.fab);
+    mFloatingActionButton = findViewById(R.id.floating_action_button);
   }
 
   @Override

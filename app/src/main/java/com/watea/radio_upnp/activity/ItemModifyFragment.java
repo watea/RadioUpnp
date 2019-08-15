@@ -45,6 +45,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SimpleAdapter;
@@ -55,7 +56,6 @@ import com.watea.radio_upnp.service.NetworkTester;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -83,7 +83,6 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_ID = "id";
   private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
-  private static final Map<String, String> DEFAULT_MESSAGE = new Hashtable<>();
   private final Handler mHandler = new Handler();
   private final List<Map<String, String>> mDarFmRadios = new Vector<>();
   // <HMI assets
@@ -91,6 +90,8 @@ public class ItemModifyFragment extends MainActivityFragment {
   private EditText mUrlEditText;
   private EditText mWebPageEditText;
   private RadioButton mDarFmRadioButton;
+  private ImageButton mSearchImageButton;
+  private ProgressBar mProgressBar;
   private UrlWatcher mUrlWatcher;
   private UrlWatcher mWebPageWatcher;
   private AlertDialog mDarFmAlertDialog;
@@ -121,6 +122,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   private final Runnable mIconSearchForeground = new Runnable() {
     @Override
     public void run() {
+      showSearchButton(true);
       if (mFoundIcon == null) {
         tell(R.string.no_icon_found);
       } else {
@@ -130,13 +132,11 @@ public class ItemModifyFragment extends MainActivityFragment {
     }
   };
   private String mDarFmWebPage;
-  // Generic search if list == DEFAULT_MESSAGE
+  // Generic search if list empty
   private final Runnable mDarFmSearchBackground = new Runnable() {
     @Override
     public void run() {
-      Map<String, String> map;
-      if (mDarFmRadios.contains(DEFAULT_MESSAGE)) {
-        Elements stations = new Elements();
+      if (mDarFmRadios.isEmpty()) {
         try {
           Element search = Jsoup
             .connect(
@@ -144,9 +144,8 @@ public class ItemModifyFragment extends MainActivityFragment {
                 WILDCARD + DAR_FM_PARTNER_TOKEN)
             .get();
           // Parse data
-          stations = search.getElementsByTag("station");
-          for (Element station : stations) {
-            map = new Hashtable<>();
+          for (Element station : search.getElementsByTag("station")) {
+            Map<String, String> map = new Hashtable<>();
             map.put(DAR_FM_ID, extractValue(station, "station_id"));
             map.put(DAR_FM_NAME, extractValue(station, "callsign"));
             mDarFmRadios.add(map);
@@ -154,21 +153,15 @@ public class ItemModifyFragment extends MainActivityFragment {
         } catch (IOException iOexception) {
           Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST search", iOexception);
         }
-        // Clear list, void if nothing found
-        if (stations.size() > 0) {
-          mDarFmRadios.remove(DEFAULT_MESSAGE);
-        } else {
-          mDarFmRadios.clear();
-        }
       }
       // When radio is known, fetch data
       if (mDarFmRadios.size() == 1) {
         mFoundIcon = null;
         mDarFmWebPage = null;
-        map = mDarFmRadios.get(0);
         try {
           Element station = Jsoup
-            .connect(DAR_FM_STATIONS_REQUEST + map.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
+            .connect(
+              DAR_FM_STATIONS_REQUEST + mDarFmRadios.get(0).get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
             .get();
           mDarFmWebPage = extractValue(station, "websiteurl");
           mFoundIcon = NetworkTester.getBitmapFromUrl(new URL(extractValue(station, "imageurl")));
@@ -185,10 +178,10 @@ public class ItemModifyFragment extends MainActivityFragment {
     @SuppressLint("SetTextI18n")
     @Override
     public void run() {
+      showSearchButton(true);
       mDarFmSimpleAdapter.notifyDataSetChanged();
       switch (mDarFmRadios.size()) {
         case 0:
-          mDarFmAlertDialog.dismiss();
           tell(R.string.dar_fm_failed);
           break;
         case 1:
@@ -201,12 +194,11 @@ public class ItemModifyFragment extends MainActivityFragment {
           if (mFoundIcon != null) {
             setRadioIcon(mFoundIcon);
           }
-          mDarFmAlertDialog.dismiss();
           tell(((mFoundIcon == null) || (mDarFmWebPage == null)) ?
             R.string.dar_fm_went_wrong : R.string.dar_fm_done);
           break;
         default:
-          // Nothing to do
+          mDarFmAlertDialog.show();
       }
     }
   };
@@ -243,17 +235,6 @@ public class ItemModifyFragment extends MainActivityFragment {
       }
     }
   };
-  private boolean mIsDarFmSearchRunning;
-  private final Runnable mDarFmSearchLast = new Runnable() {
-    @Override
-    public void run() {
-      mIsDarFmSearchRunning = false;
-      // Clear if we were disposed
-      if (!isActuallyShown() && (mDarFmAlertDialog != null)) {
-        mDarFmAlertDialog.dismiss();
-      }
-    }
-  };
 
   @NonNull
   private static String extractValue(@NonNull Element element, @NonNull String tag) {
@@ -274,17 +255,15 @@ public class ItemModifyFragment extends MainActivityFragment {
       mRadioIcon = BitmapFactory.decodeFile(
         savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
     }
-    DEFAULT_MESSAGE.clear();
-    DEFAULT_MESSAGE.put(DAR_FM_NAME, getActivity().getResources().getString(R.string.wait_search));
-    mIsDarFmSearchRunning = false;
     // Inflate the view so that graphical objects exists
     final View view = inflater.inflate(R.layout.content_item_modify, container, false);
     // Fill content including recycler
     mNameEditText = view.findViewById(R.id.name_edit_text);
+    mProgressBar = view.findViewById(R.id.progressbar);
     mUrlEditText = view.findViewById(R.id.url_edit_text);
     mWebPageEditText = view.findViewById(R.id.web_page_edit_text);
     mDarFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
-    final ImageButton searchButton = view.findViewById(R.id.search_button);
+    mSearchImageButton = view.findViewById(R.id.search_image_button);
     mNameEditText.setText(mRadioName);
     setRadioIcon((mRadioIcon == null) ?
       BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_radio) : mRadioIcon);
@@ -300,7 +279,7 @@ public class ItemModifyFragment extends MainActivityFragment {
         @Override
         public void onCheckedChanged(RadioGroup group, int checkedId) {
           boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
-          searchButton.setImageResource(
+          mSearchImageButton.setImageResource(
             isDarFmSelected ? R.drawable.ic_search_black_40dp : R.drawable.ic_image_black_40dp);
           mWebPageEditText.setEnabled(!isDarFmSelected);
           mUrlEditText.setEnabled(!isDarFmSelected);
@@ -310,7 +289,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     mDarFmRadioButton.setChecked(
       (savedInstanceState == null) ||
         savedInstanceState.getBoolean(getString(R.string.key_dar_fm_checked)));
-    searchButton.setOnClickListener(new View.OnClickListener() {
+    mSearchImageButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
         flushKeyboard(Objects.requireNonNull(getView()));
@@ -318,17 +297,15 @@ public class ItemModifyFragment extends MainActivityFragment {
           tell(R.string.no_internet);
         } else {
           if (mDarFmRadioButton.isChecked()) {
-            if (mIsDarFmSearchRunning) {
-              tell(R.string.dar_fm_in_progress);
-            } else {
-              darFmSearch(DEFAULT_MESSAGE);
-            }
+            darFmSearch(null);
           } else {
-            new Searcher(mIconSearchBackground, mIconSearchForeground, null, true).start();
+            showSearchButton(false);
+            new Searcher(mIconSearchBackground, mIconSearchForeground).start();
           }
         }
       }
     });
+    showSearchButton(true);
     // Build alert dialog for DAR FM
     mDarFmAlertDialog = new AlertDialog
       .Builder(getActivity())
@@ -338,7 +315,7 @@ public class ItemModifyFragment extends MainActivityFragment {
           mDarFmRadios,
           R.layout.row_darfm_radio,
           new String[]{DAR_FM_NAME},
-          new int[]{R.id.row_darfm_radio_name}),
+          new int[]{R.id.row_darfm_radio_name_text_view}),
         new DialogInterface.OnClickListener() {
           @Override
           public void onClick(DialogInterface dialogInterface, int i) {
@@ -362,7 +339,7 @@ public class ItemModifyFragment extends MainActivityFragment {
           if (mUrlWatcher.isNull()) {
             tell(R.string.connection_test_aborted);
           } else {
-            new Searcher(mTestRadioURLBackground, mTestRadioURLForeground, null, true).start();
+            new Searcher(mTestRadioURLBackground, mTestRadioURLForeground).start();
           }
         }
       }
@@ -460,16 +437,13 @@ public class ItemModifyFragment extends MainActivityFragment {
     return (mRadio == null);
   }
 
-  // radio == DEFAULT_MESSAGE to display the search dialog
-  private void darFmSearch(@NonNull Map<String, String> radio) {
-    mIsDarFmSearchRunning = true;
+  private void darFmSearch(@Nullable Map<String, String> radio) {
+    showSearchButton(false);
     mDarFmRadios.clear();
-    mDarFmRadios.add(radio);
-    if (radio == DEFAULT_MESSAGE) {
-      mDarFmSimpleAdapter.notifyDataSetChanged();
-      mDarFmAlertDialog.show();
+    if (radio != null) {
+      mDarFmRadios.add(radio);
     }
-    new Searcher(mDarFmSearchBackground, mDarFmSearchForeground, mDarFmSearchLast, false).start();
+    new Searcher(mDarFmSearchBackground, mDarFmSearchForeground).start();
   }
 
   @NonNull
@@ -510,21 +484,20 @@ public class ItemModifyFragment extends MainActivityFragment {
       null);
   }
 
+  private void showSearchButton(boolean isShowing) {
+    mSearchImageButton.setVisibility(isShowing ? View.VISIBLE : View.INVISIBLE);
+    mProgressBar.setVisibility(isShowing ? View.INVISIBLE : View.VISIBLE);
+  }
+
   // Utility to properly handle asynchronous actions
   private class Searcher extends Thread {
-    private final Runnable mBackground, mForeground, mLast;
+    private final Runnable mBackground, mForeground;
 
-    private Searcher(
-      @NonNull Runnable background,
-      @NonNull Runnable foreground,
-      @Nullable Runnable last,
-      boolean isWaitToTell) {
+    private Searcher(@NonNull Runnable background, @NonNull Runnable foreground) {
       mBackground = background;
       mForeground = foreground;
-      mLast = last;
-      if (isWaitToTell) {
-        tell(R.string.wait_search);
-      }
+      flushKeyboard(Objects.requireNonNull(getView()));
+      tell(R.string.wait_search);
     }
 
     @Override
@@ -534,11 +507,8 @@ public class ItemModifyFragment extends MainActivityFragment {
       mHandler.post(new Runnable() {
         @Override
         public void run() {
-          if (isActuallyShown()) {
+          if (isActuallyAdded()) {
             mForeground.run();
-          }
-          if (mLast != null) {
-            mLast.run();
           }
         }
       });
