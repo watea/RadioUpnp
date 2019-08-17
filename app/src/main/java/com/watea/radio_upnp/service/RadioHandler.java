@@ -44,7 +44,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.List;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,6 +52,7 @@ import javax.servlet.http.HttpServletResponse;
 
 public class RadioHandler extends AbstractHandler {
   private static final String LOG_TAG = RadioHandler.class.getName();
+  private static final String VOID = "";
   private static final int CONNECT_TIMEOUT = 5000;
   private static final int READ_TIMEOUT = 30000;
   private static final int METADATA_MAX = 256;
@@ -67,6 +67,8 @@ public class RadioHandler extends AbstractHandler {
   private final boolean mIsBuffered;
   @Nullable
   private Listener mListener = null;
+  @NonNull
+  private String mLockKey = VOID;
 
   RadioHandler(@NonNull String userAgent, @NonNull RadioLibrary radioLibrary, boolean isBuffered) {
     super();
@@ -83,14 +85,14 @@ public class RadioHandler extends AbstractHandler {
   }
 
   // Shall be called before proxying
-  public synchronized void setListener(@NonNull Listener listener) {
-    Log.d(LOG_TAG, "setListener");
+  public synchronized void setListener(@NonNull Listener listener, @NonNull String lockKey) {
     mListener = listener;
+    mLockKey = lockKey;
   }
 
   public synchronized void removeListener() {
-    Log.d(LOG_TAG, "removeListener");
     mListener = null;
+    mLockKey = VOID;
   }
 
   @Override
@@ -99,13 +101,13 @@ public class RadioHandler extends AbstractHandler {
     Request baseRequest,
     HttpServletRequest request,
     HttpServletResponse response) {
-    // Tag this handle with current listener
-    final Listener listenerAsLockKey = mListener;
+    // Tag this handle with current lock key
+    final String lockKey = mLockKey;
     // Request must contain a query with radio ID
     String radioId = baseRequest.getParameter(Radio.RADIO_ID);
-    if ((radioId == null) || (listenerAsLockKey == null)) {
+    if ((radioId == null) || lockKey.equals(VOID)) {
       Log.d(LOG_TAG,
-        "Unexpected request received. RadioId: " + radioId + " Listener: " + listenerAsLockKey);
+        "Unexpected request received. RadioId: " + radioId + "LockKey: " + lockKey);
     } else {
       Radio radio = mRadioLibrary.getFrom(Long.decode(radioId));
       if (radio == null) {
@@ -117,7 +119,7 @@ public class RadioHandler extends AbstractHandler {
         switch (method) {
           case HEAD:
           case GET:
-            handleConnection(method.equals(GET), response, radio, listenerAsLockKey);
+            handleConnection(method.equals(GET), response, radio, lockKey);
             break;
           default:
             Log.d(LOG_TAG, "Unknown radio request received:" + method);
@@ -130,7 +132,7 @@ public class RadioHandler extends AbstractHandler {
     boolean isGet,
     @NonNull HttpServletResponse response,
     @NonNull Radio radio,
-    @NonNull Object lockKey) {
+    @NonNull String lockKey) {
     Log.d(LOG_TAG,
       "handleConnection: entering for " + radio.getName() + "; " + (isGet ? GET : HEAD));
     // Create WAN connection
@@ -213,9 +215,9 @@ public class RadioHandler extends AbstractHandler {
       Log.d(LOG_TAG, "IOException", iOException);
       // Multithread safe!
       synchronized (this) {
-        if (hasLockKey(lockKey)) {
+        if (mListener != null) {
           Log.d(LOG_TAG, "Error sent to listener");
-          Objects.requireNonNull(mListener).onError();
+          mListener.onError(lockKey);
         }
       }
     } finally {
@@ -233,7 +235,7 @@ public class RadioHandler extends AbstractHandler {
     @NonNull CharsetDecoder charsetDecoder,
     int metadataOffset,
     @NonNull OutputStream outputStream,
-    @NonNull Object lockKey) throws IOException {
+    @NonNull String lockKey) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
     final byte[] buffer = new byte[1];
     final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
@@ -242,7 +244,7 @@ public class RadioHandler extends AbstractHandler {
     while (inputStream.read(buffer) != -1) {
       // Multithread safe!
       synchronized (this) {
-        if (hasLockKey(lockKey)) {
+        if (mLockKey.equals(lockKey)) {
           // Only stream data are transferred
           if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
             outputStream.write(buffer);
@@ -278,7 +280,7 @@ public class RadioHandler extends AbstractHandler {
                 Matcher matcher = PATTERN.matcher(metadata);
                 // Tell listener
                 if ((mListener != null) && matcher.find()) {
-                  mListener.onNewInformation(matcher.group(1));
+                  mListener.onNewInformation(matcher.group(1), lockKey);
                 }
               }
               metadataBlockBytesRead = 0;
@@ -293,13 +295,9 @@ public class RadioHandler extends AbstractHandler {
     Log.d(LOG_TAG, "handleStreaming: leaving");
   }
 
-  private boolean hasLockKey(@NonNull Object lockKey) {
-    return (mListener != null) && (mListener == lockKey);
-  }
-
   public interface Listener {
-    void onNewInformation(@NonNull String information);
+    void onNewInformation(@NonNull String information, @NonNull String lockKey);
 
-    void onError();
+    void onError(@NonNull String lockKey);
   }
 }

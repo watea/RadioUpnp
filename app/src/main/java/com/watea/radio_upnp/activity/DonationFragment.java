@@ -58,6 +58,7 @@ public class DonationFragment extends MainActivityFragment {
     "android.test.purchased",
     "android.test.canceled",
     "android.test.item_unavailable"};
+  ArrayAdapter<CharSequence> mDonationAdapter;
   // <HMI assets
   private Spinner mGoogleSpinner;
   // />
@@ -139,6 +140,18 @@ public class DonationFragment extends MainActivityFragment {
   }
 
   @Override
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    // Adapters
+    mDonationAdapter = new ArrayAdapter<CharSequence>(
+      getActivity(),
+      android.R.layout.simple_spinner_item,
+      BuildConfig.DEBUG ?
+        DEBUG_CATALOG : getResources().getStringArray(R.array.donation_google_catalog_values));
+    mDonationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+  }
+
+  @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     // Create the helper, passing it our context and the public key to verify signatures with
@@ -159,13 +172,7 @@ public class DonationFragment extends MainActivityFragment {
     final View view = inflater.inflate(R.layout.content_donation, container, false);
     // Choose donation amount
     mGoogleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
-    ArrayAdapter<CharSequence> adapter = new ArrayAdapter<CharSequence>(
-      getActivity(),
-      android.R.layout.simple_spinner_item,
-      BuildConfig.DEBUG ?
-        DEBUG_CATALOG : getResources().getStringArray(R.array.donation_google_catalog_values));
-    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-    mGoogleSpinner.setAdapter(adapter);
+    mGoogleSpinner.setAdapter(mDonationAdapter);
     return view;
   }
 

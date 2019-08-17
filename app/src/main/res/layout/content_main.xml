@@ -32,8 +32,8 @@
 
     <ImageView
         android:id="@+id/album_art_image_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
         android:padding="@dimen/app_margin"
         android:scaleType="fitXY"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -95,7 +95,7 @@
             tools:ignore="ContentDescription" />
 
         <ProgressBar
-            android:id="@+id/progressbar"
+            android:id="@+id/progress_bar"
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:layout_gravity="center" />

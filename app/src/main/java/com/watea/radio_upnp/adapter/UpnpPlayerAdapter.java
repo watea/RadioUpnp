@@ -55,6 +55,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private Device mDlnaDevice = null;
   @Nullable
   private AndroidUpnpService mAndroidUpnpService = null;
+  @NonNull
+  private String mLockKey = VOID;
 
   public UpnpPlayerAdapter(
     @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
@@ -81,7 +83,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected void onPrepareFromMediaId() {
+  synchronized protected void onPrepareFromMediaId(@NonNull String lockKey) {
+    // Tag this session
+    mLockKey = lockKey;
     String radioUri = mHttpServer.getRadioUri(Objects.requireNonNull(mRadio)).toString();
     String radioName = mRadio.getName();
     ActionInvocation actionInvocation = getUpnpActionInvocation(
@@ -108,7 +112,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   public void onPlay() {
-    onPlay(getLockKey());
+    onPlay(mLockKey);
   }
 
   // Nota: as tested, not supported by DLNA device
@@ -151,24 +155,29 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     return actions;
   }
 
-  private void onPlay(@Nullable Object lockKey) {
-    if (mDlnaDevice == null) {
-      Log.i(LOG_TAG, "onPlay on null DlnaDevice");
-      return;
+  // Do not execute if lock key has changed
+  synchronized private void onPlay(@NonNull String lockKey) {
+    if (lockKey.equals(mLockKey)) {
+      if (mDlnaDevice == null) {
+        Log.i(LOG_TAG, "onPlay on null DlnaDevice");
+        return;
+      }
+      ActionInvocation actionInvocation = getUpnpActionInvocation(mDlnaDevice, UPNP_ACTION_PLAY);
+      actionInvocation.setInput("Speed", "1");
+      upnpExecuteAction(actionInvocation, lockKey);
+    } else {
+      Log.d(LOG_TAG, "onPlay with bad lockKey");
     }
-    ActionInvocation actionInvocation = getUpnpActionInvocation(mDlnaDevice, UPNP_ACTION_PLAY);
-    actionInvocation.setInput("Speed", "1");
-    upnpExecuteAction(actionInvocation, lockKey);
   }
 
   // Execute asynchronous in the background
   private void upnpExecuteAction(@NonNull ActionInvocation actionInvocation) {
-    upnpExecuteAction(actionInvocation, getLockKey());
+    upnpExecuteAction(actionInvocation, mLockKey);
   }
 
   // Execute asynchronous in the background
   private void upnpExecuteAction(
-    @NonNull ActionInvocation actionInvocation, @Nullable Object lockKey) {
+    @NonNull ActionInvocation actionInvocation, @NonNull String lockKey) {
     if (mAndroidUpnpService == null) {
       Log.d(LOG_TAG, "upnpExecuteAction: AndroidUpnpService is null");
       changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
@@ -189,13 +198,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   private class TaggedActionCallback extends ActionCallback {
-    @Nullable
-    private final Object mLockKey;
+    @NonNull
+    private final String mActionLockKey;
 
     private TaggedActionCallback(
-      @NonNull ActionInvocation actionInvocation, @Nullable Object lockKey) {
+      @NonNull ActionInvocation actionInvocation, @NonNull String lockKey) {
       super(actionInvocation);
-      mLockKey = lockKey;
+      mActionLockKey = lockKey;
     }
 
     @Override
@@ -207,19 +216,19 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       }
       switch (action) {
         case UpnpPlayerAdapter.UPNP_ACTION_SET_AV_TRANSPORT_URI:
-          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, mLockKey);
+          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, mActionLockKey);
           // Now we can call Play with same tag
-          onPlay(mLockKey);
+          onPlay(mActionLockKey);
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_STOP:
-          changeAndNotifyState(PlaybackStateCompat.STATE_NONE, mLockKey);
+          changeAndNotifyState(PlaybackStateCompat.STATE_NONE, mActionLockKey);
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_PLAY:
-          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING, mLockKey);
+          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING, mActionLockKey);
           break;
         // Should not happen as PAUSE not allowed
         case UpnpPlayerAdapter.UPNP_ACTION_PAUSE:
-          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED, mLockKey);
+          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED, mActionLockKey);
           break;
         // Should not happen
         default:
@@ -231,7 +240,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     public void failure(
       ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
       Log.d(LOG_TAG, defaultMsg);
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mLockKey);
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mActionLockKey);
     }
   }
 }

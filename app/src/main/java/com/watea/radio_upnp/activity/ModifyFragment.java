@@ -48,6 +48,13 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   // />
   private RadiosModifyAdapter mRadiosModifyAdapter;
 
+  @Override
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    // Adapters
+    mRadiosModifyAdapter = new RadiosModifyAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
+  }
+
   @Nullable
   @Override
   public View onCreateView(
@@ -55,11 +62,10 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     super.onCreateView(inflater, container, savedInstanceState);
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_modify, container, false);
-    // Fill content including recycler
     RecyclerView radiosView = view.findViewById(R.id.radios_recycler_view);
     radiosView.setLayoutManager(new LinearLayoutManager(getActivity()));
     // RecyclerView shall be defined for Adapter
-    mRadiosModifyAdapter = new RadiosModifyAdapter(getActivity(), this, radiosView);
+    mRadiosModifyAdapter.attachToRecyclerView(radiosView);
     // Adapter shall be defined for RecyclerView
     radiosView.setAdapter(mRadiosModifyAdapter);
     mRadiosDefaultView = view.findViewById(R.id.view_radios_default);

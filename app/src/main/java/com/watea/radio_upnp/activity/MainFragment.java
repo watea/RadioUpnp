@@ -97,7 +97,6 @@ public class MainFragment
   private TextView mPlayedRadioInformationTextView;
   private View mRadiosDefaultView;
   private MenuItem mPreferredMenuItem;
-  private int mScreenWidthDp;
   private AlertDialog mDlnaAlertDialog;
   private AlertDialog mRadioLongPressAlertDialog;
   private AlertDialog mPlayLongPressAlertDialog;
@@ -190,12 +189,11 @@ public class MainFragment
           String radioInformation =
             mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
           mPlayedRadioInformationTextView.setText(radioInformation);
-          //noinspection SuspiciousNameCombination
           mAlbumArtImageView.setImageBitmap(
             Bitmap.createScaledBitmap(
               mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
-              mScreenWidthDp,
-              mScreenWidthDp,
+              RADIO_ICON_SIZE,
+              RADIO_ICON_SIZE,
               false));
         }
       }
@@ -390,6 +388,102 @@ public class MainFragment
   public View onCreateView(
     LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
     super.onCreateView(inflater, container, savedInstanceState);
+    // Inflate the view so that graphical objects exists
+    View view = inflater.inflate(R.layout.content_main, container, false);
+    mAlbumArtImageView = view.findViewById(R.id.album_art_image_view);
+    mPlayedRadioNameTextView = view.findViewById(R.id.played_radio_name_text_view);
+    mPlayedRadioNameTextView.setSelected(true); // For scrolling
+    mPlayedRadioInformationTextView = view.findViewById(R.id.played_radio_information_text_view);
+    mPlayedRadioInformationTextView.setSelected(true); // For scrolling
+    RecyclerView radiosView = view.findViewById(R.id.radios_recycler_view);
+    radiosView.setLayoutManager(
+      new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+    radiosView.setAdapter(mRadiosAdapter);
+    mRadiosDefaultView = view.findViewById(R.id.view_radios_default);
+    mProgressBar = view.findViewById(R.id.progress_bar);
+    mProgressBar.setVisibility(View.INVISIBLE);
+    mPlayImageButton = view.findViewById(R.id.play_image_button);
+    mPlayImageButton.setVisibility(View.INVISIBLE);
+    mPlayImageButton.setOnClickListener(this);
+    mPlayImageButton.setOnLongClickListener(this);
+    return view;
+  }
+
+  @Override
+  public void onResume() {
+    super.onResume();
+    browserViewSync();
+    setRadiosView();
+  }
+
+  @NonNull
+  @Override
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+          tell(R.string.LAN_required);
+          return;
+        }
+        if (mAndroidUpnpService == null) {
+          tell(R.string.device_no_device_yet);
+          return;
+        }
+        // Do not search more than 1 peer 5 s
+        if (System.currentTimeMillis() - mTimeDlnaSearch > 5000) {
+          mTimeDlnaSearch = System.currentTimeMillis();
+          mAndroidUpnpService.getControlPoint().search();
+        }
+
+        mDlnaAlertDialog.show();
+        if (!mGotItDlnaEnable) {
+          mDlnaEnableAlertDialog.show();
+        }
+      }
+    };
+  }
+
+  @NonNull
+  @Override
+  public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
+    return new View.OnLongClickListener() {
+      @Override
+      public boolean onLongClick(View view) {
+        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+          tell(R.string.LAN_required);
+          return true;
+        }
+        if (mAndroidUpnpService == null) {
+          tell(R.string.device_no_device_yet);
+          return true;
+        }
+        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
+        mDlnaDevicesAdapter.removeChosenDlnaDevice();
+        tell(R.string.dlna_reset);
+        return true;
+      }
+    };
+  }
+
+  @Override
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_cast_black_24dp;
+  }
+
+  @Override
+  public int getMenuId() {
+    return R.menu.menu_main;
+  }
+
+  @Override
+  public int getTitle() {
+    return R.string.title_main;
+  }
+
+  @Override
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
     // Restore saved state, if any
     if (savedInstanceState != null) {
       mIsPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
@@ -402,19 +496,13 @@ public class MainFragment
       sharedPreferences.getBoolean(getString(R.string.key_play_long_press_got_it), false);
     mGotItDlnaEnable =
       sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
-    // Display metrics
-    mScreenWidthDp = getResources().getConfiguration().screenWidthDp;
-    // Inflate the view so that graphical objects exists
-    View view = inflater.inflate(R.layout.content_main, container, false);
-    // Fill content including recycler
-    // A an exception, created only if necessary as handles UPnP events
-    if (mDlnaDevicesAdapter == null) {
-      mDlnaDevicesAdapter = new DlnaDevicesAdapter(
-        getActivity(),
-        R.layout.row_dlna_device,
-        (savedInstanceState == null) ?
-          null : savedInstanceState.getString(getString(R.string.key_selected_device)));
-    }
+    // Adapters
+    mDlnaDevicesAdapter = new DlnaDevicesAdapter(
+      getActivity(),
+      R.layout.row_dlna_device,
+      (savedInstanceState == null) ?
+        null : savedInstanceState.getString(getString(R.string.key_selected_device)));
+    mRadiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
       .setAdapter(
@@ -463,95 +551,6 @@ public class MainFragment
         }
       });
     mDlnaEnableAlertDialog = alertDialogBuilder.create();
-    mAlbumArtImageView = view.findViewById(R.id.album_art_image_view);
-    mPlayedRadioNameTextView = view.findViewById(R.id.played_radio_name_text_view);
-    mPlayedRadioNameTextView.setSelected(true); // For scrolling
-    mPlayedRadioInformationTextView = view.findViewById(R.id.played_radio_information_text_view);
-    mPlayedRadioInformationTextView.setSelected(true); // For scrolling
-    mRadiosAdapter = new RadiosAdapter(getActivity(), this);
-    RecyclerView radiosView = view.findViewById(R.id.radios_recycler_view);
-    radiosView.setLayoutManager(
-      new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
-    radiosView.setAdapter(mRadiosAdapter);
-    mRadiosDefaultView = view.findViewById(R.id.view_radios_default);
-    mProgressBar = view.findViewById(R.id.progressbar);
-    mProgressBar.setVisibility(View.INVISIBLE);
-    mPlayImageButton = view.findViewById(R.id.play_image_button);
-    mPlayImageButton.setVisibility(View.INVISIBLE);
-    mPlayImageButton.setOnClickListener(this);
-    mPlayImageButton.setOnLongClickListener(this);
-    return view;
-  }
-
-  @Override
-  public void onResume() {
-    super.onResume();
-    browserViewSync();
-    setRadiosView();
-  }
-
-  @NonNull
-  @Override
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-          tell(R.string.LAN_required);
-          return;
-        }
-        if (mAndroidUpnpService == null) {
-          tell(R.string.device_no_device_yet);
-          return;
-        }
-        // Do not search more than 1 peer 5 s
-        if (System.currentTimeMillis() - mTimeDlnaSearch > 5000) {
-          mTimeDlnaSearch = System.currentTimeMillis();
-          mAndroidUpnpService.getControlPoint().search();
-        }
-        mDlnaAlertDialog.show();
-        if (!mGotItDlnaEnable) {
-          mDlnaEnableAlertDialog.show();
-        }
-      }
-    };
-  }
-
-  @NonNull
-  @Override
-  public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return new View.OnLongClickListener() {
-      @Override
-      public boolean onLongClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
-          tell(R.string.LAN_required);
-          return true;
-        }
-        if (mAndroidUpnpService == null) {
-          tell(R.string.device_no_device_yet);
-          return true;
-        }
-        mAndroidUpnpService.getRegistry().removeAllRemoteDevices();
-        mDlnaDevicesAdapter.removeChosenDlnaDevice();
-        tell(R.string.dlna_reset);
-        return true;
-      }
-    };
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_cast_black_24dp;
-  }
-
-  @Override
-  public int getMenuId() {
-    return R.menu.menu_main;
-  }
-
-  @Override
-  public int getTitle() {
-    return R.string.title_main;
   }
 
   @Override

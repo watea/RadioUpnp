@@ -70,7 +70,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private static String CHANNEL_ID;
   private final UpnpServiceConnection mUpnpConnection = new UpnpServiceConnection();
   private MediaSessionCompat mSession;
-  private boolean mServiceInStartedState;
   private RadioLibrary mRadioLibrary;
   private NotificationManager mNotificationManager;
   private PlayerAdapter mPlayerAdapter;
@@ -86,7 +85,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     // Create a new MediaSession...
     mSession = new MediaSessionCompat(this, LOG_TAG);
     mMediaMetadataCompat = null;
-    mServiceInStartedState = false;
     // Link to callback where actual media controls are called...
     mSession.setCallback(new MediaSessionCompatCallback());
     mSession.setFlags(
@@ -177,29 +175,29 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @SuppressLint("SwitchIntDef")
   @Override
-  public void onPlaybackStateChange(
+  synchronized public void onPlaybackStateChange(
     @NonNull PlaybackStateCompat state, @Nullable MediaMetadataCompat mediaMetadataCompat) {
     Log.d(LOG_TAG, "onPlaybackStateChange: state: " + state);
     mMediaMetadataCompat = mediaMetadataCompat;
     // Report the state to the MediaSession
     if (mSession.isActive()) {
       mSession.setPlaybackState(state);
+      Log.d(LOG_TAG, "=> Session is activ");
     }
     // Manage the started state of this service, and session activity
     switch (state.getState()) {
       case PlaybackStateCompat.STATE_BUFFERING:
         break;
       case PlaybackStateCompat.STATE_PLAYING:
-        // Move service to started state
-        if (!mServiceInStartedState) {
-          ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
-          mServiceInStartedState = true;
-        }
+        // Start service
+        ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
+        // Update notification
+        mNotificationManager.notify(NOTIFICATION_ID, getNotification());
         break;
       case PlaybackStateCompat.STATE_PAUSED:
         // Move service out started state
         stopForeground(false);
-        // Update notification for pause
+        // Update notification
         mNotificationManager.notify(NOTIFICATION_ID, getNotification());
         break;
       default:
@@ -209,21 +207,18 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           mSession.setMetadata(null);
           mSession.setActive(false);
         }
-        // Move service out started state, if any
-        if (mServiceInStartedState) {
-          stopForeground(true);
-          stopSelf();
-          mServiceInStartedState = false;
-        }
+        // Move service out started state
+        stopForeground(true);
+        stopSelf();
     }
   }
 
   @Override
-  public void onInformationChange(@Nullable MediaMetadataCompat mediaMetadataCompat) {
-    mMediaMetadataCompat = mediaMetadataCompat;
-    mSession.setMetadata(mMediaMetadataCompat);
-    // Update notification, if any
-    if (mServiceInStartedState) {
+  synchronized public void onInformationChange(@Nullable MediaMetadataCompat mediaMetadataCompat) {
+    if (mSession.isActive()) {
+      mMediaMetadataCompat = mediaMetadataCompat;
+      mSession.setMetadata(mMediaMetadataCompat);
+      // Update notification, if any
       mNotificationManager.notify(NOTIFICATION_ID, getNotification());
     }
   }
@@ -351,8 +346,10 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         }
       }
       // Activate session
-      if (!mSession.isActive()) {
-        mSession.setActive(true);
+      synchronized (RadioService.this) {
+        if (!mSession.isActive()) {
+          mSession.setActive(true);
+        }
       }
       // Prepare radio streaming, radio retrieved in database
       Radio radio = mRadioLibrary.getFrom(Long.valueOf(mediaId));
@@ -362,8 +359,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       }
       mPlayerAdapter.prepareFromMediaId(radio);
       // Synchronize session data
-      mSession.setMetadata(radio.getMediaMetadataBuilder().build());
-      mSession.setExtras(extras);
+      synchronized (RadioService.this) {
+        if (mSession.isActive()) {
+          mSession.setMetadata(radio.getMediaMetadataBuilder().build());
+          mSession.setExtras(extras);
+        }
+      }
     }
 
     @Override

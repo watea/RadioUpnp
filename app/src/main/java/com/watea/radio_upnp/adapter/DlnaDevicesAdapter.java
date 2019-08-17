@@ -135,7 +135,7 @@ public class DlnaDevicesAdapter extends ArrayAdapter<DlnaDevice> {
 
     private ViewHolder(@NonNull View itemView) {
       mDlnaDeviceNameTextView = itemView.findViewById(R.id.row_dlna_device_name_text_view);
-      mProgressBar = itemView.findViewById(R.id.progressbar);
+      mProgressBar = itemView.findViewById(R.id.progress_bar);
     }
 
     private void setView(@NonNull DlnaDevice dlnaDevice) {

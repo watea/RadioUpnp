@@ -75,12 +75,12 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected void onPrepareFromMediaId() {
+  protected void onPrepareFromMediaId(@NonNull String lockKey) {
     mSimpleExoPlayer = ExoPlayerFactory.newSimpleInstance(
       new DefaultRenderersFactory(mContext),
       new DefaultTrackSelector(),
       new DefaultLoadControl());
-    mSimpleExoPlayer.addListener(mPlayerEventListener = new PlayerEventListener());
+    mSimpleExoPlayer.addListener(mPlayerEventListener = new PlayerEventListener(lockKey));
     mSimpleExoPlayer.setPlayWhenReady(true);
     mSimpleExoPlayer.prepare(
       new ExtractorMediaSource.Factory(
@@ -152,12 +152,12 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   private class PlayerEventListener implements Player.EventListener {
-    @Nullable
-    private final Object mLockKey;
+    @NonNull
+    private final String mLockKey;
 
-    private PlayerEventListener() {
-      // Shall not be null
-      mLockKey = getLockKey();
+    private PlayerEventListener(@NonNull String lockKey) {
+      // Tag this session
+      mLockKey = lockKey;
     }
 
     @Override

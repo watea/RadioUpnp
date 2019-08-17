@@ -38,7 +38,8 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import java.util.Objects;
 
 public abstract class MainActivityFragment extends Fragment {
-  public static final int DEFAULT_RESOURCE = -1;
+  protected static final int RADIO_ICON_SIZE = 300;
+  protected static final int DEFAULT_RESOURCE = -1;
   protected RadioLibrary mRadioLibrary;
   protected Provider mProvider;
 

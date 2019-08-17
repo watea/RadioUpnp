@@ -39,15 +39,21 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
 
+import java.util.UUID;
+
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
 @SuppressWarnings("WeakerAccess")
 public abstract class PlayerAdapter {
+  protected static final String VOID = "";
   private static final String LOG_TAG = PlayerAdapter.class.getName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+  // Current tag, always set before playing
+  @NonNull
+  private static String mLockKey = VOID;
   @NonNull
   protected final Context mContext;
   @NonNull
@@ -64,10 +70,6 @@ public abstract class PlayerAdapter {
   @Nullable
   protected Radio mRadio = null;
   protected int mState = PlaybackStateCompat.STATE_NONE;
-  // Only one radio listened at a time
-  // Used as process tag by implementations, as a new one is created for each new actual renderer
-  @Nullable
-  private RadioHandler.Listener mRadioHandlerListener = null;
   private boolean mPlayOnAudioFocus = false;
   private boolean mAudioNoisyReceiverRegistered = false;
   @NonNull
@@ -84,6 +86,39 @@ public abstract class PlayerAdapter {
   private boolean mIsRerunAllowed = false;
   @NonNull
   private String mCurrentRadioInformation = "";
+  @NonNull
+  private final RadioHandler.Listener mRadioHandlerListener = new RadioHandler.Listener() {
+    @Override
+    public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
+      synchronized (PlayerAdapter.this) {
+        if (lockKey.equals(mLockKey)) {
+          mCurrentRadioInformation = information;
+          mListener.onInformationChange(getCurrentMedia());
+        }
+      }
+    }
+
+    // Try to relaunch, just once till Playing state received
+    @Override
+    public void onError(@NonNull String lockKey) {
+      Log.d(LOG_TAG, "RadioHandler error received");
+      synchronized (PlayerAdapter.this) {
+        if (lockKey.equals(mLockKey)) {
+          if (mIsRerunAllowed && (mState == PlaybackStateCompat.STATE_PLAYING)) {
+            Log.d(LOG_TAG, "=> Try to relaunch");
+            changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+            mIsRerunAllowed = false;
+            onPrepareFromMediaId(lockKey);
+          } else {
+            Log.d(LOG_TAG, "=> Error");
+            changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          }
+        } else {
+          Log.d(LOG_TAG, "=> Garbage");
+        }
+      }
+    }
+  };
 
   public PlayerAdapter(
     @NonNull Context context,
@@ -92,9 +127,9 @@ public abstract class PlayerAdapter {
     boolean isLocal) {
     mContext = context.getApplicationContext();
     mHttpServer = httpServer;
-    mRadioHandler = mHttpServer.getRadioHandler();
     mListener = listener;
     mIsLocal = isLocal;
+    mRadioHandler = mHttpServer.getRadioHandler();
     mAudioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
     if (mAudioManager == null) {
       Log.e(LOG_TAG, "AudioManager is null");
@@ -115,32 +150,10 @@ public abstract class PlayerAdapter {
     // Audio focus management
     mAudioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
-    // New listener for each actual renderer
-    mRadioHandlerListener = new RadioHandler.Listener() {
-      @Override
-      public void onNewInformation(@NonNull String information) {
-        mCurrentRadioInformation = information;
-        mListener.onInformationChange(getCurrentMedia());
-      }
-
-      // Try to relaunch, just once till Playing state received
-      @Override
-      public void onError() {
-        Log.d(LOG_TAG, "RadioHandler error received");
-        if (mIsRerunAllowed && (mState == PlaybackStateCompat.STATE_PLAYING)) {
-          Log.d(LOG_TAG, "=> Try to relaunch");
-          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, this);
-          mIsRerunAllowed = false;
-          onPrepareFromMediaId();
-        } else {
-          Log.d(LOG_TAG, "=> Error");
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, this);
-        }
-      }
-    };
-    // Listen for RadioHandler
-    mRadioHandler.setListener(mRadioHandlerListener);
-    onPrepareFromMediaId();
+    // New tag
+    mLockKey = UUID.randomUUID().toString();
+    mRadioHandler.setListener(mRadioHandlerListener, mLockKey);
+    onPrepareFromMediaId(mLockKey);
   }
 
   public synchronized final void play() {
@@ -168,8 +181,8 @@ public abstract class PlayerAdapter {
   }
 
   public synchronized final void stop() {
-    // Force playback state
-    changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, mRadioHandlerListener);
+    // Force playback state immediately
+    changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, mLockKey);
     // Now we can release
     releaseOwnResources();
     // Stop actual reader
@@ -186,7 +199,7 @@ public abstract class PlayerAdapter {
   public void setVolume(float volume) {
   }
 
-  protected abstract void onPrepareFromMediaId();
+  protected abstract void onPrepareFromMediaId(@NonNull String lockKey);
 
   // Called when media is ready to be played and indicates the app has audio focus
   protected abstract void onPlay();
@@ -202,10 +215,21 @@ public abstract class PlayerAdapter {
   // Set the current capabilities available on this session
   protected abstract long getAvailableActions();
 
-  // Transmit state only for current process, just one time
-  protected synchronized void changeAndNotifyState(int newState, @Nullable Object lockKey) {
-    Log.d(LOG_TAG, "New state received: " + newState);
-    if ((lockKey == mRadioHandlerListener) && (mState != newState)) {
+  // Transmit state only for current process
+  protected synchronized void changeAndNotifyState(int newState, @NonNull String lockKey) {
+    Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + lockKey);
+    if (lockKey.equals(mLockKey)) {
+      changeAndNotifyState(newState);
+    } else {
+      Log.d(LOG_TAG, "=> Garbage");
+    }
+  }
+
+  // Transmit just one time
+  private void changeAndNotifyState(int newState) {
+    if (mState == newState) {
+      Log.d(LOG_TAG, "=> Unchanged");
+    } else {
       Log.d(LOG_TAG, "=> Transmitted to listener");
       mState = newState;
       // Re-run allowed if "Playing" received
@@ -217,11 +241,6 @@ public abstract class PlayerAdapter {
           .build(),
         getCurrentMedia());
     }
-  }
-
-  @Nullable
-  protected Object getLockKey() {
-    return mRadioHandlerListener;
   }
 
   // We add current radio information to current media data
@@ -254,7 +273,7 @@ public abstract class PlayerAdapter {
     unregisterAudioNoisyReceiver();
     // Stop listening for RadioHandler, shall stop RadioHandler
     mRadioHandler.removeListener();
-    mRadioHandlerListener = null;
+    mLockKey = VOID;
   }
 
   public interface Listener {

@@ -25,7 +25,6 @@ package com.watea.radio_upnp.adapter;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
@@ -57,13 +56,10 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
   @NonNull
   private List<Long> mRadioIds = new Vector<>();
 
-  public RadiosAdapter(@NonNull Context context, @NonNull Listener listener) {
+  public RadiosAdapter(@NonNull Context context, @NonNull Listener listener, int inconSize) {
     mContext = context;
     mListener = listener;
-    Configuration configuration = mContext.getResources().getConfiguration();
-    // Image size same order as screen size to get reasonable layout
-    mIconSize = ((configuration.orientation == Configuration.ORIENTATION_PORTRAIT) ?
-      configuration.screenWidthDp : configuration.screenHeightDp) / 2;
+    mIconSize = inconSize;
   }
 
   // Content setter, must be called

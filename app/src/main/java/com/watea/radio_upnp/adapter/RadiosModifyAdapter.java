@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.adapter;
 
 import android.content.Context;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.annotation.NonNull;
@@ -53,15 +52,15 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   @NonNull
   private List<Long> mRadioIds = new Vector<>();
 
-  public RadiosModifyAdapter(
-    @NonNull Context context, @NonNull Listener listener, @NonNull RecyclerView recyclerView) {
+  public RadiosModifyAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {
     mContext = context;
     mListener = listener;
+    mIconSize = iconSize;
+  }
+
+  // Shall be called
+  public void attachToRecyclerView(@NonNull RecyclerView recyclerView) {
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
-    Configuration configuration = mContext.getResources().getConfiguration();
-    // Image size same order as screen size to get reasonable layout
-    mIconSize = ((configuration.orientation == Configuration.ORIENTATION_PORTRAIT) ?
-      configuration.screenWidthDp : configuration.screenHeightDp) / 2;
   }
 
   // Content setter, must be called
