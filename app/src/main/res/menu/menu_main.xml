@@ -26,6 +26,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_dlna"
+        android:title="@string/title_dlna"
+        app:showAsAction="ifRoom"/>
+    <item
         android:id="@+id/action_preferred"
         android:icon="@drawable/ic_star_black_24dp"
         android:title="@string/title_preferred"

@@ -57,6 +57,7 @@ import com.watea.radio_upnp.service.NetworkTester;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -70,7 +71,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // ADD or MODIFY modes
-// mRadio = null for ADD
+// radio = null for ADD
 public class ItemModifyFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemModifyFragment.class.getName();
   private static final String DAR_FM_API = "http://api.dar.fm/";
@@ -85,21 +86,21 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final String DAR_FM_ID = "id";
   private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
   // <HMI assets
-  private EditText mNameEditText;
-  private EditText mUrlEditText;
-  private EditText mWebPageEditText;
-  private RadioButton mDarFmRadioButton;
-  private ImageButton mSearchImageButton;
-  private ProgressBar mProgressBar;
-  private UrlWatcher mUrlWatcher;
-  private UrlWatcher mWebPageWatcher;
+  private EditText nameEditText;
+  private EditText urlEditText;
+  private EditText webPageEditText;
+  private RadioButton darFmRadioButton;
+  private ImageButton searchImageButton;
+  private ProgressBar progressBar;
+  private UrlWatcher urlWatcher;
+  private UrlWatcher webPageWatcher;
   // />
   // Default values; ADD mode
-  private Radio mRadio = null;
-  private String mRadioName = null;
-  private String mRadioUrl = null;
-  private String mRadioWebPage = null;
-  private Bitmap mRadioIcon = null;
+  private Radio radio = null;
+  private String radioName = null;
+  private String radioUrl = null;
+  private String radioWebPage = null;
+  private Bitmap radioIcon = null;
 
   @NonNull
   private static String extractValue(@NonNull Element element, @NonNull String tag) {
@@ -111,12 +112,16 @@ public class ItemModifyFragment extends MainActivityFragment {
     super.onCreate(savedInstanceState);
     // Restore saved state, if any
     if (savedInstanceState != null) {
-      mRadio = mRadioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
-      mRadioName = savedInstanceState.getString(getString(R.string.key_radio_name));
-      mRadioUrl = savedInstanceState.getString(getString(R.string.key_radio_url));
-      mRadioWebPage = savedInstanceState.getString(getString(R.string.key_radio_web_page));
-      mRadioIcon = BitmapFactory.decodeFile(
+      radio = radioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
+      radioName = savedInstanceState.getString(getString(R.string.key_radio_name));
+      radioUrl = savedInstanceState.getString(getString(R.string.key_radio_url));
+      radioWebPage = savedInstanceState.getString(getString(R.string.key_radio_web_page));
+      radioIcon = BitmapFactory.decodeFile(
         savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
+    }
+    // Init if necessary
+    if (radioIcon == null) {
+      radioIcon = BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_radio);
     }
   }
 
@@ -124,14 +129,14 @@ public class ItemModifyFragment extends MainActivityFragment {
   public void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
     // "set" values...
-    outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : mRadio.getId());
+    outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : radio.getId());
     // ...others
-    outState.putString(getString(R.string.key_radio_name), mNameEditText.getText().toString());
-    outState.putString(getString(R.string.key_radio_url), mUrlEditText.getText().toString());
-    outState.putString(getString(R.string.key_radio_web_page), mWebPageEditText.getText().toString());
+    outState.putString(getString(R.string.key_radio_name), nameEditText.getText().toString());
+    outState.putString(getString(R.string.key_radio_url), urlEditText.getText().toString());
+    outState.putString(getString(R.string.key_radio_web_page), webPageEditText.getText().toString());
     outState.putString(getString(R.string.key_radio_icon_file),
-      mRadioLibrary.bitmapToFile(mRadioIcon, Integer.toString(hashCode())).getPath());
-    outState.putBoolean(getString(R.string.key_dar_fm_checked), mDarFmRadioButton.isChecked());
+      radioLibrary.bitmapToFile(radioIcon, Integer.toString(hashCode())).getPath());
+    outState.putBoolean(getString(R.string.key_dar_fm_checked), darFmRadioButton.isChecked());
   }
 
   @Override
@@ -144,30 +149,29 @@ public class ItemModifyFragment extends MainActivityFragment {
   public boolean onOptionsItemSelected(MenuItem item) {
     flushKeyboard(Objects.requireNonNull(getView()));
     if (item.getItemId() == R.id.action_done) {
-      if (mUrlWatcher.mUrl == null) {
+      if (urlWatcher.url == null) {
         tell(R.string.radio_definition_error);
       } else {
         if (isAddMode()) {
-          mRadio = new Radio(
+          radio = new Radio(
             getRadioName(),
-            null,
+            // Dummy as NonNull is required
+            new File(""),
             Radio.Type.MISC,
             Radio.Language.OTHER,
-            mUrlWatcher.mUrl,
-            mWebPageWatcher.mUrl,
+            urlWatcher.url,
+            webPageWatcher.url,
             Radio.Quality.MEDIUM);
-          if (mRadioLibrary.insertAndSaveIcon(mRadio, mRadioIcon) <= 0) {
+          if (radioLibrary.insertAndSaveIcon(radio, radioIcon) <= 0) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding in database");
           }
         } else {
-          mRadio.setName(getRadioName());
+          radio.setName(getRadioName());
           // Same file name reused to store icon
-          mRadioLibrary.bitmapToFile(
-            mRadioIcon,
-            Objects.requireNonNull(mRadio.getIconFile()).getName().replace(".png", ""));
-          mRadio.setURL(mUrlWatcher.mUrl);
-          mRadio.setWebPageURL(mWebPageWatcher.mUrl);
-          if (mRadioLibrary.updateFrom(mRadio.getId(), mRadio.toContentValues()) <= 0) {
+          radioLibrary.setIconFile(radio, radioIcon);
+          radio.setURL(urlWatcher.url);
+          radio.setWebPageURL(webPageWatcher.url);
+          if (radioLibrary.updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
           }
         }
@@ -189,50 +193,49 @@ public class ItemModifyFragment extends MainActivityFragment {
     super.onCreateView(inflater, container, savedInstanceState);
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_item_modify, container, false);
-    mNameEditText = view.findViewById(R.id.name_edit_text);
-    mProgressBar = view.findViewById(R.id.progress_bar);
-    mUrlEditText = view.findViewById(R.id.url_edit_text);
-    mWebPageEditText = view.findViewById(R.id.web_page_edit_text);
-    mDarFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
-    mSearchImageButton = view.findViewById(R.id.search_image_button);
-    mNameEditText.setText(mRadioName);
-    setRadioIcon((mRadioIcon == null) ?
-      BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_radio) : mRadioIcon);
-    mUrlEditText.setText(mRadioUrl);
-    mWebPageEditText.setText(mRadioWebPage);
-    mUrlWatcher = new UrlWatcher(mUrlEditText);
-    mWebPageWatcher = new UrlWatcher(mWebPageEditText);
-    mUrlEditText.setText(mRadioUrl);
-    mWebPageEditText.setText(mRadioWebPage);
+    nameEditText = view.findViewById(R.id.name_edit_text);
+    progressBar = view.findViewById(R.id.progress_bar);
+    urlEditText = view.findViewById(R.id.url_edit_text);
+    webPageEditText = view.findViewById(R.id.web_page_edit_text);
+    darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
+    searchImageButton = view.findViewById(R.id.search_image_button);
+    nameEditText.setText(radioName);
+    setRadioIcon(radioIcon);
+    urlEditText.setText(radioUrl);
+    webPageEditText.setText(radioWebPage);
+    urlWatcher = new UrlWatcher(urlEditText);
+    webPageWatcher = new UrlWatcher(webPageEditText);
+    urlEditText.setText(radioUrl);
+    webPageEditText.setText(radioWebPage);
     // Order matters!
     ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
       new RadioGroup.OnCheckedChangeListener() {
         @Override
         public void onCheckedChanged(RadioGroup group, int checkedId) {
           boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
-          mSearchImageButton.setImageResource(
+          searchImageButton.setImageResource(
             isDarFmSelected ? R.drawable.ic_search_black_40dp : R.drawable.ic_image_black_40dp);
-          mWebPageEditText.setEnabled(!isDarFmSelected);
-          mUrlEditText.setEnabled(!isDarFmSelected);
+          webPageEditText.setEnabled(!isDarFmSelected);
+          urlEditText.setEnabled(!isDarFmSelected);
         }
 
       });
-    mDarFmRadioButton.setChecked(
+    darFmRadioButton.setChecked(
       (savedInstanceState == null) ||
         savedInstanceState.getBoolean(getString(R.string.key_dar_fm_checked)));
-    mSearchImageButton.setOnClickListener(new View.OnClickListener() {
+    searchImageButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
         flushKeyboard(Objects.requireNonNull(getView()));
         if (NetworkTester.isDeviceOffline(getActivity())) {
           tell(R.string.no_internet);
         } else {
-          if (mDarFmRadioButton.isChecked()) {
+          if (darFmRadioButton.isChecked()) {
             //noinspection unchecked
             new DarFmSearcher().execute();
           } else {
             showSearchButton(false);
-            new IconSearcher().execute(mWebPageWatcher.mUrl);
+            new IconSearcher().execute(webPageWatcher.url);
           }
         }
       }
@@ -250,10 +253,10 @@ public class ItemModifyFragment extends MainActivityFragment {
         if (NetworkTester.isDeviceOffline(getActivity())) {
           tell(R.string.no_internet);
         } else {
-          if (mUrlWatcher.mUrl == null) {
+          if (urlWatcher.url == null) {
             tell(R.string.connection_test_aborted);
           } else {
-            new UrlTester().execute(mUrlWatcher.mUrl);
+            new UrlTester().execute(urlWatcher.url);
           }
         }
       }
@@ -277,21 +280,21 @@ public class ItemModifyFragment extends MainActivityFragment {
 
   // Must be called before MODIFY mode
   public void set(@NonNull Radio radio) {
-    mRadio = radio;
-    mRadioName = mRadio.getName();
-    mRadioUrl = mRadio.getURL().toString();
-    URL webPageURL = mRadio.getWebPageURL();
-    mRadioWebPage = (webPageURL == null) ? null : webPageURL.toString();
-    mRadioIcon = mRadio.getIcon();
+    this.radio = radio;
+    radioName = this.radio.getName();
+    radioUrl = this.radio.getURL().toString();
+    URL webPageURL = this.radio.getWebPageURL();
+    radioWebPage = (webPageURL == null) ? null : webPageURL.toString();
+    radioIcon = this.radio.getIcon();
   }
 
   public boolean isAddMode() {
-    return (mRadio == null);
+    return (radio == null);
   }
 
   @NonNull
   private String getRadioName() {
-    return mNameEditText.getText().toString().toUpperCase();
+    return nameEditText.getText().toString().toUpperCase();
   }
 
   private void flushKeyboard(@NonNull View view) {
@@ -307,7 +310,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     int height = icon.getHeight();
     int width = icon.getWidth();
     int min = Math.min(height, width);
-    mRadioIcon = Bitmap.createBitmap(
+    radioIcon = Bitmap.createBitmap(
       icon,
       (width - min) / 2,
       (height - min) / 2,
@@ -315,18 +318,18 @@ public class ItemModifyFragment extends MainActivityFragment {
       min,
       null,
       false);
-    mNameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
+    nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
       null,
       new BitmapDrawable(
         getResources(),
-        Bitmap.createScaledBitmap(mRadioIcon, RADIO_ICON_SIZE, RADIO_ICON_SIZE, false)),
+        Bitmap.createScaledBitmap(radioIcon, RADIO_ICON_SIZE, RADIO_ICON_SIZE, false)),
       null,
       null);
   }
 
   private void showSearchButton(boolean isShowing) {
-    mSearchImageButton.setVisibility(isShowing ? View.VISIBLE : View.INVISIBLE);
-    mProgressBar.setVisibility(isShowing ? View.INVISIBLE : View.VISIBLE);
+    searchImageButton.setVisibility(isShowing ? View.VISIBLE : View.INVISIBLE);
+    progressBar.setVisibility(isShowing ? View.INVISIBLE : View.VISIBLE);
   }
 
   private void tellWait() {
@@ -341,17 +344,17 @@ public class ItemModifyFragment extends MainActivityFragment {
 
   // Utility class to listen for URL edition
   private class UrlWatcher implements TextWatcher {
-    private final int mDefaultColor;
+    private final int defaultColor;
     @NonNull
-    private final EditText mEditText;
+    private final EditText editText;
     @Nullable
-    private URL mUrl;
+    private URL url;
 
     private UrlWatcher(@NonNull EditText editText) {
-      mEditText = editText;
-      mEditText.addTextChangedListener(this);
-      mDefaultColor = mEditText.getCurrentTextColor();
-      mUrl = null;
+      this.editText = editText;
+      this.editText.addTextChangedListener(this);
+      defaultColor = this.editText.getCurrentTextColor();
+      url = null;
     }
 
     @Override
@@ -365,14 +368,14 @@ public class ItemModifyFragment extends MainActivityFragment {
     @Override
     public void afterTextChanged(Editable s) {
       try {
-        mUrl = new URL(s.toString());
-        mEditText.setTextColor(mDefaultColor);
+        url = new URL(s.toString());
+        editText.setTextColor(defaultColor);
       } catch (MalformedURLException malformedURLException) {
-        if (mUrl != null) {
+        if (url != null) {
           tell(R.string.malformed_url_error);
         }
-        mUrl = null;
-        mEditText.setTextColor(ContextCompat.getColor(getActivity(), R.color.colorError));
+        url = null;
+        editText.setTextColor(ContextCompat.getColor(getActivity(), R.color.colorError));
       }
     }
   }
@@ -422,13 +425,13 @@ public class ItemModifyFragment extends MainActivityFragment {
   private class DarFmSearcher
     extends AsyncTask<Map<String, String>, Void, List<Map<String, String>>> {
     @Nullable
-    private Bitmap mFoundIcon;
+    private Bitmap foundIcon;
 
     @SafeVarargs
     @Override
     protected final List<Map<String, String>> doInBackground(Map<String, String>... radios) {
       List<Map<String, String>> darFmRadios = new Vector<>();
-      mFoundIcon = null;
+      foundIcon = null;
       if (radios.length == 0) {
         try {
           Element search = Jsoup
@@ -456,7 +459,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             .connect(DAR_FM_STATIONS_REQUEST + foundRadio.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
             .get();
           foundRadio.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
-          mFoundIcon = NetworkTester.getBitmapFromUrl(new URL(extractValue(station, "imageurl")));
+          foundIcon = NetworkTester.getBitmapFromUrl(new URL(extractValue(station, "imageurl")));
         } catch (MalformedURLException malformedURLException) {
           Log.i(LOG_TAG, "Error performing icon search");
         } catch (IOException iOexception) {
@@ -483,16 +486,15 @@ public class ItemModifyFragment extends MainActivityFragment {
             break;
           case 1:
             Map<String, String> foundRadio = darFmRadios.get(0);
-            mNameEditText.setText(
-              Objects.requireNonNull(foundRadio.get(DAR_FM_NAME)).toUpperCase());
-            mUrlEditText.setText(DAR_FM_BASE_URL + foundRadio.get(DAR_FM_ID));
+            nameEditText.setText(Objects.requireNonNull(foundRadio.get(DAR_FM_NAME)).toUpperCase());
+            urlEditText.setText(DAR_FM_BASE_URL + foundRadio.get(DAR_FM_ID));
             boolean isDarFmWebPageFound = foundRadio.containsKey(DAR_FM_WEB_PAGE);
-            boolean isIconFound = (mFoundIcon != null);
+            boolean isIconFound = (foundIcon != null);
             if (isDarFmWebPageFound) {
-              mWebPageEditText.setText(foundRadio.get(DAR_FM_WEB_PAGE));
+              webPageEditText.setText(foundRadio.get(DAR_FM_WEB_PAGE));
             }
             if (isIconFound) {
-              setRadioIcon(mFoundIcon);
+              setRadioIcon(foundIcon);
             }
             tell((isIconFound && isDarFmWebPageFound) ?
               R.string.dar_fm_done : R.string.dar_fm_went_wrong);

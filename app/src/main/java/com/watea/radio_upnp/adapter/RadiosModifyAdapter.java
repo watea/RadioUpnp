@@ -44,18 +44,18 @@ import java.util.Vector;
 
 public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder> {
   @NonNull
-  private final Context mContext;
-  private final int mIconSize;
+  private final Context context;
+  private final int iconSize;
   @NonNull
-  private final Listener mListener;
+  private final Listener listener;
   // Dummy default
   @NonNull
-  private List<Long> mRadioIds = new Vector<>();
+  private List<Long> radioIds = new Vector<>();
 
   public RadiosModifyAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {
-    mContext = context;
-    mListener = listener;
-    mIconSize = iconSize;
+    this.context = context;
+    this.listener = listener;
+    this.iconSize = iconSize;
   }
 
   // Shall be called
@@ -65,7 +65,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   // Content setter, must be called
   public void setRadioIds(@NonNull List<Long> radioIds) {
-    mRadioIds = radioIds;
+    this.radioIds = radioIds;
     notifyDataSetChanged();
   }
 
@@ -78,13 +78,12 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    Objects.requireNonNull(viewHolder).setView(
-      Objects.requireNonNull(mListener.getRadioFromId(mRadioIds.get(position))));
+    viewHolder.setView(Objects.requireNonNull(listener.getRadioFromId(radioIds.get(position))));
   }
 
   @Override
   public int getItemCount() {
-    return mRadioIds.size();
+    return radioIds.size();
   }
 
   public interface Listener {
@@ -113,13 +112,13 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
       int from = viewHolder.getAdapterPosition();
-      Long fromId = mRadioIds.get(from);
+      Long fromId = radioIds.get(from);
       int to = targetViewHolder.getAdapterPosition();
-      Long toId = mRadioIds.get(to);
-      if (mListener.onMove(fromId, toId)) {
+      Long toId = radioIds.get(to);
+      if (listener.onMove(fromId, toId)) {
         // Database updated, update view
-        mRadioIds.set(to, fromId);
-        mRadioIds.set(from, toId);
+        radioIds.set(to, fromId);
+        radioIds.set(from, toId);
         notifyItemMoved(from, to);
         return true;
       } else {
@@ -140,9 +139,9 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
       int position = viewHolder.getAdapterPosition();
-      if (mListener.onDelete(mRadioIds.get(position))) {
+      if (listener.onDelete(radioIds.get(position))) {
         // Database updated, update view
-        mRadioIds.remove(position);
+        radioIds.remove(position);
         notifyItemRemoved(position);
       }
     }
@@ -150,34 +149,33 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
-    private final TextView mRadioNameTextView;
+    private final TextView radioNameTextView;
     @Nullable
-    private Radio mRadio;
+    private Radio radio;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
-      mRadioNameTextView = itemView.findViewById(R.id.row_modify_radio_name_text_view);
+      radioNameTextView = itemView.findViewById(R.id.row_modify_radio_name_text_view);
       // Edit action
       itemView.findViewById(R.id.row_modify_radio_name_text_view).setOnClickListener(
         new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-            mListener.onModifyClick(mRadio);
+            listener.onModifyClick(radio);
           }
         });
     }
 
     private void setView(@NonNull Radio radio) {
-      mRadio = radio;
-      mRadioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+      this.radio = radio;
+      radioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         new BitmapDrawable(
-          mContext.getResources(),
-          Bitmap.createScaledBitmap(
-            Objects.requireNonNull(mRadio.getIcon()), mIconSize, mIconSize, false)),
+          context.getResources(),
+          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
         null,
         null,
         null);
-      mRadioNameTextView.setText(mRadio.getName());
+      radioNameTextView.setText(this.radio.getName());
     }
   }
 }

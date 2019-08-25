@@ -46,120 +46,15 @@ import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
-
-import java.util.Objects;
+import com.watea.radio_upnp.service.RadioHandler;
 
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
-  @Nullable
-  private SimpleExoPlayer mSimpleExoPlayer = null;
-  @Nullable
-  private PlayerEventListener mPlayerEventListener = null;
-
-  public LocalPlayerAdapter(
-    @NonNull Context context,
-    @NonNull HttpServer httpServer,
-    @NonNull Listener listener) {
-    super(context, httpServer, listener, true);
-  }
-
-  @Override
-  public void setVolume(float volume) {
-    if (mSimpleExoPlayer == null) {
-      Log.i(LOG_TAG, "setVolume on null ExoPlayer");
-    } else {
-      mSimpleExoPlayer.setVolume(volume);
-    }
-  }
-
-  @Override
-  protected void onPrepareFromMediaId(@NonNull String lockKey) {
-    mSimpleExoPlayer = ExoPlayerFactory.newSimpleInstance(
-      new DefaultRenderersFactory(mContext),
-      new DefaultTrackSelector(),
-      new DefaultLoadControl());
-    mSimpleExoPlayer.addListener(mPlayerEventListener = new PlayerEventListener(lockKey));
-    mSimpleExoPlayer.setPlayWhenReady(true);
-    mSimpleExoPlayer.prepare(
-      new ExtractorMediaSource.Factory(
-        // Better management of bad wifi connection
-        new DefaultHttpDataSourceFactory(
-          mContext.getResources().getString(R.string.app_name),
-          new DefaultBandwidthMeter(),
-          DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
-          DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO,
-          false))
-        .setExtractorsFactory(new DefaultExtractorsFactory())
-        .createMediaSource(
-          Objects.requireNonNull(mRadio).getHandledUri(HttpServer.getLoopbackUri())));
-  }
-
-  @Override
-  protected void onPlay() {
-    if (mSimpleExoPlayer == null) {
-      Log.i(LOG_TAG, "onPlay on null ExoPlayer");
-    } else {
-      mSimpleExoPlayer.setPlayWhenReady(true);
-    }
-  }
-
-  @Override
-  protected void onPause() {
-    if (mSimpleExoPlayer == null) {
-      Log.i(LOG_TAG, "onPause on null ExoPlayer");
-    } else {
-      mSimpleExoPlayer.setPlayWhenReady(false);
-    }
-  }
-
-  @Override
-  public void onStop() {
-    if (mSimpleExoPlayer == null) {
-      Log.i(LOG_TAG, "onStop on null ExoPlayer");
-    } else {
-      mSimpleExoPlayer.stop();
-    }
-  }
-
-  @Override
-  protected void onRelease() {
-    if (mSimpleExoPlayer == null) {
-      Log.i(LOG_TAG, "onRelease on null ExoPlayer");
-    } else {
-      mSimpleExoPlayer.removeListener(mPlayerEventListener);
-      mSimpleExoPlayer.release();
-      mSimpleExoPlayer = null;
-    }
-  }
-
-  @Override
-  protected long getAvailableActions() {
-    long actions = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID | PlaybackStateCompat.ACTION_STOP;
-    switch (mState) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        actions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-        actions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      default:
-        // Nothing else
-    }
-    return actions;
-  }
-
-  private class PlayerEventListener implements Player.EventListener {
-    @NonNull
-    private final String mLockKey;
-
-    private PlayerEventListener(@NonNull String lockKey) {
-      // Tag this session
-      mLockKey = lockKey;
-    }
-
+  @NonNull
+  private final Player.EventListener playerEventListener = new Player.EventListener() {
     @Override
     public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
     }
@@ -180,16 +75,16 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
       switch (playbackState) {
         case Player.STATE_BUFFERING:
         case Player.STATE_IDLE:
-          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, mLockKey);
+          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, lockKey);
           break;
         case Player.STATE_ENDED:
-          changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, mLockKey);
+          changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, lockKey);
           break;
         case Player.STATE_READY:
           changeAndNotifyState(playWhenReady ?
               PlaybackStateCompat.STATE_PLAYING :
               PlaybackStateCompat.STATE_PAUSED,
-            mLockKey);
+            lockKey);
           break;
         default: // Should not happen
           Log.e(LOG_TAG, "onPlayerStateChanged: onPlayerStateChanged bad state " + playbackState);
@@ -208,7 +103,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     @Override
     public void onPlayerError(ExoPlaybackException exoPlaybackException) {
       Log.d(LOG_TAG, "ExoPlayer: onPlayerError " + exoPlaybackException);
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, mLockKey);
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
     }
 
     @Override
@@ -222,5 +117,103 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     @Override
     public void onSeekProcessed() {
     }
+  };
+  @Nullable
+  private SimpleExoPlayer simpleExoPlayer = null;
+
+  public LocalPlayerAdapter(
+    @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
+    super(context, httpServer, listener);
+  }
+
+  @Override
+  public void setVolume(float volume) {
+    if (simpleExoPlayer == null) {
+      Log.i(LOG_TAG, "setVolume on null ExoPlayer");
+    } else {
+      simpleExoPlayer.setVolume(volume);
+    }
+  }
+
+  @Override
+  protected boolean isLocal() {
+    return true;
+  }
+
+  @Override
+  protected void onPrepareFromMediaId(@NonNull Radio radio) {
+    simpleExoPlayer = ExoPlayerFactory.newSimpleInstance(
+      new DefaultRenderersFactory(context),
+      new DefaultTrackSelector(),
+      new DefaultLoadControl());
+    simpleExoPlayer.addListener(playerEventListener);
+    simpleExoPlayer.setPlayWhenReady(true);
+    simpleExoPlayer.prepare(
+      new ExtractorMediaSource.Factory(
+        // Better management of bad wifi connection
+        new DefaultHttpDataSourceFactory(
+          context.getResources().getString(R.string.app_name),
+          new DefaultBandwidthMeter(),
+          DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
+          DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO,
+          false))
+        .setExtractorsFactory(new DefaultExtractorsFactory())
+        .createMediaSource(
+          RadioHandler.getHandledUri(HttpServer.getLoopbackUri(), radio, lockKey)));
+  }
+
+  @Override
+  protected void onPlay() {
+    if (simpleExoPlayer == null) {
+      Log.i(LOG_TAG, "onPlay on null ExoPlayer");
+    } else {
+      simpleExoPlayer.setPlayWhenReady(true);
+    }
+  }
+
+  @Override
+  protected void onPause() {
+    if (simpleExoPlayer == null) {
+      Log.i(LOG_TAG, "onPause on null ExoPlayer");
+    } else {
+      simpleExoPlayer.setPlayWhenReady(false);
+    }
+  }
+
+  @Override
+  protected void onStop() {
+    if (simpleExoPlayer == null) {
+      Log.i(LOG_TAG, "onStop on null ExoPlayer");
+    } else {
+      simpleExoPlayer.stop();
+    }
+  }
+
+  @Override
+  protected void onRelease() {
+    if (simpleExoPlayer == null) {
+      Log.i(LOG_TAG, "onRelease on null ExoPlayer");
+    } else {
+      simpleExoPlayer.removeListener(playerEventListener);
+      simpleExoPlayer.release();
+      simpleExoPlayer = null;
+    }
+  }
+
+  @Override
+  protected long getAvailableActions() {
+    long actions = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID | PlaybackStateCompat.ACTION_STOP;
+    switch (state) {
+      case PlaybackStateCompat.STATE_PLAYING:
+        actions |= PlaybackStateCompat.ACTION_PAUSE;
+        break;
+      case PlaybackStateCompat.STATE_PAUSED:
+      case PlaybackStateCompat.STATE_BUFFERING:
+        actions |= PlaybackStateCompat.ACTION_PLAY;
+        break;
+      default:
+        // Nothing else
+    }
+    return actions;
   }
 }

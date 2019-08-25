@@ -33,6 +33,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -45,6 +46,7 @@ import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.VolumeProviderCompat;
 import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -63,51 +65,63 @@ import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 
 import java.util.List;
 
+import static com.watea.radio_upnp.service.RadioHandler.Listener.VOID;
+
 public class RadioService extends MediaBrowserServiceCompat implements PlayerAdapter.Listener {
   private static final String LOG_TAG = RadioService.class.getName();
   private static final int NOTIFICATION_ID = 9;
   private static final int REQUEST_CODE = 501;
   private static String CHANNEL_ID;
-  private final UpnpServiceConnection mUpnpConnection = new UpnpServiceConnection();
-  private MediaSessionCompat mSession;
-  private RadioLibrary mRadioLibrary;
-  private NotificationManager mNotificationManager;
-  private PlayerAdapter mPlayerAdapter;
-  private LocalPlayerAdapter mLocalPlayerAdapter;
-  private UpnpPlayerAdapter mUpnpPlayerAdapter;
-  private HttpServer mHttpServer;
-  private MediaMetadataCompat mMediaMetadataCompat;
+  private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
+  private MediaSessionCompat session;
+  private RadioLibrary radioLibrary;
+  private NotificationManager notificationManager;
+  // Shall not be null
+  private PlayerAdapter playerAdapter;
+  private final VolumeProviderCompat volumeProviderCompat =
+    new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
+      @Override
+      public void onAdjustVolume(int direction) {
+        playerAdapter.adjustVolume(direction);
+      }
+    };
+  private LocalPlayerAdapter localPlayerAdapter;
+  private UpnpPlayerAdapter upnpPlayerAdapter;
+  private HttpServer httpServer;
+  private MediaMetadataCompat mediaMetadataCompat = null;
 
   @Override
   public void onCreate() {
     super.onCreate();
-    CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
     // Create a new MediaSession...
-    mSession = new MediaSessionCompat(this, LOG_TAG);
-    mMediaMetadataCompat = null;
+    session = new MediaSessionCompat(this, LOG_TAG);
     // Link to callback where actual media controls are called...
-    mSession.setCallback(new MediaSessionCompatCallback());
-    mSession.setFlags(
-      MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
-        MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
-    setSessionToken(mSession.getSessionToken());
+    session.setCallback(new MediaSessionCompatCallback());
+    session.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+      MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+    setSessionToken(session.getSessionToken());
+    // Create the (mandatory) notification channel when running on Android Oreo
+    CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      createChannel();
+    }
     // Notification
-    mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     // Cancel all notifications to handle the case where the Service was killed and
     // restarted by the system
-    if (mNotificationManager == null) {
+    if (notificationManager == null) {
       Log.d(LOG_TAG, "onCreate: NotificationManager error");
       stopSelf();
     } else {
-      mNotificationManager.cancelAll();
+      notificationManager.cancelAll();
     }
     // Radio library access
-    mRadioLibrary = new RadioLibrary(this);
+    radioLibrary = new RadioLibrary(this);
     // Init HTTP Server
-    mHttpServer = new HttpServer(
+    httpServer = new HttpServer(
       this,
       getString(R.string.app_name),
-      mRadioLibrary,
+      radioLibrary,
       new HttpServer.Listener() {
         @Override
         public void onError() {
@@ -115,22 +129,20 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           stopSelf();
         }
       });
-    mHttpServer.start();
+    // Init players
+    localPlayerAdapter = new LocalPlayerAdapter(this, httpServer, this);
+    upnpPlayerAdapter = new UpnpPlayerAdapter(this, httpServer, this);
+    // Default actual player
+    playerAdapter = localPlayerAdapter;
+    // Is current handler listener
+    httpServer.radioHandler.setListener(playerAdapter);
+    httpServer.start();
     // Bind to UPnP service, launch if not already
     if (!bindService(
       new Intent(this, AndroidUpnpServiceImpl.class),
-      mUpnpConnection,
+      upnpConnection,
       BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "UpnpPlayerAdapter: internal failure; AndroidUpnpService not bound");
-    }
-    // Init players
-    mLocalPlayerAdapter = new LocalPlayerAdapter(this, mHttpServer, this);
-    mUpnpPlayerAdapter = new UpnpPlayerAdapter(this, mHttpServer, this);
-    // Default actual player
-    mPlayerAdapter = mLocalPlayerAdapter;
-    // Create the (mandatory) notification channel when running on Android Oreo
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      createChannel();
     }
     Log.d(LOG_TAG, "onCreate: done!");
   }
@@ -138,15 +150,15 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   @Override
   public BrowserRoot onGetRoot(
     @NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
-    return new BrowserRoot(mRadioLibrary.getRoot(), null);
+    return new BrowserRoot(radioLibrary.getRoot(), null);
   }
 
   @Override
   public void onLoadChildren(
     @NonNull final String parentMediaId,
     @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
-    result.sendResult(parentMediaId.equals(mRadioLibrary.getRoot()) ?
-      mRadioLibrary.getMediaItems() : null);
+    result.sendResult(parentMediaId.equals(radioLibrary.getRoot()) ?
+      radioLibrary.getMediaItems() : null);
   }
 
   @Override
@@ -156,14 +168,15 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   }
 
   @Override
-  public void onDestroy() {
+  public synchronized void onDestroy() {
     super.onDestroy();
-    mLocalPlayerAdapter.release();
-    mUpnpPlayerAdapter.release();
-    mHttpServer.stopServer();
-    mUpnpConnection.release();
-    mRadioLibrary.close();
-    mSession.release();
+    Log.d(LOG_TAG, "onDestroy: requested...");
+    localPlayerAdapter.release();
+    upnpPlayerAdapter.release();
+    httpServer.stopServer();
+    upnpConnection.release();
+    radioLibrary.close();
+    session.release();
     Log.d(LOG_TAG, "onDestroy: done!");
   }
 
@@ -173,76 +186,76 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     stopSelf();
   }
 
+  // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
-  synchronized public void onPlaybackStateChange(
-    @NonNull PlaybackStateCompat state, @Nullable MediaMetadataCompat mediaMetadataCompat) {
-    Log.d(LOG_TAG, "onPlaybackStateChange: state: " + state);
-    mMediaMetadataCompat = mediaMetadataCompat;
-    // Report the state to the MediaSession
-    if (mSession.isActive()) {
-      mSession.setPlaybackState(state);
-      Log.d(LOG_TAG, "=> Session is activ");
-    }
-    // Manage the started state of this service, and session activity
-    switch (state.getState()) {
-      case PlaybackStateCompat.STATE_BUFFERING:
-        break;
-      case PlaybackStateCompat.STATE_PLAYING:
-        // Start service
-        ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
-        // Update notification
-        mNotificationManager.notify(NOTIFICATION_ID, getNotification());
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-        // Move service out started state
-        stopForeground(false);
-        // Update notification
-        mNotificationManager.notify(NOTIFICATION_ID, getNotification());
-        break;
-      default:
-        mMediaMetadataCompat = null;
-        // Cancel session
-        if (mSession.isActive()) {
-          mSession.setMetadata(null);
-          mSession.setActive(false);
-        }
-        // Move service out started state
-        stopForeground(true);
-        stopSelf();
+  public synchronized void onPlaybackStateChange(
+    @NonNull PlaybackStateCompat state, @NonNull String lockKey) {
+    if (isValid(lockKey)) {
+      Log.d(LOG_TAG, "New valid state/lock key received: " + state + "/" + lockKey);
+      // Report the state to the MediaSession
+      session.setPlaybackState(state);
+      // Manage the started state of this service, and session activity
+      switch (state.getState()) {
+        case PlaybackStateCompat.STATE_BUFFERING:
+          break;
+        case PlaybackStateCompat.STATE_PLAYING:
+          // Start service if needed
+          ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
+          break;
+        case PlaybackStateCompat.STATE_PAUSED:
+          // Move service out started state
+          stopForeground(false);
+          // Update notification
+          notificationManager.notify(NOTIFICATION_ID, getNotification());
+          break;
+        default:
+          // Cancel session
+          playerAdapter.release();
+          session.setMetadata(mediaMetadataCompat = null);
+          session.setActive(false);
+          // Move service out started state
+          stopForeground(true);
+          stopSelf();
+      }
     }
   }
 
+  // Only if lockKey still valid
   @Override
-  synchronized public void onInformationChange(@Nullable MediaMetadataCompat mediaMetadataCompat) {
-    if (mSession.isActive()) {
-      mMediaMetadataCompat = mediaMetadataCompat;
-      mSession.setMetadata(mMediaMetadataCompat);
-      // Update notification, if any
-      mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+  public synchronized void onInformationChange(
+    @NonNull MediaMetadataCompat mediaMetadataCompat, @NonNull String lockKey) {
+    if (isValid(lockKey)) {
+      session.setMetadata(this.mediaMetadataCompat = mediaMetadataCompat);
+      // Update notification
+      notificationManager.notify(NOTIFICATION_ID, getNotification());
     }
+  }
+
+  private boolean isValid(@NonNull String lockKey) {
+    return (!lockKey.equals(VOID) && playerAdapter.getLockKey().equals(lockKey));
   }
 
   // Does nothing on versions of Android earlier than O
   @RequiresApi(Build.VERSION_CODES.O)
   private void createChannel() {
-    if (mNotificationManager == null) {
+    if (notificationManager == null) {
       Log.d(LOG_TAG, "NotificationManager is not defined");
     } else {
-      if (mNotificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+      if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
         NotificationChannel mChannel = new NotificationChannel(
           CHANNEL_ID,
-          "RadioSession", // Name
+          RadioService.class.getSimpleName(),
           NotificationManager.IMPORTANCE_LOW);
-        // Configure the notification channel,
-        mChannel.setDescription("RadioSession and MediaPlayer"); // User-visible
+        // Configure the notification channel
+        mChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
         mChannel.enableLights(true);
         // Sets the notification light color for notifications posted to this
         // channel, if the device supports this feature
         mChannel.setLightColor(Color.GREEN);
         mChannel.enableVibration(true);
         mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-        mNotificationManager.createNotificationChannel(mChannel);
+        notificationManager.createNotificationChannel(mChannel);
         Log.d(LOG_TAG, "createChannel: new channel created");
       } else {
         Log.d(LOG_TAG, "createChannel: existing channel reused");
@@ -252,11 +265,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @Nullable
   private Notification getNotification() {
-    if (mMediaMetadataCompat == null) {
+    if (mediaMetadataCompat == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
       return null;
     }
-    MediaDescriptionCompat description = mMediaMetadataCompat.getDescription();
+    MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
     NotificationCompat.Action ActionPause =
       new NotificationCompat.Action(
         R.drawable.ic_pause_black_24dp,
@@ -299,29 +312,29 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       // UPnP device doesn't support PAUSE action but STOP
       .addAction(
-        mPlayerAdapter.isPlaying() ?
-          mPlayerAdapter instanceof UpnpPlayerAdapter ?
+        playerAdapter.isPlaying() ?
+          playerAdapter instanceof UpnpPlayerAdapter ?
             ActionStop : ActionPause : ActionPlay)
       .build();
   }
 
   private class UpnpServiceConnection implements ServiceConnection {
-    private AndroidUpnpService mAndroidUpnpService = null;
+    private AndroidUpnpService androidUpnpService = null;
 
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-      mUpnpPlayerAdapter.setAndroidUpnpService(mAndroidUpnpService = (AndroidUpnpService) iBinder);
+      upnpPlayerAdapter.setAndroidUpnpService(androidUpnpService = (AndroidUpnpService) iBinder);
     }
 
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
-      mAndroidUpnpService = null;
+      androidUpnpService = null;
     }
 
     void release() {
-      if (mAndroidUpnpService != null) {
-        unbindService(mUpnpConnection);
-        mAndroidUpnpService = null;
+      if (androidUpnpService != null) {
+        unbindService(upnpConnection);
+        androidUpnpService = null;
       }
     }
   }
@@ -330,56 +343,53 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
-      // Stop if any, avoid any cross acquisition of multithread lock
-      mPlayerAdapter.stop();
-      // Set actual player: local or DLNA?
-      if (extras.isEmpty()) {
-        mPlayerAdapter = mLocalPlayerAdapter;
-      } else {
-        // Extra shall contain DLNA device UDN
-        if (mUpnpPlayerAdapter.setDlnaDevice(
-          extras.getString(getString(R.string.key_dlna_device)))) {
-          mPlayerAdapter = mUpnpPlayerAdapter;
-        } else {
-          Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
-          return;
-        }
-      }
-      // Activate session
-      synchronized (RadioService.this) {
-        if (!mSession.isActive()) {
-          mSession.setActive(true);
-        }
-      }
-      // Prepare radio streaming, radio retrieved in database
-      Radio radio = mRadioLibrary.getFrom(Long.valueOf(mediaId));
+      // Radio retrieved in database
+      Radio radio = radioLibrary.getFrom(Long.valueOf(mediaId));
       if (radio == null) {
         Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't retrieve radio");
         throw new RuntimeException();
       }
-      mPlayerAdapter.prepareFromMediaId(radio);
-      // Synchronize session data
+      // Stop if any, avoid any cross acquisition of multithread lock
+      playerAdapter.stop();
+      // Synchronize as session ids shall be changed in coherence
       synchronized (RadioService.this) {
-        if (mSession.isActive()) {
-          mSession.setMetadata(radio.getMediaMetadataBuilder().build());
-          mSession.setExtras(extras);
+        // Default
+        playerAdapter = localPlayerAdapter;
+        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
+        // Set actual player DLNA? Extra shall contain DLNA device UDN.
+        if (!extras.isEmpty()) {
+          if (upnpPlayerAdapter.setDlnaDevice(
+            extras.getString(getString(R.string.key_dlna_device)))) {
+            playerAdapter = upnpPlayerAdapter;
+            session.setPlaybackToRemote(volumeProviderCompat);
+          } else {
+            Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
+            return;
+          }
         }
+        // Synchronize session data
+        session.setActive(true);
+        session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
+        session.setExtras(extras);
+        // Prepare radio streaming
+        playerAdapter.prepareFromMediaId(radio);
       }
     }
 
     @Override
     public void onPlay() {
-      mPlayerAdapter.play();
+      playerAdapter.play();
     }
 
     @Override
     public void onPause() {
-      mPlayerAdapter.pause();
+      playerAdapter.pause();
     }
 
     @Override
     public void onStop() {
-      mPlayerAdapter.stop();
+      playerAdapter.stop();
     }
+
   }
 }

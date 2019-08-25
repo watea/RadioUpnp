@@ -58,33 +58,33 @@ public class DonationFragment extends MainActivityFragment {
     "android.test.purchased",
     "android.test.canceled",
     "android.test.item_unavailable"};
-  ArrayAdapter<CharSequence> mDonationAdapter;
+  ArrayAdapter<CharSequence> donationAdapter;
   // <HMI assets
-  private Spinner mGoogleSpinner;
+  private Spinner googleSpinner;
   // />
   // Google Play helper object
-  private IabHelper mIabHelper;
+  private IabHelper iabHelper;
   // Callback for when a purchase is finished
-  private final IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener =
+  private final IabHelper.OnIabPurchaseFinishedListener purchaseFinishedListener =
     new IabHelper.OnIabPurchaseFinishedListener() {
       public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
         Log.d(LOG_TAG, "Purchase finished: " + result + ", purchase: " + purchase);
         // If we were disposed of in the meantime, quit
-        if (mIabHelper == null) {
+        if (iabHelper == null) {
           return;
         }
         if (result.isSuccess()) {
           Log.d(LOG_TAG, "Purchase successful");
           // Directly consume in-app purchase, so that people can donate multiple times
           try {
-            mIabHelper.consumeAsync(
+            iabHelper.consumeAsync(
               purchase,
               new IabHelper.OnConsumeFinishedListener() {
                 public void onConsumeFinished(Purchase purchase, IabResult result) {
                   Log.d(LOG_TAG,
                     "Consumption finished. Purchase: " + purchase + ", result: " + result);
                   // If we were disposed of in the meantime, quit
-                  if (mIabHelper == null) {
+                  if (iabHelper == null) {
                     return;
                   }
                   if (result.isSuccess()) {
@@ -113,12 +113,12 @@ public class DonationFragment extends MainActivityFragment {
       }
     };
   // Callback for when a purchase is finished
-  private final IabHelper.OnIabSetupFinishedListener mSetupFinishedListener =
+  private final IabHelper.OnIabSetupFinishedListener setupFinishedListener =
     new IabHelper.OnIabSetupFinishedListener() {
       public void onIabSetupFinished(IabResult result) {
         Log.d(LOG_TAG, "Setup finished");
         // Have we been disposed of in the meantime? If so, quit
-        if (mIabHelper == null) {
+        if (iabHelper == null) {
           return;
         }
         if (!result.isSuccess()) {
@@ -130,8 +130,8 @@ public class DonationFragment extends MainActivityFragment {
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
     Log.d(LOG_TAG, "onActivityResult(" + requestCode + "," + resultCode + "," + data + ")");
-    // mIabHelper may be null if disposed in the meantime
-    if ((mIabHelper != null) && mIabHelper.handleActivityResult(requestCode, resultCode, data)) {
+    // iabHelper may be null if disposed in the meantime
+    if ((iabHelper != null) && iabHelper.handleActivityResult(requestCode, resultCode, data)) {
       Log.d(LOG_TAG, "onActivityResult handled by IABUtil");
     } else {
       // Not handeld here, we pass through
@@ -143,25 +143,25 @@ public class DonationFragment extends MainActivityFragment {
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // Adapters
-    mDonationAdapter = new ArrayAdapter<CharSequence>(
+    donationAdapter = new ArrayAdapter<CharSequence>(
       getActivity(),
       android.R.layout.simple_spinner_item,
       BuildConfig.DEBUG ?
         DEBUG_CATALOG : getResources().getStringArray(R.array.donation_google_catalog_values));
-    mDonationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+    donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
   }
 
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     // Create the helper, passing it our context and the public key to verify signatures with
-    mIabHelper = new IabHelper(getActivity(), PUBKEY);
+    iabHelper = new IabHelper(getActivity(), PUBKEY);
     // Enable debug logging (for a production application, you should set this to false)
-    mIabHelper.enableDebugLogging(BuildConfig.DEBUG);
+    iabHelper.enableDebugLogging(BuildConfig.DEBUG);
     // Start setup. This is asynchronous and the specified listener
     // will be called once setup completes.
     Log.d(LOG_TAG, "Starting setup");
-    mIabHelper.startSetup(mSetupFinishedListener);
+    iabHelper.startSetup(setupFinishedListener);
   }
 
   @Nullable
@@ -171,8 +171,8 @@ public class DonationFragment extends MainActivityFragment {
     super.onCreateView(inflater, container, savedInstanceState);
     final View view = inflater.inflate(R.layout.content_donation, container, false);
     // Choose donation amount
-    mGoogleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
-    mGoogleSpinner.setAdapter(mDonationAdapter);
+    googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
+    googleSpinner.setAdapter(donationAdapter);
     return view;
   }
 
@@ -183,15 +183,15 @@ public class DonationFragment extends MainActivityFragment {
 
       @Override
       public void onClick(View view) {
-        int index = mGoogleSpinner.getSelectedItemPosition();
+        int index = googleSpinner.getSelectedItemPosition();
         Log.d(LOG_TAG, "selected item in spinner: " + index);
         // When debugging, choose android.test.x item
         try {
-          mIabHelper.launchPurchaseFlow(
+          iabHelper.launchPurchaseFlow(
             getActivity(),
             BuildConfig.DEBUG ? DEBUG_CATALOG[index] : GOOGLE_CATALOG[index],
             0,
-            mPurchaseFinishedListener);
+            purchaseFinishedListener);
         } catch (IabHelper.IabAsyncInProgressException iabAsyncInProgressException) {
           // In some devices, it is impossible to setup IAB Helper
           // and this exception is thrown, being almost "impossible"

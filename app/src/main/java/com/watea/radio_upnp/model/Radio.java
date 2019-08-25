@@ -36,33 +36,43 @@ import android.util.Log;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Objects;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Radio {
-  public static final String RADIO_ID = "radio_id";
+  public static final Radio DUMMY_RADIO;
   private static final String LOG_TAG = Radio.class.getName();
+
+  static {
+    Radio radio = null;
+    try {
+      radio = new Radio("", new File(""), new URL(""), null);
+    } catch (MalformedURLException e) {
+      e.printStackTrace();
+    }
+    DUMMY_RADIO = radio;
+  }
+
   @NonNull
-  private Long mId;
+  private Long id;
   @NonNull
-  private String mName;
+  private String name;
+  @NonNull
+  private File iconFile;
+  @NonNull
+  private Type type;
+  @NonNull
+  private Language language;
+  @NonNull
+  private URL url;
   @Nullable
-  private File mIconFile;
+  private URL webPageUrl;
   @NonNull
-  private Type mType;
-  @NonNull
-  private Language mLanguage;
-  @NonNull
-  private URL mURL;
-  @Nullable
-  private URL mWebPageURL;
-  @NonNull
-  private Quality mQuality;
-  private Boolean mIsPreferred = false;
+  private Quality quality;
+  private Boolean isPreferred = false;
 
   public Radio(
     @NonNull String name,
-    @Nullable File iconFile,
+    @NonNull File iconFile,
     @NonNull URL uRL,
     @Nullable URL webPageURL) {
     this(name, iconFile, Type.MISC, Language.OTHER, uRL, webPageURL, Quality.LOW);
@@ -70,177 +80,161 @@ public class Radio {
 
   public Radio(
     @NonNull String name,
-    @Nullable File iconFile,
+    @NonNull File iconFile,
     @NonNull Type type,
     @NonNull Language language,
     @NonNull URL uRL,
     @Nullable URL webPageURL,
     @NonNull Quality quality) {
-    mId = -1L;
-    mName = name;
-    mIconFile = iconFile;
-    mType = type;
-    mLanguage = language;
-    mURL = uRL;
-    mWebPageURL = webPageURL;
-    mQuality = quality;
+    id = -1L;
+    this.name = name;
+    this.iconFile = iconFile;
+    this.type = type;
+    this.language = language;
+    url = uRL;
+    webPageUrl = webPageURL;
+    this.quality = quality;
   }
 
   // SQL constructor
   public Radio(@NonNull Cursor cursor) {
-    mId = cursor.getLong(cursor.getColumnIndex(RadioSQLContract.Columns._ID));
-    mName = cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_NAME));
-    String iconFileName =
-      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_ICON));
-    mIconFile = new File(iconFileName);
-    mType =
+    id = cursor.getLong(cursor.getColumnIndex(RadioSQLContract.Columns._ID));
+    name = cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_NAME));
+    iconFile = new File(
+      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_ICON)));
+    type =
       Type.valueOf(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_TYPE)));
-    mLanguage =
-      Language.valueOf(
-        cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_LANGUAGE)));
+    language = Language.valueOf(
+      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_LANGUAGE)));
     try {
-      mURL = new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_URL)));
+      url = new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_URL)));
     } catch (MalformedURLException malformedURLException) {
       Log.e(LOG_TAG, "Radio: internal error, bad URL definition");
       throw new RuntimeException();
     }
     try {
-      mWebPageURL =
+      webPageUrl =
         new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_WEB_PAGE)));
     } catch (MalformedURLException malformedURLException) {
       Log.d(LOG_TAG, "Bad WebPageURL definition");
     }
-    mQuality =
-      Quality.valueOf(
-        cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_QUALITY)));
-    mIsPreferred =
-      Boolean.valueOf(
-        cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_IS_PREFERRED)));
-  }
-
-  // Add radio ID to given URI as query parameter
-  @NonNull
-  public Uri getHandledUri(@NonNull Uri uri) {
-    return uri
-      .buildUpon()
-      // Add path to target to type the stream, remove first "/"
-      .appendEncodedPath(Objects.requireNonNull(getUri().getPath()).substring(1))
-      // Add radio ID as query parameter
-      .appendQueryParameter(RADIO_ID, mId.toString())
-      .build();
+    quality = Quality.valueOf(
+      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_QUALITY)));
+    isPreferred = Boolean.valueOf(
+      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_IS_PREFERRED)));
   }
 
   @NonNull
   public Long getId() {
-    return mId;
+    return id;
   }
 
   public void setId(@NonNull Long id) {
-    mId = id;
+    this.id = id;
   }
 
   @NonNull
   public String getName() {
-    return mName;
+    return name;
   }
 
   public void setName(@NonNull String name) {
-    mName = name;
+    this.name = name;
   }
 
   @NonNull
   public Type getType() {
-    return mType;
+    return type;
   }
 
   public void setType(@NonNull Type type) {
-    mType = type;
+    this.type = type;
   }
 
   @NonNull
   public Language getLanguage() {
-    return mLanguage;
+    return language;
   }
 
   public void setLanguage(@NonNull Language language) {
-    mLanguage = language;
+    this.language = language;
   }
 
   @NonNull
   public URL getURL() {
-    return mURL;
+    return url;
   }
 
   public void setURL(@NonNull URL uRL) {
-    mURL = uRL;
+    url = uRL;
   }
 
   @NonNull
   public Uri getUri() {
-    return Uri.parse(mURL.toString());
+    return Uri.parse(url.toString());
   }
 
   @Nullable
   public URL getWebPageURL() {
-    return mWebPageURL;
+    return webPageUrl;
   }
 
   public void setWebPageURL(URL webSiteURL) {
-    mWebPageURL = webSiteURL;
+    webPageUrl = webSiteURL;
   }
 
   @Nullable
   public Uri getWebPageUri() {
-    return (mWebPageURL == null) ? null : Uri.parse(mWebPageURL.toString());
+    return (webPageUrl == null) ? null : Uri.parse(webPageUrl.toString());
   }
 
-  @Nullable
+  @NonNull
   public File getIconFile() {
-    return mIconFile;
+    return iconFile;
   }
 
-  public void setIconFile(@NonNull File file) {
-    mIconFile = file;
+  @NonNull
+  public File setIconFile(@NonNull File file) {
+    return iconFile = file;
   }
 
   // Note: no defined size for icon
-  @Nullable
+  @NonNull
   public Bitmap getIcon() {
-    return (mIconFile == null) ? null : BitmapFactory.decodeFile(mIconFile.getPath());
+    return BitmapFactory.decodeFile(iconFile.getPath());
   }
 
   @NonNull
   public Quality getQuality() {
-    return mQuality;
+    return quality;
   }
 
   public void setQuality(@NonNull Quality quality) {
-    mQuality = quality;
+    this.quality = quality;
   }
 
   public Boolean isPreferred() {
-    return mIsPreferred;
+    return isPreferred;
   }
 
   public void togglePreferred() {
-    mIsPreferred = !mIsPreferred;
+    isPreferred = !isPreferred;
   }
 
   // SQL access
   @NonNull
   public ContentValues toContentValues() {
     ContentValues contentValues = new ContentValues();
-    contentValues.put(RadioSQLContract.Columns.COLUMN_NAME, mName);
+    contentValues.put(RadioSQLContract.Columns.COLUMN_NAME, name);
     // Null allowed on transition
-    contentValues.put(RadioSQLContract.Columns.COLUMN_ICON,
-      (mIconFile == null) ? null : mIconFile.getPath());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_TYPE, mType.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_LANGUAGE, mLanguage.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_URL, mURL.toString());
+    contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, iconFile.getPath());
+    contentValues.put(RadioSQLContract.Columns.COLUMN_TYPE, type.toString());
+    contentValues.put(RadioSQLContract.Columns.COLUMN_LANGUAGE, language.toString());
+    contentValues.put(RadioSQLContract.Columns.COLUMN_URL, url.toString());
     contentValues.put(RadioSQLContract.Columns.COLUMN_WEB_PAGE,
-      (mWebPageURL == null) ? null : mWebPageURL.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_QUALITY, mQuality.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, mIsPreferred.toString());
+      (webPageUrl == null) ? null : webPageUrl.toString());
+    contentValues.put(RadioSQLContract.Columns.COLUMN_QUALITY, quality.toString());
+    contentValues.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
     return contentValues;
   }
 
@@ -267,15 +261,15 @@ public class Radio {
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
       //.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, "DisplayIconURI")
       //.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, "DisplaySubtitle")
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, mName)
+      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, name)
       //.putLong(MediaMetadataCompat.METADATA_KEY_DOWNLOAD_STATUS, MediaDescriptionCompat.STATUS_DOWNLOADED)
       //.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, -1)
       //.putString(MediaMetadataCompat.METADATA_KEY_GENRE, "Genre")
-      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, mId.toString())
+      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id.toString())
       //.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, "MediaURI")
       //.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1)
       //.putRating(MediaMetadataCompat.METADATA_KEY_RATING, RatingCompat.newPercentageRating(100))
-      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, mName);
+      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name);
     //.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 0)
     //.putRating(MediaMetadataCompat.METADATA_KEY_USER_RATING,  RatingCompat.newPercentageRating(100))
     //.putString(MediaMetadataCompat.METADATA_KEY_WRITER, "Writer")
@@ -284,7 +278,7 @@ public class Radio {
 
   @Override
   public boolean equals(Object object) {
-    return (object instanceof Radio) && (mId.longValue() == ((Radio) object).getId().longValue());
+    return ((object instanceof Radio) && (id.longValue() == ((Radio) object).id.longValue()));
   }
 
   public enum Type {

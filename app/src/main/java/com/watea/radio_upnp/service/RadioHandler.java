@@ -23,8 +23,8 @@
 
 package com.watea.radio_upnp.service;
 
+import android.net.Uri;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.watea.radio_upnp.BuildConfig;
@@ -52,47 +52,67 @@ import javax.servlet.http.HttpServletResponse;
 
 public class RadioHandler extends AbstractHandler {
   private static final String LOG_TAG = RadioHandler.class.getName();
-  private static final String VOID = "";
   private static final int CONNECT_TIMEOUT = 5000;
   private static final int READ_TIMEOUT = 30000;
   private static final int METADATA_MAX = 256;
   private static final String GET = "GET";
   private static final String HEAD = "HEAD";
+  private static final String RADIO_ID = "radio_id";
+  private static final String LOCK_KEY = "lock_key";
   // For ICY metadata
   private static final Pattern PATTERN = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
-  private final String mUserAgent;
+  private final String userAgent;
   @NonNull
-  private final RadioLibrary mRadioLibrary;
-  private final boolean mIsBuffered;
-  @Nullable
-  private Listener mListener = null;
+  private final RadioLibrary radioLibrary;
+  private final boolean isBuffered;
   @NonNull
-  private String mLockKey = VOID;
+  private Listener listener;
 
-  RadioHandler(@NonNull String userAgent, @NonNull RadioLibrary radioLibrary, boolean isBuffered) {
+  // Has always a listener
+  RadioHandler(
+    @NonNull String userAgent,
+    @NonNull RadioLibrary radioLibrary,
+    boolean isBuffered) {
     super();
-    mUserAgent = userAgent;
-    mRadioLibrary = radioLibrary;
-    mIsBuffered = isBuffered;
+    this.userAgent = userAgent;
+    this.radioLibrary = radioLibrary;
+    this.isBuffered = isBuffered;
+    // Dummy listener
+    this.listener = new Listener() {
+      @Override
+      public void onNewInformation(
+        @NonNull Radio radio, @NonNull String information, @NonNull String lockKey) {
+      }
+
+      @Override
+      public void onError(@NonNull Radio radio, @NonNull String lockKey) {
+      }
+
+      @NonNull
+      @Override
+      public String getLockKey() {
+        return VOID;
+      }
+    };
   }
 
-  @Override
-  public void destroy() {
-    super.destroy();
-    // Ensure proper end
-    removeListener();
+  // Add ID and lock key to given URI as query parameter
+  @NonNull
+  public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
+    String path = radio.getUri().getPath();
+    return uri
+      .buildUpon()
+      // Add path to target to type the stream, remove first "/"
+      .appendEncodedPath((path == null) ? "" : path.substring(1))
+      // Add radio ID + lock key as query parameter
+      .appendQueryParameter(RADIO_ID, radio.getId().toString())
+      .appendQueryParameter(LOCK_KEY, lockKey)
+      .build();
   }
 
-  // Shall be called before proxying
-  public synchronized void setListener(@NonNull Listener listener, @NonNull String lockKey) {
-    mListener = listener;
-    mLockKey = lockKey;
-  }
-
-  public synchronized void removeListener() {
-    mListener = null;
-    mLockKey = VOID;
+  public void setListener(@NonNull Listener listener) {
+    this.listener = listener;
   }
 
   @Override
@@ -101,25 +121,25 @@ public class RadioHandler extends AbstractHandler {
     Request baseRequest,
     HttpServletRequest request,
     HttpServletResponse response) {
-    // Tag this handle with current lock key
-    final String lockKey = mLockKey;
-    // Request must contain a query with radio ID
-    String radioId = baseRequest.getParameter(Radio.RADIO_ID);
-    if ((radioId == null) || lockKey.equals(VOID)) {
-      Log.d(LOG_TAG,
-        "Unexpected request received. RadioId: " + radioId + "LockKey: " + lockKey);
+    // Request must contain a query with radio ID and lock key
+    String radioId = baseRequest.getParameter(RADIO_ID);
+    String lockKey = baseRequest.getParameter(LOCK_KEY);
+    if ((radioId == null) || (lockKey == null) || lockKey.equals(Listener.VOID)) {
+      Log.d(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
     } else {
-      Radio radio = mRadioLibrary.getFrom(Long.decode(radioId));
+      Radio radio = radioLibrary.getFrom(Long.decode(radioId));
       if (radio == null) {
         Log.d(LOG_TAG, "Unknown radio");
       } else {
         baseRequest.setHandled(true);
         String method = baseRequest.getMethod();
-        Log.d(LOG_TAG, method + " radio request received, radio: " + radio.getName());
+        Log.d(LOG_TAG, method + " received. Radio/UUID: " + radio.getName() + "/" + lockKey);
         switch (method) {
           case HEAD:
+            handleConnection(false, response, radio, lockKey);
+            break;
           case GET:
-            handleConnection(method.equals(GET), response, radio, lockKey);
+            handleConnection(true, response, radio, lockKey);
             break;
           default:
             Log.d(LOG_TAG, "Unknown radio request received:" + method);
@@ -137,14 +157,14 @@ public class RadioHandler extends AbstractHandler {
       "handleConnection: entering for " + radio.getName() + "; " + (isGet ? GET : HEAD));
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
-    try (OutputStream outputStream = mIsBuffered ?
+    try (OutputStream outputStream = isBuffered ?
       new BufferedOutputStream(response.getOutputStream()) : response.getOutputStream()) {
       httpURLConnection = (HttpURLConnection) radio.getURL().openConnection();
       httpURLConnection.setInstanceFollowRedirects(true);
       httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
       httpURLConnection.setReadTimeout(READ_TIMEOUT);
       httpURLConnection.setRequestMethod(isGet ? GET : HEAD);
-      httpURLConnection.setRequestProperty("User-Agent", mUserAgent);
+      httpURLConnection.setRequestProperty("User-Agent", userAgent);
       httpURLConnection.setRequestProperty("GetContentFeatures.dlna.org", "1");
       if (isGet) {
         httpURLConnection.setRequestProperty("Icy-metadata", "1");
@@ -153,7 +173,7 @@ public class RadioHandler extends AbstractHandler {
       Log.d(LOG_TAG, "handleConnection: connected to radio URL");
       // Response to LAN
       response.setContentType("audio/mpeg");
-      response.setHeader("Server", mUserAgent);
+      response.setHeader("Server", userAgent);
       response.setHeader("Accept-Ranges", "bytes");
       response.setHeader("Connection", "Keep-Alive");
       /* DLNA.ORG_FLAGS, padded with 24 trailing 0s
@@ -208,18 +228,14 @@ public class RadioHandler extends AbstractHandler {
           charset.newDecoder(),
           metadataOffset,
           outputStream,
+          radio,
           lockKey);
       }
     } catch (IOException iOException) {
       // Error thrown if allowed to run
       Log.d(LOG_TAG, "IOException", iOException);
-      // Multithread safe!
-      synchronized (this) {
-        if (mListener != null) {
-          Log.d(LOG_TAG, "Error sent to listener");
-          mListener.onError(lockKey);
-        }
-      }
+      Log.d(LOG_TAG, "Error sent to listener");
+      listener.onError(radio, lockKey);
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
@@ -235,6 +251,7 @@ public class RadioHandler extends AbstractHandler {
     @NonNull CharsetDecoder charsetDecoder,
     int metadataOffset,
     @NonNull OutputStream outputStream,
+    @NonNull Radio radio,
     @NonNull String lockKey) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
     final byte[] buffer = new byte[1];
@@ -242,62 +259,66 @@ public class RadioHandler extends AbstractHandler {
     int metadataBlockBytesRead = 0;
     int metadataSize = 0;
     while (inputStream.read(buffer) != -1) {
-      // Multithread safe!
-      synchronized (this) {
-        if (mLockKey.equals(lockKey)) {
-          // Only stream data are transferred
-          if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
-            outputStream.write(buffer);
+      // Stop if not a valid listener
+      if (listener.getLockKey().equals(lockKey)) {
+        // Only stream data are transferred
+        if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+          outputStream.write(buffer);
+        } else {
+          // Metadata: look for title information
+          int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+          // First byte gives size (16 bytes chunks) to read for metadata
+          if (metadataIndex == 0) {
+            metadataSize = buffer[0] * 16;
+            metadataBuffer.clear();
           } else {
-            // Metadata: look for title information
-            int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
-            // First byte gives size (16 bytes chunks) to read for metadata
-            if (metadataIndex == 0) {
-              metadataSize = buffer[0] * 16;
-              metadataBuffer.clear();
-            } else {
-              // Other bytes are metadata
-              if (metadataIndex <= METADATA_MAX) {
-                metadataBuffer.put(buffer[0]);
-              }
-            }
-            // End of metadata, extract pattern
-            if (metadataIndex == metadataSize) {
-              CharBuffer metadata = null;
-              metadataBuffer.flip();
-              // Exception blocked on metadata
-              try {
-                metadata = charsetDecoder.decode(metadataBuffer);
-              } catch (Exception exception) {
-                if (BuildConfig.DEBUG) {
-                  Log.w(LOG_TAG, "Error decoding metadata", exception);
-                }
-              }
-              if ((metadata != null) && (metadata.length() > 0)) {
-                if (BuildConfig.DEBUG) {
-                  Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
-                }
-                Matcher matcher = PATTERN.matcher(metadata);
-                // Tell listener
-                if ((mListener != null) && matcher.find()) {
-                  mListener.onNewInformation(matcher.group(1), lockKey);
-                }
-              }
-              metadataBlockBytesRead = 0;
+            // Other bytes are metadata
+            if (metadataIndex <= METADATA_MAX) {
+              metadataBuffer.put(buffer[0]);
             }
           }
-        } else {
-          Log.d(LOG_TAG, "handleStreaming: requested to stop");
-          break;
+          // End of metadata, extract pattern
+          if (metadataIndex == metadataSize) {
+            CharBuffer metadata = null;
+            metadataBuffer.flip();
+            // Exception blocked on metadata
+            try {
+              metadata = charsetDecoder.decode(metadataBuffer);
+            } catch (Exception exception) {
+              if (BuildConfig.DEBUG) {
+                Log.w(LOG_TAG, "Error decoding metadata", exception);
+              }
+            }
+            if ((metadata != null) && (metadata.length() > 0)) {
+              if (BuildConfig.DEBUG) {
+                Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+              }
+              Matcher matcher = PATTERN.matcher(metadata);
+              // Tell listener
+              if (matcher.find()) {
+                listener.onNewInformation(radio, matcher.group(1), lockKey);
+              }
+            }
+            metadataBlockBytesRead = 0;
+          }
         }
+      } else {
+        Log.d(LOG_TAG, "handleStreaming: requested to stop");
+        break;
       }
     }
     Log.d(LOG_TAG, "handleStreaming: leaving");
   }
 
   public interface Listener {
-    void onNewInformation(@NonNull String information, @NonNull String lockKey);
+    String VOID = "";
 
-    void onError(@NonNull String lockKey);
+    void onNewInformation(
+      @NonNull Radio radio, @NonNull String information, @NonNull String lockKey);
+
+    void onError(@NonNull Radio radio, @NonNull String lockKey);
+
+    @NonNull
+    String getLockKey();
   }
 }

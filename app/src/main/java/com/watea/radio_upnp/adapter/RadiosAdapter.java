@@ -48,93 +48,96 @@ import java.util.Vector;
 
 public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder> {
   @NonNull
-  private final Context mContext;
-  private final int mIconSize;
+  private final Context context;
+  private final int iconSize;
   @NonNull
-  private final Listener mListener;
+  private final Listener listener;
   // Dummy default
   @NonNull
-  private List<Long> mRadioIds = new Vector<>();
+  private List<Long> radioIds = new Vector<>();
 
-  public RadiosAdapter(@NonNull Context context, @NonNull Listener listener, int inconSize) {
-    mContext = context;
-    mListener = listener;
-    mIconSize = inconSize;
+  public RadiosAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {
+    this.context = context;
+    this.listener = listener;
+    this.iconSize = iconSize;
+
   }
 
   // Content setter, must be called
   public void setRadioIds(@NonNull List<Long> radioIds) {
-    mRadioIds = radioIds;
+    this.radioIds = radioIds;
     notifyDataSetChanged();
   }
 
   @NonNull
   @Override
-  public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-    return new ViewHolder(
-      LayoutInflater.from(parent.getContext()).inflate(R.layout.row_radio, parent, false));
+  public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    return new ViewHolder(LayoutInflater
+      .from(viewGroup.getContext())
+      .inflate(R.layout.row_radio, viewGroup, false));
   }
 
   @Override
-  public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    viewHolder.setView(Objects.requireNonNull(mListener.getRadioFromId(mRadioIds.get(position))));
+  public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
+    viewHolder.setView(Objects.requireNonNull(listener.getRadioFromId(radioIds.get(i))));
   }
 
   @Override
   public int getItemCount() {
-    return mRadioIds.size();
+    return radioIds.size();
   }
 
   public interface Listener {
     @Nullable
     Radio getRadioFromId(@NonNull Long radioId);
 
-    void onRowClick(Radio radio);
+    void onRowClick(@NonNull Radio radio);
 
     boolean onPreferredClick(@NonNull Long radioId, Boolean isPreferred);
   }
 
   class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
-    private final LinearLayout mLinearLayout;
+    private final LinearLayout linearLayout;
     @NonNull
-    private final TextView mRadioNameTextView;
+    private final TextView radioNameTextView;
     @NonNull
-    private final ImageButton mPreferredImageButton;
-    private Radio mRadio;
+    private final ImageButton preferredImageButton;
+    @NonNull
+    private Radio radio = Radio.DUMMY_RADIO;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
-      mLinearLayout = (LinearLayout) itemView;
-      mRadioNameTextView = itemView.findViewById(R.id.row_radio_name_text_view);
-      mPreferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
+      linearLayout = (LinearLayout) itemView;
+      radioNameTextView = itemView.findViewById(R.id.row_radio_name_text_view);
+      preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
       // Listener on radio
-      mRadioNameTextView.setOnClickListener(new View.OnClickListener() {
+      radioNameTextView.setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-          mListener.onRowClick(mRadio);
+          listener.onRowClick(radio);
         }
       });
       // Listener on web link
-      mRadioNameTextView.setOnLongClickListener(new View.OnLongClickListener() {
+      radioNameTextView.setOnLongClickListener(new View.OnLongClickListener() {
         @Override
         public boolean onLongClick(View v) {
-          Uri webPageUri = mRadio.getWebPageUri();
+          Uri webPageUri = radio.getWebPageUri();
           if (webPageUri == null) {
             Snackbar.make(v, R.string.no_web_page, Snackbar.LENGTH_LONG).show();
           } else {
-            mContext.startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
+            context.startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
           }
           return true;
         }
       });
       // Listener on preferred device icon
-      mPreferredImageButton.setOnClickListener(new View.OnClickListener() {
+      preferredImageButton.setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-          if (mListener.onPreferredClick(mRadio.getId(), !mRadio.isPreferred())) {
+          if (listener.onPreferredClick(radio.getId(), !radio.isPreferred())) {
             // Database updated, update view
-            mRadio.togglePreferred();
+            radio.togglePreferred();
             setPreferredButton();
           }
         }
@@ -146,21 +149,21 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     }
 
     private void setView(@NonNull Radio radio) {
-      mRadio = radio;
-      mLinearLayout.setBackgroundColor(getDominantColor(Objects.requireNonNull(mRadio.getIcon())));
-      mRadioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+      this.radio = radio;
+      linearLayout.setBackgroundColor(getDominantColor(this.radio.getIcon()));
+      radioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         null,
         new BitmapDrawable(
-          mContext.getResources(),
-          Bitmap.createScaledBitmap(mRadio.getIcon(), mIconSize, mIconSize, false)),
+          context.getResources(),
+          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
         null,
         null);
-      mRadioNameTextView.setText(mRadio.getName());
+      radioNameTextView.setText(this.radio.getName());
       setPreferredButton();
     }
 
     private void setPreferredButton() {
-      mPreferredImageButton.setImageResource(mRadio.isPreferred() ?
+      preferredImageButton.setImageResource(radio.isPreferred() ?
         R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp);
     }
   }

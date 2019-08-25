@@ -23,6 +23,7 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+
     package="com.watea.radio_upnp">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -41,6 +42,7 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
         tools:ignore="AllowBackup,GoogleAppIndexingWarning">
+
         <activity
             android:name="com.watea.radio_upnp.activity.MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
@@ -52,24 +54,29 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <service
             android:name="com.watea.radio_upnp.service.RadioService"
             android:enabled="true"
-            android:exported="false">
+            android:exported="false"
+            android:description="@string/radio_service_description">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+
         <service
             android:name="org.fourthline.cling.android.AndroidUpnpServiceImpl"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:description="@string/upnp_service_description" />
+
         <!--
          MediaSession, prior to API 21, uses a broadcast receiver to communicate with a
          media session. It does not have to be this broadcast receiver, but it must
          handle the action "android.intent.action.MEDIA_BUTTON".
 
-         Additionally, this is used to resume the service from an inactive state upon
+         AND, this is used to resume the service from an inactive state upon
          receiving a media button event (such as "play").
         -->
         <receiver android:name="android.support.v4.media.session.MediaButtonReceiver">
@@ -77,5 +84,7 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
+
     </application>
+
 </manifest>

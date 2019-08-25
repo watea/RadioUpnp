@@ -24,50 +24,40 @@
 package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.fourthline.cling.model.meta.Device;
 
 public class DlnaDevice {
   @Nullable
-  private Device mDevice;
+  private Device device;
   @Nullable
-  private Bitmap mIcon = null;
+  private Bitmap icon = null;
 
   public DlnaDevice(@Nullable Device device) {
-    mDevice = device;
+    this.device = device;
   }
 
   @Nullable
   public Bitmap getIcon() {
-    return mIcon;
+    return icon;
   }
 
   public void setIcon(@Nullable Bitmap icon) {
-    mIcon = icon;
-  }
-
-  @Nullable
-  public Device getDevice() {
-    return mDevice;
-  }
-
-  public void setDevice(@NonNull Device device) {
-    mDevice = device;
+    this.icon = icon;
   }
 
   @Nullable
   public String getIdentity() {
-    return (mDevice == null) ? null : mDevice.getIdentity().getUdn().getIdentifierString();
+    return (device == null) ? null : device.getIdentity().getUdn().getIdentifierString();
   }
 
   @Override
   public boolean equals(Object object) {
     return
       object instanceof DlnaDevice &&
-        ((mDevice == null) && (((DlnaDevice) object).getDevice() == null) ||
-          (mDevice != null) && mDevice.equals(((DlnaDevice) object).getDevice()));
+        ((device == null) && (((DlnaDevice) object).device == null) ||
+          (device != null) && device.equals(((DlnaDevice) object).device));
   }
 
   @SuppressWarnings("NullableProblems")
@@ -75,12 +65,12 @@ public class DlnaDevice {
   @Nullable
   public String toString() {
     return
-      (mDevice == null) ? null :
-        (mDevice.getDetails() != null) && (mDevice.getDetails().getFriendlyName() != null) ?
-          mDevice.getDetails().getFriendlyName() : mDevice.getDisplayString();
+      (device == null) ? null :
+        (device.getDetails() != null) && (device.getDetails().getFriendlyName() != null) ?
+          device.getDetails().getFriendlyName() : device.getDisplayString();
   }
 
   public boolean isFullyHydrated() {
-    return (mDevice != null) && mDevice.isFullyHydrated();
+    return (device != null) && device.isFullyHydrated();
   }
 }

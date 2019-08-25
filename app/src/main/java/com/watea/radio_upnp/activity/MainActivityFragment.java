@@ -37,11 +37,12 @@ import com.watea.radio_upnp.model.RadioLibrary;
 
 import java.util.Objects;
 
+// Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
   protected static final int RADIO_ICON_SIZE = 300;
   protected static final int DEFAULT_RESOURCE = -1;
-  protected RadioLibrary mRadioLibrary;
-  protected Provider mProvider;
+  protected RadioLibrary radioLibrary = null;
+  protected Provider provider = null;
 
   // Required empty constructor
   public MainActivityFragment() {
@@ -66,7 +67,7 @@ public abstract class MainActivityFragment extends Fragment {
     // Activity may have been re-created, so new library instance is used
     setMembers();
     // Decorate
-    mProvider.onFragmentResume(this);
+    provider.onFragmentResume(this);
   }
 
   @NonNull
@@ -111,8 +112,8 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   private void setMembers() {
-    mProvider = (Provider) getActivity();
-    mRadioLibrary = mProvider.getRadioLibrary();
+    provider = (Provider) getActivity();
+    radioLibrary = provider.getRadioLibrary();
   }
 
   public interface Provider {

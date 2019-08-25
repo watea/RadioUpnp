@@ -29,141 +29,183 @@ import android.graphics.drawable.BitmapDrawable;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.DlnaDevice;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Vector;
 
-public class DlnaDevicesAdapter extends ArrayAdapter<DlnaDevice> {
+public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
   private static final int ICON_SIZE = 100;
+  private static final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
   @NonNull
-  private final Context mContext;
+  private final Context context;
+  @NonNull
+  private final List<DlnaDevice> dlnaDevices = new Vector<>();
   @Nullable
-  private String mChosenDlnaDeviceIdentity;
+  private String chosenDlnaDeviceIdentity;
+  @NonNull
+  private Listener listener;
 
   public DlnaDevicesAdapter(
-    @NonNull Context context, int resource, @Nullable String chosenDlnaDeviceIdentity) {
-    super(context, resource);
-    mContext = context;
-    mChosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
+    @NonNull Context context,
+    @Nullable String chosenDlnaDeviceIdentity,
+    @NonNull Listener listener) {
+    this.context = context;
+    this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
+    this.listener = listener;
     clear();
+  }
+
+  @NonNull
+  @Override
+  public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    return new ViewHolder(LayoutInflater
+      .from(viewGroup.getContext())
+      .inflate(R.layout.row_dlna_device, viewGroup, false));
+  }
+
+  @Override
+  public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
+    viewHolder.setView(dlnaDevices.get(i));
+  }
+
+  @Override
+  public int getItemCount() {
+    return dlnaDevices.size();
   }
 
   // Null if device no longer online
   @Nullable
-  public String getChosenDlnaDeviceIdentity() {
-    for (int i = 0; i < getCount(); i++) {
-      String identity = Objects.requireNonNull(getItem(i)).getIdentity();
-      if ((identity != null) && identity.equals(mChosenDlnaDeviceIdentity)) {
-        return mChosenDlnaDeviceIdentity;
+  public DlnaDevice getChosenDlnaDevice() {
+    for (DlnaDevice dlnaDevice : dlnaDevices) {
+      String identity = dlnaDevice.getIdentity();
+      if ((identity != null) && identity.equals(chosenDlnaDeviceIdentity)) {
+        return dlnaDevice;
       }
     }
     return null;
   }
 
+  private void setChosenDlnaDevice(@Nullable DlnaDevice dlnaDevice) {
+    chosenDlnaDeviceIdentity = (dlnaDevice == null) ? null : dlnaDevice.getIdentity();
+    listener.onChosenDeviceChange(getChosenDlnaDevice());
+    notifyDataSetChanged();
+  }
+
   public boolean hasChosenDlnaDevice() {
-    return (getChosenDlnaDeviceIdentity() != null);
+    return (getChosenDlnaDevice() != null);
   }
 
   public void removeChosenDlnaDevice() {
-    mChosenDlnaDeviceIdentity = null;
+    setChosenDlnaDevice(null);
   }
 
-  public void onSelection(int position) {
-    String identity = Objects.requireNonNull(getItem(position)).getIdentity();
-    if (identity != null) {
-      mChosenDlnaDeviceIdentity = identity.equals(mChosenDlnaDeviceIdentity) ? null : identity;
-    }
-  }
-
-  @Override
-  public void add(@Nullable DlnaDevice object) {
-    if (object != null) {
-      // Remove dummy device if any
-      if ((getCount() > 0) && (Objects.requireNonNull(getItem(0)).getDevice() == null)) {
-        super.clear();
-      }
-      super.add(object);
-    }
-  }
-
-  @Override
-  public void remove(@Nullable DlnaDevice object) {
-    super.remove(object);
-    if (isEmpty()) {
-      // Specific procedure if empty
-      clear();
-    }
-  }
-
-  @Override
-  public void clear() {
-    super.clear();
-    // Dummy device for waiting...
-    add(new DlnaDevice(null));
-  }
-
-  @NonNull
-  @Override
-  public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-    ViewHolder viewHolder;
-    if (convertView == null) {
-      convertView = LayoutInflater.from(
-        parent.getContext()).inflate(R.layout.row_dlna_device, parent, false);
-      viewHolder = new ViewHolder(convertView);
-      convertView.setTag(viewHolder);
+  // Replace if already here
+  public void addOrReplace(@NonNull DlnaDevice dlnaDevice) {
+    // Remove dummy device if any
+    if (isWaiting()) {
+      dlnaDevices.clear();
     } else {
-      viewHolder = (ViewHolder) convertView.getTag();
+      dlnaDevices.remove(dlnaDevice);
     }
-    // Device is never null
-    viewHolder.setView(Objects.requireNonNull(getItem(position)));
-    return convertView;
+    dlnaDevices.add(dlnaDevice);
+    listener.onChosenDeviceChange(getChosenDlnaDevice());
+    notifyDataSetChanged();
   }
 
-  private class ViewHolder {
-    @NonNull
-    private final TextView mDlnaDeviceNameTextView;
-    @NonNull
-    private final ProgressBar mProgressBar;
+  public void remove(@NonNull DlnaDevice dlnaDevice) {
+    dlnaDevices.remove(dlnaDevice);
+    if (dlnaDevices.isEmpty()) {
+      setDummyDeviceForWaiting();
+    }
+    listener.onChosenDeviceChange(getChosenDlnaDevice());
+    notifyDataSetChanged();
+  }
 
-    private ViewHolder(@NonNull View itemView) {
-      mDlnaDeviceNameTextView = itemView.findViewById(R.id.row_dlna_device_name_text_view);
-      mProgressBar = itemView.findViewById(R.id.progress_bar);
+  public void clear() {
+    dlnaDevices.clear();
+    setDummyDeviceForWaiting();
+    listener.onChosenDeviceChange(getChosenDlnaDevice());
+    notifyDataSetChanged();
+  }
+
+  private void setDummyDeviceForWaiting() {
+    dlnaDevices.add(DUMMY_DEVICE);
+  }
+
+  private boolean isWaiting() {
+    return dlnaDevices.contains(DUMMY_DEVICE);
+  }
+
+  public interface Listener {
+    void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen);
+
+    void onChosenDeviceChange(@Nullable DlnaDevice chosenDlnaDevice);
+  }
+
+  class ViewHolder extends RecyclerView.ViewHolder {
+    @NonNull
+    private final TextView dlnaDeviceNameTextView;
+    @NonNull
+    private final ProgressBar progressBar;
+    @NonNull
+    private final View view;
+    @NonNull
+    DlnaDevice dlnaDevice = DUMMY_DEVICE;
+
+    ViewHolder(@NonNull View itemView) {
+      super(itemView);
+      view = itemView;
+      view.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+          setChosenDlnaDevice(
+            ((chosenDlnaDeviceIdentity == null) ||
+              !chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity())) ?
+              dlnaDevice : null);
+          listener.onRowClick(dlnaDevice, hasChosenDlnaDevice());
+        }
+      });
+      dlnaDeviceNameTextView = view.findViewById(R.id.row_dlna_device_name_text_view);
+      progressBar = view.findViewById(R.id.progress_bar);
     }
 
     private void setView(@NonNull DlnaDevice dlnaDevice) {
+      this.dlnaDevice = dlnaDevice;
+      // Waiting message not accessible
+      view.setEnabled(!isWaiting());
       // Dummy device for waiting message
-      boolean isWaiting = (dlnaDevice.getDevice() == null);
-      if (isWaiting) {
-        mDlnaDeviceNameTextView.setText(R.string.device_no_device_yet);
+      if (isWaiting()) {
+        dlnaDeviceNameTextView.setText(R.string.device_no_device_yet);
       } else {
-        mDlnaDeviceNameTextView.setText(dlnaDevice.toString());
+        dlnaDeviceNameTextView.setText(dlnaDevice.toString());
       }
-      if (isWaiting || (dlnaDevice.getIcon() == null)) {
-        mDlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+      if (isWaiting() || (dlnaDevice.getIcon() == null)) {
+        dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
           R.drawable.ic_cast_black_24dp,
           0, 0, 0);
       } else {
-        mDlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+        dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
           new BitmapDrawable(
-            getContext().getResources(),
+            context.getResources(),
             Bitmap.createScaledBitmap(dlnaDevice.getIcon(), ICON_SIZE, ICON_SIZE, false)),
           null, null, null);
       }
-      isWaiting = (isWaiting || !dlnaDevice.isFullyHydrated());
-      mDlnaDeviceNameTextView.setTextColor(ContextCompat.getColor(mContext,
-        (isWaiting ||
-          !Objects.requireNonNull(dlnaDevice.getIdentity()).equals(mChosenDlnaDeviceIdentity)) ?
+      boolean isWaitingOrNotFullyHydrated = (isWaiting() || !dlnaDevice.isFullyHydrated());
+      dlnaDeviceNameTextView.setTextColor(ContextCompat.getColor(context,
+        (isWaitingOrNotFullyHydrated ||
+          !Objects.requireNonNull(dlnaDevice.getIdentity()).equals(chosenDlnaDeviceIdentity)) ?
           R.color.colorPrimaryText : R.color.colorPrimary));
-      // Note: for some reason, is sometimes not animated...
-      mProgressBar.setVisibility(isWaiting ? View.VISIBLE : View.INVISIBLE);
+      progressBar.setVisibility(isWaitingOrNotFullyHydrated ? View.VISIBLE : View.INVISIBLE);
     }
   }
 }

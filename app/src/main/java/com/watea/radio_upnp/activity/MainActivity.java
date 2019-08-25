@@ -53,6 +53,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Hashtable;
@@ -122,16 +123,16 @@ public class MainActivity
       "https://www.funradio.fr/")
   };
   // <HMI assets
-  private DrawerLayout mDrawerLayout;
-  private ActionBarDrawerToggle mDrawerToggle;
-  private ActionBar mActionBar;
-  private FloatingActionButton mFloatingActionButton;
-  private Menu mNavigationMenu;
-  private AlertDialog mAboutAlertDialog;
+  private DrawerLayout drawerLayout;
+  private ActionBarDrawerToggle drawerToggle;
+  private ActionBar actionBar;
+  private FloatingActionButton floatingActionButton;
+  private Menu navigationMenu;
+  private AlertDialog aboutAlertDialog;
   // />
-  private RadioLibrary mRadioLibrary;
-  private Integer mNavigationMenuCheckedId;
-  private MainFragment mMainFragment;
+  private RadioLibrary radioLibrary;
+  private Integer navigationMenuCheckedId;
+  private MainFragment mainFragment;
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
@@ -154,7 +155,7 @@ public class MainActivity
     // true, then it has handled the app icon touch event
     //noinspection ConstantConditions
     return
-      mDrawerToggle.onOptionsItemSelected(item) ||
+      drawerToggle.onOptionsItemSelected(item) ||
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
@@ -168,7 +169,7 @@ public class MainActivity
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
     Integer id = menuItem.getItemId();
     if (id == R.id.action_about) {
-      mAboutAlertDialog.show();
+      aboutAlertDialog.show();
     } else {
       // Shall not fail to find!
       for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
@@ -177,27 +178,27 @@ public class MainActivity
         }
       }
     }
-    mDrawerLayout.closeDrawers();
+    drawerLayout.closeDrawers();
     return true;
   }
 
   @Override
   @NonNull
   public RadioLibrary getRadioLibrary() {
-    return mRadioLibrary;
+    return radioLibrary;
   }
 
   @Override
   public void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
     invalidateOptionsMenu();
-    mActionBar.setTitle(mainActivityFragment.getTitle());
-    mFloatingActionButton.setOnClickListener(
+    actionBar.setTitle(mainActivityFragment.getTitle());
+    floatingActionButton.setOnClickListener(
       mainActivityFragment.getFloatingActionButtonOnClickListener());
-    mFloatingActionButton.setOnLongClickListener(
+    floatingActionButton.setOnLongClickListener(
       mainActivityFragment.getFloatingActionButtonOnLongClickListener());
     int resource = mainActivityFragment.getFloatingActionButtonResource();
     if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
-      mFloatingActionButton.setImageResource(resource);
+      floatingActionButton.setImageResource(resource);
     }
     checkNavigationMenu(
       Objects.requireNonNull(FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass())));
@@ -240,7 +241,7 @@ public class MainActivity
   @Override
   protected void onPause() {
     super.onPause();
-    mMainFragment.onActivityPause();
+    mainFragment.onActivityPause();
   }
 
   @Override
@@ -258,93 +259,93 @@ public class MainActivity
         .apply();
     }
     // Retrieve main fragment
-    mMainFragment = (MainFragment) ((getCurrentFragment() == null) ?
+    mainFragment = (MainFragment) ((getCurrentFragment() == null) ?
       setFragment(MainFragment.class) :
       // Shall exists as MainFragment always created
       getFragmentManager().findFragmentByTag(MainFragment.class.getSimpleName()));
-    mMainFragment.onActivityResume(this);
+    mainFragment.onActivityResume(this);
   }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    mRadioLibrary = new RadioLibrary(this);
+    radioLibrary = new RadioLibrary(this);
     // Inflate view
     setContentView(R.layout.activity_main);
-    mDrawerLayout = findViewById(R.id.main_activity);
+    drawerLayout = findViewById(R.id.main_activity);
     // Toolbar
     setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-    mActionBar = getSupportActionBar();
-    if (mActionBar == null) {
+    actionBar = getSupportActionBar();
+    if (actionBar == null) {
       // Should not happen
       Log.e(LOG_TAG, "onCreate: ActionBar is null");
     } else {
-      mActionBar.setDisplayHomeAsUpEnabled(true);
-      mActionBar.setHomeButtonEnabled(true);
+      actionBar.setDisplayHomeAsUpEnabled(true);
+      actionBar.setHomeButtonEnabled(true);
     }
     // Set navigation drawer toggle (according to documentation)
-    mDrawerToggle = new ActionBarDrawerToggle(
-      this, mDrawerLayout, R.string.drawer_open, R.string.drawer_close);
+    drawerToggle = new ActionBarDrawerToggle(
+      this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
     // Set the drawer toggle as the DrawerListener
-    mDrawerLayout.addDrawerListener(mDrawerToggle);
+    drawerLayout.addDrawerListener(drawerToggle);
     // Navigation drawer
     NavigationView navigationView = findViewById(R.id.navigation_view);
-    mNavigationMenu = navigationView.getMenu();
+    navigationMenu = navigationView.getMenu();
     navigationView.setNavigationItemSelectedListener(this);
     // Build alert about dialog
     @SuppressLint("InflateParams")
     View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
     ((TextView) aboutView.findViewById(R.id.version_name_text_view))
       .setText(BuildConfig.VERSION_NAME);
-    mAboutAlertDialog = new AlertDialog.Builder(this)
+    aboutAlertDialog = new AlertDialog.Builder(this)
       .setView(aboutView)
       .setOnDismissListener(new DialogInterface.OnDismissListener() {
         @Override
         public void onDismiss(DialogInterface dialogInterface) {
           // Restore checked item
-          checkNavigationMenu(mNavigationMenuCheckedId);
+          checkNavigationMenu(navigationMenuCheckedId);
         }
       })
       .create();
     // FAB
-    mFloatingActionButton = findViewById(R.id.floating_action_button);
+    floatingActionButton = findViewById(R.id.floating_action_button);
   }
 
   @Override
   protected void onPostCreate(Bundle savedInstanceState) {
     super.onPostCreate(savedInstanceState);
     // Sync the toggle state after onRestoreInstanceState has occurred.
-    mDrawerToggle.syncState();
+    drawerToggle.syncState();
   }
 
   @Override
   public void onConfigurationChanged(Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
-    mDrawerToggle.onConfigurationChanged(newConfig);
+    drawerToggle.onConfigurationChanged(newConfig);
   }
 
   @Override
   protected void onDestroy() {
     super.onDestroy();
     // Close radios database
-    mRadioLibrary.close();
+    radioLibrary.close();
   }
 
   private boolean setDefaultRadios() {
     boolean result = false;
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
       try {
-        result = (mRadioLibrary.insertAndSaveIcon(
+        result = (radioLibrary.insertAndSaveIcon(
           new Radio(
             defaultRadio.name,
-            // Filename not known yet
-            null,
+            // Dummy as NonNull is required
+            new File(""),
             Radio.Type.MISC,
             Radio.Language.OTHER,
             new URL(defaultRadio.uRL),
             new URL(defaultRadio.webPageURL),
             Radio.Quality.LOW),
-          mRadioLibrary.resourceToBitmap(defaultRadio.drawable)) >= 0) || result;
+          radioLibrary.resourceToBitmap(defaultRadio.drawable)) >= 0) || result;
       } catch (MalformedURLException malformedURLException) {
         Log.e(LOG_TAG, "setDefaultRadios: bad URL definition", malformedURLException);
       }
@@ -358,8 +359,8 @@ public class MainActivity
   }
 
   private void checkNavigationMenu(@NonNull Integer id) {
-    mNavigationMenuCheckedId = id;
-    mNavigationMenu.findItem(mNavigationMenuCheckedId).setChecked(true);
+    navigationMenuCheckedId = id;
+    navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
   }
 
   private static class DefaultRadio {

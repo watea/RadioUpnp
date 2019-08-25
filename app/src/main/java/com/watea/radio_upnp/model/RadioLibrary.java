@@ -50,21 +50,21 @@ public class RadioLibrary {
   private static final String LOG_TAG = RadioLibrary.class.getName();
   private static final int ICON_SIZE = 300;
   @NonNull
-  private final SQLiteDatabase mRadioDataBase;
+  private final SQLiteDatabase radioDataBase;
   @NonNull
-  private final Context mContext;
+  private final Context context;
 
   public RadioLibrary(@NonNull Context context) {
-    mContext = context;
-    mRadioDataBase = new RadioDbSQLHelper(mContext).getWritableDatabase();
+    this.context = context;
+    radioDataBase = new RadioDbSQLHelper(this.context).getWritableDatabase();
   }
 
   public void close() {
-    mRadioDataBase.close();
+    radioDataBase.close();
   }
 
   public int updateFrom(@NonNull Long radioId, @NonNull ContentValues values) {
-    return mRadioDataBase.update(
+    return radioDataBase.update(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // Values for columns
@@ -77,7 +77,7 @@ public class RadioLibrary {
 
   @Nullable
   public Radio getFrom(@NonNull Long radioId) {
-    Cursor cursor = mRadioDataBase.query(
+    Cursor cursor = radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns to return
@@ -108,7 +108,7 @@ public class RadioLibrary {
   }
 
   public int getPositionFrom(@NonNull Long radioId) {
-    Cursor cursor = mRadioDataBase.query(
+    Cursor cursor = radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns to return
@@ -130,7 +130,7 @@ public class RadioLibrary {
   }
 
   public int deleteFrom(@NonNull Long radioId) {
-    return mRadioDataBase.delete(
+    return radioDataBase.delete(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns for the WHERE clause
@@ -151,7 +151,7 @@ public class RadioLibrary {
 
   @NonNull
   public Bitmap resourceToBitmap(int resource) {
-    Bitmap b = BitmapFactory.decodeResource(mContext.getResources(), resource);
+    Bitmap b = BitmapFactory.decodeResource(context.getResources(), resource);
     return Bitmap.createScaledBitmap(b, ICON_SIZE, ICON_SIZE, false);
   }
 
@@ -161,9 +161,9 @@ public class RadioLibrary {
     File file;
     fileName = fileName + ".png";
     try (FileOutputStream fileOutputStream =
-           mContext.openFileOutput(fileName, Context.MODE_PRIVATE)) {
+           context.openFileOutput(fileName, Context.MODE_PRIVATE)) {
       bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream);
-      file = new File(mContext.getFilesDir().getPath() + "/" + fileName);
+      file = new File(context.getFilesDir().getPath() + "/" + fileName);
     } catch (FileNotFoundException fileNotFoundException) {
       Log.e(LOG_TAG, "bitmapToFile: internal storage failure", fileNotFoundException);
       throw new RuntimeException();
@@ -182,9 +182,7 @@ public class RadioLibrary {
     if (radioId >= 0) {
       ContentValues contentValues = new ContentValues();
       // RadioId is used as file id for bitmap file
-      contentValues.put(
-        RadioSQLContract.Columns.COLUMN_ICON,
-        bitmapToFile(icon, radioId.toString()).getPath());
+      contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, setIconFile(radio, icon).getPath());
       // Store file name in database
       if (updateFrom(radioId, contentValues) <= 0) {
         Log.e(LOG_TAG, "insertAndSaveIcon: internal failure");
@@ -192,6 +190,11 @@ public class RadioLibrary {
       }
     }
     return radioId;
+  }
+
+  @NonNull
+  public File setIconFile(@NonNull Radio radio, @NonNull Bitmap icon) {
+    return radio.setIconFile(bitmapToFile(icon, radio.getId().toString()));
   }
 
   @NonNull
@@ -210,10 +213,9 @@ public class RadioLibrary {
         Log.e(LOG_TAG, "getMediaItems: internal failure");
         throw new RuntimeException();
       }
-      result.add(
-        new MediaBrowserCompat.MediaItem(
-          radio.getMediaMetadataBuilder().build().getDescription(),
-          MediaBrowserCompat.MediaItem.FLAG_PLAYABLE));
+      result.add(new MediaBrowserCompat.MediaItem(
+        radio.getMediaMetadataBuilder().build().getDescription(),
+        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE));
     }
     cursor.close();
     return result;
@@ -232,7 +234,7 @@ public class RadioLibrary {
 
   @NonNull
   private Cursor allIdsQuery() {
-    return mRadioDataBase.query(
+    return radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns to return
@@ -251,7 +253,7 @@ public class RadioLibrary {
 
   @NonNull
   private Cursor preferredIdsQuery() {
-    return mRadioDataBase.query(
+    return radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns to return
@@ -270,7 +272,7 @@ public class RadioLibrary {
 
   private int getMaxPosition() {
     String maxPosition = "MAX(" + RadioSQLContract.Columns.COLUMN_POSITION + ")";
-    Cursor cursor = mRadioDataBase.query(
+    Cursor cursor = radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns to return
@@ -294,7 +296,7 @@ public class RadioLibrary {
     ContentValues contentValues = radio.toContentValues();
     // Position = last
     contentValues.put(RadioSQLContract.Columns.COLUMN_POSITION, getMaxPosition() + 1);
-    return mRadioDataBase.insert(RadioSQLContract.Columns.TABLE_RADIO, null, contentValues);
+    return radioDataBase.insert(RadioSQLContract.Columns.TABLE_RADIO, null, contentValues);
   }
 
   private class RadioDbSQLHelper extends SQLiteOpenHelper {

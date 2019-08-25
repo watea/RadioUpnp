@@ -44,15 +44,15 @@ import java.util.List;
 public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
   private static final String LOG_TAG = ModifyFragment.class.getName();
   // <HMI assets
-  private View mRadiosDefaultView;
+  private View radiosDefaultView;
   // />
-  private RadiosModifyAdapter mRadiosModifyAdapter;
+  private RadiosModifyAdapter radiosModifyAdapter;
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // Adapters
-    mRadiosModifyAdapter = new RadiosModifyAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
+    radiosModifyAdapter = new RadiosModifyAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
   }
 
   @Nullable
@@ -65,19 +65,19 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     RecyclerView radiosView = view.findViewById(R.id.radios_recycler_view);
     radiosView.setLayoutManager(new LinearLayoutManager(getActivity()));
     // RecyclerView shall be defined for Adapter
-    mRadiosModifyAdapter.attachToRecyclerView(radiosView);
+    radiosModifyAdapter.attachToRecyclerView(radiosView);
     // Adapter shall be defined for RecyclerView
-    radiosView.setAdapter(mRadiosModifyAdapter);
-    mRadiosDefaultView = view.findViewById(R.id.view_radios_default);
+    radiosView.setAdapter(radiosModifyAdapter);
+    radiosDefaultView = view.findViewById(R.id.view_radios_default);
     return view;
   }
 
   @Override
   public void onResume() {
     super.onResume();
-    List<Long> radioIds = mRadioLibrary.getAllRadioIds();
-    mRadiosModifyAdapter.setRadioIds(radioIds);
-    mRadiosDefaultView.setVisibility((radioIds.size() == 0) ? View.VISIBLE : View.INVISIBLE);
+    List<Long> radioIds = radioLibrary.getAllRadioIds();
+    radiosModifyAdapter.setRadioIds(radioIds);
+    radiosDefaultView.setVisibility((radioIds.size() == 0) ? View.VISIBLE : View.INVISIBLE);
   }
 
   @NonNull
@@ -86,7 +86,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     return new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        mProvider.setFragment(ItemModifyFragment.class);
+        provider.setFragment(ItemModifyFragment.class);
       }
     };
   }
@@ -104,20 +104,20 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Override
   @Nullable
   public Radio getRadioFromId(@NonNull Long radioId) {
-    return mRadioLibrary.getFrom(radioId);
+    return radioLibrary.getFrom(radioId);
   }
 
   @Override
   public void onModifyClick(@NonNull Radio radio) {
-    ((ItemModifyFragment) mProvider.setFragment(ItemModifyFragment.class)).set(radio);
+    ((ItemModifyFragment) provider.setFragment(ItemModifyFragment.class)).set(radio);
   }
 
   @Override
   public boolean onDelete(@NonNull Long radioId) {
-    if (mRadioLibrary.deleteFrom(radioId) > 0) {
+    if (radioLibrary.deleteFrom(radioId) > 0) {
       // Default view is visible if no radio left
-      mRadiosDefaultView.setVisibility(
-        mRadioLibrary.getAllRadioIds().isEmpty() ? View.VISIBLE : View.INVISIBLE);
+      radiosDefaultView.setVisibility(
+        radioLibrary.getAllRadioIds().isEmpty() ? View.VISIBLE : View.INVISIBLE);
       return true;
     } else {
       Log.w(LOG_TAG, "Internal failure, radio database update failed");
@@ -129,8 +129,8 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   public boolean onMove(@NonNull Long fromRadioId, @NonNull Long toRadioId) {
     ContentValues fromPosition = positionContentValuesOf(fromRadioId);
     ContentValues toPosition = positionContentValuesOf(toRadioId);
-    if ((mRadioLibrary.updateFrom(fromRadioId, toPosition) > 0) &&
-      (mRadioLibrary.updateFrom(toRadioId, fromPosition) > 0)) {
+    if ((radioLibrary.updateFrom(fromRadioId, toPosition) > 0) &&
+      (radioLibrary.updateFrom(toRadioId, fromPosition) > 0)) {
       return true;
     } else {
       Log.w(LOG_TAG, "Internal failure, radio database update failed");
@@ -143,7 +143,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   private ContentValues positionContentValuesOf(@NonNull Long radioId) {
     ContentValues contentValues = new ContentValues();
     contentValues.put(
-      RadioSQLContract.Columns.COLUMN_POSITION, mRadioLibrary.getPositionFrom(radioId));
+      RadioSQLContract.Columns.COLUMN_POSITION, radioLibrary.getPositionFrom(radioId));
     return contentValues;
   }
 }

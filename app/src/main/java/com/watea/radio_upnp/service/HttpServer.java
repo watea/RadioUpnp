@@ -38,7 +38,6 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 
 import java.io.FileOutputStream;
-import java.util.Objects;
 
 @SuppressWarnings("WeakerAccess")
 public class HttpServer extends Thread {
@@ -46,31 +45,30 @@ public class HttpServer extends Thread {
   private static final String LOGO_FILE = "logo";
   private static final int PORT = 57648;
   @NonNull
-  private final Context mContext;
+  public final RadioHandler radioHandler;
   @NonNull
-  private final Server mServer;
+  private final Context context;
   @NonNull
-  private final RadioHandler mRadioHandler;
+  private final Server server;
   @NonNull
-  private final Listener mListener;
+  private final Listener listener;
 
   public HttpServer(
     @NonNull Context context,
     @NonNull String userAgent,
     @NonNull RadioLibrary radioLibrary,
     @NonNull Listener listener) {
-    mContext = context;
-    mServer = new Server(PORT);
-    mListener = listener;
+    this.context = context;
+    server = new Server(PORT);
+    this.listener = listener;
     // Handler for local files
     ResourceHandler resourceHandler = new ResourceHandler();
-    resourceHandler.setResourceBase(mContext.getFilesDir().getPath());
-    // Handler for radio stream
-    mRadioHandler = new RadioHandler(userAgent, radioLibrary, true);
+    resourceHandler.setResourceBase(this.context.getFilesDir().getPath());
     // Add the ResourceHandler to the server
     HandlerList handlers = new HandlerList();
-    handlers.setHandlers(new Handler[]{resourceHandler, mRadioHandler});
-    mServer.setHandler(handlers);
+    radioHandler = new RadioHandler(userAgent, radioLibrary, true);
+    handlers.setHandlers(new Handler[]{resourceHandler, radioHandler});
+    server.setHandler(handlers);
   }
 
   @NonNull
@@ -78,28 +76,23 @@ public class HttpServer extends Thread {
     return NetworkTester.getLoopbackUri(PORT);
   }
 
-  @NonNull
-  public RadioHandler getRadioHandler() {
-    return mRadioHandler;
-  }
-
   @Override
   public void run() {
     super.run();
     try {
       Log.d(LOG_TAG, "HTTP server start");
-      mServer.start();
-      mServer.join();
+      server.start();
+      server.join();
     } catch (Exception exception) {
       Log.d(LOG_TAG, "HTTP server start error");
-      mListener.onError();
+      listener.onError();
     }
   }
 
   public void stopServer() {
     try {
       Log.d(LOG_TAG, "HTTP server stop");
-      mServer.stop();
+      server.stop();
     } catch (Exception exception) {
       Log.d(LOG_TAG, "HTTP server stop error");
     }
@@ -108,9 +101,9 @@ public class HttpServer extends Thread {
   // Return logo file Uri; a jpeg file
   public Uri createLogoFile(@NonNull Radio radio, int size) {
     String name = LOGO_FILE + ".jpg";
-    try (FileOutputStream fileOutputStream = mContext.openFileOutput(name, Context.MODE_PRIVATE)) {
+    try (FileOutputStream fileOutputStream = context.openFileOutput(name, Context.MODE_PRIVATE)) {
       Bitmap
-        .createScaledBitmap(Objects.requireNonNull(radio.getIcon()), size, size, false)
+        .createScaledBitmap(radio.getIcon(), size, size, false)
         .compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
     } catch (Exception exception) {
       Log.e(LOG_TAG, "createLogoFile: internal failure creating logo file");
@@ -119,13 +112,8 @@ public class HttpServer extends Thread {
     return (uri == null) ? null : uri.buildUpon().appendEncodedPath(name).build();
   }
 
-  @NonNull
-  public Uri getRadioUri(@NonNull Radio radio) {
-    return radio.getHandledUri(getUri());
-  }
-
-  private Uri getUri() {
-    return NetworkTester.getUri(mContext, PORT);
+  public Uri getUri() {
+    return NetworkTester.getUri(context, PORT);
   }
 
   public interface Listener {

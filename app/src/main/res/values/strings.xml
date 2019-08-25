@@ -23,6 +23,8 @@
 
 <resources>
     <string name="app_name">RadioUpnp</string>
+    <string name="radio_service_description">Streams radio for RadioUpnp app</string>
+    <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
     <string name="copyright">Copyright &#169; 2018 Stephane Treuchot.</string>
     <string name="credit">Credit:</string>
     <string name="credit_0">- Icon by shareicon.net</string>
@@ -95,6 +97,7 @@
     <string name="title_donate">Donate</string>
     <string name="title_about">About</string>
     <string name="title_item_modify">Edit</string>
+    <string name="title_dlna">DLNA</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>

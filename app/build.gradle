@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
         targetSdkVersion 28
-        versionCode 206
-        versionName "2.06"
+        versionCode 207
+        versionName "2.07"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -49,7 +49,6 @@ android {
 }
 
 repositories {
-    mavenCentral()
     maven {
         url "http://4thline.org/m2/"
     }
