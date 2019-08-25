@@ -182,7 +182,9 @@ public class RadioLibrary {
     if (radioId >= 0) {
       ContentValues contentValues = new ContentValues();
       // RadioId is used as file id for bitmap file
-      contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, setIconFile(radio, icon).getPath());
+      contentValues.put(
+        RadioSQLContract.Columns.COLUMN_ICON,
+        bitmapToFile(icon, radioId.toString()).getPath());
       // Store file name in database
       if (updateFrom(radioId, contentValues) <= 0) {
         Log.e(LOG_TAG, "insertAndSaveIcon: internal failure");
@@ -192,9 +194,8 @@ public class RadioLibrary {
     return radioId;
   }
 
-  @NonNull
-  public File setIconFile(@NonNull Radio radio, @NonNull Bitmap icon) {
-    return radio.setIconFile(bitmapToFile(icon, radio.getId().toString()));
+  public void setRadioIconFile(@NonNull Radio radio, @NonNull Bitmap icon) {
+    bitmapToFile(icon, radio.getId().toString());
   }
 
   @NonNull

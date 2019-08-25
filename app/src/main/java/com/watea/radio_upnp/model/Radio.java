@@ -37,7 +37,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-@SuppressWarnings({"unused", "WeakerAccess"})
+@SuppressWarnings({"unused"})
 public class Radio {
   public static final Radio DUMMY_RADIO;
   private static final String LOG_TAG = Radio.class.getName();
@@ -45,9 +45,9 @@ public class Radio {
   static {
     Radio radio = null;
     try {
-      radio = new Radio("", new File(""), new URL(""), null);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
+      radio = new Radio("", new File(""), new URL("http:"), null);
+    } catch (MalformedURLException malformedURLException) {
+      Log.e(LOG_TAG, "Bad static init");
     }
     DUMMY_RADIO = radio;
   }
@@ -109,7 +109,7 @@ public class Radio {
     try {
       url = new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_URL)));
     } catch (MalformedURLException malformedURLException) {
-      Log.e(LOG_TAG, "Radio: internal error, bad URL definition");
+      Log.e(LOG_TAG, "Internal error, bad URL definition");
       throw new RuntimeException();
     }
     try {

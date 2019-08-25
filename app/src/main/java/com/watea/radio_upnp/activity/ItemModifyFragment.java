@@ -59,7 +59,6 @@ import org.jsoup.nodes.Element;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Hashtable;
@@ -69,6 +68,8 @@ import java.util.Objects;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.watea.radio_upnp.service.NetworkTester.getStreamContentType;
 
 // ADD or MODIFY modes
 // radio = null for ADD
@@ -168,7 +169,7 @@ public class ItemModifyFragment extends MainActivityFragment {
         } else {
           radio.setName(getRadioName());
           // Same file name reused to store icon
-          radioLibrary.setIconFile(radio, radioIcon);
+          radioLibrary.setRadioIconFile(radio, radioIcon);
           radio.setURL(urlWatcher.url);
           radio.setWebPageURL(webPageWatcher.url);
           if (radioLibrary.updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
@@ -529,24 +530,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   private class UrlTester extends AsyncTask<URL, Void, String> {
     @Override
     protected String doInBackground(URL... urls) {
-      String streamContent = null;
-      HttpURLConnection httpURLConnection = null;
-      try {
-        httpURLConnection = NetworkTester.getActualHttpURLConnection(urls[0]);
-        // Actual connection test: header must be audio/mpeg
-        streamContent = httpURLConnection.getHeaderField("Content-Type");
-        // If we get there, connection has occurred
-        Log.d(LOG_TAG, "Connection test status/contentType: " +
-          httpURLConnection.getResponseCode() + "/" + streamContent);
-      } catch (IOException iOException) {
-        // Fires also in case of timeout
-        Log.i(LOG_TAG, "Radio URL IO exception");
-      } finally {
-        if (httpURLConnection != null) {
-          httpURLConnection.disconnect();
-        }
-      }
-      return streamContent;
+      return getStreamContentType(urls[0]);
     }
 
     @Override

@@ -100,11 +100,16 @@ public class RadioHandler extends AbstractHandler {
   // Add ID and lock key to given URI as query parameter
   @NonNull
   public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
-    String path = radio.getUri().getPath();
+    return getHandledUri(uri, radio, lockKey, "radio");
+  }
+
+  // Add ID and lock key to given URI as query parameter
+  @NonNull
+  public static Uri getHandledUri(
+    @NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey, @NonNull String content) {
     return uri
       .buildUpon()
-      // Add path to target to type the stream, remove first "/"
-      .appendEncodedPath((path == null) ? "" : path.substring(1))
+      .appendEncodedPath(content)
       // Add radio ID + lock key as query parameter
       .appendQueryParameter(RADIO_ID, radio.getId().toString())
       .appendQueryParameter(LOCK_KEY, lockKey)

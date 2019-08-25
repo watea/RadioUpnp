@@ -33,6 +33,7 @@ import android.util.Log;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
+import com.watea.radio_upnp.service.NetworkTester;
 import com.watea.radio_upnp.service.RadioHandler;
 
 import org.fourthline.cling.android.AndroidUpnpService;
@@ -119,42 +120,53 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected void onPrepareFromMediaId(@NonNull Radio radio) {
+  protected void onPrepareFromMediaId(@NonNull final Radio radio) {
     // dlnaDevice must be defined
     if (dlnaDevice == null) {
       throw new RuntimeException("dlnaDevice not defined");
     }
-    ActionInvocation actionInvocation;
     // Volume
     currentVolume = DEFAULT;
     isVolumeInProgress = true;
     if (dlnaDevice.findService(RENDERING_CONTROL_ID) != null) {
-      actionInvocation = getRenderingControlUpnpActionInvocation(UPNP_ACTION_GET_VOLUME);
-      upnpExecuteAction(actionInvocation);
+      upnpExecuteAction(getRenderingControlUpnpActionInvocation(UPNP_ACTION_GET_VOLUME));
     }
     // Rendering
-    String radioUri = RadioHandler
-      .getHandledUri(httpServer.getUri(), radio, getLockKey()).toString();
-    String radioName = radio.getName();
-    actionInvocation = getAVTransportUpnpActionInvocation(UPNP_ACTION_SET_AV_TRANSPORT_URI);
-    actionInvocation.setInput("CurrentURI", radioUri);
-    actionInvocation.setInput("CurrentURIMetaData",
-      "<DIDL-Lite " +
-        "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"" +
-        "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
-        "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
-        "<item id=\"" + radioName + "\" parentID=\"0\" restricted=\"1\">" +
-        // object.item.audioItem.audioBroadcast not valid
-        "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
-        "<dc:title>" + radioName + "</dc:title>" +
-        "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
-        "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
-        "<res protocolInfo=\"http-get:*:audio/mpeg:*\">" + radioUri + "</res>" +
-        "<upnp:albumArtURI>" + httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE) +
-        "</upnp:albumArtURI>" +
-        "</item>" +
-        "</DIDL-Lite>");
-    upnpExecuteAction(actionInvocation);
+    // Lock key is final for this thread
+    final String lockKey = getLockKey();
+    // Fetch content type and start
+    new Thread() {
+      @Override
+      public void run() {
+        super.run();
+        String contentType = NetworkTester.getStreamContentType(radio.getURL());
+        contentType = (contentType == null) ? "audio/mpeg" : contentType;
+        // Content name is similar to content type (necessary for MS Media Player)
+        String radioUri = RadioHandler
+          .getHandledUri(httpServer.getUri(), radio, lockKey, contentType.replace("/", "."))
+          .toString();
+        ActionInvocation actionInvocation =
+          getAVTransportUpnpActionInvocation(UPNP_ACTION_SET_AV_TRANSPORT_URI);
+        actionInvocation.setInput("CurrentURI", radioUri);
+        actionInvocation.setInput("CurrentURIMetaData",
+          "<DIDL-Lite " +
+            "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"" +
+            "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
+            "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
+            "<item id=\"" + radio.getName() + "\" parentID=\"0\" restricted=\"1\">" +
+            // object.item.audioItem.audioBroadcast not valid
+            "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
+            "<dc:title>" + radio.getName() + "</dc:title>" +
+            "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
+            "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
+            "<res protocolInfo=\"http-get:*:" + contentType + ":*\">" + radioUri + "</res>" +
+            "<upnp:albumArtURI>" + httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE) +
+            "</upnp:albumArtURI>" +
+            "</item>" +
+            "</DIDL-Lite>");
+        upnpExecuteAction(actionInvocation);
+      }
+    }.start();
   }
 
   public void onPlay() {
@@ -261,6 +273,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       }
       switch (action) {
         case UpnpPlayerAdapter.UPNP_ACTION_GET_VOLUME:
+          // Lock key should be tested here ot be rigorous
           synchronized (UpnpPlayerAdapter.this) {
             currentVolume =
               Integer.parseInt(actionInvocation.getOutput("CurrentVolume").toString());
@@ -269,6 +282,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           }
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_SET_VOLUME:
+          // Lock key should be tested here ot be rigorous
           synchronized (UpnpPlayerAdapter.this) {
             currentVolume =
               Integer.parseInt(actionInvocation.getInput(UPNP_INPUT_DESIRED_VOLUME).toString());
@@ -306,6 +320,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       Log.d(LOG_TAG, defaultMsg);
       String action = actionInvocation.getAction().getName();
       // Don't handle error on volume
+      // Lock key should be tested here ot be rigorous
       if (action.equals(UpnpPlayerAdapter.UPNP_ACTION_GET_VOLUME) ||
         action.equals(UPNP_ACTION_SET_VOLUME)) {
         isVolumeInProgress = false;

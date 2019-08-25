@@ -53,6 +53,28 @@ public class NetworkTester {
   }
 
   @Nullable
+  public static String getStreamContentType(@NonNull URL uRL) {
+    String streamContent = null;
+    HttpURLConnection httpURLConnection = null;
+    try {
+      httpURLConnection = getActualHttpURLConnection(uRL);
+      // Actual connection test: header must be audio/mpeg
+      streamContent = httpURLConnection.getHeaderField("Content-Type");
+      // If we get there, connection has occurred
+      Log.d(LOG_TAG, "Connection status/contentType: " +
+        httpURLConnection.getResponseCode() + "/" + streamContent);
+    } catch (IOException iOException) {
+      // Fires also in case of timeout
+      Log.i(LOG_TAG, "URL IO exception");
+    } finally {
+      if (httpURLConnection != null) {
+        httpURLConnection.disconnect();
+      }
+    }
+    return streamContent;
+  }
+
+  @Nullable
   private static String ipAddressToString(int ipAddress) {
     try {
       return InetAddress.getByAddress(
