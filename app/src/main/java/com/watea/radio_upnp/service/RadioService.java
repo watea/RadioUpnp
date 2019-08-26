@@ -89,6 +89,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private UpnpPlayerAdapter upnpPlayerAdapter;
   private HttpServer httpServer;
   private MediaMetadataCompat mediaMetadataCompat = null;
+  private boolean isStarted;
 
   @Override
   public void onCreate() {
@@ -100,11 +101,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     session.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
       MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
     setSessionToken(session.getSessionToken());
-    // Create the (mandatory) notification channel when running on Android Oreo
-    CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      createChannel();
-    }
     // Notification
     notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     // Cancel all notifications to handle the case where the Service was killed and
@@ -144,6 +140,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "UpnpPlayerAdapter: internal failure; AndroidUpnpService not bound");
     }
+    // Create the (mandatory) notification channel when running on Android Oreo
+    CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      createChannel();
+    }
+    isStarted = false;
     Log.d(LOG_TAG, "onCreate: done!");
   }
 
@@ -201,7 +203,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           break;
         case PlaybackStateCompat.STATE_PLAYING:
           // Start service if needed
-          ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
+          if (!isStarted) {
+            ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
+            isStarted = true;
+          }
+          // Update notification
+          notificationManager.notify(NOTIFICATION_ID, getNotification());
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           // Move service out started state
@@ -215,8 +222,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           session.setMetadata(mediaMetadataCompat = null);
           session.setActive(false);
           // Move service out started state
-          stopForeground(true);
-          stopSelf();
+          if (isStarted) {
+            stopForeground(true);
+            stopSelf();
+            isStarted = false;
+          }
       }
     }
   }
