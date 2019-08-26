@@ -45,7 +45,7 @@ public class Radio {
   static {
     Radio radio = null;
     try {
-      radio = new Radio("", new File(""), new URL("http:"), null);
+      radio = new Radio("", new URL("http:"), null);
     } catch (MalformedURLException malformedURLException) {
       Log.e(LOG_TAG, "Bad static init");
     }
@@ -70,14 +70,15 @@ public class Radio {
   private Quality quality;
   private Boolean isPreferred = false;
 
+  // Create Radio with no icon file
   public Radio(
     @NonNull String name,
-    @NonNull File iconFile,
     @NonNull URL uRL,
     @Nullable URL webPageURL) {
-    this(name, iconFile, Type.MISC, Language.OTHER, uRL, webPageURL, Quality.LOW);
+    this(name, new File(""), Type.MISC, Language.OTHER, uRL, webPageURL, Quality.MEDIUM);
   }
 
+  // Create Radio with no id
   public Radio(
     @NonNull String name,
     @NonNull File iconFile,

@@ -57,7 +57,6 @@ import com.watea.radio_upnp.service.NetworkTester;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -154,24 +153,16 @@ public class ItemModifyFragment extends MainActivityFragment {
         tell(R.string.radio_definition_error);
       } else {
         if (isAddMode()) {
-          radio = new Radio(
-            getRadioName(),
-            // Dummy as NonNull is required
-            new File(""),
-            Radio.Type.MISC,
-            Radio.Language.OTHER,
-            urlWatcher.url,
-            webPageWatcher.url,
-            Radio.Quality.MEDIUM);
+          radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url);
           if (radioLibrary.insertAndSaveIcon(radio, radioIcon) <= 0) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding in database");
           }
         } else {
           radio.setName(getRadioName());
-          // Same file name reused to store icon
-          radioLibrary.setRadioIconFile(radio, radioIcon);
           radio.setURL(urlWatcher.url);
           radio.setWebPageURL(webPageWatcher.url);
+          // Same file name reused to store icon
+          radioLibrary.setRadioIconFile(radio, radioIcon);
           if (radioLibrary.updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
           }

@@ -52,6 +52,12 @@ public abstract class MainActivityFragment extends Fragment {
   public void onCreateOptionsMenu(@NonNull Menu menu) {
   }
 
+  @Override
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setMembers();
+  }
+
   @Nullable
   @Override
   public View onCreateView(
