@@ -28,10 +28,8 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
-import android.view.ViewGroup;
 
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -53,25 +51,15 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    setMembers();
-  }
-
-  @Nullable
-  @Override
-  public View onCreateView(
-    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
-    setMembers();
-    return null;
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
+    provider = (Provider) getActivity();
+    radioLibrary = provider.getRadioLibrary();
   }
 
   @Override
   public void onResume() {
     super.onResume();
-    // Activity may have been re-created, so new library instance is used
-    setMembers();
     // Decorate
     provider.onFragmentResume(this);
   }
@@ -115,11 +103,6 @@ public abstract class MainActivityFragment extends Fragment {
 
   protected void tell(@NonNull String message) {
     Snackbar.make(Objects.requireNonNull(getView()), message, Snackbar.LENGTH_LONG).show();
-  }
-
-  private void setMembers() {
-    provider = (Provider) getActivity();
-    radioLibrary = provider.getRadioLibrary();
   }
 
   public interface Provider {

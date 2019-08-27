@@ -164,7 +164,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
     private void setPreferredButton() {
       preferredImageButton.setImageResource(radio.isPreferred() ?
-        R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp);
+        R.drawable.ic_star_black_30dp : R.drawable.ic_star_border_black_30dp);
     }
   }
 }

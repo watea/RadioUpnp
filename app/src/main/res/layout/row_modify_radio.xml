@@ -47,7 +47,7 @@
         <ImageButton
             android:id="@+id/row_modify_radio_move_image_button"
             android:contentDescription="@string/action_move"
-            android:src="@drawable/ic_reorder_black_24dp"
+            android:src="@drawable/ic_swap_vert_black_24dp"
             app:layout_gravity="end|center_vertical" />
 
     </android.support.v7.widget.GridLayout>

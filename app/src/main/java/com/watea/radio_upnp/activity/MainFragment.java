@@ -98,6 +98,9 @@ public class MainFragment
   private TextView playedRadioNameTextView;
   private TextView playedRadioInformationTextView;
   private View radiosDefaultView;
+  private View dlnaView;
+  private RecyclerView dlnaRecyclerView;
+  private RecyclerView radiosView;
   private MenuItem preferredMenuItem;
   private MenuItem dlnaMenuItem;
   private AlertDialog dlnaAlertDialog;
@@ -395,10 +398,7 @@ public class MainFragment
     playedRadioNameTextView.setSelected(true); // For scrolling
     playedRadioInformationTextView = view.findViewById(R.id.played_radio_information_text_view);
     playedRadioInformationTextView.setSelected(true); // For scrolling
-    RecyclerView radiosView = view.findViewById(R.id.radios_recycler_view);
-    radiosView.setLayoutManager(
-      new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
-    radiosView.setAdapter(radiosAdapter);
+    radiosView = view.findViewById(R.id.radios_recycler_view);
     radiosDefaultView = view.findViewById(R.id.view_radios_default);
     progressBar = view.findViewById(R.id.progress_bar);
     progressBar.setVisibility(View.INVISIBLE);
@@ -406,12 +406,8 @@ public class MainFragment
     playImageButton.setVisibility(View.INVISIBLE);
     playImageButton.setOnClickListener(this);
     playImageButton.setOnLongClickListener(this);
-    // Specific DLNA devices dialog
-    View dlnaView = inflater.inflate(R.layout.view_dlna_devices, container, false);
-    dlnaAlertDialog = new AlertDialog.Builder(getActivity()).setView(dlnaView).create();
-    RecyclerView dlnaRecyclerView = dlnaView.findViewById(R.id.dlna_devices_recycler_view);
-    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-    dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
+    dlnaView = inflater.inflate(R.layout.view_dlna_devices, container, false);
+    dlnaRecyclerView = dlnaView.findViewById(R.id.dlna_devices_recycler_view);
     return view;
   }
 
@@ -487,8 +483,8 @@ public class MainFragment
   }
 
   @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
     // Restore saved state, if any
     if (savedInstanceState != null) {
       isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
@@ -530,6 +526,9 @@ public class MainFragment
         }
       });
     radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
+    radiosView.setLayoutManager(
+      new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+    radiosView.setAdapter(radiosAdapter);
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
       .setMessage(R.string.radio_long_press)
@@ -558,6 +557,10 @@ public class MainFragment
         }
       });
     dlnaEnableAlertDialog = alertDialogBuilder.create();
+    // Specific DLNA devices dialog
+    dlnaAlertDialog = new AlertDialog.Builder(getActivity()).setView(dlnaView).create();
+    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+    dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
   }
 
   @Override
@@ -712,7 +715,7 @@ public class MainFragment
 
   private void setPreferredMenuItem() {
     preferredMenuItem.setIcon(
-      isPreferredRadios ? R.drawable.ic_star_black_24dp : R.drawable.ic_star_border_black_24dp);
+      isPreferredRadios ? R.drawable.ic_star_black_30dp : R.drawable.ic_star_border_black_30dp);
   }
 
   private void startReading(@NonNull Radio radio) {

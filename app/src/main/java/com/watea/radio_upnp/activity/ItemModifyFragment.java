@@ -108,8 +108,8 @@ public class ItemModifyFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
     // Restore saved state, if any
     if (savedInstanceState != null) {
       radio = radioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
@@ -123,6 +123,13 @@ public class ItemModifyFragment extends MainActivityFragment {
     if (radioIcon == null) {
       radioIcon = BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_radio);
     }
+    // Set views
+    nameEditText.setText(radioName);
+    setRadioIcon(radioIcon);
+    urlEditText.setText(radioUrl);
+    webPageEditText.setText(radioWebPage);
+    urlWatcher = new UrlWatcher(urlEditText);
+    webPageWatcher = new UrlWatcher(webPageEditText);
   }
 
   @Override
@@ -191,14 +198,6 @@ public class ItemModifyFragment extends MainActivityFragment {
     webPageEditText = view.findViewById(R.id.web_page_edit_text);
     darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
     searchImageButton = view.findViewById(R.id.search_image_button);
-    nameEditText.setText(radioName);
-    setRadioIcon(radioIcon);
-    urlEditText.setText(radioUrl);
-    webPageEditText.setText(radioWebPage);
-    urlWatcher = new UrlWatcher(urlEditText);
-    webPageWatcher = new UrlWatcher(webPageEditText);
-    urlEditText.setText(radioUrl);
-    webPageEditText.setText(radioWebPage);
     // Order matters!
     ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
       new RadioGroup.OnCheckedChangeListener() {

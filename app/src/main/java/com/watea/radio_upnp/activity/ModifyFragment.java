@@ -45,14 +45,20 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   private static final String LOG_TAG = ModifyFragment.class.getName();
   // <HMI assets
   private View radiosDefaultView;
+  private RecyclerView radiosRecyclerView;
   // />
   private RadiosModifyAdapter radiosModifyAdapter;
 
   @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
     // Adapters
     radiosModifyAdapter = new RadiosModifyAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
+    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+    // RecyclerView shall be defined for Adapter
+    radiosModifyAdapter.attachToRecyclerView(radiosRecyclerView);
+    // Adapter shall be defined for RecyclerView
+    radiosRecyclerView.setAdapter(radiosModifyAdapter);
   }
 
   @Nullable
@@ -62,12 +68,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     super.onCreateView(inflater, container, savedInstanceState);
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_modify, container, false);
-    RecyclerView radiosView = view.findViewById(R.id.radios_recycler_view);
-    radiosView.setLayoutManager(new LinearLayoutManager(getActivity()));
-    // RecyclerView shall be defined for Adapter
-    radiosModifyAdapter.attachToRecyclerView(radiosView);
-    // Adapter shall be defined for RecyclerView
-    radiosView.setAdapter(radiosModifyAdapter);
+    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosDefaultView = view.findViewById(R.id.view_radios_default);
     return view;
   }

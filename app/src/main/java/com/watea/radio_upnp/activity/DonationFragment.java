@@ -58,7 +58,6 @@ public class DonationFragment extends MainActivityFragment {
     "android.test.purchased",
     "android.test.canceled",
     "android.test.item_unavailable"};
-  ArrayAdapter<CharSequence> donationAdapter;
   // <HMI assets
   private Spinner googleSpinner;
   // />
@@ -140,20 +139,16 @@ public class DonationFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
     // Adapters
-    donationAdapter = new ArrayAdapter<CharSequence>(
+    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<CharSequence>(
       getActivity(),
       android.R.layout.simple_spinner_item,
       BuildConfig.DEBUG ?
         DEBUG_CATALOG : getResources().getStringArray(R.array.donation_google_catalog_values));
     donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-  }
-
-  @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
+    googleSpinner.setAdapter(donationAdapter);
     // Create the helper, passing it our context and the public key to verify signatures with
     iabHelper = new IabHelper(getActivity(), PUBKEY);
     // Enable debug logging (for a production application, you should set this to false)
@@ -172,7 +167,6 @@ public class DonationFragment extends MainActivityFragment {
     final View view = inflater.inflate(R.layout.content_donation, container, false);
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
-    googleSpinner.setAdapter(donationAdapter);
     return view;
   }
 

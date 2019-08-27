@@ -55,7 +55,6 @@
     <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>
     <string name="live_streaming">Live streaming</string>
     <string name="no_icon_found">Icon search failed, check if Web page URL is valid</string>
-    <string name="dar_fm_no_icon_found">Done!\nIcon search failed, try unchecking OnRad.io</string>
     <string name="connection_test_failed">Connection test failed</string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
     <string name="connection_test_successful">Connection test successful.\nAudio content: </string>
@@ -65,8 +64,8 @@
     <string name="dlna_enable">Short press: choose remote DLNA device.\nLong press: cancel choice.\nThe phone may need connection authorization.\nBad Wifi may hinder communication.</string>
     <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>
     <string name="icon_updated">Icon updated!</string>
-    <string name="dar_fm_went_wrong">Done!\nIcon or web page were not found, please check.</string>
-    <string name="dar_fm_done">Done!</string>
+    <string name="dar_fm_went_wrong">Radio found!\nIcon or web page unavailable.</string>
+    <string name="dar_fm_done">Radio found!</string>
     <string name="got_it">Got it!</string>
     <string name="donation_button_close">Close</string>
     <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer!</string>

@@ -39,7 +39,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.media.MediaBrowserCompat;
@@ -102,14 +101,36 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
     setSessionToken(session.getSessionToken());
     // Notification
+    CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
     notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     // Cancel all notifications to handle the case where the Service was killed and
     // restarted by the system
     if (notificationManager == null) {
-      Log.d(LOG_TAG, "onCreate: NotificationManager error");
+      Log.e(LOG_TAG, "onCreate: NotificationManager error");
       stopSelf();
     } else {
       notificationManager.cancelAll();
+      // Create the (mandatory) notification channel when running on Android Oreo and more
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+          NotificationChannel mChannel = new NotificationChannel(
+            CHANNEL_ID,
+            RadioService.class.getSimpleName(),
+            NotificationManager.IMPORTANCE_LOW);
+          // Configure the notification channel
+          mChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
+          mChannel.enableLights(true);
+          // Sets the notification light color for notifications posted to this
+          // channel, if the device supports this feature
+          mChannel.setLightColor(Color.GREEN);
+          mChannel.enableVibration(true);
+          mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+          notificationManager.createNotificationChannel(mChannel);
+          Log.d(LOG_TAG, "createChannel: new channel created");
+        } else {
+          Log.d(LOG_TAG, "createChannel: existing channel reused");
+        }
+      }
     }
     // Radio library access
     radioLibrary = new RadioLibrary(this);
@@ -139,11 +160,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       upnpConnection,
       BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "UpnpPlayerAdapter: internal failure; AndroidUpnpService not bound");
-    }
-    // Create the (mandatory) notification channel when running on Android Oreo
-    CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      createChannel();
     }
     isStarted = false;
     Log.d(LOG_TAG, "onCreate: done!");
@@ -203,12 +219,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           break;
         case PlaybackStateCompat.STATE_PLAYING:
           // Start service if needed
-          if (!isStarted) {
+          if (isStarted) {
+            notificationManager.notify(NOTIFICATION_ID, getNotification());
+          } else {
             ContextCompat.startForegroundService(this, new Intent(this, RadioService.class));
             isStarted = true;
           }
-          // Update notification
-          notificationManager.notify(NOTIFICATION_ID, getNotification());
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           // Move service out started state
@@ -244,33 +260,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   private boolean isValid(@NonNull String lockKey) {
     return (!lockKey.equals(VOID) && playerAdapter.getLockKey().equals(lockKey));
-  }
-
-  // Does nothing on versions of Android earlier than O
-  @RequiresApi(Build.VERSION_CODES.O)
-  private void createChannel() {
-    if (notificationManager == null) {
-      Log.d(LOG_TAG, "NotificationManager is not defined");
-    } else {
-      if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-        NotificationChannel mChannel = new NotificationChannel(
-          CHANNEL_ID,
-          RadioService.class.getSimpleName(),
-          NotificationManager.IMPORTANCE_LOW);
-        // Configure the notification channel
-        mChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
-        mChannel.enableLights(true);
-        // Sets the notification light color for notifications posted to this
-        // channel, if the device supports this feature
-        mChannel.setLightColor(Color.GREEN);
-        mChannel.enableVibration(true);
-        mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-        notificationManager.createNotificationChannel(mChannel);
-        Log.d(LOG_TAG, "createChannel: new channel created");
-      } else {
-        Log.d(LOG_TAG, "createChannel: existing channel reused");
-      }
-    }
   }
 
   @Nullable
@@ -400,6 +389,5 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     public void onStop() {
       playerAdapter.stop();
     }
-
   }
 }
