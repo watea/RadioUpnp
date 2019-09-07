@@ -25,6 +25,7 @@ package com.watea.radio_upnp.service;
 
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.watea.radio_upnp.BuildConfig;
@@ -57,6 +58,7 @@ public class RadioHandler extends AbstractHandler {
   private static final int METADATA_MAX = 256;
   private static final String GET = "GET";
   private static final String HEAD = "HEAD";
+  private static final String CONNECTION = "Connection";
   private static final String RADIO_ID = "radio_id";
   private static final String LOCK_KEY = "lock_key";
   // For ICY metadata
@@ -99,17 +101,11 @@ public class RadioHandler extends AbstractHandler {
 
   // Add ID and lock key to given URI as query parameter
   @NonNull
-  public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
-    return getHandledUri(uri, radio, lockKey, "radio");
-  }
-
-  // Add ID and lock key to given URI as query parameter
-  @NonNull
   public static Uri getHandledUri(
-    @NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey, @NonNull String content) {
+    @NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
       .buildUpon()
-      .appendEncodedPath(content)
+      .appendEncodedPath("radio")
       // Add radio ID + lock key as query parameter
       .appendQueryParameter(RADIO_ID, radio.getId().toString())
       .appendQueryParameter(LOCK_KEY, lockKey)
@@ -129,6 +125,7 @@ public class RadioHandler extends AbstractHandler {
     // Request must contain a query with radio ID and lock key
     String radioId = baseRequest.getParameter(RADIO_ID);
     String lockKey = baseRequest.getParameter(LOCK_KEY);
+    String connectionHeader = baseRequest.getHeader(CONNECTION);
     if ((radioId == null) || (lockKey == null) || lockKey.equals(Listener.VOID)) {
       Log.d(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
     } else {
@@ -141,10 +138,10 @@ public class RadioHandler extends AbstractHandler {
         Log.d(LOG_TAG, method + " received. Radio/UUID: " + radio.getName() + "/" + lockKey);
         switch (method) {
           case HEAD:
-            handleConnection(false, response, radio, lockKey);
+            handleConnection(false, connectionHeader, response, radio, lockKey);
             break;
           case GET:
-            handleConnection(true, response, radio, lockKey);
+            handleConnection(true, connectionHeader, response, radio, lockKey);
             break;
           default:
             Log.d(LOG_TAG, "Unknown radio request received:" + method);
@@ -155,6 +152,7 @@ public class RadioHandler extends AbstractHandler {
 
   private void handleConnection(
     boolean isGet,
+    @Nullable String connectionHeader,
     @NonNull HttpServletResponse response,
     @NonNull Radio radio,
     @NonNull String lockKey) {
@@ -169,49 +167,33 @@ public class RadioHandler extends AbstractHandler {
       httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
       httpURLConnection.setReadTimeout(READ_TIMEOUT);
       httpURLConnection.setRequestMethod(isGet ? GET : HEAD);
+      if (connectionHeader != null) {
+        httpURLConnection.setRequestProperty(CONNECTION, connectionHeader);
+      }
       httpURLConnection.setRequestProperty("User-Agent", userAgent);
-      httpURLConnection.setRequestProperty("GetContentFeatures.dlna.org", "1");
       if (isGet) {
         httpURLConnection.setRequestProperty("Icy-metadata", "1");
       }
       httpURLConnection.connect();
       Log.d(LOG_TAG, "handleConnection: connected to radio URL");
       // Response to LAN
-      response.setContentType("audio/mpeg");
+      String contentType = httpURLConnection.getContentType();
+      response.setContentType((contentType == null) ? "audio/mpeg" : contentType);
       response.setHeader("Server", userAgent);
       response.setHeader("Accept-Ranges", "bytes");
-      response.setHeader("Connection", "Keep-Alive");
-      /* DLNA.ORG_FLAGS, padded with 24 trailing 0s
-       *     80000000  31  senderPaced
-       *     40000000  30  lsopTimeBasedSeekSupported
-       *     20000000  29  lsopByteBasedSeekSupported
-       *     10000000  28  playcontainerSupported
-       *      8000000  27  s0IncreasingSupported
-       *      4000000  26  sNIncreasingSupported
-       *      2000000  25  rtspPauseSupported
-       *      1000000  24  streamingTransferModeSupported
-       *       800000  23  interactiveTransferModeSupported
-       *       400000  22  backgroundTransferModeSupported
-       *       200000  21  connectionStallingSupported
-       *       100000  20  dlnaVersion15Supported
-       *
-       *     Example: (1 << 24) | (1 << 22) | (1 << 21) | (1 << 20)
-       *       DLNA.ORG_FLAGS=01700000[000000000000000000000000] // [] show padding
-       *
-       * If DLNA.ORG_OP=11, then left/rght keys uses range header, and up/down uses TimeSeekRange.DLNA.ORG header
-       * If DLNA.ORG_OP=10, then left/rght and up/down keys uses TimeSeekRange.DLNA.ORG header
-       * If DLNA.ORG_OP=01, then left/rght keys uses range header, and up/down keys are disabled
-       * and if DLNA.ORG_OP=00, then all keys are disabled */
-      response.setHeader("ContentFeatures.dlna.org", "DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01700000000000000000000000000000");
-      response.setHeader("TransferMode.dlna.org", "Streaming");
+      response.setHeader("Cache-Control", "no-cache");
+      if (connectionHeader != null) {
+        response.setHeader(CONNECTION, connectionHeader);
+      }
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
       Log.d(LOG_TAG, "handleConnection: response sent to LAN client");
-      if (isGet) {
+      if (isGet &&
+        ((connectionHeader == null) || connectionHeader.toLowerCase().equals("keep-alive"))) {
         // Try to find charset
-        String contentType = httpURLConnection.getContentEncoding();
-        Charset charset = (contentType == null) ?
-          Charset.defaultCharset() : Charset.forName(contentType);
+        String contentEncoding = httpURLConnection.getContentEncoding();
+        Charset charset = (contentEncoding == null) ?
+          Charset.defaultCharset() : Charset.forName(contentEncoding);
         // Find metadata place, 0 if undefined
         int metadataOffset = 0;
         List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");

@@ -121,7 +121,8 @@ public class ItemModifyFragment extends MainActivityFragment {
     }
     // Init if necessary
     if (radioIcon == null) {
-      radioIcon = BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_radio);
+      radioIcon = BitmapFactory.decodeResource(
+        Objects.requireNonNull(getActivity()).getResources(), R.drawable.ic_radio);
     }
     // Set views
     nameEditText.setText(radioName);
@@ -133,7 +134,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onSaveInstanceState(Bundle outState) {
+  public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     // "set" values...
     outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : radio.getId());
@@ -175,7 +176,7 @@ public class ItemModifyFragment extends MainActivityFragment {
           }
         }
         // Back to previous fragment
-        getFragmentManager().popBackStack();
+        Objects.requireNonNull(getFragmentManager()).popBackStack();
       }
     } else {
       // If we got here, the user's action was not recognized
@@ -188,7 +189,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   @Nullable
   @Override
   public View onCreateView(
-    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
     super.onCreateView(inflater, container, savedInstanceState);
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_item_modify, container, false);
@@ -218,7 +219,7 @@ public class ItemModifyFragment extends MainActivityFragment {
       @Override
       public void onClick(View view) {
         flushKeyboard(Objects.requireNonNull(getView()));
-        if (NetworkTester.isDeviceOffline(getActivity())) {
+        if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
           tell(R.string.no_internet);
         } else {
           if (darFmRadioButton.isChecked()) {
@@ -241,7 +242,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     return new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        if (NetworkTester.isDeviceOffline(getActivity())) {
+        if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
           tell(R.string.no_internet);
         } else {
           if (urlWatcher.url == null) {
@@ -289,8 +290,8 @@ public class ItemModifyFragment extends MainActivityFragment {
   }
 
   private void flushKeyboard(@NonNull View view) {
-    InputMethodManager inputMethodManager =
-      (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+    InputMethodManager inputMethodManager = (InputMethodManager)
+      Objects.requireNonNull(getActivity()).getSystemService(Context.INPUT_METHOD_SERVICE);
     if (inputMethodManager != null) {
       inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
@@ -366,7 +367,8 @@ public class ItemModifyFragment extends MainActivityFragment {
           tell(R.string.malformed_url_error);
         }
         url = null;
-        editText.setTextColor(ContextCompat.getColor(getActivity(), R.color.colorError));
+        editText.setTextColor(
+          ContextCompat.getColor(Objects.requireNonNull(getActivity()), R.color.colorError));
       }
     }
   }
@@ -492,7 +494,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             break;
           default:
             new AlertDialog
-              .Builder(getActivity())
+              .Builder(Objects.requireNonNull(getActivity()))
               .setAdapter(
                 new SimpleAdapter(
                   getActivity(),

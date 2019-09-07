@@ -38,7 +38,6 @@ import com.watea.radio_upnp.service.RadioHandler;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.controlpoint.ActionCallback;
-import org.fourthline.cling.model.action.ActionArgumentValue;
 import org.fourthline.cling.model.action.ActionInvocation;
 import org.fourthline.cling.model.message.UpnpResponse;
 import org.fourthline.cling.model.meta.Device;
@@ -49,6 +48,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   public static final ServiceId AV_TRANSPORT_SERVICE_ID = new UDAServiceId("AVTransport");
   private static final ServiceId RENDERING_CONTROL_ID = new UDAServiceId("RenderingControl");
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
+  private static final String MPEG = "audio/mpeg";
   private static final String UPNP_ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
   private static final String UPNP_ACTION_PLAY = "Play";
   private static final String UPNP_ACTION_PAUSE = "Pause";
@@ -56,18 +56,69 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String UPNP_ACTION_SET_VOLUME = "SetVolume";
   private static final String UPNP_ACTION_GET_VOLUME = "GetVolume";
   private static final String UPNP_INPUT_DESIRED_VOLUME = "DesiredVolume";
-  private static final int DEFAULT = -1;
   private static final int REMOTE_LOGO_SIZE = 140;
   @Nullable
   private Device dlnaDevice = null;
   @Nullable
   private AndroidUpnpService androidUpnpService = null;
-  private Integer currentVolume;
-  private boolean isVolumeInProgress;
+  private int volumeDirection;
 
   public UpnpPlayerAdapter(
     @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
     super(context, httpServer, listener);
+  }
+
+  /* DLNA.ORG_FLAGS, padded with 24 trailing 0s
+   *     80000000  31  senderPaced
+   *     40000000  30  lsopTimeBasedSeekSupported
+   *     20000000  29  lsopByteBasedSeekSupported
+   *     10000000  28  playcontainerSupported
+   *      8000000  27  s0IncreasingSupported
+   *      4000000  26  sNIncreasingSupported
+   *      2000000  25  rtspPauseSupported
+   *      1000000  24  streamingTransferModeSupported
+   *       800000  23  interactiveTransferModeSupported
+   *       400000  22  backgroundTransferModeSupported
+   *       200000  21  connectionStallingSupported
+   *       100000  20  dlnaVersion15Supported
+   *
+   *     Example: (1 << 24) | (1 << 22) | (1 << 21) | (1 << 20)
+   *       DLNA.ORG_FLAGS=01700000[000000000000000000000000] // [] show padding
+   *
+   * If DLNA.ORG_OP=11, then left/rght keys uses range header, and up/down uses TimeSeekRange.DLNA.ORG header
+   * If DLNA.ORG_OP=10, then left/rght and up/down keys uses TimeSeekRange.DLNA.ORG header
+   * If DLNA.ORG_OP=01, then left/rght keys uses range header, and up/down keys are disabled
+   * and if DLNA.ORG_OP=00, then all keys are disabled
+   * DLNA.ORG_CI 0 = native 1, = transcoded
+   * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region
+   * Example:
+   * DLNA_PARAMS = "DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"; */
+  @NonNull
+  private static String getProtocolInfo(String contentType) {
+    String normalizedContent = contentType.toLowerCase();
+    String protocolInfo = "\"http-get:*:" + normalizedContent + ":";
+    String dlnaOrgPn = "DLNA.ORG_PN=";
+    switch (normalizedContent) {
+      case "audio/x-ms-wma":
+        dlnaOrgPn += "WMABASE";
+        break;
+      case "audio/mp4":
+        dlnaOrgPn += "AAC_ISO_320";
+        break;
+      case "audio/aac":
+        dlnaOrgPn += "AAC_ADTS_320";
+        break;
+      case "audio/3gpp":
+        dlnaOrgPn += "AMR_3GPP";
+        break;
+      case MPEG:
+        dlnaOrgPn += "MP3";
+        break;
+      default:
+        return protocolInfo + "*\"";
+    }
+    return protocolInfo + dlnaOrgPn +
+      ";DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000\"";
   }
 
   // Must be called
@@ -91,27 +142,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   public void adjustVolume(int direction) {
-    // Do nothing if volume not controlled
-    if ((currentVolume == DEFAULT) || isVolumeInProgress) {
+    // Do nothing if volume not controlled or already running
+    if ((dlnaDevice == null) ||
+      (dlnaDevice.findService(RENDERING_CONTROL_ID) == null) ||
+      (volumeDirection != AudioManager.ADJUST_SAME)) {
       return;
     }
-    Integer desiredVolume;
-    switch (direction) {
-      case AudioManager.ADJUST_LOWER:
-        desiredVolume = Math.max(0, --currentVolume);
-        break;
-      case AudioManager.ADJUST_RAISE:
-        desiredVolume = ++currentVolume;
-        break;
-      default:
-        // Nothing to do
-        return;
-    }
-    isVolumeInProgress = true;
-    ActionInvocation actionInvocation =
-      getRenderingControlUpnpActionInvocation(UPNP_ACTION_SET_VOLUME);
-    actionInvocation.setInput(UPNP_INPUT_DESIRED_VOLUME, desiredVolume.toString());
-    upnpExecuteAction(actionInvocation);
+    volumeDirection = direction;
+    upnpExecuteAction(getRenderingControlUpnpActionInvocation(UPNP_ACTION_GET_VOLUME));
   }
 
   @Override
@@ -126,11 +164,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       throw new RuntimeException("dlnaDevice not defined");
     }
     // Volume
-    currentVolume = DEFAULT;
-    isVolumeInProgress = true;
-    if (dlnaDevice.findService(RENDERING_CONTROL_ID) != null) {
-      upnpExecuteAction(getRenderingControlUpnpActionInvocation(UPNP_ACTION_GET_VOLUME));
-    }
+    volumeDirection = AudioManager.ADJUST_SAME;
     // Rendering
     // Lock key is final for this thread
     final String lockKey = getLockKey();
@@ -140,11 +174,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       public void run() {
         super.run();
         String contentType = NetworkTester.getStreamContentType(radio.getURL());
-        contentType = (contentType == null) ? "audio/mpeg" : contentType;
-        // Content name is similar to content type (necessary for MS Media Player)
-        String radioUri = RadioHandler
-          .getHandledUri(httpServer.getUri(), radio, lockKey, contentType.replace("/", "."))
-          .toString();
+        contentType = (contentType == null) ? MPEG : contentType;
+        String radioUri =
+          RadioHandler.getHandledUri(httpServer.getUri(), radio, lockKey).toString();
         ActionInvocation actionInvocation =
           getAVTransportUpnpActionInvocation(UPNP_ACTION_SET_AV_TRANSPORT_URI);
         actionInvocation.setInput("CurrentURI", radioUri);
@@ -159,7 +191,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
             "<dc:title>" + radio.getName() + "</dc:title>" +
             "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
             "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
-            "<res protocolInfo=\"http-get:*:" + contentType + ":*\">" + radioUri + "</res>" +
+            "<res duration=\"0:00:00\" protocolInfo=" + getProtocolInfo(contentType) + ">" +
+            radioUri + "</res>" +
             "<upnp:albumArtURI>" + httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE) +
             "</upnp:albumArtURI>" +
             "</item>" +
@@ -268,27 +301,38 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     public void success(ActionInvocation invocation) {
       String action = actionInvocation.getAction().getName();
       Log.d(LOG_TAG, "Successfully called UPnP action: " + action);
-      for (ActionArgumentValue value : actionInvocation.getOutput()) {
-        Log.d(LOG_TAG, value.toString());
-      }
       switch (action) {
         case UpnpPlayerAdapter.UPNP_ACTION_GET_VOLUME:
+          int currentVolume;
           // Lock key should be tested here ot be rigorous
           synchronized (UpnpPlayerAdapter.this) {
             currentVolume =
-              Integer.parseInt(actionInvocation.getOutput("CurrentVolume").toString());
-            isVolumeInProgress = false;
-            Log.d(LOG_TAG, "Volume: " + currentVolume);
+              Integer.parseInt(actionInvocation.getOutput("CurrentVolume").getValue().toString());
+            switch (volumeDirection) {
+              case AudioManager.ADJUST_LOWER:
+                currentVolume = Math.max(0, --currentVolume);
+                break;
+              case AudioManager.ADJUST_RAISE:
+                currentVolume++;
+                break;
+              default:
+                // Nothing to do
+                return;
+            }
+            ActionInvocation actionInvocation =
+              getRenderingControlUpnpActionInvocation(UPNP_ACTION_SET_VOLUME);
+            actionInvocation.setInput(UPNP_INPUT_DESIRED_VOLUME, Integer.toString(currentVolume));
+            upnpExecuteAction(actionInvocation);
           }
+          Log.d(LOG_TAG, "Volume required: " + currentVolume);
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_SET_VOLUME:
+          // Done!
           // Lock key should be tested here ot be rigorous
           synchronized (UpnpPlayerAdapter.this) {
-            currentVolume =
-              Integer.parseInt(actionInvocation.getInput(UPNP_INPUT_DESIRED_VOLUME).toString());
-            isVolumeInProgress = false;
-            Log.d(LOG_TAG, "Volume: " + currentVolume);
+            volumeDirection = AudioManager.ADJUST_SAME;
           }
+          Log.d(LOG_TAG, "Volume set: " + actionInvocation.getInput(UPNP_INPUT_DESIRED_VOLUME));
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_SET_AV_TRANSPORT_URI:
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, actionLockKey);
@@ -323,7 +367,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       // Lock key should be tested here ot be rigorous
       if (action.equals(UpnpPlayerAdapter.UPNP_ACTION_GET_VOLUME) ||
         action.equals(UPNP_ACTION_SET_VOLUME)) {
-        isVolumeInProgress = false;
+        // No more action
+        volumeDirection = AudioManager.ADJUST_SAME;
         return;
       }
       changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, actionLockKey);

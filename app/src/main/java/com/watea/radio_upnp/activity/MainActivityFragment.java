@@ -23,11 +23,11 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.app.Fragment;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.Fragment;
 import android.view.Menu;
 import android.view.View;
 
@@ -54,7 +54,7 @@ public abstract class MainActivityFragment extends Fragment {
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     provider = (Provider) getActivity();
-    radioLibrary = provider.getRadioLibrary();
+    radioLibrary = Objects.requireNonNull(provider).getRadioLibrary();
   }
 
   @Override

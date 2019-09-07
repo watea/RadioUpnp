@@ -356,7 +356,7 @@ public class MainFragment
 
   @Override
   public void onRowClick(@NonNull Radio radio) {
-    if (NetworkTester.isDeviceOffline(getActivity())) {
+    if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
       tell(R.string.no_internet);
       return;
     }
@@ -389,7 +389,7 @@ public class MainFragment
   @Nullable
   @Override
   public View onCreateView(
-    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
     super.onCreateView(inflater, container, savedInstanceState);
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_main, container, false);
@@ -424,7 +424,7 @@ public class MainFragment
     return new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+        if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
           tell(R.string.LAN_required);
           return;
         }
@@ -451,7 +451,7 @@ public class MainFragment
     return new View.OnLongClickListener() {
       @Override
       public boolean onLongClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(getActivity())) {
+        if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
           tell(R.string.LAN_required);
           return true;
         }
@@ -490,7 +490,8 @@ public class MainFragment
       isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
     }
     // Shared preferences
-    SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
+    SharedPreferences sharedPreferences =
+      Objects.requireNonNull(getActivity()).getPreferences(Context.MODE_PRIVATE);
     gotItRadioLongPress =
       sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
     gotItPlayLongPress =
@@ -564,7 +565,7 @@ public class MainFragment
   }
 
   @Override
-  public void onSaveInstanceState(Bundle outState) {
+  public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
     outState.putString(getString(R.string.key_selected_device),
@@ -576,7 +577,7 @@ public class MainFragment
   public void onPause() {
     super.onPause();
     // Shared preferences
-    getActivity()
+    Objects.requireNonNull(getActivity())
       .getPreferences(Context.MODE_PRIVATE)
       .edit()
       .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
@@ -727,7 +728,7 @@ public class MainFragment
     isErrorAllowedToTell = true;
     Bundle bundle = new Bundle();
     if ((androidUpnpService != null) &&
-      NetworkTester.hasWifiIpAddress(getActivity()) &&
+      NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity())) &&
       dlnaDevicesAdapter.hasChosenDlnaDevice()) {
       bundle.putString(getString(R.string.key_dlna_device),
         Objects.requireNonNull(dlnaDevicesAdapter.getChosenDlnaDevice()).getIdentity());

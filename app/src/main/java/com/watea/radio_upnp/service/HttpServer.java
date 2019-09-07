@@ -30,7 +30,6 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -45,35 +44,38 @@ public class HttpServer extends Thread {
   private static final String LOGO_FILE = "logo";
   private static final int PORT = 57648;
   @NonNull
-  public final RadioHandler radioHandler;
-  @NonNull
   private final Context context;
   @NonNull
   private final Server server;
+  @NonNull
+  private final RadioHandler radioHandler;
   @NonNull
   private final Listener listener;
 
   public HttpServer(
     @NonNull Context context,
-    @NonNull String userAgent,
-    @NonNull RadioLibrary radioLibrary,
+    @NonNull RadioHandler radioHandler,
     @NonNull Listener listener) {
     this.context = context;
     server = new Server(PORT);
     this.listener = listener;
+    this.radioHandler = radioHandler;
     // Handler for local files
     ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setResourceBase(this.context.getFilesDir().getPath());
     // Add the ResourceHandler to the server
     HandlerList handlers = new HandlerList();
-    radioHandler = new RadioHandler(userAgent, radioLibrary, true);
-    handlers.setHandlers(new Handler[]{resourceHandler, radioHandler});
+    handlers.setHandlers(new Handler[]{resourceHandler, this.radioHandler});
     server.setHandler(handlers);
   }
 
   @NonNull
   public static Uri getLoopbackUri() {
     return NetworkTester.getLoopbackUri(PORT);
+  }
+
+  public void setRadioHandlerListener(RadioHandler.Listener listener) {
+    radioHandler.setListener(listener);
   }
 
   @Override

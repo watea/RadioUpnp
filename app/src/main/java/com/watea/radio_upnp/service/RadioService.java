@@ -135,24 +135,22 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     // Radio library access
     radioLibrary = new RadioLibrary(this);
     // Init HTTP Server
-    httpServer = new HttpServer(
-      this,
-      getString(R.string.app_name),
-      radioLibrary,
-      new HttpServer.Listener() {
-        @Override
-        public void onError() {
-          Log.d(LOG_TAG, "onCreate: HttpServer error");
-          stopSelf();
-        }
-      });
+    RadioHandler radioHandler = new RadioHandler(getString(R.string.app_name), radioLibrary, true);
+    HttpServer.Listener httpServerListener = new HttpServer.Listener() {
+      @Override
+      public void onError() {
+        Log.d(LOG_TAG, "onCreate: HttpServer error");
+        stopSelf();
+      }
+    };
+    httpServer = new HttpServer(this, radioHandler, httpServerListener);
     // Init players
     localPlayerAdapter = new LocalPlayerAdapter(this, httpServer, this);
     upnpPlayerAdapter = new UpnpPlayerAdapter(this, httpServer, this);
     // Default actual player
     playerAdapter = localPlayerAdapter;
     // Is current handler listener
-    httpServer.radioHandler.setListener(playerAdapter);
+    radioHandler.setListener(playerAdapter);
     httpServer.start();
     // Bind to UPnP service, launch if not already
     if (!bindService(

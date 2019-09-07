@@ -36,12 +36,8 @@ import android.util.Log;
 
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
-import com.watea.radio_upnp.service.NetworkTester;
 import com.watea.radio_upnp.service.RadioHandler;
 
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
@@ -81,8 +77,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     }
   };
   private boolean isRerunAllowed = false;
-  @NonNull
-  private final Map<Long, String> contentCache = new Hashtable<>();
 
   public PlayerAdapter(
     @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
@@ -143,8 +137,8 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     unregisterAudioNoisyReceiver();
     // New tag
     lockKey = UUID.randomUUID().toString();
-    httpServer.radioHandler.setListener(this);
-        onPrepareFromMediaId(radio);
+    httpServer.setRadioHandlerListener(this);
+    onPrepareFromMediaId(radio);
   }
 
   public final void play() {

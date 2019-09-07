@@ -24,8 +24,6 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
-import android.app.Fragment;
-import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -36,6 +34,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -208,7 +208,7 @@ public class MainActivity
     Fragment fragment;
     String tag = fragmentClass.getSimpleName();
     if (ALWAYS_NEW_FRAGMENTS.contains(fragmentClass) ||
-      ((fragment = getFragmentManager().findFragmentByTag(tag)) == null)) {
+      ((fragment = getSupportFragmentManager().findFragmentByTag(tag)) == null)) {
       try {
         fragment = fragmentClass.getConstructor().newInstance();
       } catch (Exception exception) {
@@ -217,7 +217,7 @@ public class MainActivity
         throw new RuntimeException();
       }
     }
-    FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
+    FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
     fragmentTransaction.replace(R.id.content_frame, fragment, tag);
     // First fragment transaction not saved to enable back leaving the app
     if (getCurrentFragment() != null) {
@@ -261,8 +261,8 @@ public class MainActivity
     mainFragment = (MainFragment) ((getCurrentFragment() == null) ?
       setFragment(MainFragment.class) :
       // Shall exists as MainFragment always created
-      getFragmentManager().findFragmentByTag(MainFragment.class.getSimpleName()));
-    mainFragment.onActivityResume(this);
+      getSupportFragmentManager().findFragmentByTag(MainFragment.class.getSimpleName()));
+    Objects.requireNonNull(mainFragment).onActivityResume(this);
   }
 
   @Override
@@ -346,7 +346,7 @@ public class MainActivity
 
   @Nullable
   private Fragment getCurrentFragment() {
-    return getFragmentManager().findFragmentById(R.id.content_frame);
+    return getSupportFragmentManager().findFragmentById(R.id.content_frame);
   }
 
   private void checkNavigationMenu(@NonNull Integer id) {

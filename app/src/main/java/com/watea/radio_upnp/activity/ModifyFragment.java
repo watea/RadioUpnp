@@ -40,6 +40,7 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioSQLContract;
 
 import java.util.List;
+import java.util.Objects;
 
 public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
   private static final String LOG_TAG = ModifyFragment.class.getName();
@@ -53,7 +54,8 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     // Adapters
-    radiosModifyAdapter = new RadiosModifyAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
+    radiosModifyAdapter = new RadiosModifyAdapter(
+      Objects.requireNonNull(getActivity()), this, RADIO_ICON_SIZE / 2);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
     // RecyclerView shall be defined for Adapter
     radiosModifyAdapter.attachToRecyclerView(radiosRecyclerView);
@@ -64,7 +66,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Nullable
   @Override
   public View onCreateView(
-    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
     super.onCreateView(inflater, container, savedInstanceState);
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_modify, container, false);

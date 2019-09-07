@@ -45,6 +45,7 @@
         android:id="@+id/radios_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/colorLightBackgroung"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <LinearLayout

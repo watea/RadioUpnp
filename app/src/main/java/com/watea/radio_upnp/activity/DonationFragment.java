@@ -42,6 +42,8 @@ import com.watea.radio_upnp.util.IabHelper;
 import com.watea.radio_upnp.util.IabResult;
 import com.watea.radio_upnp.util.Purchase;
 
+import java.util.Objects;
+
 import static com.watea.radio_upnp.util.IabHelper.BILLING_RESPONSE_RESULT_USER_CANCELED;
 import static com.watea.radio_upnp.util.IabHelper.IABHELPER_USER_CANCELLED;
 
@@ -92,7 +94,8 @@ public class DonationFragment extends MainActivityFragment {
                     openDialog(
                       android.R.drawable.ic_dialog_info,
                       R.string.donation_thanks_dialog_title,
-                      getActivity().getResources().getString(R.string.donation_thanks_dialog));
+                      Objects.requireNonNull(getActivity())
+                        .getResources().getString(R.string.donation_thanks_dialog));
                   } else {
                     complaign(result.getMessage());
                   }
@@ -100,7 +103,8 @@ public class DonationFragment extends MainActivityFragment {
                 }
               });
           } catch (IabHelper.IabAsyncInProgressException iabAsyncInProgressException) {
-            complaign(getActivity().getResources().getString(R.string.donation_alert_dialog_try_again));
+            complaign(Objects.requireNonNull(getActivity())
+              .getResources().getString(R.string.donation_alert_dialog_try_again));
           }
         } else {
           // No error message for user cancel
@@ -143,7 +147,7 @@ public class DonationFragment extends MainActivityFragment {
     super.onActivityCreated(savedInstanceState);
     // Adapters
     ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<CharSequence>(
-      getActivity(),
+      Objects.requireNonNull(getActivity()),
       android.R.layout.simple_spinner_item,
       BuildConfig.DEBUG ?
         DEBUG_CATALOG : getResources().getStringArray(R.array.donation_google_catalog_values));
@@ -162,7 +166,7 @@ public class DonationFragment extends MainActivityFragment {
   @Nullable
   @Override
   public View onCreateView(
-    LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
     super.onCreateView(inflater, container, savedInstanceState);
     final View view = inflater.inflate(R.layout.content_donation, container, false);
     // Choose donation amount
@@ -194,7 +198,7 @@ public class DonationFragment extends MainActivityFragment {
           openDialog(
             android.R.drawable.ic_dialog_alert,
             R.string.donation_google_android_market_not_supported_title,
-            getActivity()
+            Objects.requireNonNull(getActivity())
               .getResources()
               .getString(R.string.donation_google_android_market_not_supported));
         }
@@ -234,6 +238,7 @@ public class DonationFragment extends MainActivityFragment {
     openDialog(
       android.R.drawable.ic_dialog_alert,
       R.string.donation_alert_dialog_title,
-      getActivity().getResources().getString(R.string.donation_alert_tip) + message);
+      Objects.requireNonNull(getActivity())
+        .getResources().getString(R.string.donation_alert_tip) + message);
   }
 }
