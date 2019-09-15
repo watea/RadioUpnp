@@ -184,7 +184,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   }
 
   @Override
-  public synchronized void onDestroy() {
+  public void onDestroy() {
     super.onDestroy();
     Log.d(LOG_TAG, "onDestroy: requested...");
     localPlayerAdapter.release();
@@ -205,8 +205,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
-  public synchronized void onPlaybackStateChange(
-    @NonNull PlaybackStateCompat state, @NonNull String lockKey) {
+  public void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey) {
     if (isValid(lockKey)) {
       Log.d(LOG_TAG, "New valid state/lock key received: " + state + "/" + lockKey);
       // Report the state to the MediaSession
@@ -247,7 +246,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   // Only if lockKey still valid
   @Override
-  public synchronized void onInformationChange(
+  public void onInformationChange(
     @NonNull MediaMetadataCompat mediaMetadataCompat, @NonNull String lockKey) {
     if (isValid(lockKey)) {
       session.setMetadata(this.mediaMetadataCompat = mediaMetadataCompat);
@@ -348,29 +347,26 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       }
       // Stop if any, avoid any cross acquisition of multithread lock
       playerAdapter.stop();
-      // Synchronize as session ids shall be changed in coherence
-      synchronized (RadioService.this) {
-        // Default
-        playerAdapter = localPlayerAdapter;
-        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
-        // Set actual player DLNA? Extra shall contain DLNA device UDN.
-        if (!extras.isEmpty()) {
-          if (upnpPlayerAdapter.setDlnaDevice(
-            extras.getString(getString(R.string.key_dlna_device)))) {
-            playerAdapter = upnpPlayerAdapter;
-            session.setPlaybackToRemote(volumeProviderCompat);
-          } else {
-            Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
-            return;
-          }
+      // Default
+      playerAdapter = localPlayerAdapter;
+      session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
+      // Set actual player DLNA? Extra shall contain DLNA device UDN.
+      if (!extras.isEmpty()) {
+        if (upnpPlayerAdapter.setDlnaDevice(
+          extras.getString(getString(R.string.key_dlna_device)))) {
+          playerAdapter = upnpPlayerAdapter;
+          session.setPlaybackToRemote(volumeProviderCompat);
+        } else {
+          Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
+          return;
         }
-        // Synchronize session data
-        session.setActive(true);
-        session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
-        session.setExtras(extras);
-        // Prepare radio streaming
-        playerAdapter.prepareFromMediaId(radio);
       }
+      // Synchronize session data
+      session.setActive(true);
+      session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
+      session.setExtras(extras);
+      // Prepare radio streaming
+      playerAdapter.prepareFromMediaId(radio);
     }
 
     @Override

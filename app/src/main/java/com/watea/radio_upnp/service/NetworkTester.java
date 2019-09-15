@@ -58,7 +58,6 @@ public class NetworkTester {
     HttpURLConnection httpURLConnection = null;
     try {
       httpURLConnection = getActualHttpURLConnection(uRL);
-      // Actual connection test: header must be audio/mpeg
       streamContent = httpURLConnection.getHeaderField("Content-Type");
       // If we get there, connection has occurred
       Log.d(LOG_TAG, "Connection status/contentType: " +

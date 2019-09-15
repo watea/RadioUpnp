@@ -24,8 +24,8 @@
 package com.watea.radio_upnp.service;
 
 import android.net.Uri;
+import android.os.Handler;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.watea.radio_upnp.BuildConfig;
@@ -44,7 +44,9 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,13 +56,14 @@ import javax.servlet.http.HttpServletResponse;
 public class RadioHandler extends AbstractHandler {
   private static final String LOG_TAG = RadioHandler.class.getName();
   private static final int CONNECT_TIMEOUT = 5000;
-  private static final int READ_TIMEOUT = 30000;
+  private static final int READ_TIMEOUT = 10000;
   private static final int METADATA_MAX = 256;
   private static final String GET = "GET";
   private static final String HEAD = "HEAD";
-  private static final String CONNECTION = "Connection";
-  private static final String RADIO_ID = "radio_id";
-  private static final String LOCK_KEY = "lock_key";
+  private static final String USER_AGENT = "User-Agent";
+  private static final String PARAMS = "params";
+  @SuppressWarnings("RegExpEmptyAlternationBranch")
+  private static final String SEPARATOR = "|";
   // For ICY metadata
   private static final Pattern PATTERN = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
@@ -69,7 +72,12 @@ public class RadioHandler extends AbstractHandler {
   private final RadioLibrary radioLibrary;
   private final boolean isBuffered;
   @NonNull
+  private final Handler handler = new Handler();
+  @NonNull
+  private final Map<String, String> remoteUserAgents = new Hashtable<>();
+  @NonNull
   private Listener listener;
+
 
   // Has always a listener
   RadioHandler(
@@ -107,8 +115,8 @@ public class RadioHandler extends AbstractHandler {
       .buildUpon()
       .appendEncodedPath("radio")
       // Add radio ID + lock key as query parameter
-      .appendQueryParameter(RADIO_ID, radio.getId().toString())
-      .appendQueryParameter(LOCK_KEY, lockKey)
+      // Don't use several query parameters to avoid encoding troubles
+      .appendQueryParameter(PARAMS, radio.getId() + SEPARATOR + lockKey)
       .build();
   }
 
@@ -123,9 +131,9 @@ public class RadioHandler extends AbstractHandler {
     HttpServletRequest request,
     HttpServletResponse response) {
     // Request must contain a query with radio ID and lock key
-    String radioId = baseRequest.getParameter(RADIO_ID);
-    String lockKey = baseRequest.getParameter(LOCK_KEY);
-    String connectionHeader = baseRequest.getHeader(CONNECTION);
+    String[] params = request.getParameter(PARAMS).split("\\" + SEPARATOR);
+    String radioId = (params.length > 0) ? params[0] : null;
+    String lockKey = (params.length > 1) ? params[1] : null;
     if ((radioId == null) || (lockKey == null) || lockKey.equals(Listener.VOID)) {
       Log.d(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
     } else {
@@ -134,30 +142,25 @@ public class RadioHandler extends AbstractHandler {
         Log.d(LOG_TAG, "Unknown radio");
       } else {
         baseRequest.setHandled(true);
-        String method = baseRequest.getMethod();
-        Log.d(LOG_TAG, method + " received. Radio/UUID: " + radio.getName() + "/" + lockKey);
-        switch (method) {
-          case HEAD:
-            handleConnection(false, connectionHeader, response, radio, lockKey);
-            break;
-          case GET:
-            handleConnection(true, connectionHeader, response, radio, lockKey);
-            break;
-          default:
-            Log.d(LOG_TAG, "Unknown radio request received:" + method);
-        }
+        handleConnection(request, response, radio, lockKey);
       }
     }
   }
 
   private void handleConnection(
-    boolean isGet,
-    @Nullable String connectionHeader,
+    @NonNull HttpServletRequest request,
     @NonNull HttpServletResponse response,
-    @NonNull Radio radio,
-    @NonNull String lockKey) {
+    @NonNull final Radio radio,
+    @NonNull final String lockKey) {
+    String method = request.getMethod();
     Log.d(LOG_TAG,
-      "handleConnection: entering for " + radio.getName() + "; " + (isGet ? GET : HEAD));
+      "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
+    // For further user
+    boolean isGet = GET.equals(method);
+    final String remoteUserAgent = request.getHeader(USER_AGENT);
+    if (remoteUserAgent != null) {
+      remoteUserAgents.put(lockKey, remoteUserAgent);
+    }
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = isBuffered ?
@@ -167,10 +170,7 @@ public class RadioHandler extends AbstractHandler {
       httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
       httpURLConnection.setReadTimeout(READ_TIMEOUT);
       httpURLConnection.setRequestMethod(isGet ? GET : HEAD);
-      if (connectionHeader != null) {
-        httpURLConnection.setRequestProperty(CONNECTION, connectionHeader);
-      }
-      httpURLConnection.setRequestProperty("User-Agent", userAgent);
+      httpURLConnection.setRequestProperty(USER_AGENT, userAgent);
       if (isGet) {
         httpURLConnection.setRequestProperty("Icy-metadata", "1");
       }
@@ -182,14 +182,11 @@ public class RadioHandler extends AbstractHandler {
       response.setHeader("Server", userAgent);
       response.setHeader("Accept-Ranges", "bytes");
       response.setHeader("Cache-Control", "no-cache");
-      if (connectionHeader != null) {
-        response.setHeader(CONNECTION, connectionHeader);
-      }
+      response.setHeader("Connection", "close");
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
       Log.d(LOG_TAG, "handleConnection: response sent to LAN client");
-      if (isGet &&
-        ((connectionHeader == null) || connectionHeader.toLowerCase().equals("keep-alive"))) {
+      if (isGet) {
         // Try to find charset
         String contentEncoding = httpURLConnection.getContentEncoding();
         Charset charset = (contentEncoding == null) ?
@@ -219,10 +216,22 @@ public class RadioHandler extends AbstractHandler {
           lockKey);
       }
     } catch (IOException iOException) {
-      // Error thrown if allowed to run
       Log.d(LOG_TAG, "IOException", iOException);
-      Log.d(LOG_TAG, "Error sent to listener");
-      listener.onError(radio, lockKey);
+      // Throw error only if stream is last requested.
+      // Used in case client request the stream several times before actually playing.
+      // As seen with BubbleUPnP.
+      handler.postDelayed(
+        new Runnable() {
+          @Override
+          public void run() {
+            if ((remoteUserAgent == null) ||
+              remoteUserAgent.equals(remoteUserAgents.get(lockKey))) {
+              Log.d(LOG_TAG, "Error sent to listener");
+              listener.onError(radio, lockKey);
+            }
+          }
+        },
+        500);
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
@@ -238,8 +247,8 @@ public class RadioHandler extends AbstractHandler {
     @NonNull CharsetDecoder charsetDecoder,
     int metadataOffset,
     @NonNull OutputStream outputStream,
-    @NonNull Radio radio,
-    @NonNull String lockKey) throws IOException {
+    @NonNull final Radio radio,
+    @NonNull final String lockKey) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
     final byte[] buffer = new byte[1];
     final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
@@ -280,10 +289,15 @@ public class RadioHandler extends AbstractHandler {
               if (BuildConfig.DEBUG) {
                 Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
               }
-              Matcher matcher = PATTERN.matcher(metadata);
+              final Matcher matcher = PATTERN.matcher(metadata);
               // Tell listener
               if (matcher.find()) {
-                listener.onNewInformation(radio, matcher.group(1), lockKey);
+                handler.post(new Runnable() {
+                  @Override
+                  public void run() {
+                    listener.onNewInformation(radio, matcher.group(1), lockKey);
+                  }
+                });
               }
             }
             metadataBlockBytesRead = 0;

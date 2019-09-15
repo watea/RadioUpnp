@@ -127,10 +127,95 @@ public class ItemModifyFragment extends MainActivityFragment {
     // Set views
     nameEditText.setText(radioName);
     setRadioIcon(radioIcon);
-    urlEditText.setText(radioUrl);
-    webPageEditText.setText(radioWebPage);
+    // Order matters
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
+    urlEditText.setText(radioUrl);
+    webPageEditText.setText(radioWebPage);
+  }
+
+  @NonNull
+  @Override
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
+          tell(R.string.no_internet);
+        } else {
+          if (urlWatcher.url == null) {
+            tell(R.string.connection_test_aborted);
+          } else {
+            new UrlTester().execute(urlWatcher.url);
+          }
+        }
+      }
+    };
+  }
+
+  @Override
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_radio_black_24dp;
+  }
+
+  @Override
+  public int getMenuId() {
+    return R.menu.menu_item_modify;
+  }
+
+  @Override
+  public int getTitle() {
+    return isAddMode() ? R.string.title_item_add : R.string.title_item_modify;
+  }
+
+  @Nullable
+  @Override
+  public View onCreateView(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    super.onCreateView(inflater, container, savedInstanceState);
+    // Inflate the view so that graphical objects exists
+    View view = inflater.inflate(R.layout.content_item_modify, container, false);
+    nameEditText = view.findViewById(R.id.name_edit_text);
+    progressBar = view.findViewById(R.id.progress_bar);
+    urlEditText = view.findViewById(R.id.url_edit_text);
+    webPageEditText = view.findViewById(R.id.web_page_edit_text);
+    darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
+    searchImageButton = view.findViewById(R.id.search_image_button);
+    // Order matters!
+    ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
+      new RadioGroup.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(RadioGroup group, int checkedId) {
+          boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
+          searchImageButton.setImageResource(
+            isDarFmSelected ? R.drawable.ic_search_black_40dp : R.drawable.ic_image_black_40dp);
+          webPageEditText.setEnabled(!isDarFmSelected);
+          urlEditText.setEnabled(!isDarFmSelected);
+        }
+
+      });
+    darFmRadioButton.setChecked(
+      (savedInstanceState == null) ||
+        savedInstanceState.getBoolean(getString(R.string.key_dar_fm_checked)));
+    searchImageButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        flushKeyboard(Objects.requireNonNull(getView()));
+        if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
+          tell(R.string.no_internet);
+        } else {
+          if (darFmRadioButton.isChecked()) {
+            //noinspection unchecked
+            new DarFmSearcher().execute();
+          } else {
+            showSearchButton(false);
+            new IconSearcher().execute(webPageWatcher.url);
+          }
+        }
+      }
+    });
+    showSearchButton(true);
+    return view;
   }
 
   @Override
@@ -184,90 +269,6 @@ public class ItemModifyFragment extends MainActivityFragment {
       return super.onOptionsItemSelected(item);
     }
     return true;
-  }
-
-  @Nullable
-  @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
-    // Inflate the view so that graphical objects exists
-    View view = inflater.inflate(R.layout.content_item_modify, container, false);
-    nameEditText = view.findViewById(R.id.name_edit_text);
-    progressBar = view.findViewById(R.id.progress_bar);
-    urlEditText = view.findViewById(R.id.url_edit_text);
-    webPageEditText = view.findViewById(R.id.web_page_edit_text);
-    darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
-    searchImageButton = view.findViewById(R.id.search_image_button);
-    // Order matters!
-    ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
-      new RadioGroup.OnCheckedChangeListener() {
-        @Override
-        public void onCheckedChanged(RadioGroup group, int checkedId) {
-          boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
-          searchImageButton.setImageResource(
-            isDarFmSelected ? R.drawable.ic_search_black_40dp : R.drawable.ic_image_black_40dp);
-          webPageEditText.setEnabled(!isDarFmSelected);
-          urlEditText.setEnabled(!isDarFmSelected);
-        }
-
-      });
-    darFmRadioButton.setChecked(
-      (savedInstanceState == null) ||
-        savedInstanceState.getBoolean(getString(R.string.key_dar_fm_checked)));
-    searchImageButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        flushKeyboard(Objects.requireNonNull(getView()));
-        if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
-          tell(R.string.no_internet);
-        } else {
-          if (darFmRadioButton.isChecked()) {
-            //noinspection unchecked
-            new DarFmSearcher().execute();
-          } else {
-            showSearchButton(false);
-            new IconSearcher().execute(webPageWatcher.url);
-          }
-        }
-      }
-    });
-    showSearchButton(true);
-    return view;
-  }
-
-  @NonNull
-  @Override
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
-          tell(R.string.no_internet);
-        } else {
-          if (urlWatcher.url == null) {
-            tell(R.string.connection_test_aborted);
-          } else {
-            new UrlTester().execute(urlWatcher.url);
-          }
-        }
-      }
-    };
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_radio_black_24dp;
-  }
-
-  @Override
-  public int getMenuId() {
-    return R.menu.menu_item_modify;
-  }
-
-  @Override
-  public int getTitle() {
-    return isAddMode() ? R.string.title_item_add : R.string.title_item_modify;
   }
 
   // Must be called before MODIFY mode

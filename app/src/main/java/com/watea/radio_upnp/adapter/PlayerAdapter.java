@@ -28,6 +28,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.media.MediaMetadataCompat;
@@ -42,6 +43,7 @@ import java.util.UUID;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
+// Warning: not threadsafe, execution shall be done in main UI thread
 @SuppressWarnings("WeakerAccess")
 public abstract class PlayerAdapter implements RadioHandler.Listener {
   private static final String LOG_TAG = PlayerAdapter.class.getName();
@@ -53,6 +55,8 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   protected final Context context;
   @NonNull
   protected final HttpServer httpServer;
+  @NonNull
+  protected final Handler handler = new Handler();
   @NonNull
   private final AudioManager audioManager;
   @NonNull
@@ -102,9 +106,10 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       lockKey);
   }
 
+  // Not threadsafe
   // Try to relaunch, just once till Playing state received
   @Override
-  public synchronized void onError(@NonNull Radio radio, @NonNull String lockKey) {
+  public void onError(@NonNull Radio radio, @NonNull String lockKey) {
     Log.d(LOG_TAG, "RadioHandler error received");
     if (isRerunAllowed && (state == PlaybackStateCompat.STATE_PLAYING)) {
       Log.d(LOG_TAG, "=> Try to relaunch");
@@ -128,7 +133,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   }
 
   // Must be called
-  public synchronized final void prepareFromMediaId(@NonNull final Radio radio) {
+  public final void prepareFromMediaId(@NonNull final Radio radio) {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
     state = PlaybackStateCompat.STATE_NONE;
     isRerunAllowed = false;
@@ -165,7 +170,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     }
   }
 
-  public synchronized final void stop() {
+  public final void stop() {
     // Force playback state immediately on current lock key
     changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, lockKey);
     // Now we can release
@@ -175,7 +180,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   }
 
   // Called when resources must be released, no impact on playback state
-  public synchronized final void release() {
+  public final void release() {
     releaseOwnResources();
     // Release actual reader
     onRelease();
@@ -184,7 +189,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   public void setVolume(float volume) {
   }
 
-  public synchronized void adjustVolume(int direction) {
+  public void adjustVolume(int direction) {
   }
 
   protected abstract boolean isLocal();
@@ -205,23 +210,27 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   // Set the current capabilities available on this session
   protected abstract long getAvailableActions();
 
-  // Transmit state, just one time
-  protected void changeAndNotifyState(int newState, @NonNull String lockKey) {
+  // Convenience for threadsafe call
+  protected void postChangeAndNotifyState(final int newState, @NonNull final String lockKey) {
+    handler.post(new Runnable() {
+      @Override
+      public void run() {
+        changeAndNotifyState(newState, lockKey);
+      }
+    });
+  }
+
+  private void changeAndNotifyState(int newState, @NonNull String lockKey) {
     Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + lockKey);
-    if (state == newState) {
-      Log.d(LOG_TAG, "=> Unchanged");
-    } else {
-      Log.d(LOG_TAG, "=> Transmitted to listener");
-      state = newState;
-      // Re-run allowed if "Playing" received
-      isRerunAllowed = (state == PlaybackStateCompat.STATE_PLAYING);
-      listener.onPlaybackStateChange(
-        new PlaybackStateCompat.Builder()
-          .setActions(getAvailableActions())
-          .setState(state, 0, 1.0f, SystemClock.elapsedRealtime())
-          .build(),
-        lockKey);
-    }
+    state = newState;
+    // Re-run allowed if "Playing" received
+    isRerunAllowed = (state == PlaybackStateCompat.STATE_PLAYING);
+    listener.onPlaybackStateChange(
+      new PlaybackStateCompat.Builder()
+        .setActions(getAvailableActions())
+        .setState(state, 0, 1.0f, SystemClock.elapsedRealtime())
+        .build(),
+      lockKey);
   }
 
   private void registerAudioNoisyReceiver() {

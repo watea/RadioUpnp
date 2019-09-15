@@ -63,18 +63,6 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     radiosRecyclerView.setAdapter(radiosModifyAdapter);
   }
 
-  @Nullable
-  @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
-    // Inflate the view so that graphical objects exists
-    View view = inflater.inflate(R.layout.content_modify, container, false);
-    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    radiosDefaultView = view.findViewById(R.id.view_radios_default);
-    return view;
-  }
-
   @Override
   public void onResume() {
     super.onResume();
@@ -102,6 +90,18 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Override
   public int getTitle() {
     return R.string.title_modify;
+  }
+
+  @Nullable
+  @Override
+  public View onCreateView(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    super.onCreateView(inflater, container, savedInstanceState);
+    // Inflate the view so that graphical objects exists
+    View view = inflater.inflate(R.layout.content_modify, container, false);
+    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    radiosDefaultView = view.findViewById(R.id.view_radios_default);
+    return view;
   }
 
   @Override

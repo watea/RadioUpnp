@@ -33,7 +33,6 @@ import android.util.Log;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
-import com.watea.radio_upnp.service.NetworkTester;
 import com.watea.radio_upnp.service.RadioHandler;
 
 import org.fourthline.cling.android.AndroidUpnpService;
@@ -41,15 +40,25 @@ import org.fourthline.cling.controlpoint.ActionCallback;
 import org.fourthline.cling.model.action.ActionInvocation;
 import org.fourthline.cling.model.message.UpnpResponse;
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.Service;
 import org.fourthline.cling.model.types.ServiceId;
 import org.fourthline.cling.model.types.UDAServiceId;
+
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
+
+import static com.watea.radio_upnp.service.NetworkTester.getStreamContentType;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
   public static final ServiceId AV_TRANSPORT_SERVICE_ID = new UDAServiceId("AVTransport");
   private static final ServiceId RENDERING_CONTROL_ID = new UDAServiceId("RenderingControl");
+  private static final ServiceId CONNECTION_MANAGER_ID = new UDAServiceId("ConnectionManager");
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
   private static final String MPEG = "audio/mpeg";
   private static final String UPNP_ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
+  private static final String UPNP_ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
   private static final String UPNP_ACTION_PLAY = "Play";
   private static final String UPNP_ACTION_PAUSE = "Pause";
   private static final String UPNP_ACTION_STOP = "Stop";
@@ -57,68 +66,17 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String UPNP_ACTION_GET_VOLUME = "GetVolume";
   private static final String UPNP_INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final int REMOTE_LOGO_SIZE = 140;
+  @NonNull
+  private static final Map<Long, String> contentTypes = new Hashtable<>();
   @Nullable
   private Device dlnaDevice = null;
   @Nullable
   private AndroidUpnpService androidUpnpService = null;
-  private int volumeDirection;
+  private int volumeDirection = AudioManager.ADJUST_SAME;
 
   public UpnpPlayerAdapter(
     @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
     super(context, httpServer, listener);
-  }
-
-  /* DLNA.ORG_FLAGS, padded with 24 trailing 0s
-   *     80000000  31  senderPaced
-   *     40000000  30  lsopTimeBasedSeekSupported
-   *     20000000  29  lsopByteBasedSeekSupported
-   *     10000000  28  playcontainerSupported
-   *      8000000  27  s0IncreasingSupported
-   *      4000000  26  sNIncreasingSupported
-   *      2000000  25  rtspPauseSupported
-   *      1000000  24  streamingTransferModeSupported
-   *       800000  23  interactiveTransferModeSupported
-   *       400000  22  backgroundTransferModeSupported
-   *       200000  21  connectionStallingSupported
-   *       100000  20  dlnaVersion15Supported
-   *
-   *     Example: (1 << 24) | (1 << 22) | (1 << 21) | (1 << 20)
-   *       DLNA.ORG_FLAGS=01700000[000000000000000000000000] // [] show padding
-   *
-   * If DLNA.ORG_OP=11, then left/rght keys uses range header, and up/down uses TimeSeekRange.DLNA.ORG header
-   * If DLNA.ORG_OP=10, then left/rght and up/down keys uses TimeSeekRange.DLNA.ORG header
-   * If DLNA.ORG_OP=01, then left/rght keys uses range header, and up/down keys are disabled
-   * and if DLNA.ORG_OP=00, then all keys are disabled
-   * DLNA.ORG_CI 0 = native 1, = transcoded
-   * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region
-   * Example:
-   * DLNA_PARAMS = "DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"; */
-  @NonNull
-  private static String getProtocolInfo(String contentType) {
-    String normalizedContent = contentType.toLowerCase();
-    String protocolInfo = "\"http-get:*:" + normalizedContent + ":";
-    String dlnaOrgPn = "DLNA.ORG_PN=";
-    switch (normalizedContent) {
-      case "audio/x-ms-wma":
-        dlnaOrgPn += "WMABASE";
-        break;
-      case "audio/mp4":
-        dlnaOrgPn += "AAC_ISO_320";
-        break;
-      case "audio/aac":
-        dlnaOrgPn += "AAC_ADTS_320";
-        break;
-      case "audio/3gpp":
-        dlnaOrgPn += "AMR_3GPP";
-        break;
-      case MPEG:
-        dlnaOrgPn += "MP3";
-        break;
-      default:
-        return protocolInfo + "*\"";
-    }
-    return protocolInfo + dlnaOrgPn +
-      ";DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000\"";
   }
 
   // Must be called
@@ -149,7 +107,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       return;
     }
     volumeDirection = direction;
-    upnpExecuteAction(getRenderingControlUpnpActionInvocation(UPNP_ACTION_GET_VOLUME));
+    upnpExecuteAction(getRenderingControlActionInvocation(UPNP_ACTION_GET_VOLUME));
   }
 
   @Override
@@ -159,55 +117,50 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPrepareFromMediaId(@NonNull final Radio radio) {
-    // dlnaDevice must be defined
     if (dlnaDevice == null) {
-      throw new RuntimeException("dlnaDevice not defined");
+      throw new RuntimeException("onPrepareFromMediaId: dlnaDevice not defined");
     }
-    // Volume
+    final Service connectionManager = dlnaDevice.findService(CONNECTION_MANAGER_ID);
+    if (connectionManager == null) {
+      Log.i(LOG_TAG, "onPrepareFromMediaId: ConnectionManager not available");
+      return;
+    }
+    // Robustness
     volumeDirection = AudioManager.ADJUST_SAME;
-    // Rendering
-    // Lock key is final for this thread
-    final String lockKey = getLockKey();
     // Fetch content type and start
-    new Thread() {
-      @Override
-      public void run() {
-        super.run();
-        String contentType = NetworkTester.getStreamContentType(radio.getURL());
-        contentType = (contentType == null) ? MPEG : contentType;
-        String radioUri =
-          RadioHandler.getHandledUri(httpServer.getUri(), radio, lockKey).toString();
-        ActionInvocation actionInvocation =
-          getAVTransportUpnpActionInvocation(UPNP_ACTION_SET_AV_TRANSPORT_URI);
-        actionInvocation.setInput("CurrentURI", radioUri);
-        actionInvocation.setInput("CurrentURIMetaData",
-          "<DIDL-Lite " +
-            "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"" +
-            "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
-            "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
-            "<item id=\"" + radio.getName() + "\" parentID=\"0\" restricted=\"1\">" +
-            // object.item.audioItem.audioBroadcast not valid
-            "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
-            "<dc:title>" + radio.getName() + "</dc:title>" +
-            "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
-            "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
-            "<res duration=\"0:00:00\" protocolInfo=" + getProtocolInfo(contentType) + ">" +
-            radioUri + "</res>" +
-            "<upnp:albumArtURI>" + httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE) +
-            "</upnp:albumArtURI>" +
-            "</item>" +
-            "</DIDL-Lite>");
-        upnpExecuteAction(actionInvocation);
-      }
-    }.start();
+    // Current action tag
+    final String actionLockKey = lockKey;
+    if (contentTypes.get(radio.getId()) == null) {
+      // Fetch ContentType before launching
+      new Thread() {
+        @Override
+        public void run() {
+          final String contentType = getStreamContentType(radio.getURL());
+          // Now we can call GetProtocolInfo, only if current action not cancelled
+          handler.post(new Runnable() {
+            @Override
+            public void run() {
+              if (contentType != null) {
+                contentTypes.put(radio.getId(), contentType);
+              }
+              if (actionLockKey.equals(lockKey)) {
+                launchGetProtocolInfo(connectionManager, radio);
+              }
+            }
+          });
+        }
+      }.start();
+    } else {
+      launchGetProtocolInfo(connectionManager, radio);
+    }
   }
 
   public void onPlay() {
     if (dlnaDevice == null) {
-      Log.i(LOG_TAG, "onPlay on null DlnaDevice");
+      Log.i(LOG_TAG, "onPlay: dlnaDevice not defined");
       return;
     }
-    ActionInvocation actionInvocation = getAVTransportUpnpActionInvocation(UPNP_ACTION_PLAY);
+    ActionInvocation actionInvocation = getAVTransportActionInvocation(UPNP_ACTION_PLAY);
     actionInvocation.setInput("Speed", "1");
     upnpExecuteAction(actionInvocation);
   }
@@ -216,20 +169,20 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Override
   public void onPause() {
     if (dlnaDevice == null) {
-      Log.i(LOG_TAG, "onPause on null DlnaDevice");
+      Log.i(LOG_TAG, "onPause: dlnaDevice not definede");
       return;
     }
-    ActionInvocation actionInvocation = getAVTransportUpnpActionInvocation(UPNP_ACTION_PAUSE);
+    ActionInvocation actionInvocation = getAVTransportActionInvocation(UPNP_ACTION_PAUSE);
     upnpExecuteAction(actionInvocation);
   }
 
   @Override
   public void onStop() {
     if (dlnaDevice == null) {
-      Log.i(LOG_TAG, "onStop on null Radio or DlnaDevice");
+      Log.i(LOG_TAG, "onStop:  dlnaDevice not defined");
       return;
     }
-    ActionInvocation actionInvocation = getAVTransportUpnpActionInvocation(UPNP_ACTION_STOP);
+    ActionInvocation actionInvocation = getAVTransportActionInvocation(UPNP_ACTION_STOP);
     upnpExecuteAction(actionInvocation);
   }
 
@@ -252,22 +205,59 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     return actions;
   }
 
-  // Execute asynchronous in the background
+  /* DLNA.ORG_FLAGS, padded with 24 trailing 0s
+   *     80000000  31  senderPaced
+   *     40000000  30  lsopTimeBasedSeekSupported
+   *     20000000  29  lsopByteBasedSeekSupported
+   *     10000000  28  playcontainerSupported
+   *      8000000  27  s0IncreasingSupported
+   *      4000000  26  sNIncreasingSupported
+   *      2000000  25  rtspPauseSupported
+   *      1000000  24  streamingTransferModeSupported
+   *       800000  23  interactiveTransferModeSupported
+   *       400000  22  backgroundTransferModeSupported
+   *       200000  21  connectionStallingSupported
+   *       100000  20  dlnaVersion15Supported
+   *
+   *     Example: (1 << 24) | (1 << 22) | (1 << 21) | (1 << 20)
+   *       DLNA.ORG_FLAGS=01700000[000000000000000000000000] // [] show padding
+   *
+   * If DLNA.ORG_OP=11, then left/rght keys uses range header, and up/down uses TimeSeekRange.DLNA.ORG header
+   * If DLNA.ORG_OP=10, then left/rght and up/down keys uses TimeSeekRange.DLNA.ORG header
+   * If DLNA.ORG_OP=01, then left/rght keys uses range header, and up/down keys are disabled
+   * and if DLNA.ORG_OP=00, then all keys are disabled
+   * DLNA.ORG_CI 0 = native 1, = transcoded
+   * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region
+   * Example:
+   * DLNA_PARAMS = "DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"; */
+  private void launchGetProtocolInfo(@NonNull Service connectionManager, @NonNull Radio radio) {
+    //noinspection unchecked
+    upnpExecuteAction(
+      new ActionInvocation(connectionManager.getAction(UPNP_ACTION_GET_PROTOCOL_INFO)), radio);
+  }
+
+  // Execute asynchronous in the background, no radio actually known
   private void upnpExecuteAction(@NonNull ActionInvocation actionInvocation) {
+    upnpExecuteAction(actionInvocation, Radio.DUMMY_RADIO);
+  }
+
+  // Execute asynchronous in the background
+  private void upnpExecuteAction(@NonNull ActionInvocation actionInvocation, @NonNull Radio radio) {
     if (androidUpnpService == null) {
       Log.d(LOG_TAG, "upnpExecuteAction: AndroidUpnpService is null");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, getLockKey());
+      postChangeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
     } else {
-      androidUpnpService.getControlPoint().execute(new TaggedActionCallback(actionInvocation));
+      androidUpnpService
+        .getControlPoint()
+        .execute(new TaggedActionCallback(actionInvocation, radio));
     }
   }
 
   @NonNull
-  private ActionInvocation getUpnpActionInvocation(
+  private ActionInvocation getInstanceActionInvocation(
     @NonNull ServiceId serviceId, @NonNull String action) {
-    // dlnaDevice must be defined
     if (dlnaDevice == null) {
-      throw new RuntimeException("dlnaDevice not defined");
+      throw new RuntimeException("getInstanceActionInvocation on null dlnaDevice for: " + action);
     }
     //noinspection unchecked
     ActionInvocation actionInvocation =
@@ -277,13 +267,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   @NonNull
-  private ActionInvocation getAVTransportUpnpActionInvocation(@NonNull String action) {
-    return getUpnpActionInvocation(AV_TRANSPORT_SERVICE_ID, action);
+  private ActionInvocation getAVTransportActionInvocation(@NonNull String action) {
+    return getInstanceActionInvocation(AV_TRANSPORT_SERVICE_ID, action);
   }
 
   @NonNull
-  private ActionInvocation getRenderingControlUpnpActionInvocation(@NonNull String action) {
-    ActionInvocation actionInvocation = getUpnpActionInvocation(RENDERING_CONTROL_ID, action);
+  private ActionInvocation getRenderingControlActionInvocation(@NonNull String action) {
+    ActionInvocation actionInvocation = getInstanceActionInvocation(RENDERING_CONTROL_ID, action);
     actionInvocation.setInput("Channel", "Master");
     return actionInvocation;
   }
@@ -291,21 +281,23 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private class TaggedActionCallback extends ActionCallback {
     @NonNull
     private final String actionLockKey;
+    @NonNull
+    private final Radio radio;
 
-    private TaggedActionCallback(@NonNull ActionInvocation actionInvocation) {
+    private TaggedActionCallback(@NonNull ActionInvocation actionInvocation, @NonNull Radio radio) {
       super(actionInvocation);
-      actionLockKey = getLockKey();
+      actionLockKey = lockKey;
+      this.radio = radio;
     }
 
     @Override
-    public void success(ActionInvocation invocation) {
+    public void success(ActionInvocation actionInvocation) {
       String action = actionInvocation.getAction().getName();
       Log.d(LOG_TAG, "Successfully called UPnP action: " + action);
       switch (action) {
         case UpnpPlayerAdapter.UPNP_ACTION_GET_VOLUME:
-          int currentVolume;
-          // Lock key should be tested here ot be rigorous
-          synchronized (UpnpPlayerAdapter.this) {
+          if (actionLockKey.equals(lockKey)) {
+            int currentVolume;
             currentVolume =
               Integer.parseInt(actionInvocation.getOutput("CurrentVolume").getValue().toString());
             switch (volumeDirection) {
@@ -319,39 +311,60 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
                 // Nothing to do
                 return;
             }
-            ActionInvocation actionInvocation =
-              getRenderingControlUpnpActionInvocation(UPNP_ACTION_SET_VOLUME);
+            actionInvocation = getRenderingControlActionInvocation(UPNP_ACTION_SET_VOLUME);
             actionInvocation.setInput(UPNP_INPUT_DESIRED_VOLUME, Integer.toString(currentVolume));
-            upnpExecuteAction(actionInvocation);
+            upnpExecuteAction(actionInvocation, radio);
+            Log.d(LOG_TAG, "Volume required: " + currentVolume);
           }
-          Log.d(LOG_TAG, "Volume required: " + currentVolume);
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_SET_VOLUME:
           // Done!
           // Lock key should be tested here ot be rigorous
-          synchronized (UpnpPlayerAdapter.this) {
-            volumeDirection = AudioManager.ADJUST_SAME;
-          }
+          volumeDirection = AudioManager.ADJUST_SAME;
           Log.d(LOG_TAG, "Volume set: " + actionInvocation.getInput(UPNP_INPUT_DESIRED_VOLUME));
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_SET_AV_TRANSPORT_URI:
-          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, actionLockKey);
-          // Now we can call Play with same tag, only if current action not cancelled
-          synchronized (UpnpPlayerAdapter.this) {
-            if (actionLockKey.equals(getLockKey())) {
-              onPlay();
-            }
+          // Now we can call Play, only if current action not cancelled
+          if (actionLockKey.equals(lockKey)) {
+            postChangeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, actionLockKey);
+            onPlay();
           }
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_STOP:
-          changeAndNotifyState(PlaybackStateCompat.STATE_NONE, actionLockKey);
+          postChangeAndNotifyState(PlaybackStateCompat.STATE_NONE, actionLockKey);
           break;
         case UpnpPlayerAdapter.UPNP_ACTION_PLAY:
-          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING, actionLockKey);
+          postChangeAndNotifyState(PlaybackStateCompat.STATE_PLAYING, actionLockKey);
           break;
         // Should not happen as PAUSE not allowed
         case UpnpPlayerAdapter.UPNP_ACTION_PAUSE:
-          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED, actionLockKey);
+          postChangeAndNotifyState(PlaybackStateCompat.STATE_PAUSED, actionLockKey);
+          break;
+        case UpnpPlayerAdapter.UPNP_ACTION_GET_PROTOCOL_INFO:
+          // Now we can call SetAVTransportURI, only if current action not cancelled
+          if (actionLockKey.equals(lockKey)) {
+            String contentType = contentTypes.get(radio.getId());
+            if (contentType == null) {
+              contentType = MPEG;
+            }
+            List<String> protocolInfos = new Vector<>();
+            // DLNA player data for MIME type
+            for (String string : actionInvocation.getOutput("Sink").toString().split(",")) {
+              if (string.contains(contentType)) {
+                protocolInfos.add(string);
+              }
+            }
+            if (protocolInfos.isEmpty()) {
+              protocolInfos.add("http-get:*:\"" + contentType + ":*");
+            }
+            // DLNA action call
+            String radioUri =
+              RadioHandler.getHandledUri(httpServer.getUri(), radio, actionLockKey).toString();
+            actionInvocation = getAVTransportActionInvocation(UPNP_ACTION_SET_AV_TRANSPORT_URI);
+            actionInvocation.setInput("CurrentURI", radioUri);
+            actionInvocation.setInput("CurrentURIMetaData", getMetaData(radioUri, protocolInfos));
+            upnpExecuteAction(actionInvocation, radio);
+          }
           break;
         // Should not happen
         default:
@@ -360,7 +373,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     }
 
     @Override
-    public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+    public void failure(
+      ActionInvocation actionInvocation, UpnpResponse operation, String defaultMsg) {
       Log.d(LOG_TAG, defaultMsg);
       String action = actionInvocation.getAction().getName();
       // Don't handle error on volume
@@ -371,7 +385,35 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         volumeDirection = AudioManager.ADJUST_SAME;
         return;
       }
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, actionLockKey);
+      postChangeAndNotifyState(PlaybackStateCompat.STATE_ERROR, actionLockKey);
+    }
+
+    // Create DIDL-Lite metadata
+    @NonNull
+    private String getMetaData(@NonNull String radioUri, @NonNull List<String> protocolInfos) {
+      StringBuilder metaData = new StringBuilder("<DIDL-Lite " +
+        "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"" +
+        "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
+        "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
+        "<item id=\"" + radio.getName() + "\" parentID=\"0\" restricted=\"1\">" +
+        // object.item.audioItem.audioBroadcast not valid
+        "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
+        "<dc:title>" + radio.getName() + "</dc:title>" +
+        "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
+        "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>");
+      for (String protocolInfo : protocolInfos) {
+        metaData
+          .append("<res duration=\"0:00:00\" protocolInfo=\"")
+          .append(protocolInfo)
+          .append("\">")
+          .append(radioUri)
+          .append("</res>");
+      }
+      return metaData +
+        "<upnp:albumArtURI>" + httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE) +
+        "</upnp:albumArtURI>" +
+        "</item>" +
+        "</DIDL-Lite>";
     }
   }
 }

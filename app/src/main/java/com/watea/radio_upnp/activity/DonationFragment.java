@@ -142,6 +142,17 @@ public class DonationFragment extends MainActivityFragment {
     }
   }
 
+  @Nullable
+  @Override
+  public View onCreateView(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    super.onCreateView(inflater, container, savedInstanceState);
+    final View view = inflater.inflate(R.layout.content_donation, container, false);
+    // Choose donation amount
+    googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
+    return view;
+  }
+
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
@@ -161,17 +172,6 @@ public class DonationFragment extends MainActivityFragment {
     // will be called once setup completes.
     Log.d(LOG_TAG, "Starting setup");
     iabHelper.startSetup(setupFinishedListener);
-  }
-
-  @Nullable
-  @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
-    final View view = inflater.inflate(R.layout.content_donation, container, false);
-    // Choose donation amount
-    googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
-    return view;
   }
 
   @NonNull
