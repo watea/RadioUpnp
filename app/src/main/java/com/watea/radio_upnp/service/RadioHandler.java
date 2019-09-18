@@ -24,8 +24,8 @@
 package com.watea.radio_upnp.service;
 
 import android.net.Uri;
-import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.watea.radio_upnp.BuildConfig;
@@ -35,7 +35,6 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -62,49 +61,23 @@ public class RadioHandler extends AbstractHandler {
   private static final String HEAD = "HEAD";
   private static final String USER_AGENT = "User-Agent";
   private static final String PARAMS = "params";
-  @SuppressWarnings("RegExpEmptyAlternationBranch")
-  private static final String SEPARATOR = "|";
+  private static final String SEPARATOR = ",";
   // For ICY metadata
   private static final Pattern PATTERN = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
   @NonNull
   private final RadioLibrary radioLibrary;
-  private final boolean isBuffered;
-  @NonNull
-  private final Handler handler = new Handler();
   @NonNull
   private final Map<String, String> remoteUserAgents = new Hashtable<>();
-  @NonNull
-  private Listener listener;
-
+  @Nullable
+  private Listener listener = null;
 
   // Has always a listener
-  RadioHandler(
-    @NonNull String userAgent,
-    @NonNull RadioLibrary radioLibrary,
-    boolean isBuffered) {
+  RadioHandler(@NonNull String userAgent, @NonNull RadioLibrary radioLibrary) {
     super();
     this.userAgent = userAgent;
     this.radioLibrary = radioLibrary;
-    this.isBuffered = isBuffered;
-    // Dummy listener
-    this.listener = new Listener() {
-      @Override
-      public void onNewInformation(
-        @NonNull Radio radio, @NonNull String information, @NonNull String lockKey) {
-      }
-
-      @Override
-      public void onError(@NonNull Radio radio, @NonNull String lockKey) {
-      }
-
-      @NonNull
-      @Override
-      public String getLockKey() {
-        return VOID;
-      }
-    };
   }
 
   // Add ID and lock key to given URI as query parameter
@@ -120,7 +93,7 @@ public class RadioHandler extends AbstractHandler {
       .build();
   }
 
-  public void setListener(@NonNull Listener listener) {
+  public void setListener(@Nullable Listener listener) {
     this.listener = listener;
   }
 
@@ -131,10 +104,11 @@ public class RadioHandler extends AbstractHandler {
     HttpServletRequest request,
     HttpServletResponse response) {
     // Request must contain a query with radio ID and lock key
-    String[] params = request.getParameter(PARAMS).split("\\" + SEPARATOR);
+    String[] params = request.getParameter(PARAMS).split(SEPARATOR);
     String radioId = (params.length > 0) ? params[0] : null;
     String lockKey = (params.length > 1) ? params[1] : null;
-    if ((radioId == null) || (lockKey == null) || lockKey.equals(Listener.VOID)) {
+    final Listener currentListener = listener;
+    if ((currentListener == null) || (radioId == null) || (lockKey == null)) {
       Log.d(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
     } else {
       Radio radio = radioLibrary.getFrom(Long.decode(radioId));
@@ -142,7 +116,7 @@ public class RadioHandler extends AbstractHandler {
         Log.d(LOG_TAG, "Unknown radio");
       } else {
         baseRequest.setHandled(true);
-        handleConnection(request, response, radio, lockKey);
+        handleConnection(request, response, radio, lockKey, currentListener);
       }
     }
   }
@@ -151,7 +125,8 @@ public class RadioHandler extends AbstractHandler {
     @NonNull HttpServletRequest request,
     @NonNull HttpServletResponse response,
     @NonNull final Radio radio,
-    @NonNull final String lockKey) {
+    @NonNull final String lockKey,
+    @NonNull final Listener currentListener) {
     String method = request.getMethod();
     Log.d(LOG_TAG,
       "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
@@ -163,8 +138,7 @@ public class RadioHandler extends AbstractHandler {
     }
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
-    try (OutputStream outputStream = isBuffered ?
-      new BufferedOutputStream(response.getOutputStream()) : response.getOutputStream()) {
+    try (OutputStream outputStream = response.getOutputStream()) {
       httpURLConnection = (HttpURLConnection) radio.getURL().openConnection();
       httpURLConnection.setInstanceFollowRedirects(true);
       httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
@@ -175,7 +149,7 @@ public class RadioHandler extends AbstractHandler {
         httpURLConnection.setRequestProperty("Icy-metadata", "1");
       }
       httpURLConnection.connect();
-      Log.d(LOG_TAG, "handleConnection: connected to radio URL");
+      Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
       String contentType = httpURLConnection.getContentType();
       response.setContentType((contentType == null) ? "audio/mpeg" : contentType);
@@ -185,7 +159,7 @@ public class RadioHandler extends AbstractHandler {
       response.setHeader("Connection", "close");
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
-      Log.d(LOG_TAG, "handleConnection: response sent to LAN client");
+      Log.d(LOG_TAG, "Response sent to LAN client");
       if (isGet) {
         // Try to find charset
         String contentEncoding = httpURLConnection.getContentEncoding();
@@ -213,25 +187,31 @@ public class RadioHandler extends AbstractHandler {
           metadataOffset,
           outputStream,
           radio,
-          lockKey);
+          lockKey,
+          currentListener);
       }
     } catch (IOException iOException) {
       Log.d(LOG_TAG, "IOException", iOException);
       // Throw error only if stream is last requested.
       // Used in case client request the stream several times before actually playing.
       // As seen with BubbleUPnP.
-      handler.postDelayed(
-        new Runnable() {
-          @Override
-          public void run() {
-            if ((remoteUserAgent == null) ||
-              remoteUserAgent.equals(remoteUserAgents.get(lockKey))) {
-              Log.d(LOG_TAG, "Error sent to listener");
-              listener.onError(radio, lockKey);
-            }
+      new Thread() {
+        @Override
+        public void run() {
+          try {
+            sleep(500);
+          } catch (InterruptedException interruptedException) {
+            Log.e(LOG_TAG, "Sleep error, ignored...");
           }
-        },
-        500);
+          if ((remoteUserAgent == null) ||
+            remoteUserAgent.equals(remoteUserAgents.get(lockKey))) {
+            Log.d(LOG_TAG, "=> error sent to listener");
+            currentListener.onError(radio, lockKey);
+          } else {
+            Log.d(LOG_TAG, "=> error ignored");
+          }
+        }
+      }.start();
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
@@ -248,15 +228,16 @@ public class RadioHandler extends AbstractHandler {
     int metadataOffset,
     @NonNull OutputStream outputStream,
     @NonNull final Radio radio,
-    @NonNull final String lockKey) throws IOException {
+    @NonNull final String lockKey,
+    @NonNull final Listener currentListener) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
     final byte[] buffer = new byte[1];
     final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
     int metadataBlockBytesRead = 0;
     int metadataSize = 0;
     while (inputStream.read(buffer) != -1) {
-      // Stop if not a valid listener
-      if (listener.getLockKey().equals(lockKey)) {
+      // Stop if not current listener
+      if (listener == currentListener) {
         // Only stream data are transferred
         if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
           outputStream.write(buffer);
@@ -292,12 +273,7 @@ public class RadioHandler extends AbstractHandler {
               final Matcher matcher = PATTERN.matcher(metadata);
               // Tell listener
               if (matcher.find()) {
-                handler.post(new Runnable() {
-                  @Override
-                  public void run() {
-                    listener.onNewInformation(radio, matcher.group(1), lockKey);
-                  }
-                });
+                currentListener.onNewInformation(radio, matcher.group(1), lockKey);
               }
             }
             metadataBlockBytesRead = 0;
@@ -312,14 +288,9 @@ public class RadioHandler extends AbstractHandler {
   }
 
   public interface Listener {
-    String VOID = "";
-
     void onNewInformation(
       @NonNull Radio radio, @NonNull String information, @NonNull String lockKey);
 
     void onError(@NonNull Radio radio, @NonNull String lockKey);
-
-    @NonNull
-    String getLockKey();
   }
 }

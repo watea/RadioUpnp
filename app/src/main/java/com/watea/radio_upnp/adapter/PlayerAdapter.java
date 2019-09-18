@@ -28,7 +28,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
-import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.media.MediaMetadataCompat;
@@ -38,8 +37,6 @@ import android.util.Log;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
-
-import java.util.UUID;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
@@ -55,17 +52,17 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   protected final Context context;
   @NonNull
   protected final HttpServer httpServer;
+  // Current tag, always set before playing
   @NonNull
-  protected final Handler handler = new Handler();
+  protected final String lockKey;
+  @NonNull
+  protected final Radio radio;
   @NonNull
   private final AudioManager audioManager;
   @NonNull
   private final AudioFocusHelper audioFocusHelper = new AudioFocusHelper();
   @NonNull
   private final Listener listener;
-  // Current tag, always set before playing
-  @NonNull
-  protected String lockKey = VOID;
   protected int state = PlaybackStateCompat.STATE_NONE;
   private boolean playOnAudioFocus = false;
   private boolean audioNoisyReceiverRegistered = false;
@@ -83,10 +80,16 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   private boolean isRerunAllowed = false;
 
   public PlayerAdapter(
-    @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
+    @NonNull Context context,
+    @NonNull HttpServer httpServer,
+    @NonNull Listener listener,
+    @NonNull Radio radio,
+    @NonNull String lockKey) {
     this.context = context;
     this.listener = listener;
     this.httpServer = httpServer;
+    this.radio = radio;
+    this.lockKey = lockKey;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     if (audioManager == null) {
       Log.e(LOG_TAG, "AudioManager is null");
@@ -106,7 +109,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       lockKey);
   }
 
-  // Not threadsafe
   // Try to relaunch, just once till Playing state received
   @Override
   public void onError(@NonNull Radio radio, @NonNull String lockKey) {
@@ -115,17 +117,11 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       Log.d(LOG_TAG, "=> Try to relaunch");
       changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, lockKey);
       isRerunAllowed = false;
-      onPrepareFromMediaId(radio);
+      onPrepareFromMediaId();
     } else {
       Log.d(LOG_TAG, "=> Error");
       changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
     }
-  }
-
-  @NonNull
-  @Override
-  public String getLockKey() {
-    return lockKey;
   }
 
   public boolean isPlaying() {
@@ -133,17 +129,15 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   }
 
   // Must be called
-  public final void prepareFromMediaId(@NonNull final Radio radio) {
+  public final void prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
     state = PlaybackStateCompat.STATE_NONE;
     isRerunAllowed = false;
+    httpServer.setRadioHandlerListener(this);
     // Audio focus management
     audioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
-    // New tag
-    lockKey = UUID.randomUUID().toString();
-    httpServer.setRadioHandlerListener(this);
-    onPrepareFromMediaId(radio);
+    onPrepareFromMediaId();
   }
 
   public final void play() {
@@ -175,8 +169,9 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, lockKey);
     // Now we can release
     releaseOwnResources();
-    // Stop actual reader
+    // Stop actual reader and release
     onStop();
+    onRelease();
   }
 
   // Called when resources must be released, no impact on playback state
@@ -194,7 +189,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
 
   protected abstract boolean isLocal();
 
-  protected abstract void onPrepareFromMediaId(@NonNull Radio radio);
+  protected abstract void onPrepareFromMediaId();
 
   // Called when media is ready to be played and indicates the app has audio focus
   protected abstract void onPlay();
@@ -210,27 +205,25 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   // Set the current capabilities available on this session
   protected abstract long getAvailableActions();
 
-  // Convenience for threadsafe call
-  protected void postChangeAndNotifyState(final int newState, @NonNull final String lockKey) {
-    handler.post(new Runnable() {
-      @Override
-      public void run() {
-        changeAndNotifyState(newState, lockKey);
-      }
-    });
+  protected void changeAndNotifyState(int newState) {
+    changeAndNotifyState(newState, lockKey);
   }
 
-  private void changeAndNotifyState(int newState, @NonNull String lockKey) {
+  protected void changeAndNotifyState(int newState, @NonNull String lockKey) {
     Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + lockKey);
-    state = newState;
-    // Re-run allowed if "Playing" received
-    isRerunAllowed = (state == PlaybackStateCompat.STATE_PLAYING);
-    listener.onPlaybackStateChange(
-      new PlaybackStateCompat.Builder()
-        .setActions(getAvailableActions())
-        .setState(state, 0, 1.0f, SystemClock.elapsedRealtime())
-        .build(),
-      lockKey);
+    if (state == newState) {
+      Log.d(LOG_TAG, "=> no change");
+    } else {
+      state = newState;
+      // Re-run allowed if "Playing" received
+      isRerunAllowed = (state == PlaybackStateCompat.STATE_PLAYING);
+      listener.onPlaybackStateChange(
+        new PlaybackStateCompat.Builder()
+          .setActions(getAvailableActions())
+          .setState(state, 0, 1.0f, SystemClock.elapsedRealtime())
+          .build(),
+        lockKey);
+    }
   }
 
   private void registerAudioNoisyReceiver() {
@@ -252,7 +245,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     audioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
     // Stop listening for RadioHandler, shall stop RadioHandler
-    lockKey = VOID;
+    httpServer.setRadioHandlerListener(null);
   }
 
   public interface Listener {
@@ -284,7 +277,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
           }
           break;
         case AudioManager.AUDIOFOCUS_LOSS:
-          audioManager.abandonAudioFocus(this);
+          abandonAudioFocus();
           playOnAudioFocus = false;
           stop();
           break;

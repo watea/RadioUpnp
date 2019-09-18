@@ -53,14 +53,79 @@ import com.watea.radio_upnp.service.RadioHandler;
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
+  @NonNull
+  private final Player.EventListener playerEventListener = new Player.EventListener() {
+    @Override
+    public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
+    }
+
+    @Override
+    public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
+    }
+
+    @Override
+    public void onLoadingChanged(boolean isLoading) {
+    }
+
+    @Override
+    public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+      Log.i(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState +
+        " PlayWhenReady=" + playWhenReady);
+      switch (playbackState) {
+        case Player.STATE_BUFFERING:
+        case Player.STATE_IDLE:
+          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+          break;
+        case Player.STATE_READY:
+          changeAndNotifyState(
+            playWhenReady ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED);
+          break;
+        case Player.STATE_ENDED:
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          break;
+        // Should not happen
+        default:
+          Log.e(LOG_TAG, "onPlayerStateChanged: onPlayerStateChanged bad state " + playbackState);
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+      }
+    }
+
+    @Override
+    public void onRepeatModeChanged(int repeatMode) {
+    }
+
+    @Override
+    public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
+    }
+
+    @Override
+    public void onPlayerError(ExoPlaybackException exoPlaybackException) {
+      Log.d(LOG_TAG, "ExoPlayer: onPlayerError " + exoPlaybackException);
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+    }
+
+    @Override
+    public void onPositionDiscontinuity(int reason) {
+    }
+
+    @Override
+    public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
+    }
+
+    @Override
+    public void onSeekProcessed() {
+    }
+  };
   @Nullable
   private SimpleExoPlayer simpleExoPlayer = null;
-  @Nullable
-  private PlayerEventListener playerEventListener;
 
   public LocalPlayerAdapter(
-    @NonNull Context context, @NonNull HttpServer httpServer, @NonNull Listener listener) {
-    super(context, httpServer, listener);
+    @NonNull Context context,
+    @NonNull HttpServer httpServer,
+    @NonNull Listener listener,
+    @NonNull Radio radio,
+    @NonNull String lockKey) {
+    super(context, httpServer, listener, radio, lockKey);
   }
 
   @Override
@@ -78,12 +143,12 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected void onPrepareFromMediaId(@NonNull Radio radio) {
+  protected void onPrepareFromMediaId() {
     simpleExoPlayer = ExoPlayerFactory.newSimpleInstance(
       new DefaultRenderersFactory(context),
       new DefaultTrackSelector(),
       new DefaultLoadControl());
-    simpleExoPlayer.addListener(playerEventListener = new PlayerEventListener(lockKey));
+    simpleExoPlayer.addListener(playerEventListener);
     simpleExoPlayer.setPlayWhenReady(true);
     simpleExoPlayer.prepare(
       new ExtractorMediaSource.Factory(
@@ -152,75 +217,5 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
         // Nothing else
     }
     return actions;
-  }
-
-  private class PlayerEventListener implements Player.EventListener {
-    private final String actionLockKey;
-
-    private PlayerEventListener(@NonNull String lockKey) {
-      actionLockKey = lockKey;
-    }
-
-    @Override
-    public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
-    }
-
-    @Override
-    public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
-    }
-
-    @Override
-    public void onLoadingChanged(boolean isLoading) {
-    }
-
-    @Override
-    public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-      Log.i(LOG_TAG,
-        "ExoPlayer: onPlayerStateChanged, State=" + playbackState +
-          " PlayWhenReady=" + playWhenReady);
-      switch (playbackState) {
-        case Player.STATE_BUFFERING:
-        case Player.STATE_IDLE:
-          postChangeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, actionLockKey);
-          break;
-        case Player.STATE_ENDED:
-          postChangeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, actionLockKey);
-          break;
-        case Player.STATE_READY:
-          postChangeAndNotifyState(
-            playWhenReady ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED,
-            actionLockKey);
-          break;
-        default: // Should not happen
-          Log.e(LOG_TAG, "onPlayerStateChanged: onPlayerStateChanged bad state " + playbackState);
-          throw new RuntimeException();
-      }
-    }
-
-    @Override
-    public void onRepeatModeChanged(int repeatMode) {
-    }
-
-    @Override
-    public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
-    }
-
-    @Override
-    public void onPlayerError(ExoPlaybackException exoPlaybackException) {
-      Log.d(LOG_TAG, "ExoPlayer: onPlayerError " + exoPlaybackException);
-      postChangeAndNotifyState(PlaybackStateCompat.STATE_ERROR, actionLockKey);
-    }
-
-    @Override
-    public void onPositionDiscontinuity(int reason) {
-    }
-
-    @Override
-    public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
-    }
-
-    @Override
-    public void onSeekProcessed() {
-    }
   }
 }

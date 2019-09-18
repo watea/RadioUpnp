@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.fourthline.cling.model.meta.Device;
@@ -38,6 +39,10 @@ public class DlnaDevice {
     this.device = device;
   }
 
+  public static String getIdentity(@NonNull Device device) {
+    return device.getIdentity().getUdn().getIdentifierString();
+  }
+
   @Nullable
   public Bitmap getIcon() {
     return icon;
@@ -49,7 +54,7 @@ public class DlnaDevice {
 
   @Nullable
   public String getIdentity() {
-    return (device == null) ? null : device.getIdentity().getUdn().getIdentifierString();
+    return (device == null) ? null : getIdentity(device);
   }
 
   @Override

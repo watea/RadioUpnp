@@ -60,7 +60,6 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     this.context = context;
     this.listener = listener;
     this.iconSize = iconSize;
-
   }
 
   // Content setter, must be called

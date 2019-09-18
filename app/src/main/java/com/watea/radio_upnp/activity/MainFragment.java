@@ -142,12 +142,12 @@ public class MainFragment
               playedRadioInformationTextView.setVisibility(View.VISIBLE);
               albumArtImageView.setVisibility(View.VISIBLE);
               // DLNA device doesn't support PAUSE but STOP
-              // No extras for local playing
-              boolean isLocal = mediaController.getExtras().isEmpty();
+              boolean isDlna =
+                mediaController.getExtras().containsKey(getString(R.string.key_dlna_device));
               playImageButton.setImageResource(
-                isLocal ? R.drawable.ic_pause_black_24dp : R.drawable.ic_stop_black_24dp);
+                isDlna ? R.drawable.ic_stop_black_24dp : R.drawable.ic_pause_black_24dp);
               playImageButton.setTag(
-                isLocal ? PlaybackStateCompat.STATE_PAUSED : PlaybackStateCompat.STATE_STOPPED);
+                isDlna ? PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
               playImageButton.setVisibility(View.VISIBLE);
               progressBar.setVisibility(View.INVISIBLE);
               break;
@@ -403,33 +403,36 @@ public class MainFragment
     gotItDlnaEnable =
       sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
     // Adapters
-    dlnaDevicesAdapter = new DlnaDevicesAdapter(
-      getActivity(),
-      (savedInstanceState == null) ?
-        null : savedInstanceState.getString(getString(R.string.key_selected_device)),
-      new DlnaDevicesAdapter.Listener() {
-        @Override
-        public void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen) {
-          if (isChosen) {
-            Radio radio = getCurrentRadio();
-            if (radio != null) {
-              startReading(radio);
+    // Don't re-create if re-enter in fragment
+    if (dlnaDevicesAdapter == null) {
+      dlnaDevicesAdapter = new DlnaDevicesAdapter(
+        getActivity(),
+        (savedInstanceState == null) ?
+          null : savedInstanceState.getString(getString(R.string.key_selected_device)),
+        new DlnaDevicesAdapter.Listener() {
+          @Override
+          public void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen) {
+            if (isChosen) {
+              Radio radio = getCurrentRadio();
+              if (radio != null) {
+                startReading(radio);
+              }
+              tell(getResources().getString(R.string.dlna_selection) + dlnaDevice);
+            } else {
+              tell(R.string.no_dlna_selection);
             }
-            tell(getResources().getString(R.string.dlna_selection) + dlnaDevice);
-          } else {
-            tell(R.string.no_dlna_selection);
+            dlnaAlertDialog.dismiss();
           }
-          dlnaAlertDialog.dismiss();
-        }
 
-        @Override
-        public void onChosenDeviceChange(@Nullable DlnaDevice chosenDlnaDevice) {
-          // Do nothing if not yet created;
-          if (dlnaMenuItem != null) {
-            setDlnaMenuItem(chosenDlnaDevice);
+          @Override
+          public void onChosenDeviceChange(@Nullable DlnaDevice chosenDlnaDevice) {
+            // Do nothing if not yet created;
+            if (dlnaMenuItem != null) {
+              setDlnaMenuItem(chosenDlnaDevice);
+            }
           }
-        }
-      });
+        });
+    }
     radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
     radiosView.setLayoutManager(
       new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
