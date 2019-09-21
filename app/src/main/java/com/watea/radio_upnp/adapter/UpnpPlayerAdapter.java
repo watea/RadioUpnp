@@ -263,7 +263,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
             handler.post(new Runnable() {
               @Override
               public void run() {
-                if (state == PlaybackStateCompat.STATE_NONE) {
+                if (isStillRunning()) {
                   changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
                   onPlay();
                 }
@@ -300,7 +300,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
             handler.post(new Runnable() {
               @Override
               public void run() {
-                if (state == PlaybackStateCompat.STATE_NONE) {
+                if (isStillRunning()) {
+                  changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
                   onSetAVTransportURI();
                 }
               }
@@ -315,7 +316,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       public void failure(
         ActionInvocation actionInvocation, UpnpResponse operation, String defaultMsg) {
-        Log.d(LOG_TAG, defaultMsg);
+        Log.d(LOG_TAG, actionInvocation.getAction().getName() + ": " + defaultMsg);
         String action = actionInvocation.getAction().getName();
         // Don't handle error on volume
         // Lock key should be tested here ot be rigorous
@@ -328,6 +329,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
       }
     });
+  }
+
+  private boolean isStillRunning() {
+    return
+      (state == PlaybackStateCompat.STATE_NONE) || (state == PlaybackStateCompat.STATE_BUFFERING);
   }
 
   // Create DIDL-Lite metadata

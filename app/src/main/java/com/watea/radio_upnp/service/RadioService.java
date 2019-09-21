@@ -207,7 +207,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     handler.post(new Runnable() {
       @Override
       public void run() {
-        if (session.isActive() && lockKey.equals(RadioService.this.lockKey)) {
+        if (isStillRunning(lockKey)) {
           Log.d(LOG_TAG, "New valid state/lock key received: " + state + "/" + lockKey);
           // Report the state to the MediaSession
           session.setPlaybackState(state);
@@ -255,13 +255,17 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     handler.post(new Runnable() {
       @Override
       public void run() {
-        if (session.isActive() && lockKey.equals(RadioService.this.lockKey)) {
+        if (isStillRunning(lockKey)) {
           session.setMetadata(RadioService.this.mediaMetadataCompat = mediaMetadataCompat);
           // Update notification
           notificationManager.notify(NOTIFICATION_ID, getNotification());
         }
       }
     });
+  }
+
+  private boolean isStillRunning(@NonNull String lockKey) {
+    return session.isActive() && lockKey.equals(this.lockKey);
   }
 
   @Nullable

@@ -237,7 +237,7 @@ public class RadioHandler extends AbstractHandler {
     int metadataSize = 0;
     while (inputStream.read(buffer) != -1) {
       // Stop if not current listener
-      if (listener == currentListener) {
+      if (currentListener.equals(listener)) {
         // Only stream data are transferred
         if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
           outputStream.write(buffer);

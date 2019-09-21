@@ -27,6 +27,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.watea.radio_upnp.model.Radio;
@@ -74,7 +75,7 @@ public class HttpServer extends Thread {
     return NetworkTester.getLoopbackUri(PORT);
   }
 
-  public void setRadioHandlerListener(RadioHandler.Listener listener) {
+  public void setRadioHandlerListener(@Nullable RadioHandler.Listener listener) {
     radioHandler.setListener(listener);
   }
 
