@@ -25,6 +25,7 @@ package com.watea.radio_upnp.adapter;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -50,6 +51,8 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   private final Context context;
   @NonNull
   private final List<DlnaDevice> dlnaDevices = new Vector<>();
+  @NonNull
+  private final Bitmap CAST;
   @Nullable
   private String chosenDlnaDeviceIdentity;
   @NonNull
@@ -62,7 +65,13 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     this.context = context;
     this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
     this.listener = listener;
+    CAST = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cast);
     clear();
+  }
+
+  @NonNull
+  public Bitmap getDefaultBitmap() {
+    return CAST;
   }
 
   @NonNull
@@ -189,19 +198,16 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
       } else {
         dlnaDeviceNameTextView.setText(dlnaDevice.toString());
       }
-      if (isWaiting() || (dlnaDevice.getIcon() == null)) {
-        dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-          R.drawable.ic_cast_black_24dp,
-          0, 0, 0);
-      } else {
-        dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-          new BitmapDrawable(
-            context.getResources(),
-            Bitmap.createScaledBitmap(dlnaDevice.getIcon(), ICON_SIZE, ICON_SIZE, false)),
-          null, null, null);
-      }
+      Bitmap bitmap = Bitmap.createScaledBitmap(
+        (isWaiting() || (dlnaDevice.getIcon() == null)) ? CAST : dlnaDevice.getIcon(),
+        ICON_SIZE,
+        ICON_SIZE,
+        false);
+      dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+        new BitmapDrawable(context.getResources(), bitmap), null, null, null);
       boolean isWaitingOrNotFullyHydrated = (isWaiting() || !dlnaDevice.isFullyHydrated());
-      dlnaDeviceNameTextView.setTextColor(ContextCompat.getColor(context,
+      dlnaDeviceNameTextView.setTextColor(ContextCompat.getColor(
+        context,
         (isWaitingOrNotFullyHydrated ||
           !Objects.requireNonNull(dlnaDevice.getIdentity()).equals(chosenDlnaDeviceIdentity)) ?
           R.color.colorPrimaryText : R.color.colorPrimary));

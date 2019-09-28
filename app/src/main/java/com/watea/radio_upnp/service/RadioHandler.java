@@ -69,7 +69,7 @@ public class RadioHandler extends AbstractHandler {
   @NonNull
   private final RadioLibrary radioLibrary;
   @NonNull
-  private final Map<String, String> remoteUserAgents = new Hashtable<>();
+  private final Map<String, Integer> remoteConnections = new Hashtable<>();
   @Nullable
   private Listener listener = null;
 
@@ -86,7 +86,7 @@ public class RadioHandler extends AbstractHandler {
     @NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
       .buildUpon()
-      .appendEncodedPath("radio")
+      .appendEncodedPath(RadioHandler.class.getSimpleName())
       // Add radio ID + lock key as query parameter
       // Don't use several query parameters to avoid encoding troubles
       .appendQueryParameter(PARAMS, radio.getId() + SEPARATOR + lockKey)
@@ -132,10 +132,8 @@ public class RadioHandler extends AbstractHandler {
       "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
     // For further user
     boolean isGet = GET.equals(method);
-    final String remoteUserAgent = request.getHeader(USER_AGENT);
-    if (remoteUserAgent != null) {
-      remoteUserAgents.put(lockKey, remoteUserAgent);
-    }
+    remoteConnections.put(lockKey, getConnectionCount(lockKey) + 1);
+    System.out.println(getConnectionCount(lockKey));
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {
@@ -203,8 +201,7 @@ public class RadioHandler extends AbstractHandler {
           } catch (InterruptedException interruptedException) {
             Log.e(LOG_TAG, "Sleep error, ignored...");
           }
-          if ((remoteUserAgent == null) ||
-            remoteUserAgent.equals(remoteUserAgents.get(lockKey))) {
+          if (getConnectionCount(lockKey) <= 0) {
             Log.d(LOG_TAG, "=> error sent to listener");
             currentListener.onError(radio, lockKey);
           } else {
@@ -217,7 +214,13 @@ public class RadioHandler extends AbstractHandler {
         httpURLConnection.disconnect();
       }
     }
+    remoteConnections.put(lockKey, getConnectionCount(lockKey) - 1);
     Log.d(LOG_TAG, "handleConnection: leaving");
+  }
+
+  private int getConnectionCount(@NonNull String lockKey) {
+    Integer count = remoteConnections.get(lockKey);
+    return (count == null) ? 0 : count;
   }
 
   // Forward stream data and handle metadata

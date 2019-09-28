@@ -262,9 +262,14 @@ public class MainFragment
           // Search for icon
           if (remoteDevice.isFullyHydrated()) {
             Icon deviceIcon = getLargestIcon(remoteDevice.getIcons());
-            dlnaDevice.setIcon((deviceIcon == null) ?
-              null :
-              NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri())));
+            Bitmap icon = null;
+            if (deviceIcon != null) {
+              icon = NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri()));
+            }
+            if (icon == null) {
+              icon = dlnaDevicesAdapter.getDefaultBitmap();
+            }
+            dlnaDevice.setIcon(icon);
           }
           // Add DlnaDevice to Adapter
           handler.post(new Runnable() {

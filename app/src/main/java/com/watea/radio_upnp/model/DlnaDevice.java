@@ -48,7 +48,7 @@ public class DlnaDevice {
     return icon;
   }
 
-  public void setIcon(@Nullable Bitmap icon) {
+  public void setIcon(@NonNull Bitmap icon) {
     this.icon = icon;
   }
 
