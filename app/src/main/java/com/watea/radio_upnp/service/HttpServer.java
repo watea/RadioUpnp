@@ -102,6 +102,7 @@ public class HttpServer extends Thread {
   }
 
   // Return logo file Uri; a jpeg file
+  @Nullable
   public Uri createLogoFile(@NonNull Radio radio, int size) {
     String name = LOGO_FILE + ".jpg";
     try (FileOutputStream fileOutputStream = context.openFileOutput(name, Context.MODE_PRIVATE)) {
@@ -115,6 +116,7 @@ public class HttpServer extends Thread {
     return (uri == null) ? null : uri.buildUpon().appendEncodedPath(name).build();
   }
 
+  @Nullable
   public Uri getUri() {
     return NetworkTester.getUri(context, PORT);
   }

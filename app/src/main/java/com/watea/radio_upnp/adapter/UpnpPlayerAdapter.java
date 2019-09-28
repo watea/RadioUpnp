@@ -25,6 +25,7 @@ package com.watea.radio_upnp.adapter;
 
 import android.content.Context;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -85,6 +86,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private String instanceId = "0";
   @NonNull
   private String remoteProtocolInfo = "";
+  @NonNull
+  private String radioUri = "";
   private final Runnable SETAVTRANSPORTURI_RUNNABLE = new Runnable() {
     @Override
     public void run() {
@@ -103,6 +106,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     super(context, httpServer, listener, radio, lockKey);
     this.dlnaDevice = dlnaDevice;
     this.androidUpnpService = androidUpnpService;
+    // Shall not be null
+    Uri uri = httpServer.getUri();
+    if (uri == null) {
+      Log.e(LOG_TAG, "UpnpPlayerAdapter: service not available");
+    } else {
+      radioUri = RadioHandler.getHandledUri(uri, this.radio, this.lockKey).toString();
+    }
     if (protocolInfos.containsKey(getDlnaIdentity())) {
       setRemoteProtocolInfo();
     }
@@ -132,6 +142,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     if ((dlnaDevice.findService(CONNECTION_MANAGER_ID) == null) ||
       (dlnaDevice.findService(AV_TRANSPORT_SERVICE_ID) == null)) {
       Log.e(LOG_TAG, "onPrepareFromMediaId: services not available");
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
       return;
     }
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
@@ -246,11 +257,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   private void onSetAVTransportURI() {
-    String radioUri = RadioHandler.getHandledUri(httpServer.getUri(), radio, lockKey).toString();
-    ActionInvocation actionInvocation =
-      getAVTransportActionInvocation(ACTION_SET_AV_TRANSPORT_URI);
+    ActionInvocation actionInvocation = getAVTransportActionInvocation(ACTION_SET_AV_TRANSPORT_URI);
     actionInvocation.setInput("CurrentURI", radioUri);
-    actionInvocation.setInput("CurrentURIMetaData", getMetaData(radioUri));
+    actionInvocation.setInput("CurrentURIMetaData", getMetaData());
     upnpExecuteAction(actionInvocation);
   }
 
@@ -390,7 +399,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   // Create DIDL-Lite metadata
   @NonNull
-  private String getMetaData(@NonNull String radioUri) {
+  private String getMetaData() {
     StringBuilder metaData = new StringBuilder("<DIDL-Lite " +
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"" +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
