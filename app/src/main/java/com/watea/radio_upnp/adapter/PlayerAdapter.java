@@ -38,6 +38,9 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
 
+import java.util.List;
+import java.util.Vector;
+
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
 // Warning: not threadsafe, execution shall be done in main UI thread
@@ -122,6 +125,11 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       Log.d(LOG_TAG, "=> Error");
       changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
     }
+  }
+
+  @Override
+  public List<String> getProtocolInfos() {
+    return new Vector<>();
   }
 
   public boolean isPlaying() {

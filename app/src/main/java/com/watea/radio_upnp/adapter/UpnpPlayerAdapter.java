@@ -28,6 +28,7 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
@@ -49,7 +50,6 @@ import org.fourthline.cling.model.types.UDAServiceId;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Vector;
 
 import static com.watea.radio_upnp.service.NetworkTester.getStreamContentType;
@@ -85,8 +85,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private String instanceId = "0";
   @NonNull
-  private String remoteProtocolInfo = "";
-  @NonNull
   private String radioUri = "";
   private final Runnable SETAVTRANSPORTURI_RUNNABLE = new Runnable() {
     @Override
@@ -113,9 +111,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     } else {
       radioUri = RadioHandler.getHandledUri(uri, this.radio, this.lockKey).toString();
     }
-    if (protocolInfos.containsKey(getDlnaIdentity())) {
-      setRemoteProtocolInfo();
-    }
     Service connectionManager = dlnaDevice.findService(CONNECTION_MANAGER_ID);
     hasPrepareForConnection = (connectionManager != null) &&
       (connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION) != null);
@@ -130,6 +125,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     }
     volumeDirection = direction;
     upnpExecuteAction(getRenderingControlActionInvocation(ACTION_GET_VOLUME));
+  }
+
+  @Nullable
+  @Override
+  public List<String> getProtocolInfos() {
+    return protocolInfos.get(getDlnaIdentity());
   }
 
   @Override
@@ -218,10 +219,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     }
   }
 
-  private void setRemoteProtocolInfo() {
-    remoteProtocolInfo = Objects.requireNonNull(protocolInfos.get(getDlnaIdentity())).get(0);
-  }
-
   @NonNull
   private String getDlnaIdentity() {
     return DlnaDevice.getIdentity(dlnaDevice);
@@ -266,7 +263,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private void onPrepareForConnection() {
     ActionInvocation actionInvocation =
       getActionInvocation(CONNECTION_MANAGER_ID, ACTION_PREPARE_FOR_CONNECTION);
-    actionInvocation.setInput("RemoteProtocolInfo", remoteProtocolInfo);
+    List<String> remoteProtocolInfos = getProtocolInfos();
+    actionInvocation.setInput(
+      "RemoteProtocolInfo",
+      ((remoteProtocolInfos == null) || (remoteProtocolInfos.size() == 0)) ? "" :
+        remoteProtocolInfos.get(0));
     actionInvocation.setInput("PeerConnectionManager", "");
     actionInvocation.setInput("PeerConnectionID", "-1");
     actionInvocation.setInput("Direction", "Input");
@@ -330,17 +331,17 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
               contentType = MPEG;
             }
             List<String> infos = new Vector<>();
+            String pattern = "http-get:*:" + contentType;
             // DLNA player data for MIME type
             for (String string : actionInvocation.getOutput("Sink").toString().split(",")) {
-              if (string.contains(contentType)) {
+              if (string.startsWith(pattern) && !infos.contains(string)) {
                 infos.add(string);
               }
             }
             if (infos.isEmpty()) {
-              infos.add("http-get:*:\"" + contentType + ":*");
+              infos.add(pattern + ":*");
             }
             protocolInfos.put(getDlnaIdentity(), infos);
-            setRemoteProtocolInfo();
             // Now we can launch connection, only if current action not cancelled
             launch(new Runnable() {
               @Override
@@ -410,13 +411,16 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "<dc:title>" + radio.getName() + "</dc:title>" +
       "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>");
-    for (String protocolInfo : Objects.requireNonNull(protocolInfos.get(getDlnaIdentity()))) {
-      metaData
-        .append("<res duration=\"0:00:00\" protocolInfo=\"")
-        .append(protocolInfo)
-        .append("\">")
-        .append(radioUri)
-        .append("</res>");
+    List<String> protocolInfos = getProtocolInfos();
+    if (protocolInfos != null) {
+      for (String protocolInfo : protocolInfos) {
+        metaData
+          .append("<res duration=\"0:00:00\" protocolInfo=\"")
+          .append(protocolInfo)
+          .append("\">")
+          .append(radioUri)
+          .append("</res>");
+      }
     }
     return metaData +
       "<upnp:albumArtURI>" + httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE) +

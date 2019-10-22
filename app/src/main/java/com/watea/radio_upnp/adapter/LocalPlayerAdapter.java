@@ -50,6 +50,8 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
 
+import java.util.List;
+
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
@@ -135,6 +137,12 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     } else {
       simpleExoPlayer.setVolume(volume);
     }
+  }
+
+  @Nullable
+  @Override
+  public List<String> getProtocolInfos() {
+    return null;
   }
 
   @Override

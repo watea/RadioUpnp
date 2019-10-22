@@ -62,8 +62,9 @@ public class RadioHandler extends AbstractHandler {
   private static final String USER_AGENT = "User-Agent";
   private static final String PARAMS = "params";
   private static final String SEPARATOR = ",";
-  // For ICY metadata
-  private static final Pattern PATTERN = Pattern.compile(".*StreamTitle='([^;]*)';.*");
+  private static final String CONTENT_FEATURES_BASE = ";DLNA.ORG_OP=00;DLNA.ORG_CI=0";
+  private static final String CONTENT_FEATURES_MP3 = "DLNA.ORG_PN=MP3";
+  private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
   @NonNull
@@ -133,7 +134,6 @@ public class RadioHandler extends AbstractHandler {
     // For further user
     boolean isGet = GET.equals(method);
     remoteConnections.put(lockKey, getConnectionCount(lockKey) + 1);
-    System.out.println(getConnectionCount(lockKey));
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {
@@ -155,6 +155,24 @@ public class RadioHandler extends AbstractHandler {
       response.setHeader("Accept-Ranges", "bytes");
       response.setHeader("Cache-Control", "no-cache");
       response.setHeader("Connection", "close");
+      /* Some DLNA devices (in particular infamous Samsung TVs, but not only), when emitting the HTTP GET request with the stream URL to the Media Server (eg MinimServer), add a custom DLNA HTTP Header:
+       *  getcontentFeatures.dlna.org: 1
+       * When this header is set, they expect the HTTP reply header to containing the 4th field of the protocolInfo containing DLNA profile info.
+       * For example for MP3:
+       *  contentFeatures.dlna.org: DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_CI=0
+       * This is an oddity of DLNA but some DLNA devices will not work without this reply header being present, and may return an error code to the caller of SetAVTransportURI (the Control Point).
+       * Handling this header is absolutely required to work with most DLNA TVs (Sony, LG, Samsung, …).
+       *
+       * If DLNA.ORG_OP=11, then left/rght keys uses range header, and up/down uses TimeSeekRange.DLNA.ORG header
+       * If DLNA.ORG_OP=10, then left/rght and up/down keys uses TimeSeekRange.DLNA.ORG header
+       * If DLNA.ORG_OP=01, then left/rght keys uses range header, and up/down keys are disabled
+       * and if DLNA.ORG_OP=00, then all keys are disabled
+       *
+       * DLNA.ORG_CI 0 = native 1, = transcoded
+       *
+       * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region */
+      response.setHeader("ContentFeatures.dlna.org", getContentFeatures());
+      response.setHeader("TransferMode.dlna.org", "Streaming");
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
       Log.d(LOG_TAG, "Response sent to LAN client");
@@ -223,6 +241,28 @@ public class RadioHandler extends AbstractHandler {
     return (count == null) ? 0 : count;
   }
 
+  @NonNull
+  private String getContentFeatures() {
+    String result = CONTENT_FEATURES_MP3;
+    if (listener == null) {
+      Log.d(LOG_TAG, "getContentFeatures: null listener");
+    } else {
+      List<String> protocolInfos = listener.getProtocolInfos();
+      if (protocolInfos == null) {
+        Log.d(LOG_TAG, "getContentFeatures: null protocolInfos");
+      } else {
+        for (String protolInfo : protocolInfos) {
+          String[] subProtocolInfo = protolInfo.split(":");
+          if (subProtocolInfo.length > 3) {
+            result = subProtocolInfo[3];
+            break;
+          }
+        }
+      }
+    }
+    return result + CONTENT_FEATURES_BASE;
+  }
+
   // Forward stream data and handle metadata
   // metadataOffset = 0 if no metadata
   private void handleStreaming(
@@ -273,7 +313,7 @@ public class RadioHandler extends AbstractHandler {
               if (BuildConfig.DEBUG) {
                 Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
               }
-              final Matcher matcher = PATTERN.matcher(metadata);
+              final Matcher matcher = PATTERN_ICY.matcher(metadata);
               // Tell listener
               if (matcher.find()) {
                 currentListener.onNewInformation(radio, matcher.group(1), lockKey);
@@ -295,5 +335,8 @@ public class RadioHandler extends AbstractHandler {
       @NonNull Radio radio, @NonNull String information, @NonNull String lockKey);
 
     void onError(@NonNull Radio radio, @NonNull String lockKey);
+
+    @Nullable
+    List<String> getProtocolInfos();
   }
 }
