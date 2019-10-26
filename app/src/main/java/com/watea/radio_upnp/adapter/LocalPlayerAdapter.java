@@ -53,7 +53,6 @@ import com.watea.radio_upnp.service.RadioHandler;
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
-  @NonNull
   private final Player.EventListener playerEventListener = new Player.EventListener() {
     @Override
     public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {

@@ -67,7 +67,6 @@ public class RadioHandler extends AbstractHandler {
   private final String userAgent;
   @NonNull
   private final RadioLibrary radioLibrary;
-  @NonNull
   private final Map<String, Integer> remoteConnections = new Hashtable<>();
   @Nullable
   private Listener listener = null;

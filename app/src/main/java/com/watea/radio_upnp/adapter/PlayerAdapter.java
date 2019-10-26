@@ -92,14 +92,12 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   protected final Radio radio;
   @NonNull
   private final AudioManager audioManager;
-  @NonNull
   private final AudioFocusHelper audioFocusHelper = new AudioFocusHelper();
   @NonNull
   private final Listener listener;
   protected int state = PlaybackStateCompat.STATE_NONE;
   private boolean playOnAudioFocus = false;
   private boolean audioNoisyReceiverRegistered = false;
-  @NonNull
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {

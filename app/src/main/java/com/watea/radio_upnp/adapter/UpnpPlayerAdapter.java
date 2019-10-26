@@ -70,15 +70,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final Pattern PATTERN_DLNA = Pattern.compile(".*DLNA\\.ORG_PN=([^;]*).*");
   private static final int REMOTE_LOGO_SIZE = 140;
-  @NonNull
   private static final Map<Long, String> contentTypes = new Hashtable<>();
-  @NonNull
   private static final Map<String, String> protocolInfos = new Hashtable<>();
   @NonNull
   private final Device dlnaDevice;
   @NonNull
   private final AndroidUpnpService androidUpnpService;
-  @NonNull
   private final Handler handler = new Handler();
   private final boolean hasPrepareForConnection;
   private int volumeDirection = AudioManager.ADJUST_SAME;

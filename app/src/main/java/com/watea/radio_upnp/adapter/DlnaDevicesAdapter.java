@@ -49,7 +49,6 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   private static final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
   @NonNull
   private final Context context;
-  @NonNull
   private final List<DlnaDevice> dlnaDevices = new Vector<>();
   @NonNull
   private final Bitmap CAST;
