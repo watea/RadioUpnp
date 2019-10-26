@@ -38,19 +38,49 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
 
-import java.util.List;
-import java.util.Vector;
-
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
 // Warning: not threadsafe, execution shall be done in main UI thread
 @SuppressWarnings("WeakerAccess")
 public abstract class PlayerAdapter implements RadioHandler.Listener {
+  /* DLNA.ORG_FLAGS, padded with 24 trailing 0s
+   *     80000000  31  senderPaced
+   *     40000000  30  lsopTimeBasedSeekSupported
+   *     20000000  29  lsopByteBasedSeekSupported
+   *     10000000  28  playcontainerSupported
+   *      8000000  27  s0IncreasingSupported
+   *      4000000  26  sNIncreasingSupported
+   *      2000000  25  rtspPauseSupported
+   *      1000000  24  streamingTransferModeSupported
+   *       800000  23  interactiveTransferModeSupported
+   *       400000  22  backgroundTransferModeSupported
+   *       200000  21  connectionStallingSupported
+   *       100000  20  dlnaVersion15Supported
+   *
+   *     Example: (1 << 24) | (1 << 22) | (1 << 21) | (1 << 20)
+   *       DLNA.ORG_FLAGS=01700000[000000000000000000000000] // [] show padding
+   *
+   * If DLNA.ORG_OP=11, then left/rght keys uses range header, and up/down uses TimeSeekRange.DLNA.ORG header
+   * If DLNA.ORG_OP=10, then left/rght and up/down keys uses TimeSeekRange.DLNA.ORG header
+   * If DLNA.ORG_OP=01, then left/rght keys uses range header, and up/down keys are disabled
+   * and if DLNA.ORG_OP=00, then all keys are disabled
+   * DLNA.ORG_CI 0 = native 1, = transcoded
+   * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region
+   * Example:
+   * DLNA_PARAMS = "DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"; */
+  protected static final String CONTENT_FEATURES_HTTP = "http-get:*:";
+  protected static final String CONTENT_FEATURES_AUDIO_MPEG = "audio/mpeg";
+  protected static final String CONTENT_FEATURES_BASE = ":DLNA.ORG_PN=";
+  protected static final String CONTENT_FEATURES_MP3 = "MP3";
+  protected static final String CONTENT_FEATURES_EXTENDED = ";DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = PlayerAdapter.class.getName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+  private static final String CONTENT_FEATURES_DEFAULT =
+    CONTENT_FEATURES_HTTP + CONTENT_FEATURES_AUDIO_MPEG +
+      CONTENT_FEATURES_BASE + CONTENT_FEATURES_MP3 + CONTENT_FEATURES_EXTENDED;
   @NonNull
   protected final Context context;
   @NonNull
@@ -127,9 +157,10 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     }
   }
 
+  @NonNull
   @Override
-  public List<String> getProtocolInfos() {
-    return new Vector<>();
+  public String getProtocolInfo() {
+    return CONTENT_FEATURES_DEFAULT;
   }
 
   public boolean isPlaying() {

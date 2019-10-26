@@ -352,7 +352,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't retrieve radio");
         throw new RuntimeException();
       }
-      // Stop if any, avoid any cross acquisition of multithread lock
+      // Stop if any
       if (playerAdapter != null) {
         playerAdapter.stop();
       }

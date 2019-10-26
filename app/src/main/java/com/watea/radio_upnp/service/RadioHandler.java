@@ -62,8 +62,6 @@ public class RadioHandler extends AbstractHandler {
   private static final String USER_AGENT = "User-Agent";
   private static final String PARAMS = "params";
   private static final String SEPARATOR = ",";
-  private static final String CONTENT_FEATURES_BASE = ";DLNA.ORG_OP=00;DLNA.ORG_CI=0";
-  private static final String CONTENT_FEATURES_MP3 = "DLNA.ORG_PN=MP3";
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
@@ -150,6 +148,7 @@ public class RadioHandler extends AbstractHandler {
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
       String contentType = httpURLConnection.getContentType();
+      // TODO String iceAudioInfo = httpURLConnection.getHeaderField("ice-audio-info");
       response.setContentType((contentType == null) ? "audio/mpeg" : contentType);
       response.setHeader("Server", userAgent);
       response.setHeader("Accept-Ranges", "bytes");
@@ -171,7 +170,8 @@ public class RadioHandler extends AbstractHandler {
        * DLNA.ORG_CI 0 = native 1, = transcoded
        *
        * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region */
-      response.setHeader("ContentFeatures.dlna.org", getContentFeatures());
+      // Listener responsibility to ensure validity of next value:
+      response.setHeader("ContentFeatures.dlna.org", currentListener.getProtocolInfo().split(":")[3]);
       response.setHeader("TransferMode.dlna.org", "Streaming");
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
@@ -241,28 +241,6 @@ public class RadioHandler extends AbstractHandler {
     return (count == null) ? 0 : count;
   }
 
-  @NonNull
-  private String getContentFeatures() {
-    String result = CONTENT_FEATURES_MP3;
-    if (listener == null) {
-      Log.d(LOG_TAG, "getContentFeatures: null listener");
-    } else {
-      List<String> protocolInfos = listener.getProtocolInfos();
-      if (protocolInfos == null) {
-        Log.d(LOG_TAG, "getContentFeatures: null protocolInfos");
-      } else {
-        for (String protolInfo : protocolInfos) {
-          String[] subProtocolInfo = protolInfo.split(":");
-          if (subProtocolInfo.length > 3) {
-            result = subProtocolInfo[3];
-            break;
-          }
-        }
-      }
-    }
-    return result + CONTENT_FEATURES_BASE;
-  }
-
   // Forward stream data and handle metadata
   // metadataOffset = 0 if no metadata
   private void handleStreaming(
@@ -274,8 +252,8 @@ public class RadioHandler extends AbstractHandler {
     @NonNull final String lockKey,
     @NonNull final Listener currentListener) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
-    final byte[] buffer = new byte[1];
-    final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
+    byte[] buffer = new byte[1];
+    ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
     int metadataBlockBytesRead = 0;
     int metadataSize = 0;
     while (inputStream.read(buffer) != -1) {
@@ -313,7 +291,7 @@ public class RadioHandler extends AbstractHandler {
               if (BuildConfig.DEBUG) {
                 Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
               }
-              final Matcher matcher = PATTERN_ICY.matcher(metadata);
+              Matcher matcher = PATTERN_ICY.matcher(metadata);
               // Tell listener
               if (matcher.find()) {
                 currentListener.onNewInformation(radio, matcher.group(1), lockKey);
@@ -336,7 +314,7 @@ public class RadioHandler extends AbstractHandler {
 
     void onError(@NonNull Radio radio, @NonNull String lockKey);
 
-    @Nullable
-    List<String> getProtocolInfos();
+    @NonNull
+    String getProtocolInfo();
   }
 }
