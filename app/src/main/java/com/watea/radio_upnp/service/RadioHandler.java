@@ -46,6 +46,7 @@ import java.nio.charset.CharsetDecoder;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -148,11 +149,11 @@ public class RadioHandler extends AbstractHandler {
       // Response to LAN
       String contentType = httpURLConnection.getContentType();
       // TODO String iceAudioInfo = httpURLConnection.getHeaderField("ice-audio-info");
-      response.setContentType((contentType == null) ? "audio/mpeg" : contentType);
+      response.setContentType(
+        (contentType == null) ? Listener.CONTENT_FEATURES_AUDIO_MPEG : contentType);
       response.setHeader("Server", userAgent);
       response.setHeader("Accept-Ranges", "bytes");
       response.setHeader("Cache-Control", "no-cache");
-      response.setHeader("Connection", "close");
       /* Some DLNA devices (in particular infamous Samsung TVs, but not only), when emitting the HTTP GET request with the stream URL to the Media Server (eg MinimServer), add a custom DLNA HTTP Header:
        *  getcontentFeatures.dlna.org: 1
        * When this header is set, they expect the HTTP reply header to containing the 4th field of the protocolInfo containing DLNA profile info.
@@ -170,8 +171,10 @@ public class RadioHandler extends AbstractHandler {
        *
        * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region */
       // Listener responsibility to ensure validity of next value:
-      response.setHeader("ContentFeatures.dlna.org", currentListener.getProtocolInfo().split(":")[3]);
-      response.setHeader("TransferMode.dlna.org", "Streaming");
+      String protocolInfo = currentListener.getProtocolInfo().split(":")[3];
+      Log.d(LOG_TAG, "Header contentFeatures.dlna.org: " + protocolInfo);
+      response.setHeader("contentFeatures.dlna.org", protocolInfo);
+      response.setHeader("transferMode.dlna.org", "Streaming");
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
       Log.d(LOG_TAG, "Response sent to LAN client");
@@ -308,6 +311,8 @@ public class RadioHandler extends AbstractHandler {
   }
 
   public interface Listener {
+    String CONTENT_FEATURES_AUDIO_MPEG = "audio/mpeg";
+
     void onNewInformation(
       @NonNull Radio radio, @NonNull String information, @NonNull String lockKey);
 

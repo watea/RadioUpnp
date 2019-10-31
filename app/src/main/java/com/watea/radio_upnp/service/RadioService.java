@@ -57,15 +57,21 @@ import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
+import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
+import org.fourthline.cling.controlpoint.ActionCallback;
 import org.fourthline.cling.model.meta.Device;
 
+import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.Vector;
 
 public class RadioService extends MediaBrowserServiceCompat implements PlayerAdapter.Listener {
   private static final String LOG_TAG = RadioService.class.getName();
@@ -74,6 +80,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private static String CHANNEL_ID;
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
   private final Handler handler = new Handler();
+  private final UpnpActionControler upnpActionControler = new UpnpActionControler();
   private AndroidUpnpService androidUpnpService = null;
   private MediaSessionCompat session;
   private RadioLibrary radioLibrary;
@@ -186,6 +193,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     if (playerAdapter != null) {
       playerAdapter.release();
     }
+    upnpActionControler.release();
     httpServer.stopServer();
     upnpConnection.release();
     radioLibrary.close();
@@ -352,6 +360,8 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't retrieve radio");
         throw new RuntimeException();
       }
+      // Ensure robustness
+      upnpActionControler.releaseActions(null);
       // Stop if any
       if (playerAdapter != null) {
         playerAdapter.stop();
@@ -363,17 +373,16 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       lockKey = UUID.randomUUID().toString();
       // Set actual player DLNA? Extra shall contain DLNA device UDN.
       if (extras.containsKey(getString(R.string.key_dlna_device))) {
-        Device dlnaDevice = null;
+        Device chosenDevice = null;
         if (androidUpnpService != null) {
           for (Device device : androidUpnpService.getRegistry().getDevices()) {
-            if (device.getIdentity().getUdn().getIdentifierString()
-              .equals(extras.getString(getString(R.string.key_dlna_device)))) {
-              dlnaDevice = device;
+            if (DlnaDevice.getIdentity(device).equals(extras.getString(getString(R.string.key_dlna_device)))) {
+              chosenDevice = device;
               break;
             }
           }
         }
-        if (dlnaDevice == null) {
+        if (chosenDevice == null) {
           Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
           return;
         } else {
@@ -383,8 +392,8 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
             RadioService.this,
             radio,
             lockKey,
-            dlnaDevice,
-            androidUpnpService);
+            chosenDevice,
+            upnpActionControler);
           session.setPlaybackToRemote(volumeProviderCompat);
         }
       } else {
@@ -413,6 +422,87 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     @Override
     public void onStop() {
       playerAdapter.stop();
+    }
+  }
+
+  // Helper class for UPnP actions scheduling
+  public class UpnpActionControler {
+    private final Map<Radio, String> contentTypes = new Hashtable<>();
+    private final Map<Device, String> protocolInfos = new Hashtable<>();
+    private final List<ActionCallback> actionCallbacks = new Vector<>();
+    private boolean isActionRunning = false;
+
+    @Nullable
+    public String getContentType(@NonNull Radio radio) {
+      return contentTypes.get(radio);
+    }
+
+    public void putContentType(@NonNull Radio radio, @NonNull String contentType) {
+      contentTypes.put(radio, contentType);
+    }
+
+    @Nullable
+    public String getProtocolInfo(@NonNull Device device) {
+      return protocolInfos.get(device);
+    }
+
+    public void putProtocolInfo(@NonNull Device device, @NonNull String protocolInfo) {
+      protocolInfos.put(device, protocolInfo);
+    }
+
+    // Execute asynchronous in the background
+    public void executeAction(@NonNull ActionCallback actionCallback) {
+      Log.d(LOG_TAG, "executeAction: " + actionCallback);
+      androidUpnpService.getControlPoint().execute(actionCallback);
+    }
+
+    // Does nothing if an action is already running
+    public void scheduleNextAction() {
+      isActionRunning = false;
+      scheduleAction(null);
+    }
+
+    public void scheduleAction(@Nullable final ActionCallback actionCallback) {
+      handler.post(new Runnable() {
+        @Override
+        public void run() {
+          if (actionCallback != null) {
+            actionCallbacks.add(actionCallback);
+          }
+          if (!(actionCallbacks.isEmpty() || isActionRunning)) {
+            executeAction(actionCallbacks.remove(0));
+            isActionRunning = true;
+          }
+        }
+      });
+    }
+
+    // Remove remaining actions on device or all (device == null)
+    public void releaseActions(@Nullable final Device device) {
+      handler.post(new Runnable() {
+        @Override
+        public void run() {
+          if (device == null) {
+            actionCallbacks.clear();
+          } else {
+            Iterator<ActionCallback> iter = actionCallbacks.iterator();
+            while (iter.hasNext()) {
+              if (iter.next().getActionInvocation().getAction().getService().getDevice() ==
+                device) {
+                iter.remove();
+              }
+            }
+          }
+          isActionRunning = false;
+        }
+      });
+    }
+
+    private void release() {
+      contentTypes.clear();
+      protocolInfos.clear();
+      actionCallbacks.clear();
+      isActionRunning = false;
     }
   }
 }
