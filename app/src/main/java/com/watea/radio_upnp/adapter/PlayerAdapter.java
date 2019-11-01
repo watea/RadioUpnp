@@ -68,6 +68,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
    * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region
    * Example:
    * DLNA_PARAMS = "DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000"; */
+  protected static final String CONTENT_FEATURES_AUDIO_MPEG = "audio/mpeg";
   protected static final String CONTENT_FEATURES_HTTP = "http-get:*:";
   protected static final String CONTENT_FEATURES_BASE = ":DLNA.ORG_PN=";
   protected static final String CONTENT_FEATURES_MP3 = "MP3";

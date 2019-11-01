@@ -46,7 +46,6 @@ import java.nio.charset.CharsetDecoder;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -147,13 +146,14 @@ public class RadioHandler extends AbstractHandler {
       httpURLConnection.connect();
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
-      String contentType = httpURLConnection.getContentType();
       // TODO String iceAudioInfo = httpURLConnection.getHeaderField("ice-audio-info");
-      response.setContentType(
-        (contentType == null) ? Listener.CONTENT_FEATURES_AUDIO_MPEG : contentType);
-      response.setHeader("Server", userAgent);
-      response.setHeader("Accept-Ranges", "bytes");
-      response.setHeader("Cache-Control", "no-cache");
+      Map<String, List<String>> headers =  httpURLConnection.getHeaderFields();
+      for (String header : headers.keySet()) {
+        List<String> values = headers.get(header);
+        if ((header != null) && (values != null) && (values.size() > 0)) {
+          response.setHeader(header, values.get(0));
+        }
+      }
       /* Some DLNA devices (in particular infamous Samsung TVs, but not only), when emitting the HTTP GET request with the stream URL to the Media Server (eg MinimServer), add a custom DLNA HTTP Header:
        *  getcontentFeatures.dlna.org: 1
        * When this header is set, they expect the HTTP reply header to containing the 4th field of the protocolInfo containing DLNA profile info.
@@ -311,8 +311,6 @@ public class RadioHandler extends AbstractHandler {
   }
 
   public interface Listener {
-    String CONTENT_FEATURES_AUDIO_MPEG = "audio/mpeg";
-
     void onNewInformation(
       @NonNull Radio radio, @NonNull String information, @NonNull String lockKey);
 
