@@ -320,13 +320,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           case ACTION_SET_AV_TRANSPORT_URI:
             // For unknown reason, some devices (seen on SONY) don't decode metadata correctly.
             // So we try without instead...
-            Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData forced to void");
             if (actionInvocation
               .getInput(FIELD_CURRENT_URI_METADATA).getValue().toString().length() > 0) {
+              Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData forced to void");
               actionInvocation.setInput(FIELD_CURRENT_URI_METADATA, "");
               upnpActionControler.pushAction(getActionCallback(actionInvocation));
+              break;
             }
-            break;
           default:
             changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
             // Remove remaining actions on device
