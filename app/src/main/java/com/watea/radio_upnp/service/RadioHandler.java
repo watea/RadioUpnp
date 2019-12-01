@@ -61,13 +61,13 @@ public class RadioHandler extends AbstractHandler {
   private static final String HEAD = "HEAD";
   private static final String USER_AGENT = "User-Agent";
   private static final String PARAMS = "params";
-  private static final String SEPARATOR = ",";
+  private static final String SEPARATOR = "_";
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
+  private final Map<String, Integer> remoteConnections = new Hashtable<>();
   @NonNull
   private final String userAgent;
   @NonNull
   private final RadioLibrary radioLibrary;
-  private final Map<String, Integer> remoteConnections = new Hashtable<>();
   @Nullable
   private Listener listener = null;
 
@@ -84,7 +84,8 @@ public class RadioHandler extends AbstractHandler {
     @NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
       .buildUpon()
-      .appendEncodedPath(RadioHandler.class.getSimpleName())
+      // Some weird devices (Seen on SONY) require ".mp3"
+      .appendEncodedPath(RadioHandler.class.getSimpleName() + radio.getId() + ".mp3")
       // Add radio ID + lock key as query parameter
       // Don't use several query parameters to avoid encoding troubles
       .appendQueryParameter(PARAMS, radio.getId() + SEPARATOR + lockKey)

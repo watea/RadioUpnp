@@ -453,7 +453,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     // Execute asynchronous in the background
     public void executeAction(@NonNull ActionCallback actionCallback) {
       Log.d(LOG_TAG, "executeAction: " + actionCallback);
-      androidUpnpService.getControlPoint().execute(actionCallback);
+      if (androidUpnpService == null) {
+        actionCallback.failure(actionCallback.getActionInvocation(), null, "UpnpService is null");
+        release();
+      } else {
+        androidUpnpService.getControlPoint().execute(actionCallback);
+      }
     }
 
     // Does nothing if an action is already running
@@ -473,6 +478,15 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
             executeAction(actionCallbacks.remove(0));
             isActionRunning = true;
           }
+        }
+      });
+    }
+
+    public void pushAction(@NonNull final ActionCallback actionCallback) {
+      handler.post(new Runnable() {
+        @Override
+        public void run() {
+          actionCallbacks.add(0, actionCallback);
         }
       });
     }

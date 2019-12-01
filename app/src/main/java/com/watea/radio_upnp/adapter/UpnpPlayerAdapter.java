@@ -27,6 +27,7 @@ import android.content.Context;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
@@ -58,6 +59,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
   private static final String ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
+  private static final String FIELD_CURRENT_URI_METADATA = "CurrentURIMetaData";
   private static final String ACTION_PLAY = "Play";
   private static final String ACTION_PAUSE = "Pause";
   private static final String ACTION_STOP = "Stop";
@@ -65,12 +67,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String ACTION_GET_VOLUME = "GetVolume";
   private static final String INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final Pattern PATTERN_DLNA = Pattern.compile(".*DLNA\\.ORG_PN=([^;]*).*");
-  private static final int REMOTE_LOGO_SIZE = 140;
+  private static final int REMOTE_LOGO_SIZE = 300;
   @NonNull
   private final Device device;
   @NonNull
   private final RadioService.UpnpActionControler upnpActionControler;
   private final boolean hasPrepareForConnection;
+  @Nullable
+  private final Uri logo;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
   private String instanceId = "0";
@@ -89,12 +93,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     this.device = device;
     this.upnpActionControler = upnpActionControler;
     // Shall not be null
-    Uri uri = httpServer.getUri();
+    Uri uri = this.httpServer.getUri();
     if (uri == null) {
       Log.e(LOG_TAG, "UpnpPlayerAdapter: service not available");
     } else {
       radioUri = RadioHandler.getHandledUri(uri, this.radio, this.lockKey).toString();
     }
+    logo = this.httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE);
     Service connectionManager = device.findService(CONNECTION_MANAGER_ID);
     hasPrepareForConnection = (connectionManager != null) &&
       (connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION) != null);
@@ -199,9 +204,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       actionInvocation.setInput("Direction", "Input");
       scheduleAction(actionInvocation);
     }
+    String metadata = getMetaData();
     actionInvocation = getAVTransportActionInvocation(ACTION_SET_AV_TRANSPORT_URI);
     actionInvocation.setInput("CurrentURI", radioUri);
-    actionInvocation.setInput("CurrentURIMetaData", getMetaData());
+    actionInvocation.setInput(FIELD_CURRENT_URI_METADATA, metadata);
+    Log.d(LOG_TAG, "SetAVTransportURI=> InstanceID: " + instanceId);
+    Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURI: " + radioUri);
+    Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData: " + metadata);
     scheduleAction(actionInvocation);
     onPlay();
   }
@@ -308,6 +317,16 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           case ACTION_PREPARE_FOR_CONNECTION:
             // Nothing to do
             return;
+          case ACTION_SET_AV_TRANSPORT_URI:
+            // For unknown reason, some devices (seen on SONY) don't decode metadata correctly.
+            // So we try without instead...
+            Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData forced to void");
+            if (actionInvocation
+              .getInput(FIELD_CURRENT_URI_METADATA).getValue().toString().length() > 0) {
+              actionInvocation.setInput(FIELD_CURRENT_URI_METADATA, "");
+              upnpActionControler.pushAction(getActionCallback(actionInvocation));
+            }
+            break;
           default:
             changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
             // Remove remaining actions on device
@@ -325,16 +344,15 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"" +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
-      "<item id=\"" + radio.getName() + "\" parentID=\"0\" restricted=\"1\">" +
+      "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
       // object.item.audioItem.audioBroadcast not valid
       "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
       "<dc:title>" + radio.getName() + "</dc:title>" +
       "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" + getProtocolInfo() + "\">" +
-      radioUri + "</res>" +
-      "<upnp:albumArtURI>" + httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE) +
-      "</upnp:albumArtURI>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + getProtocolInfo() + "\">" + radioUri +
+      "</res>" +
+      "<upnp:albumArtURI>" + logo + "</upnp:albumArtURI>" +
       "</item>" +
       "</DIDL-Lite>";
   }

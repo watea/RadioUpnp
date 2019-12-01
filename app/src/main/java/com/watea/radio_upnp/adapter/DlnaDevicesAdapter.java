@@ -47,9 +47,9 @@ import java.util.Vector;
 public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
   private static final int ICON_SIZE = 100;
   private static final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
+  private final List<DlnaDevice> dlnaDevices = new Vector<>();
   @NonNull
   private final Context context;
-  private final List<DlnaDevice> dlnaDevices = new Vector<>();
   @NonNull
   private final Bitmap CAST;
   @Nullable

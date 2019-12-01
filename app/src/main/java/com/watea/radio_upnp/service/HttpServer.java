@@ -44,10 +44,9 @@ public class HttpServer extends Thread {
   private static final String LOG_TAG = HttpServer.class.getName();
   private static final String LOGO_FILE = "logo";
   private static final int PORT = 57648;
+  private final Server server = new Server(PORT);
   @NonNull
   private final Context context;
-  @NonNull
-  private final Server server;
   @NonNull
   private final RadioHandler radioHandler;
   @NonNull
@@ -58,7 +57,6 @@ public class HttpServer extends Thread {
     @NonNull RadioHandler radioHandler,
     @NonNull Listener listener) {
     this.context = context;
-    server = new Server(PORT);
     this.listener = listener;
     this.radioHandler = radioHandler;
     // Handler for local files
@@ -104,7 +102,7 @@ public class HttpServer extends Thread {
   // Return logo file Uri; a jpeg file
   @Nullable
   public Uri createLogoFile(@NonNull Radio radio, int size) {
-    String name = LOGO_FILE + ".jpg";
+    String name = LOGO_FILE + radio.getId() + ".jpg";
     try (FileOutputStream fileOutputStream = context.openFileOutput(name, Context.MODE_PRIVATE)) {
       Bitmap
         .createScaledBitmap(radio.getIcon(), size, size, false)

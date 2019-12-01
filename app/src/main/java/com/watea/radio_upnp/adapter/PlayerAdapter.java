@@ -81,6 +81,17 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   private static final String CONTENT_FEATURES_DEFAULT =
     CONTENT_FEATURES_HTTP + CONTENT_FEATURES_AUDIO_MPEG +
       CONTENT_FEATURES_BASE + CONTENT_FEATURES_MP3 + CONTENT_FEATURES_EXTENDED;
+  private final AudioFocusHelper audioFocusHelper = new AudioFocusHelper();
+  private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
+        if (isPlaying()) {
+          pause();
+        }
+      }
+    }
+  };
   @NonNull
   protected final Context context;
   @NonNull
@@ -92,22 +103,11 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   protected final Radio radio;
   @NonNull
   private final AudioManager audioManager;
-  private final AudioFocusHelper audioFocusHelper = new AudioFocusHelper();
   @NonNull
   private final Listener listener;
   protected int state = PlaybackStateCompat.STATE_NONE;
   private boolean playOnAudioFocus = false;
   private boolean audioNoisyReceiverRegistered = false;
-  private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
-    @Override
-    public void onReceive(Context context, Intent intent) {
-      if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
-        if (isPlaying()) {
-          pause();
-        }
-      }
-    }
-  };
   private boolean isRerunAllowed = false;
 
   public PlayerAdapter(
