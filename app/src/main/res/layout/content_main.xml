@@ -73,12 +73,21 @@
             android:id="@+id/played_radio_information_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"
             android:singleLine="true" />
+
+        <TextView
+            android:id="@+id/played_radio_rate_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+
     </LinearLayout>
 
     <FrameLayout
+        android:id="@+id/play_frame_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintLeft_toLeftOf="parent"

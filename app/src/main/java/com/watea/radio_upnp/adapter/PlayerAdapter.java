@@ -30,6 +30,7 @@ import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
@@ -129,13 +130,18 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
 
   @Override
   public void onNewInformation(
-    @NonNull Radio radio, @NonNull String information, @NonNull String lockKey) {
+    @NonNull Radio radio,
+    @NonNull String information,
+    @Nullable String rate,
+    @NonNull String lockKey) {
     // We add current radio information to current media data
     listener.onInformationChange(
       radio
         .getMediaMetadataBuilder()
         .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
         .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
+        // Use WRITER for rate
+        .putString(MediaMetadataCompat.METADATA_KEY_WRITER, rate)
         .build(),
       lockKey);
   }

@@ -98,7 +98,7 @@ public class MainActivity
     new DefaultRadio(
       "EUROPE1",
       R.drawable.logo_europe1,
-      "http://mp3lg4.tdf-cdn.com/9240/lag_180945.mp3",
+      "http://e1-live-mp3-128.scdn.arkena.com/europe1.mp3",
       "https://www.europe1.fr/"),
     new DefaultRadio(
       "RFM",
@@ -113,7 +113,7 @@ public class MainActivity
     new DefaultRadio(
       "VIRGIN",
       R.drawable.logo_virgin,
-      "http://vr-live-mp3-128.scdn.arkena.com/virginradio.mp3",
+      "http://ais-live.cloud-services.paris:8000/virgin.mp3",
       "https://www.virginradio.fr/"),
     new DefaultRadio(
       "FUN",

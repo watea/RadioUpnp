@@ -35,6 +35,7 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -147,8 +148,7 @@ public class RadioHandler extends AbstractHandler {
       httpURLConnection.connect();
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
-      // TODO String iceAudioInfo = httpURLConnection.getHeaderField("ice-audio-info");
-      Map<String, List<String>> headers =  httpURLConnection.getHeaderFields();
+      Map<String, List<String>> headers = httpURLConnection.getHeaderFields();
       for (String header : headers.keySet()) {
         List<String> values = headers.get(header);
         if ((header != null) && (values != null) && (values.size() > 0)) {
@@ -204,8 +204,9 @@ public class RadioHandler extends AbstractHandler {
           httpURLConnection.getInputStream(),
           charset.newDecoder(),
           metadataOffset,
-          outputStream,
+          new BufferedOutputStream(outputStream),
           radio,
+          httpURLConnection.getHeaderField("icy-br"),
           lockKey,
           currentListener);
       }
@@ -250,11 +251,14 @@ public class RadioHandler extends AbstractHandler {
     @NonNull InputStream inputStream,
     @NonNull CharsetDecoder charsetDecoder,
     int metadataOffset,
-    @NonNull OutputStream outputStream,
+    @NonNull BufferedOutputStream outputStream,
     @NonNull final Radio radio,
+    @Nullable final String rate,
     @NonNull final String lockKey,
     @NonNull final Listener currentListener) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
+    // Send rate
+    currentListener.onNewInformation(radio, "", rate, lockKey);
     byte[] buffer = new byte[1];
     ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
     int metadataBlockBytesRead = 0;
@@ -297,7 +301,7 @@ public class RadioHandler extends AbstractHandler {
               Matcher matcher = PATTERN_ICY.matcher(metadata);
               // Tell listener
               if (matcher.find()) {
-                currentListener.onNewInformation(radio, matcher.group(1), lockKey);
+                currentListener.onNewInformation(radio, matcher.group(1), rate, lockKey);
               }
             }
             metadataBlockBytesRead = 0;
@@ -313,7 +317,10 @@ public class RadioHandler extends AbstractHandler {
 
   public interface Listener {
     void onNewInformation(
-      @NonNull Radio radio, @NonNull String information, @NonNull String lockKey);
+      @NonNull Radio radio,
+      @NonNull String information,
+      @Nullable String rate,
+      @NonNull String lockKey);
 
     void onError(@NonNull Radio radio, @NonNull String lockKey);
 

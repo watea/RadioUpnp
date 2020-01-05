@@ -53,8 +53,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -92,11 +94,14 @@ public class MainFragment
   private static final String LOG_TAG = MainFragment.class.getName();
   private final Handler handler = new Handler();
   // <HMI assets
+  private LinearLayout playedRadioDataLinearLayout;
+  private FrameLayout playFrameLayout;
   private ImageButton playImageButton;
   private ProgressBar progressBar;
   private ImageView albumArtImageView;
   private TextView playedRadioNameTextView;
   private TextView playedRadioInformationTextView;
+  private TextView playedRadioRateTextView;
   private View radiosDefaultView;
   private View dlnaView;
   private RecyclerView dlnaRecyclerView;
@@ -138,9 +143,7 @@ public class MainFragment
           // Play button stores state to reach
           switch (intState) {
             case PlaybackStateCompat.STATE_PLAYING:
-              playedRadioNameTextView.setVisibility(View.VISIBLE);
-              playedRadioInformationTextView.setVisibility(View.VISIBLE);
-              albumArtImageView.setVisibility(View.VISIBLE);
+              setFrameVisibility(true, true);
               // DLNA device doesn't support PAUSE but STOP
               boolean isDlna =
                 mediaController.getExtras().containsKey(getString(R.string.key_dlna_device));
@@ -148,40 +151,22 @@ public class MainFragment
                 isDlna ? R.drawable.ic_stop_black_24dp : R.drawable.ic_pause_black_24dp);
               playImageButton.setTag(
                 isDlna ? PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
-              playImageButton.setVisibility(View.VISIBLE);
-              progressBar.setVisibility(View.INVISIBLE);
               break;
             case PlaybackStateCompat.STATE_PAUSED:
-              playedRadioNameTextView.setVisibility(View.VISIBLE);
-              playedRadioInformationTextView.setVisibility(View.VISIBLE);
-              albumArtImageView.setVisibility(View.VISIBLE);
+              setFrameVisibility(true, true);
               playImageButton.setImageResource(R.drawable.ic_play_arrow_black_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_PLAYING);
-              playImageButton.setVisibility(View.VISIBLE);
-              progressBar.setVisibility(View.INVISIBLE);
               break;
             case PlaybackStateCompat.STATE_BUFFERING:
             case PlaybackStateCompat.STATE_CONNECTING:
-              playedRadioNameTextView.setVisibility(View.VISIBLE);
-              playedRadioInformationTextView.setVisibility(View.VISIBLE);
-              albumArtImageView.setVisibility(View.VISIBLE);
-              playImageButton.setVisibility(View.INVISIBLE);
-              progressBar.setVisibility(View.VISIBLE);
+              setFrameVisibility(true, false);
               break;
             case PlaybackStateCompat.STATE_NONE:
             case PlaybackStateCompat.STATE_STOPPED:
-              playedRadioNameTextView.setVisibility(View.INVISIBLE);
-              playedRadioInformationTextView.setVisibility(View.INVISIBLE);
-              albumArtImageView.setVisibility(View.INVISIBLE);
-              playImageButton.setVisibility(View.INVISIBLE);
-              progressBar.setVisibility(View.INVISIBLE);
+              setFrameVisibility(false, false);
               break;
             default:
-              playedRadioNameTextView.setVisibility(View.INVISIBLE);
-              playedRadioInformationTextView.setVisibility(View.INVISIBLE);
-              albumArtImageView.setVisibility(View.INVISIBLE);
-              playImageButton.setVisibility(View.INVISIBLE);
-              progressBar.setVisibility(View.INVISIBLE);
+              setFrameVisibility(false, false);
               // Tell error, just once per reading session
               if (isErrorAllowedToTell) {
                 tell(R.string.radio_connection_error);
@@ -197,9 +182,11 @@ public class MainFragment
         if (isActuallyAdded() && (mediaMetadata != null)) {
           playedRadioNameTextView.setText(
             mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
-          String radioInformation =
-            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
-          playedRadioInformationTextView.setText(radioInformation);
+          playedRadioInformationTextView.setText(
+            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST));
+          // Use WRITER for rate
+          String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
+          playedRadioRateTextView.setText((rate == null) ? "" : rate + getString(R.string.kbs));
           albumArtImageView.setImageBitmap(
             Bitmap.createScaledBitmap(
               mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
@@ -207,6 +194,18 @@ public class MainFragment
               RADIO_ICON_SIZE,
               false));
         }
+      }
+
+      private void setFrameVisibility(boolean isVisible, boolean isPlayVisible) {
+        playedRadioDataLinearLayout.setVisibility(getVisibility(isVisible));
+        playFrameLayout.setVisibility(getVisibility(isVisible));
+        albumArtImageView.setVisibility(getVisibility(isVisible));
+        playImageButton.setVisibility(getVisibility(isVisible && isPlayVisible));
+        progressBar.setVisibility(getVisibility(isVisible && !isPlayVisible));
+      }
+
+      private int getVisibility(boolean isVisible) {
+        return isVisible ? View.VISIBLE : View.INVISIBLE;
       }
     };
   private RadiosAdapter radiosAdapter;
@@ -554,19 +553,20 @@ public class MainFragment
     super.onCreateView(inflater, container, savedInstanceState);
     // Inflate the view so that graphical objects exists
     View view = inflater.inflate(R.layout.content_main, container, false);
+    playedRadioDataLinearLayout = view.findViewById(R.id.played_radio_data_linear_layout);
     albumArtImageView = view.findViewById(R.id.album_art_image_view);
     playedRadioNameTextView = view.findViewById(R.id.played_radio_name_text_view);
     playedRadioNameTextView.setSelected(true); // For scrolling
     playedRadioInformationTextView = view.findViewById(R.id.played_radio_information_text_view);
     playedRadioInformationTextView.setSelected(true); // For scrolling
-    radiosView = view.findViewById(R.id.radios_recycler_view);
-    radiosDefaultView = view.findViewById(R.id.view_radios_default);
+    playedRadioRateTextView = view.findViewById(R.id.played_radio_rate_text_view);
+    playFrameLayout = view.findViewById(R.id.play_frame_layout);
     progressBar = view.findViewById(R.id.progress_bar);
-    progressBar.setVisibility(View.INVISIBLE);
     playImageButton = view.findViewById(R.id.play_image_button);
-    playImageButton.setVisibility(View.INVISIBLE);
     playImageButton.setOnClickListener(this);
     playImageButton.setOnLongClickListener(this);
+    radiosView = view.findViewById(R.id.radios_recycler_view);
+    radiosDefaultView = view.findViewById(R.id.view_radios_default);
     dlnaView = inflater.inflate(R.layout.view_dlna_devices, container, false);
     dlnaRecyclerView = dlnaView.findViewById(R.id.dlna_devices_recycler_view);
     return view;

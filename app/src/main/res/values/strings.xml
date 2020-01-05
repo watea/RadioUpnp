@@ -82,7 +82,7 @@
     <string name="dar_fm_radio_button">Search with <b>OnRad.io</b></string>
     <string name="dar_fm_failed">OnRad.io search failed</string>
     <string name="image_from_url_radio_button">Manual fill in (icon fetch in web page)</string>
-    image_from_url_radio_button
+    <string name="kbs">kb/s</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
