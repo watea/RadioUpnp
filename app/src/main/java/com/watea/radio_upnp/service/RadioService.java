@@ -182,7 +182,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
-    startForeground(NOTIFICATION_ID, getNotification());
+    Notification notification = getNotification();
+    // If null, something went wrong, should not happen
+    if (notification != null) {
+      startForeground(NOTIFICATION_ID, getNotification());
+    }
     return START_REDELIVER_INTENT;
   }
 
@@ -309,8 +313,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       .setContentIntent(PendingIntent.getActivity(
         this,
         REQUEST_CODE,
-        new Intent(this, MainActivity.class)
-          .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_CANCEL_CURRENT))
       // Title, radio name
       .setContentTitle(description.getTitle())

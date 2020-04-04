@@ -98,12 +98,12 @@ public class MainActivity
     new DefaultRadio(
       "EUROPE1",
       R.drawable.logo_europe1,
-      "http://e1-live-mp3-128.scdn.arkena.com/europe1.mp3",
+      "http://stream.dar.fm/10522",
       "https://www.europe1.fr/"),
     new DefaultRadio(
       "RFM",
       R.drawable.logo_rfm,
-      "http://rfm-live-mp3-128.scdn.arkena.com/rfm.mp3",
+      "http://ais-live.cloud-services.paris:8000/rfm.mp3",
       "http://www.rfm.fr/"),
     new DefaultRadio(
       "SKYROCK",

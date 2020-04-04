@@ -109,7 +109,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   protected int state = PlaybackStateCompat.STATE_NONE;
   private boolean playOnAudioFocus = false;
   private boolean audioNoisyReceiverRegistered = false;
-  private boolean isRerunAllowed = false;
 
   public PlayerAdapter(
     @NonNull Context context,
@@ -146,19 +145,10 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       lockKey);
   }
 
-  // Try to relaunch, just once till Playing state received
   @Override
   public void onError(@NonNull Radio radio, @NonNull String lockKey) {
     Log.d(LOG_TAG, "RadioHandler error received");
-    if (isRerunAllowed && (state == PlaybackStateCompat.STATE_PLAYING)) {
-      Log.d(LOG_TAG, "=> Try to relaunch");
-      changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING, lockKey);
-      isRerunAllowed = false;
-      onPrepareFromMediaId();
-    } else {
-      Log.d(LOG_TAG, "=> Error");
       changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
-    }
   }
 
   @NonNull
@@ -175,7 +165,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   public final void prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
     state = PlaybackStateCompat.STATE_NONE;
-    isRerunAllowed = false;
     httpServer.setRadioHandlerListener(this);
     // Audio focus management
     audioFocusHelper.abandonAudioFocus();
@@ -189,6 +178,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       if (audioFocusHelper.requestAudioFocus()) {
         registerAudioNoisyReceiver();
       } else {
+        Log.d(LOG_TAG, "AudioFocusHelper error");
         return;
       }
     }
@@ -258,8 +248,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       Log.d(LOG_TAG, "=> no change");
     } else {
       state = newState;
-      // Re-run allowed if "Playing" received
-      isRerunAllowed = (state == PlaybackStateCompat.STATE_PLAYING);
       listener.onPlaybackStateChange(
         new PlaybackStateCompat.Builder()
           .setActions(getAvailableActions())
