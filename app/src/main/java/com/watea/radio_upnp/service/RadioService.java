@@ -185,7 +185,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     Notification notification = getNotification();
     // If null, something went wrong, should not happen
     if (notification != null) {
-      startForeground(NOTIFICATION_ID, getNotification());
+      startForeground(NOTIFICATION_ID, notification);
     }
     return START_REDELIVER_INTENT;
   }
