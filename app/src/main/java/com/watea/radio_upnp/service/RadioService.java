@@ -313,8 +313,8 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       .setContentIntent(PendingIntent.getActivity(
         this,
         REQUEST_CODE,
-        new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_CANCEL_CURRENT))
+        new Intent(this, MainActivity.class)
+          .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_CANCEL_CURRENT))
       // Title, radio name
       .setContentTitle(description.getTitle())
       // Radio current track

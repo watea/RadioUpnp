@@ -258,15 +258,11 @@ public class MainFragment
       for (Service service : remoteDevice.getServices()) {
         if (service.getServiceId().equals(AV_TRANSPORT_SERVICE_ID)) {
           final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
-          final Bitmap icon;
           // Search for icon
-          if (remoteDevice.isFullyHydrated()) {
-            Icon deviceIcon = getLargestIcon(remoteDevice.getIcons());
-            icon = (deviceIcon == null) ?
-              null : NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri()));
-          } else {
-            icon = null;
-          }
+          Icon deviceIcon = remoteDevice.isFullyHydrated() ?
+            getLargestIcon(remoteDevice.getIcons()) : null;
+          final Bitmap icon = (deviceIcon == null) ?
+            null : NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri()));
           // Add DlnaDevice to Adapter
           handler.post(new Runnable() {
             public void run() {
