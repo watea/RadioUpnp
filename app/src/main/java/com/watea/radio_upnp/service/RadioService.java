@@ -182,11 +182,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
-    Notification notification = getNotification();
-    // If null, something went wrong, should not happen
-    if (notification != null) {
-      startForeground(NOTIFICATION_ID, notification);
-    }
+    startForeground(NOTIFICATION_ID, getNotification());
     return START_REDELIVER_INTENT;
   }
 
@@ -282,11 +278,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @Nullable
   private Notification getNotification() {
-    if (mediaMetadataCompat == null) {
-      Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
-      return null;
-    }
-    MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
     NotificationCompat.Action ActionPause =
       new NotificationCompat.Action(
         R.drawable.ic_pause_black_24dp,
@@ -302,12 +293,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         R.drawable.ic_play_arrow_black_24dp,
         getString(R.string.action_play),
         MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY));
-    return new NotificationCompat.Builder(this, CHANNEL_ID)
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle()
         .setMediaSession(getSessionToken())
         .setShowActionsInCompactView(0))
       .setColor(ContextCompat.getColor(this, R.color.colorAccent))
-      .setLargeIcon(description.getIconBitmap())
       .setSmallIcon(R.drawable.ic_launcher_foreground)
       // Pending intent that is fired when user clicks on notification
       .setContentIntent(PendingIntent.getActivity(
@@ -315,10 +305,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         REQUEST_CODE,
         new Intent(this, MainActivity.class)
           .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_CANCEL_CURRENT))
-      // Title, radio name
-      .setContentTitle(description.getTitle())
-      // Radio current track
-      .setContentText(description.getSubtitle())
       // When notification is deleted (when playback is paused and notification can be
       // deleted) fire MediaButtonPendingIntent with ACTION_STOP
       .setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(
@@ -330,8 +316,19 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       .addAction(
         playerAdapter.isPlaying() ?
           playerAdapter instanceof UpnpPlayerAdapter ?
-            ActionStop : ActionPause : ActionPlay)
-      .build();
+            ActionStop : ActionPause : ActionPlay);
+    if (mediaMetadataCompat == null) {
+      Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
+    } else {
+      MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
+      builder
+        .setLargeIcon(description.getIconBitmap())
+        // Title, radio name
+        .setContentTitle(description.getTitle())
+        // Radio current track
+        .setContentText(description.getSubtitle());
+    }
+    return builder.build();
   }
 
   private class UpnpServiceConnection implements ServiceConnection {
@@ -376,9 +373,9 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       lockKey = UUID.randomUUID().toString();
       // Set actual player DLNA? Extra shall contain DLNA device UDN.
       if (extras.containsKey(getString(R.string.key_dlna_device))) {
-        Device chosenDevice = null;
+        Device<?, ?, ?> chosenDevice = null;
         if (androidUpnpService != null) {
-          for (Device device : androidUpnpService.getRegistry().getDevices()) {
+          for (Device<?, ?, ?> device : androidUpnpService.getRegistry().getDevices()) {
             if (DlnaDevice.getIdentity(device).equals(extras.getString(getString(R.string.key_dlna_device)))) {
               chosenDevice = device;
               break;
@@ -431,7 +428,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   // Helper class for UPnP actions scheduling
   public class UpnpActionControler {
     private final Map<Radio, String> contentTypes = new Hashtable<>();
-    private final Map<Device, String> protocolInfos = new Hashtable<>();
+    private final Map<Device<?, ?, ?>, String> protocolInfos = new Hashtable<>();
     private final List<ActionCallback> actionCallbacks = new Vector<>();
     private boolean isActionRunning = false;
 
@@ -445,11 +442,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     }
 
     @Nullable
-    public String getProtocolInfo(@NonNull Device device) {
+    public String getProtocolInfo(@NonNull Device<?, ?, ?> device) {
       return protocolInfos.get(device);
     }
 
-    public void putProtocolInfo(@NonNull Device device, @NonNull String protocolInfo) {
+    public void putProtocolInfo(@NonNull Device<?, ?, ?> device, @NonNull String protocolInfo) {
       protocolInfos.put(device, protocolInfo);
     }
 
@@ -495,7 +492,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     }
 
     // Remove remaining actions on device or all (device == null)
-    public void releaseActions(@Nullable final Device device) {
+    public void releaseActions(@Nullable final Device<?, ?, ?> device) {
       handler.post(new Runnable() {
         @Override
         public void run() {

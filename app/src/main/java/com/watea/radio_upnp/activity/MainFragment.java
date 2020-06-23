@@ -255,7 +255,7 @@ public class MainFragment
   private final RegistryListener browseRegistryListener = new DefaultRegistryListener() {
     @Override
     public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
-      for (Service service : remoteDevice.getServices()) {
+      for (Service<?, ?> service : remoteDevice.getServices()) {
         if (service.getServiceId().equals(AV_TRANSPORT_SERVICE_ID)) {
           final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
           // Search for icon
@@ -325,7 +325,7 @@ public class MainFragment
               @Override
               public void run() {
                 super.run();
-                for (Device device : registry.getDevices()) {
+                for (Device<?, ?, ?> device : registry.getDevices()) {
                   if (device instanceof RemoteDevice) {
                     browseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
                   }
@@ -424,8 +424,8 @@ public class MainFragment
 
           @Override
           public void onChosenDeviceChange(@Nullable DlnaDevice chosenDlnaDevice) {
-            // Do nothing if not yet created;
-            if (dlnaMenuItem != null) {
+            // Do nothing if not yet created or if we were disposed
+            if ((dlnaMenuItem != null) && (getActivity() != null)) {
               setDlnaMenuItem(chosenDlnaDevice);
             }
           }
