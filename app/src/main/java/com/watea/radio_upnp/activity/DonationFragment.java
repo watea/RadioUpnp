@@ -27,8 +27,8 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -194,7 +194,7 @@ public class DonationFragment extends MainActivityFragment {
           // In some devices, it is impossible to setup IAB Helper
           // and this exception is thrown, being almost "impossible"
           // to the user to control it and forcing app close
-          Log.e(LOG_TAG, iabAsyncInProgressException.getMessage());
+          Log.e(LOG_TAG, Objects.requireNonNull(iabAsyncInProgressException.getMessage()));
           openDialog(
             android.R.drawable.ic_dialog_alert,
             R.string.donation_google_android_market_not_supported_title,

@@ -38,19 +38,20 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.media.MediaBrowserCompat;
-import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.VolumeProviderCompat;
-import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import androidx.media.MediaBrowserServiceCompat;
+import androidx.media.VolumeProviderCompat;
+import androidx.media.session.MediaButtonReceiver;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
@@ -97,6 +98,9 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private MediaMetadataCompat mediaMetadataCompat = null;
   private boolean isStarted;
   private String lockKey;
+  private NotificationCompat.Action ActionPause;
+  private NotificationCompat.Action ActionStop;
+  private NotificationCompat.Action ActionPlay;
 
   @Override
   public void onCreate() {
@@ -105,8 +109,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     session = new MediaSessionCompat(this, LOG_TAG);
     // Link to callback where actual media controls are called...
     session.setCallback(new MediaSessionCompatCallback());
-    session.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
-      MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
     setSessionToken(session.getSessionToken());
     // Notification
     CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
@@ -121,19 +123,20 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       // Create the (mandatory) notification channel when running on Android Oreo and more
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-          NotificationChannel mChannel = new NotificationChannel(
+          NotificationChannel notificationChannel = new NotificationChannel(
             CHANNEL_ID,
             RadioService.class.getSimpleName(),
             NotificationManager.IMPORTANCE_LOW);
           // Configure the notification channel
-          mChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
-          mChannel.enableLights(true);
+          notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
+          notificationChannel.enableLights(true);
           // Sets the notification light color for notifications posted to this
           // channel, if the device supports this feature
-          mChannel.setLightColor(Color.GREEN);
-          mChannel.enableVibration(true);
-          mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-          notificationManager.createNotificationChannel(mChannel);
+          notificationChannel.setLightColor(Color.GREEN);
+          notificationChannel.enableVibration(true);
+          notificationChannel.setVibrationPattern(
+            new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+          notificationManager.createNotificationChannel(notificationChannel);
           Log.d(LOG_TAG, "New channel created");
         } else {
           Log.d(LOG_TAG, "Existing channel reused");
@@ -163,6 +166,19 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     isStarted = false;
+    // Prepare notification
+    ActionPause = new NotificationCompat.Action(
+      R.drawable.ic_pause_black_24dp,
+      getString(R.string.action_pause),
+      MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE));
+    ActionStop = new NotificationCompat.Action(
+      R.drawable.ic_stop_black_24dp,
+      getString(R.string.action_stop),
+      MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP));
+    ActionPlay = new NotificationCompat.Action(
+      R.drawable.ic_play_arrow_black_24dp,
+      getString(R.string.action_play),
+      MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY));
     Log.d(LOG_TAG, "onCreate: done!");
   }
 
@@ -278,25 +294,20 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
   @Nullable
   private Notification getNotification() {
-    NotificationCompat.Action ActionPause =
-      new NotificationCompat.Action(
-        R.drawable.ic_pause_black_24dp,
-        getString(R.string.action_pause),
-        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE));
-    NotificationCompat.Action ActionStop =
-      new NotificationCompat.Action(
-        R.drawable.ic_stop_black_24dp,
-        getString(R.string.action_stop),
-        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP));
-    NotificationCompat.Action ActionPlay =
-      new NotificationCompat.Action(
-        R.drawable.ic_play_arrow_black_24dp,
-        getString(R.string.action_play),
-        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY));
-    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-      .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle()
-        .setMediaSession(getSessionToken())
-        .setShowActionsInCompactView(0))
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+    if (mediaMetadataCompat == null) {
+      Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
+    } else {
+      MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
+      builder.setLargeIcon(description.getIconBitmap())
+        // Title, radio name
+        .setContentTitle(description.getTitle())
+        // Radio current track
+        .setContentText(description.getSubtitle());
+    }
+    return builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+      .setMediaSession(getSessionToken())
+      .setShowActionsInCompactView(0))
       .setColor(ContextCompat.getColor(this, R.color.colorAccent))
       .setSmallIcon(R.drawable.ic_launcher_foreground)
       // Pending intent that is fired when user clicks on notification
@@ -307,28 +318,15 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_CANCEL_CURRENT))
       // When notification is deleted (when playback is paused and notification can be
       // deleted) fire MediaButtonPendingIntent with ACTION_STOP
-      .setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(
-        this,
-        PlaybackStateCompat.ACTION_STOP))
-      // Show controls on lock screen even when user hides sensitive content.
+      .setDeleteIntent(
+        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
+      // Show controls on lock screen even when user hides sensitive content
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       // UPnP device doesn't support PAUSE action but STOP
-      .addAction(
-        playerAdapter.isPlaying() ?
-          playerAdapter instanceof UpnpPlayerAdapter ?
-            ActionStop : ActionPause : ActionPlay);
-    if (mediaMetadataCompat == null) {
-      Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
-    } else {
-      MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
-      builder
-        .setLargeIcon(description.getIconBitmap())
-        // Title, radio name
-        .setContentTitle(description.getTitle())
-        // Radio current track
-        .setContentText(description.getSubtitle());
-    }
-    return builder.build();
+      .addAction(playerAdapter.isPlaying() ? playerAdapter instanceof UpnpPlayerAdapter ?
+        ActionStop : ActionPause : ActionPlay)
+      .setOngoing(playerAdapter.isPlaying())
+      .build();
   }
 
   private class UpnpServiceConnection implements ServiceConnection {

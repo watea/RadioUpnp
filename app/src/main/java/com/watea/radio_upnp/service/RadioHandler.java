@@ -24,9 +24,10 @@
 package com.watea.radio_upnp.service;
 
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.model.Radio;
@@ -300,8 +301,10 @@ public class RadioHandler extends AbstractHandler {
               }
               Matcher matcher = PATTERN_ICY.matcher(metadata);
               // Tell listener
-              if (matcher.find()) {
-                currentListener.onNewInformation(radio, matcher.group(1), rate, lockKey);
+              String information = (matcher.find() && (matcher.groupCount() > 0)) ?
+                matcher.group(1) : null;
+              if (information != null) {
+                currentListener.onNewInformation(radio, information, rate, lockKey);
               }
             }
             metadataBlockBytesRead = 0;

@@ -28,7 +28,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <android.support.v7.widget.GridLayout
+    <androidx.gridlayout.widget.GridLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="@dimen/app_margin"
@@ -50,7 +50,7 @@
             android:src="@drawable/ic_swap_vert_black_24dp"
             app:layout_gravity="end|center_vertical" />
 
-    </android.support.v7.widget.GridLayout>
+    </androidx.gridlayout.widget.GridLayout>
 
     <View
         android:layout_width="match_parent"

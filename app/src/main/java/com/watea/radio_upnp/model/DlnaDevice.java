@@ -24,22 +24,22 @@
 package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.fourthline.cling.model.meta.Device;
 
 public class DlnaDevice {
   @Nullable
-  private Device device;
+  private Device<?, ?, ?> device;
   @Nullable
   private Bitmap icon = null;
 
-  public DlnaDevice(@Nullable Device device) {
+  public DlnaDevice(@Nullable Device<?, ?, ?> device) {
     this.device = device;
   }
 
-  public static String getIdentity(@NonNull Device device) {
+  public static String getIdentity(@NonNull Device<?, ?, ?> device) {
     return device.getIdentity().getUdn().getIdentifierString();
   }
 

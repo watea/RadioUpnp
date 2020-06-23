@@ -26,8 +26,8 @@ package com.watea.radio_upnp.adapter;
 import android.content.Context;
 import android.media.AudioManager;
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
