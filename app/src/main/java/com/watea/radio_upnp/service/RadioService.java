@@ -197,12 +197,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   }
 
   @Override
-  public int onStartCommand(Intent intent, int flags, int startId) {
-    startForeground(NOTIFICATION_ID, getNotification());
-    return START_REDELIVER_INTENT;
-  }
-
-  @Override
   public void onDestroy() {
     super.onDestroy();
     Log.d(LOG_TAG, "onDestroy: requested...");
@@ -241,13 +235,12 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
               break;
             case PlaybackStateCompat.STATE_PLAYING:
               // Start service if needed
-              if (isStarted) {
-                notificationManager.notify(NOTIFICATION_ID, getNotification());
-              } else {
+              if (!isStarted) {
                 ContextCompat.startForegroundService(
                   RadioService.this, new Intent(RadioService.this, RadioService.class));
                 isStarted = true;
               }
+              startForeground(NOTIFICATION_ID, getNotification());
               break;
             case PlaybackStateCompat.STATE_PAUSED:
               // Move service out started state
