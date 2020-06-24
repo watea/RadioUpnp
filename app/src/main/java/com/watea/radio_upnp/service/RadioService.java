@@ -292,7 +292,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     return session.isActive() && lockKey.equals(this.lockKey);
   }
 
-  @Nullable
+  @NonNull
   private Notification getNotification() {
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
     if (mediaMetadataCompat == null) {
