@@ -29,9 +29,10 @@ import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import android.util.Log;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -86,7 +87,7 @@ public class NetworkTester {
   }
 
   @NonNull
-  static private Uri getUri(@NonNull String address, int port) {
+  private static Uri getUri(@NonNull String address, int port) {
     return new Uri
       .Builder()
       .scheme(SCHEME)
@@ -94,11 +95,10 @@ public class NetworkTester {
       .build();
   }
 
-  static public boolean isDeviceOffline(@NonNull Context context) {
-    ConnectivityManager connectivityManager;
+  public static boolean isDeviceOffline(@NonNull Context context) {
     // Robustness; to be multithread safe
     try {
-      connectivityManager =
+      ConnectivityManager connectivityManager =
         (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
       return (connectivityManager == null) ||
         (connectivityManager.getActiveNetworkInfo() == null) ||
@@ -112,10 +112,9 @@ public class NetworkTester {
 
   @Nullable
   private static String getIpAddress(@NonNull Context context) {
-    WifiManager wifiManager;
     // Robustness; to be multithread safe
     try {
-      wifiManager =
+      WifiManager wifiManager =
         (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
       return (wifiManager == null) ?
         null : ipAddressToString(wifiManager.getConnectionInfo().getIpAddress());
@@ -125,7 +124,7 @@ public class NetworkTester {
     }
   }
 
-  static public boolean hasWifiIpAddress(@NonNull Context context) {
+  public static boolean hasWifiIpAddress(@NonNull Context context) {
     return (getIpAddress(context) != null);
   }
 
@@ -142,15 +141,17 @@ public class NetworkTester {
   // Handle redirection
   @NonNull
   public static HttpURLConnection getActualHttpURLConnection(@NonNull URL uRL) throws IOException {
-    HttpURLConnection httpURLConnection = (HttpURLConnection) uRL.openConnection();
+    return getActualHttpURLConnection((HttpURLConnection) uRL.openConnection());
+  }
+
+  // Handle redirection
+  @NonNull
+  public static HttpURLConnection getActualHttpURLConnection(
+    @NonNull HttpURLConnection httpURLConnection) throws IOException {
     int status = httpURLConnection.getResponseCode();
-    if ((status == HttpURLConnection.HTTP_MOVED_TEMP) ||
-      (status == HttpURLConnection.HTTP_MOVED_PERM) ||
-      (status == HttpURLConnection.HTTP_SEE_OTHER)) {
-      httpURLConnection = (HttpURLConnection)
-        new URL(httpURLConnection.getHeaderField("Location")).openConnection();
-    }
-    return httpURLConnection;
+    return (status / 100 == 3) ?
+      (HttpURLConnection) new URL(httpURLConnection.getHeaderField("Location")).openConnection() :
+      httpURLConnection;
   }
 
   @Nullable

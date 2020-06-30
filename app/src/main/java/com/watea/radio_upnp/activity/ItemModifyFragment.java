@@ -68,8 +68,6 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.watea.radio_upnp.service.NetworkTester.getStreamContentType;
-
 // ADD or MODIFY modes
 // radio = null for ADD
 public class ItemModifyFragment extends MainActivityFragment {
@@ -523,7 +521,8 @@ public class ItemModifyFragment extends MainActivityFragment {
   private class UrlTester extends AsyncTask<URL, Void, String> {
     @Override
     protected String doInBackground(URL... urls) {
-      return getStreamContentType(urls[0]);
+      URL uRL = Radio.getUrlFromM3u(urls[0]);
+      return (uRL == null) ? null : NetworkTester.getStreamContentType(uRL);
     }
 
     @Override

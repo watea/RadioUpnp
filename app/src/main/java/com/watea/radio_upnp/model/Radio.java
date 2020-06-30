@@ -28,12 +28,18 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import android.support.v4.media.MediaMetadataCompat;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.watea.radio_upnp.service.NetworkTester;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -123,6 +129,31 @@ public class Radio {
       cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_QUALITY)));
     isPreferred = Boolean.valueOf(
       cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_IS_PREFERRED)));
+  }
+
+  // First URL if m3u, else do nothing
+  @Nullable
+  public static URL getUrlFromM3u(@NonNull URL uRL) {
+    if (!uRL.toString().endsWith(".m3u")) {
+      return uRL;
+    }
+    try (BufferedReader bufferedReader = new BufferedReader(
+      new InputStreamReader(NetworkTester.getActualHttpURLConnection(uRL).getInputStream()))) {
+      String result;
+      while ((result = bufferedReader.readLine()) != null) {
+        if (result.startsWith("http://") || result.startsWith("https://")) {
+          return new URL(result);
+        }
+      }
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "Error getting M3U", iOException);
+    }
+    return null;
+  }
+
+  @Nullable
+  public URL getUrlFromM3u() {
+    return getUrlFromM3u(url);
   }
 
   @NonNull

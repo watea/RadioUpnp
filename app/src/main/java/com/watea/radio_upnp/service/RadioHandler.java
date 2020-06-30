@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -137,7 +138,12 @@ public class RadioHandler extends AbstractHandler {
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {
-      httpURLConnection = (HttpURLConnection) radio.getURL().openConnection();
+      URL uRL = radio.getUrlFromM3u();
+      if (uRL == null) {
+        throw new IOException("Wrong radio URL");
+      }
+      httpURLConnection = (HttpURLConnection) uRL.openConnection();
+      // Won't work HTTP -> HTTPS or vice versa
       httpURLConnection.setInstanceFollowRedirects(true);
       httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
       httpURLConnection.setReadTimeout(READ_TIMEOUT);
@@ -146,7 +152,7 @@ public class RadioHandler extends AbstractHandler {
       if (isGet) {
         httpURLConnection.setRequestProperty("Icy-metadata", "1");
       }
-      httpURLConnection.connect();
+      httpURLConnection = NetworkTester.getActualHttpURLConnection(httpURLConnection);
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
       Map<String, List<String>> headers = httpURLConnection.getHeaderFields();
