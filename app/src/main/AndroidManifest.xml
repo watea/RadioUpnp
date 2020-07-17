@@ -59,6 +59,7 @@
             android:name="com.watea.radio_upnp.service.RadioService"
             android:enabled="true"
             android:exported="false"
+            android:foregroundServiceType="mediaPlayback"
             android:description="@string/radio_service_description">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
@@ -69,6 +70,7 @@
             android:name="org.fourthline.cling.android.AndroidUpnpServiceImpl"
             android:enabled="true"
             android:exported="false"
+            android:foregroundServiceType="connectedDevice"
             android:description="@string/upnp_service_description" />
 
         <!--
