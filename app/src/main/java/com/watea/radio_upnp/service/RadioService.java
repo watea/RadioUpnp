@@ -347,6 +347,8 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Radio retrieved in database
       Radio radio = radioLibrary.getFrom(Long.valueOf(mediaId));
+      boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
+      Device<?, ?, ?> chosenDevice = null;
       if (radio == null) {
         Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't retrieve radio");
         throw new RuntimeException();
@@ -358,29 +360,28 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         playerAdapter.stop();
       }
       // Set actual player DLNA? Extra shall contain DLNA device UDN.
-      if (extras.containsKey(getString(R.string.key_dlna_device))) {
-        Device<?, ?, ?> chosenDevice = null;
-        if (androidUpnpService != null) {
-          for (Device<?, ?, ?> device : androidUpnpService.getRegistry().getDevices()) {
-            if (DlnaDevice.getIdentity(device).equals(extras.getString(getString(R.string.key_dlna_device)))) {
-              chosenDevice = device;
-              break;
-            }
-          }
-        }
+      if (isDlna) {
+        chosenDevice = getChosenDevice(extras.getString(getString(R.string.key_dlna_device)));
         if (chosenDevice == null) {
           Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
           return;
-        } else {
-          playerAdapter = new UpnpPlayerAdapter(
-            RadioService.this,
-            httpServer,
-            RadioService.this,
-            radio,
-            lockKey,
-            chosenDevice,
-            upnpActionControler);
         }
+      }
+      // Synchronize session data
+      session.setActive(true);
+      session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
+      session.setExtras(extras);
+      lockKey = UUID.randomUUID().toString();
+      if (isDlna) {
+        playerAdapter = new UpnpPlayerAdapter(
+          RadioService.this,
+          httpServer,
+          RadioService.this,
+          radio,
+          lockKey,
+          chosenDevice,
+          upnpActionControler);
+        session.setPlaybackToRemote(volumeProviderCompat);
       } else {
         playerAdapter = new LocalPlayerAdapter(
           RadioService.this,
@@ -388,17 +389,8 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           RadioService.this,
           radio,
           lockKey);
-      }
-      // Synchronize session data
-      session.setActive(true);
-      session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
-      session.setExtras(extras);
-      if (playerAdapter instanceof UpnpPlayerAdapter) {
-        session.setPlaybackToRemote(volumeProviderCompat);
-      } else {
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       }
-      lockKey = UUID.randomUUID().toString();
       // Prepare radio streaming
       playerAdapter.prepareFromMediaId();
     }
@@ -416,6 +408,17 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     @Override
     public void onStop() {
       playerAdapter.stop();
+    }
+
+    private Device<?, ?, ?> getChosenDevice(String identity) {
+      if (androidUpnpService != null) {
+        for (Device<?, ?, ?> device : androidUpnpService.getRegistry().getDevices()) {
+          if (DlnaDevice.getIdentity(device).equals(identity)) {
+            return device;
+          }
+        }
+      }
+      return null;
     }
   }
 
