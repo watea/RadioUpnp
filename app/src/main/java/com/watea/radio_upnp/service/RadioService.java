@@ -357,11 +357,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       if (playerAdapter != null) {
         playerAdapter.stop();
       }
-      // Synchronize session data
-      session.setActive(true);
-      session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
-      session.setExtras(extras);
-      lockKey = UUID.randomUUID().toString();
       // Set actual player DLNA? Extra shall contain DLNA device UDN.
       if (extras.containsKey(getString(R.string.key_dlna_device))) {
         Device<?, ?, ?> chosenDevice = null;
@@ -385,7 +380,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
             lockKey,
             chosenDevice,
             upnpActionControler);
-          session.setPlaybackToRemote(volumeProviderCompat);
         }
       } else {
         playerAdapter = new LocalPlayerAdapter(
@@ -394,8 +388,17 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
           RadioService.this,
           radio,
           lockKey);
+      }
+      // Synchronize session data
+      session.setActive(true);
+      session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
+      session.setExtras(extras);
+      if (playerAdapter instanceof UpnpPlayerAdapter) {
+        session.setPlaybackToRemote(volumeProviderCompat);
+      } else {
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       }
+      lockKey = UUID.randomUUID().toString();
       // Prepare radio streaming
       playerAdapter.prepareFromMediaId();
     }
