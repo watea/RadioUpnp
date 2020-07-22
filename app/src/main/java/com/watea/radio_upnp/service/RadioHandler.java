@@ -36,7 +36,6 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -211,7 +210,7 @@ public class RadioHandler extends AbstractHandler {
           httpURLConnection.getInputStream(),
           charset.newDecoder(),
           metadataOffset,
-          new BufferedOutputStream(outputStream),
+          outputStream,
           radio,
           httpURLConnection.getHeaderField("icy-br"),
           lockKey,
@@ -258,7 +257,7 @@ public class RadioHandler extends AbstractHandler {
     @NonNull InputStream inputStream,
     @NonNull CharsetDecoder charsetDecoder,
     int metadataOffset,
-    @NonNull BufferedOutputStream outputStream,
+    @NonNull OutputStream outputStream,
     @NonNull final Radio radio,
     @Nullable final String rate,
     @NonNull final String lockKey,
