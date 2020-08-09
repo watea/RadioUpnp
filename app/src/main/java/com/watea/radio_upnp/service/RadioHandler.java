@@ -64,6 +64,7 @@ public class RadioHandler extends AbstractHandler {
   private static final String USER_AGENT = "User-Agent";
   private static final String PARAMS = "params";
   private static final String SEPARATOR = "_";
+  private static final String ICY = "icy-";
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   private final Map<String, Integer> remoteConnections = new Hashtable<>();
   @NonNull
@@ -157,7 +158,9 @@ public class RadioHandler extends AbstractHandler {
       Map<String, List<String>> headers = httpURLConnection.getHeaderFields();
       for (String header : headers.keySet()) {
         List<String> values = headers.get(header);
-        if ((header != null) && (values != null) && (values.size() > 0)) {
+        // Icy data not forwarded
+        if ((header != null) && !header.toLowerCase().startsWith(ICY) &&
+          (values != null) && (values.size() > 0)) {
           response.setHeader(header, values.get(0));
         }
       }
@@ -271,53 +274,52 @@ public class RadioHandler extends AbstractHandler {
     int metadataSize = 0;
     while (inputStream.read(buffer) != -1) {
       // Stop if not current listener
-      if (currentListener.equals(listener)) {
-        // Only stream data are transferred
-        if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
-          outputStream.write(buffer);
-        } else {
-          // Metadata: look for title information
-          int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
-          // First byte gives size (16 bytes chunks) to read for metadata
-          if (metadataIndex == 0) {
-            metadataSize = buffer[0] * 16;
-            metadataBuffer.clear();
-          } else {
-            // Other bytes are metadata
-            if (metadataIndex <= METADATA_MAX) {
-              metadataBuffer.put(buffer[0]);
-            }
-          }
-          // End of metadata, extract pattern
-          if (metadataIndex == metadataSize) {
-            CharBuffer metadata = null;
-            metadataBuffer.flip();
-            // Exception blocked on metadata
-            try {
-              metadata = charsetDecoder.decode(metadataBuffer);
-            } catch (Exception exception) {
-              if (BuildConfig.DEBUG) {
-                Log.w(LOG_TAG, "Error decoding metadata", exception);
-              }
-            }
-            if ((metadata != null) && (metadata.length() > 0)) {
-              if (BuildConfig.DEBUG) {
-                Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
-              }
-              Matcher matcher = PATTERN_ICY.matcher(metadata);
-              // Tell listener
-              String information = (matcher.find() && (matcher.groupCount() > 0)) ?
-                matcher.group(1) : null;
-              if (information != null) {
-                currentListener.onNewInformation(radio, information, rate, lockKey);
-              }
-            }
-            metadataBlockBytesRead = 0;
-          }
-        }
-      } else {
+      if (!currentListener.equals(listener)) {
         Log.d(LOG_TAG, "handleStreaming: requested to stop");
         break;
+      }
+      // Only stream data are transferred
+      if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+        outputStream.write(buffer);
+      } else {
+        // Metadata: look for title information
+        int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+        // First byte gives size (16 bytes chunks) to read for metadata
+        if (metadataIndex == 0) {
+          metadataSize = buffer[0] * 16;
+          metadataBuffer.clear();
+        } else {
+          // Other bytes are metadata
+          if (metadataIndex <= METADATA_MAX) {
+            metadataBuffer.put(buffer[0]);
+          }
+        }
+        // End of metadata, extract pattern
+        if (metadataIndex == metadataSize) {
+          CharBuffer metadata = null;
+          metadataBuffer.flip();
+          // Exception blocked on metadata
+          try {
+            metadata = charsetDecoder.decode(metadataBuffer);
+          } catch (Exception exception) {
+            if (BuildConfig.DEBUG) {
+              Log.w(LOG_TAG, "Error decoding metadata", exception);
+            }
+          }
+          if ((metadata != null) && (metadata.length() > 0)) {
+            if (BuildConfig.DEBUG) {
+              Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+            }
+            Matcher matcher = PATTERN_ICY.matcher(metadata);
+            // Tell listener
+            String information = (matcher.find() && (matcher.groupCount() > 0)) ?
+              matcher.group(1) : null;
+            if (information != null) {
+              currentListener.onNewInformation(radio, information, rate, lockKey);
+            }
+          }
+          metadataBlockBytesRead = 0;
+        }
       }
     }
     Log.d(LOG_TAG, "handleStreaming: leaving");

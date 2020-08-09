@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
@@ -38,15 +39,10 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.SystemClock;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
-import androidx.appcompat.app.AlertDialog;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -59,6 +55,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.DlnaDevicesAdapter;
@@ -335,7 +336,9 @@ public class MainFragment
           }
           // Get ready for future device advertisements
           registry.addListener(browseRegistryListener);
-          androidUpnpService.getControlPoint().search();
+          // Cling library bug workaround
+          NetworkTester.sendMSearch(getActivity());
+          //androidUpnpService.getControlPoint().search();
         }
       });
     }
@@ -493,7 +496,9 @@ public class MainFragment
         // Do not search more than 1 peer 5 s
         if (System.currentTimeMillis() - timeDlnaSearch > 5000) {
           timeDlnaSearch = System.currentTimeMillis();
-          androidUpnpService.getControlPoint().search();
+          // Cling library bug workaround
+          NetworkTester.sendMSearch(getActivity());
+          //androidUpnpService.getControlPoint().search();
         }
         dlnaAlertDialog.show();
         if (!gotItDlnaEnable) {
