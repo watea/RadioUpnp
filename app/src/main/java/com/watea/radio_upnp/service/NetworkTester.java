@@ -194,13 +194,18 @@ public class NetworkTester {
       @Override
       public void run() {
         try (DatagramSocket datagramSocket = new DatagramSocket(null)) {
-          datagramSocket.setReuseAddress(true);
-          datagramSocket.bind(new InetSocketAddress(getIpAddress(context), UPNP_MULTICAST_PORT));
-          datagramSocket.send(new DatagramPacket(
-            M_SEARCH_DATA,
-            M_SEARCH_DATA.length,
-            InetAddress.getByName(UPNP_MULTICAST_ADDRESS),
-            UPNP_MULTICAST_PORT));
+          String ipAddress = getIpAddress(context);
+          if (ipAddress == null) {
+            Log.d(LOG_TAG, "sendMSearch failed, no IP address");
+          } else {
+            datagramSocket.setReuseAddress(true);
+            datagramSocket.bind(new InetSocketAddress(ipAddress, UPNP_MULTICAST_PORT));
+            datagramSocket.send(new DatagramPacket(
+              M_SEARCH_DATA,
+              M_SEARCH_DATA.length,
+              InetAddress.getByName(UPNP_MULTICAST_ADDRESS),
+              UPNP_MULTICAST_PORT));
+          }
         } catch (IOException iOException) {
           Log.d(LOG_TAG, "sendMSearch setup failed", iOException);
         }
