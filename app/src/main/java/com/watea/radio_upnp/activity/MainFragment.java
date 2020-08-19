@@ -73,7 +73,6 @@ import com.watea.radio_upnp.service.RadioService;
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
-import org.fourthline.cling.model.meta.Icon;
 import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.model.meta.Service;
 import org.fourthline.cling.registry.DefaultRegistryListener;
@@ -258,19 +257,12 @@ public class MainFragment
     public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
       for (Service<?, ?> service : remoteDevice.getServices()) {
         if (service.getServiceId().equals(AV_TRANSPORT_SERVICE_ID)) {
-          final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
-          // Search for icon
-          Icon deviceIcon = remoteDevice.isFullyHydrated() ?
-            getLargestIcon(remoteDevice.getIcons()) : null;
-          final Bitmap icon = (deviceIcon == null) ?
-            null : NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(deviceIcon.getUri()));
           // Add DlnaDevice to Adapter
           handler.post(new Runnable() {
             public void run() {
               // Do nothing if we were disposed
               if (dlnaDevicesAdapter != null) {
-                dlnaDevice.setIcon((icon == null) ? dlnaDevicesAdapter.getDefaultBitmap() : icon);
-                dlnaDevicesAdapter.addOrReplace(dlnaDevice);
+                dlnaDevicesAdapter.addOrReplace(remoteDevice);
               }
             }
           });
@@ -285,24 +277,10 @@ public class MainFragment
         public void run() {
           // Do nothing if we were disposed
           if (dlnaDevicesAdapter != null) {
-            dlnaDevicesAdapter.remove(new DlnaDevice(remoteDevice));
+            dlnaDevicesAdapter.remove(remoteDevice);
           }
         }
       });
-    }
-
-    @Nullable
-    private Icon getLargestIcon(@NonNull Icon[] deviceIcons) {
-      Icon icon = null;
-      int maxWidth = 0;
-      for (Icon deviceIcon : deviceIcons) {
-        int width = deviceIcon.getWidth();
-        if (width > maxWidth) {
-          maxWidth = width;
-          icon = deviceIcon;
-        }
-      }
-      return icon;
     }
   };
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -336,9 +314,7 @@ public class MainFragment
           }
           // Get ready for future device advertisements
           registry.addListener(browseRegistryListener);
-          // Cling library bug workaround
-          NetworkTester.sendMSearch(getActivity());
-          //androidUpnpService.getControlPoint().search();
+          androidUpnpService.getControlPoint().search();
         }
       });
     }
@@ -496,9 +472,7 @@ public class MainFragment
         // Do not search more than 1 peer 5 s
         if (System.currentTimeMillis() - timeDlnaSearch > 5000) {
           timeDlnaSearch = System.currentTimeMillis();
-          // Cling library bug workaround
-          NetworkTester.sendMSearch(getActivity());
-          //androidUpnpService.getControlPoint().search();
+          androidUpnpService.getControlPoint().search();
         }
         dlnaAlertDialog.show();
         if (!gotItDlnaEnable) {
@@ -575,9 +549,10 @@ public class MainFragment
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
-    outState.putString(getString(R.string.key_selected_device),
-      dlnaDevicesAdapter.hasChosenDlnaDevice() ?
-        Objects.requireNonNull(dlnaDevicesAdapter.getChosenDlnaDevice()).getIdentity() : null);
+    DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
+    outState.putString(
+      getString(R.string.key_selected_device),
+      (chosenDlnaDevice == null) ? null : chosenDlnaDevice.getIdentity());
   }
 
   @Override
@@ -734,21 +709,24 @@ public class MainFragment
     // Allow to tell error again
     isErrorAllowedToTell = true;
     Bundle bundle = new Bundle();
+    DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
     if ((androidUpnpService != null) &&
       NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity())) &&
-      dlnaDevicesAdapter.hasChosenDlnaDevice()) {
-      bundle.putString(getString(R.string.key_dlna_device),
-        Objects.requireNonNull(dlnaDevicesAdapter.getChosenDlnaDevice()).getIdentity());
+      (chosenDlnaDevice != null)) {
+      bundle.putString(getString(R.string.key_dlna_device), chosenDlnaDevice.getIdentity());
     }
     mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
   }
 
   private void setDlnaMenuItem(@Nullable DlnaDevice dlnaDevice) {
-    Bitmap icon = (dlnaDevice == null) ? null : dlnaDevice.getIcon();
-    if ((dlnaDevice == null) || (icon == null)) {
+    if (dlnaDevice == null) {
       dlnaMenuItem.setVisible(false);
     } else {
       dlnaMenuItem.setVisible(true);
+      Bitmap icon = dlnaDevice.getIcon();
+      if (icon == null) {
+        icon = dlnaDevicesAdapter.getDefaultIcon();
+      }
       dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
     }
   }

@@ -24,19 +24,27 @@
 package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
+import android.os.Handler;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.service.NetworkTester;
+
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.Icon;
+import org.fourthline.cling.model.meta.RemoteDevice;
+
+import java.util.Objects;
 
 public class DlnaDevice {
   @Nullable
-  private Device<?, ?, ?> device;
+  private RemoteDevice remoteDevice;
   @Nullable
   private Bitmap icon = null;
 
-  public DlnaDevice(@Nullable Device<?, ?, ?> device) {
-    this.device = device;
+  public DlnaDevice(@Nullable RemoteDevice remoteDevice) {
+    this.remoteDevice = remoteDevice;
   }
 
   public static String getIdentity(@NonNull Device<?, ?, ?> device) {
@@ -54,15 +62,15 @@ public class DlnaDevice {
 
   @Nullable
   public String getIdentity() {
-    return (device == null) ? null : getIdentity(device);
+    return (remoteDevice == null) ? null : getIdentity(remoteDevice);
   }
 
   @Override
   public boolean equals(Object object) {
     return
       object instanceof DlnaDevice &&
-        ((device == null) && (((DlnaDevice) object).device == null) ||
-          (device != null) && device.equals(((DlnaDevice) object).device));
+        ((remoteDevice == null) && (((DlnaDevice) object).remoteDevice == null) ||
+          (remoteDevice != null) && remoteDevice.equals(((DlnaDevice) object).remoteDevice));
   }
 
   @SuppressWarnings("NullableProblems")
@@ -70,12 +78,44 @@ public class DlnaDevice {
   @Nullable
   public String toString() {
     return
-      (device == null) ? null :
-        (device.getDetails() != null) && (device.getDetails().getFriendlyName() != null) ?
-          device.getDetails().getFriendlyName() : device.getDisplayString();
+      (remoteDevice == null) ? null :
+        (remoteDevice.getDetails() != null) &&
+          (remoteDevice.getDetails().getFriendlyName() != null) ?
+          remoteDevice.getDetails().getFriendlyName() : remoteDevice.getDisplayString();
   }
 
   public boolean isFullyHydrated() {
-    return (device != null) && device.isFullyHydrated();
+    return (remoteDevice != null) && remoteDevice.isFullyHydrated();
+  }
+
+  public void searchIcon(@NonNull final Listener listener) {
+    if (isFullyHydrated()) {
+      new Thread() {
+        @Override
+        public void run() {
+          Icon largestIcon = null;
+          int maxWidth = 0;
+          for (Icon deviceIcon : Objects.requireNonNull(remoteDevice).getIcons()) {
+            int width = deviceIcon.getWidth();
+            if (width > maxWidth) {
+              maxWidth = width;
+              largestIcon = deviceIcon;
+            }
+          }
+          if (largestIcon != null) {
+            Bitmap searchedIcon =
+              NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(largestIcon.getUri()));
+            if (searchedIcon != null) {
+              icon = searchedIcon;
+              listener.onNewIcon();
+            }
+          }
+        }
+      }.start();
+    }
+  }
+
+  public interface Listener {
+    void onNewIcon();
   }
 }

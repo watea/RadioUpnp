@@ -27,18 +27,22 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.RecyclerView;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.DlnaDevice;
+
+import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
 import java.util.Objects;
@@ -46,12 +50,13 @@ import java.util.Vector;
 
 public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
   private static final int ICON_SIZE = 100;
-  private static final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
+  private final Handler handler = new Handler();
+  private final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
+  @NonNull
+  private final Bitmap CAST;
   private final List<DlnaDevice> dlnaDevices = new Vector<>();
   @NonNull
   private final Context context;
-  @NonNull
-  private final Bitmap CAST;
   @Nullable
   private String chosenDlnaDeviceIdentity;
   @NonNull
@@ -64,13 +69,9 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     this.context = context;
     this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
     this.listener = listener;
-    CAST = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cast);
+    CAST = BitmapFactory.decodeResource(this.context.getResources(), R.drawable.ic_cast);
+    DUMMY_DEVICE.setIcon(CAST);
     clear();
-  }
-
-  @NonNull
-  public Bitmap getDefaultBitmap() {
-    return CAST;
   }
 
   @NonNull
@@ -103,14 +104,15 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     return null;
   }
 
+  @NonNull
+  public Bitmap getDefaultIcon() {
+    return CAST;
+  }
+
   private void setChosenDlnaDevice(@Nullable DlnaDevice dlnaDevice) {
     chosenDlnaDeviceIdentity = (dlnaDevice == null) ? null : dlnaDevice.getIdentity();
     listener.onChosenDeviceChange(getChosenDlnaDevice());
     notifyDataSetChanged();
-  }
-
-  public boolean hasChosenDlnaDevice() {
-    return (getChosenDlnaDevice() != null);
   }
 
   public void removeChosenDlnaDevice() {
@@ -118,7 +120,8 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   }
 
   // Replace if already here
-  public void addOrReplace(@NonNull DlnaDevice dlnaDevice) {
+  public void addOrReplace(@NonNull RemoteDevice remoteDevice) {
+    final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
     // Remove dummy device if any
     if (isWaiting()) {
       dlnaDevices.clear();
@@ -128,9 +131,23 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     dlnaDevices.add(dlnaDevice);
     listener.onChosenDeviceChange(getChosenDlnaDevice());
     notifyDataSetChanged();
+    dlnaDevice.searchIcon(new DlnaDevice.Listener() {
+      @Override
+      public void onNewIcon() {
+        handler.post(new Runnable() {
+          @Override
+          public void run() {
+            if (dlnaDevices.contains(dlnaDevice)) {
+              notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
+            }
+          }
+        });
+      }
+    });
   }
 
-  public void remove(@NonNull DlnaDevice dlnaDevice) {
+  public void remove(@NonNull RemoteDevice remoteDevice) {
+    DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
     dlnaDevices.remove(dlnaDevice);
     if (dlnaDevices.isEmpty()) {
       setDummyDeviceForWaiting();
@@ -160,7 +177,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     void onChosenDeviceChange(@Nullable DlnaDevice chosenDlnaDevice);
   }
 
-  class ViewHolder extends RecyclerView.ViewHolder {
+  protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
     private final TextView dlnaDeviceNameTextView;
     @NonNull
@@ -180,7 +197,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
             ((chosenDlnaDeviceIdentity == null) ||
               !chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity())) ?
               dlnaDevice : null);
-          listener.onRowClick(dlnaDevice, hasChosenDlnaDevice());
+          listener.onRowClick(dlnaDevice, (getChosenDlnaDevice() != null));
         }
       });
       dlnaDeviceNameTextView = view.findViewById(R.id.row_dlna_device_name_text_view);
@@ -189,22 +206,20 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
 
     private void setView(@NonNull DlnaDevice dlnaDevice) {
       this.dlnaDevice = dlnaDevice;
+      boolean isWaitingOrNotFullyHydrated = (isWaiting() || !dlnaDevice.isFullyHydrated());
       // Waiting message not accessible
-      view.setEnabled(!isWaiting());
+      view.setEnabled(!isWaitingOrNotFullyHydrated);
       // Dummy device for waiting message
       if (isWaiting()) {
         dlnaDeviceNameTextView.setText(R.string.device_no_device_yet);
       } else {
         dlnaDeviceNameTextView.setText(dlnaDevice.toString());
       }
-      Bitmap bitmap = Bitmap.createScaledBitmap(
-        (isWaiting() || (dlnaDevice.getIcon() == null)) ? CAST : dlnaDevice.getIcon(),
-        ICON_SIZE,
-        ICON_SIZE,
-        false);
+      Bitmap bitmap = dlnaDevice.getIcon();
+      bitmap = Bitmap.createScaledBitmap(
+        (bitmap == null) ? CAST : bitmap, ICON_SIZE, ICON_SIZE, false);
       dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         new BitmapDrawable(context.getResources(), bitmap), null, null, null);
-      boolean isWaitingOrNotFullyHydrated = (isWaiting() || !dlnaDevice.isFullyHydrated());
       dlnaDeviceNameTextView.setTextColor(ContextCompat.getColor(
         context,
         (isWaitingOrNotFullyHydrated ||

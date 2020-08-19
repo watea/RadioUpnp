@@ -36,11 +36,8 @@ import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
@@ -50,15 +47,6 @@ import static android.content.Context.WIFI_SERVICE;
 @SuppressWarnings("WeakerAccess")
 public class NetworkTester {
   private static final String LOG_TAG = NetworkTester.class.getName();
-  private static final String UPNP_MULTICAST_ADDRESS = "239.255.255.250";
-  private static final int UPNP_MULTICAST_PORT = 1900;
-  private static final String M_SEARCH = "M-SEARCH * HTTP/1.1\r\n" +
-    "MX: 3\r\n" +
-    "ST: ssdp:all\r\n" +
-    "HOST: " + UPNP_MULTICAST_ADDRESS + ":" + UPNP_MULTICAST_PORT + "\r\n" +
-    "MAN: \"ssdp:discover\"\r\n" +
-    "\r\n";
-  private static final byte[] M_SEARCH_DATA = M_SEARCH.getBytes();
   private static final String SCHEME = "http";
 
   // Static class, no instance
@@ -182,34 +170,5 @@ public class NetworkTester {
       }
     }
     return bitmap;
-  }
-
-  // Workaround for Cling library bug on device search
-  public static void sendMSearch(@Nullable final Context context) {
-    if (context == null) {
-      Log.d(LOG_TAG, "sendMSearch failed due to null context");
-      return;
-    }
-    new Thread() {
-      @Override
-      public void run() {
-        try (DatagramSocket datagramSocket = new DatagramSocket(null)) {
-          String ipAddress = getIpAddress(context);
-          if (ipAddress == null) {
-            Log.d(LOG_TAG, "sendMSearch failed, no IP address");
-          } else {
-            datagramSocket.setReuseAddress(true);
-            datagramSocket.bind(new InetSocketAddress(ipAddress, UPNP_MULTICAST_PORT));
-            datagramSocket.send(new DatagramPacket(
-              M_SEARCH_DATA,
-              M_SEARCH_DATA.length,
-              InetAddress.getByName(UPNP_MULTICAST_ADDRESS),
-              UPNP_MULTICAST_PORT));
-          }
-        } catch (IOException iOException) {
-          Log.d(LOG_TAG, "sendMSearch setup failed", iOException);
-        }
-      }
-    }.start();
   }
 }
