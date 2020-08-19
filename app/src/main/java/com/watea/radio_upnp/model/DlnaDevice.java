@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
-import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
