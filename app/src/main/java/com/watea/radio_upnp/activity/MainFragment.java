@@ -255,8 +255,11 @@ public class MainFragment
   private final RegistryListener browseRegistryListener = new DefaultRegistryListener() {
     @Override
     public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
+      Log.i(LOG_TAG,
+        "remoteDeviceAdded: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
       for (Service<?, ?> service : remoteDevice.getServices()) {
         if (service.getServiceId().equals(AV_TRANSPORT_SERVICE_ID)) {
+          Log.i(LOG_TAG, ">> is UPnP reader");
           // Add DlnaDevice to Adapter
           handler.post(new Runnable() {
             public void run() {
@@ -273,6 +276,8 @@ public class MainFragment
 
     @Override
     public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
+      Log.i(LOG_TAG,
+        "remoteDeviceRemoved: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
       handler.post(new Runnable() {
         public void run() {
           // Do nothing if we were disposed
@@ -287,36 +292,22 @@ public class MainFragment
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) {
       androidUpnpService = (AndroidUpnpService) service;
-      handler.post(new Runnable() {
-        public void run() {
-          // Do nothing if we were disposed
-          if (androidUpnpService == null) {
-            return;
+      Registry registry = androidUpnpService.getRegistry();
+      // May be null if onCreateView() not yet called
+      if (dlnaDevicesAdapter == null) {
+        registry.removeAllRemoteDevices();
+      } else {
+        dlnaDevicesAdapter.clear();
+        // Add all devices to the list we already know about
+        for (Device<?, ?, ?> device : registry.getDevices()) {
+          if (device instanceof RemoteDevice) {
+            browseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
           }
-          final Registry registry = androidUpnpService.getRegistry();
-          // May be null if onCreateView() not yet called
-          if (dlnaDevicesAdapter == null) {
-            registry.removeAllRemoteDevices();
-          } else {
-            dlnaDevicesAdapter.clear();
-            // Add all devices to the list we already know about
-            new Thread() {
-              @Override
-              public void run() {
-                super.run();
-                for (Device<?, ?, ?> device : registry.getDevices()) {
-                  if (device instanceof RemoteDevice) {
-                    browseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
-                  }
-                }
-              }
-            }.start();
-          }
-          // Get ready for future device advertisements
-          registry.addListener(browseRegistryListener);
-          androidUpnpService.getControlPoint().search();
         }
-      });
+      }
+      // Get ready for future device advertisements
+      registry.addListener(browseRegistryListener);
+      androidUpnpService.getControlPoint().search();
     }
 
     @Override
