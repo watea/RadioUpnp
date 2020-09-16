@@ -29,15 +29,18 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.os.SystemClock;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
+
+import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
@@ -82,7 +85,23 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   private static final String CONTENT_FEATURES_DEFAULT =
     CONTENT_FEATURES_HTTP + CONTENT_FEATURES_AUDIO_MPEG +
       CONTENT_FEATURES_BASE + CONTENT_FEATURES_MP3 + CONTENT_FEATURES_EXTENDED;
+  @NonNull
+  protected final Context context;
+  @NonNull
+  protected final HttpServer httpServer;
+  // Current tag, always set before playing
+  @NonNull
+  protected final String lockKey;
+  @NonNull
+  protected final Radio radio;
   private final AudioFocusHelper audioFocusHelper = new AudioFocusHelper();
+  @NonNull
+  private final AudioManager audioManager;
+  @NonNull
+  private final Listener listener;
+  protected int state = PlaybackStateCompat.STATE_NONE;
+  private boolean playOnAudioFocus = false;
+  private boolean audioNoisyReceiverRegistered = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -93,22 +112,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       }
     }
   };
-  @NonNull
-  protected final Context context;
-  @NonNull
-  protected final HttpServer httpServer;
-  // Current tag, always set before playing
-  @NonNull
-  protected final String lockKey;
-  @NonNull
-  protected final Radio radio;
-  @NonNull
-  private final AudioManager audioManager;
-  @NonNull
-  private final Listener listener;
-  protected int state = PlaybackStateCompat.STATE_NONE;
-  private boolean playOnAudioFocus = false;
-  private boolean audioNoisyReceiverRegistered = false;
 
   public PlayerAdapter(
     @NonNull Context context,
@@ -148,7 +151,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   @Override
   public void onError(@NonNull Radio radio, @NonNull String lockKey) {
     Log.d(LOG_TAG, "RadioHandler error received");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
+    changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
   }
 
   @NonNull
@@ -251,7 +254,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
       listener.onPlaybackStateChange(
         new PlaybackStateCompat.Builder()
           .setActions(getAvailableActions())
-          .setState(state, 0, 1.0f, SystemClock.elapsedRealtime())
+          .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime())
           .build(),
         lockKey);
     }

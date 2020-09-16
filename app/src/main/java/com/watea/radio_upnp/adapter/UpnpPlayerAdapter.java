@@ -26,10 +26,11 @@ package com.watea.radio_upnp.adapter;
 import android.content.Context;
 import android.media.AudioManager;
 import android.net.Uri;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
@@ -163,6 +164,21 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     } else {
       onPreparedPlay();
     }
+    // Watchdog
+    new Thread() {
+      @Override
+      public void run() {
+        try {
+          Thread.sleep(10000);
+        } catch (InterruptedException interruptedException) {
+          Log.e(LOG_TAG, "onPrepareFromMediaId: watchdog error");
+        }
+        if (state == PlaybackStateCompat.STATE_BUFFERING) {
+          Log.i(LOG_TAG, "onPrepareFromMediaId: watchdog fired");
+          abort();
+        }
+      }
+    }.start();
   }
 
   public void onPlay() {
@@ -371,9 +387,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
               }
             }
           default:
-            changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-            // Remove remaining actions on device
-            upnpActionControler.releaseActions(device);
+            abort();
         }
         upnpActionControler.scheduleNextAction();
       }
@@ -448,5 +462,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     @NonNull Service<?, ?> service, @NonNull String actionId) {
     Action<?> action = service.getAction(actionId);
     return (action == null) ? null : new ActionInvocation<>(action);
+  }
+
+  private void abort() {
+    // Remove remaining actions on device
+    upnpActionControler.releaseActions(device);
+    changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
   }
 }

@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
+import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,9 +35,12 @@ import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Icon;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Vector;
 
 public class DlnaDevice {
+  private final List<Listener> listeners = new Vector<>();
   @Nullable
   private RemoteDevice remoteDevice;
   @Nullable
@@ -48,6 +52,10 @@ public class DlnaDevice {
 
   public static String getIdentity(@NonNull Device<?, ?, ?> device) {
     return device.getIdentity().getUdn().getIdentifierString();
+  }
+
+  public void addListener(@NonNull Listener listener) {
+    listeners.add(listener);
   }
 
   @Nullable
@@ -87,8 +95,9 @@ public class DlnaDevice {
     return (remoteDevice != null) && remoteDevice.isFullyHydrated();
   }
 
-  public void searchIcon(@NonNull final Listener listener) {
+  public void searchIcon() {
     if (isFullyHydrated()) {
+      final Handler handler = new Handler();
       new Thread() {
         @Override
         public void run() {
@@ -106,7 +115,14 @@ public class DlnaDevice {
               NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(largestIcon.getUri()));
             if (searchedIcon != null) {
               icon = searchedIcon;
-              listener.onNewIcon();
+              handler.post(new Runnable() {
+                @Override
+                public void run() {
+                  for (Listener listener : listeners) {
+                    listener.onNewIcon();
+                  }
+                }
+              });
             }
           }
         }

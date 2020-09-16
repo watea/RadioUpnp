@@ -27,7 +27,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,7 +49,6 @@ import java.util.Vector;
 
 public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
   private static final int ICON_SIZE = 100;
-  private final Handler handler = new Handler();
   private final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
   @NonNull
   private final Bitmap CAST;
@@ -104,15 +102,15 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     return null;
   }
 
+  private void setChosenDlnaDevice(@Nullable DlnaDevice dlnaDevice) {
+    chosenDlnaDeviceIdentity = (dlnaDevice == null) ? null : dlnaDevice.getIdentity();
+    listener.onChosenDeviceChange();
+    notifyDataSetChanged();
+  }
+
   @NonNull
   public Bitmap getDefaultIcon() {
     return CAST;
-  }
-
-  private void setChosenDlnaDevice(@Nullable DlnaDevice dlnaDevice) {
-    chosenDlnaDeviceIdentity = (dlnaDevice == null) ? null : dlnaDevice.getIdentity();
-    listener.onChosenDeviceChange(getChosenDlnaDevice());
-    notifyDataSetChanged();
   }
 
   public void removeChosenDlnaDevice() {
@@ -122,44 +120,40 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   // Replace if already here
   public void addOrReplace(@NonNull RemoteDevice remoteDevice) {
     final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
+    if (dlnaDevices.contains(dlnaDevice))
+      return;
     // Remove dummy device if any
     if (isWaiting()) {
       dlnaDevices.clear();
-    } else {
-      dlnaDevices.remove(dlnaDevice);
     }
     dlnaDevices.add(dlnaDevice);
-    listener.onChosenDeviceChange(getChosenDlnaDevice());
+    listener.onChosenDeviceChange();
     notifyDataSetChanged();
-    dlnaDevice.searchIcon(new DlnaDevice.Listener() {
+    // Wait for icon
+    dlnaDevice.addListener(new DlnaDevice.Listener() {
       @Override
       public void onNewIcon() {
-        handler.post(new Runnable() {
-          @Override
-          public void run() {
-            if (dlnaDevices.contains(dlnaDevice)) {
-              notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
-            }
-          }
-        });
+        if (dlnaDevices.contains(dlnaDevice)) {
+          notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
+        }
       }
     });
+    dlnaDevice.searchIcon();
   }
 
   public void remove(@NonNull RemoteDevice remoteDevice) {
-    DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
-    dlnaDevices.remove(dlnaDevice);
+    dlnaDevices.remove(new DlnaDevice(remoteDevice));
     if (dlnaDevices.isEmpty()) {
       setDummyDeviceForWaiting();
     }
-    listener.onChosenDeviceChange(getChosenDlnaDevice());
+    listener.onChosenDeviceChange();
     notifyDataSetChanged();
   }
 
   public void clear() {
     dlnaDevices.clear();
     setDummyDeviceForWaiting();
-    listener.onChosenDeviceChange(getChosenDlnaDevice());
+    listener.onChosenDeviceChange();
     notifyDataSetChanged();
   }
 
@@ -174,7 +168,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   public interface Listener {
     void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen);
 
-    void onChosenDeviceChange(@Nullable DlnaDevice chosenDlnaDevice);
+    void onChosenDeviceChange();
   }
 
   protected class ViewHolder extends RecyclerView.ViewHolder {

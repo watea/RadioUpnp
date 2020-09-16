@@ -31,10 +31,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
-import androidx.appcompat.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -49,6 +45,11 @@ import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SimpleAdapter;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
@@ -108,28 +109,27 @@ public class ItemModifyFragment extends MainActivityFragment {
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
+    // Order matters
+    urlWatcher = new UrlWatcher(urlEditText);
+    webPageWatcher = new UrlWatcher(webPageEditText);
     // Restore saved state, if any
-    if (savedInstanceState != null) {
+    if (savedInstanceState == null) {
+      nameEditText.setText(radioName);
+      urlEditText.setText(radioUrl);
+      webPageEditText.setText(radioWebPage);
+      darFmRadioButton.setChecked(true);
+    } else {
       radio = radioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
-      radioName = savedInstanceState.getString(getString(R.string.key_radio_name));
-      radioUrl = savedInstanceState.getString(getString(R.string.key_radio_url));
-      radioWebPage = savedInstanceState.getString(getString(R.string.key_radio_web_page));
       radioIcon = BitmapFactory.decodeFile(
         savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
     }
-    // Init if necessary
+    // Icon init if necessary
     if (radioIcon == null) {
       radioIcon = BitmapFactory.decodeResource(
         Objects.requireNonNull(getActivity()).getResources(), R.drawable.ic_radio);
     }
-    // Set views
-    nameEditText.setText(radioName);
     setRadioIcon(radioIcon);
-    // Order matters
-    urlWatcher = new UrlWatcher(urlEditText);
-    webPageWatcher = new UrlWatcher(webPageEditText);
-    urlEditText.setText(radioUrl);
-    webPageEditText.setText(radioWebPage);
+    showSearchButton(true);
   }
 
   @NonNull
@@ -192,9 +192,6 @@ public class ItemModifyFragment extends MainActivityFragment {
         }
 
       });
-    darFmRadioButton.setChecked(
-      (savedInstanceState == null) ||
-        savedInstanceState.getBoolean(getString(R.string.key_dar_fm_checked)));
     searchImageButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
@@ -212,22 +209,15 @@ public class ItemModifyFragment extends MainActivityFragment {
         }
       }
     });
-    showSearchButton(true);
     return view;
   }
 
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    // "set" values...
     outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : radio.getId());
-    // ...others
-    outState.putString(getString(R.string.key_radio_name), nameEditText.getText().toString());
-    outState.putString(getString(R.string.key_radio_url), urlEditText.getText().toString());
-    outState.putString(getString(R.string.key_radio_web_page), webPageEditText.getText().toString());
     outState.putString(getString(R.string.key_radio_icon_file),
       radioLibrary.bitmapToFile(radioIcon, Integer.toString(hashCode())).getPath());
-    outState.putBoolean(getString(R.string.key_dar_fm_checked), darFmRadioButton.isChecked());
   }
 
   @Override

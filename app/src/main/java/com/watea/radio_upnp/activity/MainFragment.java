@@ -351,7 +351,7 @@ public class MainFragment
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     dlnaMenuItem = menu.findItem(R.id.action_dlna);
     setPreferredMenuItem();
-    setDlnaMenuItem(dlnaDevicesAdapter.getChosenDlnaDevice());
+    setDlnaMenuItem();
   }
 
   @Override
@@ -393,10 +393,10 @@ public class MainFragment
           }
 
           @Override
-          public void onChosenDeviceChange(@Nullable DlnaDevice chosenDlnaDevice) {
+          public void onChosenDeviceChange() {
             // Do nothing if not yet created or if we were disposed
             if ((dlnaMenuItem != null) && (getActivity() != null)) {
-              setDlnaMenuItem(chosenDlnaDevice);
+              setDlnaMenuItem();
             }
           }
         });
@@ -487,7 +487,7 @@ public class MainFragment
           tell(R.string.device_no_device_yet);
           return true;
         }
-        dlnaDevicesAdapter.removeChosenDlnaDevice();
+        dlnaDevicesAdapter.clear();
         androidUpnpService.getRegistry().removeAllRemoteDevices();
         tell(R.string.dlna_reset);
         return true;
@@ -709,7 +709,8 @@ public class MainFragment
     mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
   }
 
-  private void setDlnaMenuItem(@Nullable DlnaDevice dlnaDevice) {
+  private void setDlnaMenuItem() {
+    final DlnaDevice dlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
     if (dlnaDevice == null) {
       dlnaMenuItem.setVisible(false);
     } else {
@@ -717,6 +718,16 @@ public class MainFragment
       Bitmap icon = dlnaDevice.getIcon();
       if (icon == null) {
         icon = dlnaDevicesAdapter.getDefaultIcon();
+        // Wait for icon
+        dlnaDevice.addListener(new DlnaDevice.Listener() {
+          @Override
+          public void onNewIcon() {
+            // Do nothing if disposed
+            if (dlnaMenuItem != null) {
+              dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), dlnaDevice.getIcon()));
+            }
+          }
+        });
       }
       dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
     }
