@@ -104,13 +104,17 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
 
   private void setChosenDlnaDevice(@Nullable DlnaDevice dlnaDevice) {
     chosenDlnaDeviceIdentity = (dlnaDevice == null) ? null : dlnaDevice.getIdentity();
-    listener.onChosenDeviceChange();
-    notifyDataSetChanged();
+    notifyChange();
   }
 
-  @NonNull
-  public Bitmap getDefaultIcon() {
-    return CAST;
+  @Nullable
+  public Bitmap getChosenDlnaDeviceIcon() {
+    DlnaDevice dlnaDevice = getChosenDlnaDevice();
+    if (dlnaDevice == null) {
+      return null;
+    }
+    Bitmap icon = dlnaDevice.getIcon();
+    return (icon == null) ? CAST : icon;
   }
 
   public void removeChosenDlnaDevice() {
@@ -127,14 +131,16 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
       dlnaDevices.clear();
     }
     dlnaDevices.add(dlnaDevice);
-    listener.onChosenDeviceChange();
-    notifyDataSetChanged();
+    notifyChange();
     // Wait for icon
     dlnaDevice.addListener(new DlnaDevice.Listener() {
       @Override
       public void onNewIcon() {
         if (dlnaDevices.contains(dlnaDevice)) {
           notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
+          if (dlnaDevice == getChosenDlnaDevice()) {
+            listener.onChosenDeviceChange();
+          }
         }
       }
     });
@@ -146,13 +152,16 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     if (dlnaDevices.isEmpty()) {
       setDummyDeviceForWaiting();
     }
-    listener.onChosenDeviceChange();
-    notifyDataSetChanged();
+    notifyChange();
   }
 
   public void clear() {
     dlnaDevices.clear();
     setDummyDeviceForWaiting();
+    notifyChange();
+  }
+
+  private void notifyChange() {
     listener.onChosenDeviceChange();
     notifyDataSetChanged();
   }

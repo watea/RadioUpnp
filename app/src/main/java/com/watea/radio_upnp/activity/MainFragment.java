@@ -710,25 +710,9 @@ public class MainFragment
   }
 
   private void setDlnaMenuItem() {
-    final DlnaDevice dlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
-    if (dlnaDevice == null) {
-      dlnaMenuItem.setVisible(false);
-    } else {
-      dlnaMenuItem.setVisible(true);
-      Bitmap icon = dlnaDevice.getIcon();
-      if (icon == null) {
-        icon = dlnaDevicesAdapter.getDefaultIcon();
-        // Wait for icon
-        dlnaDevice.addListener(new DlnaDevice.Listener() {
-          @Override
-          public void onNewIcon() {
-            // Do nothing if disposed
-            if (dlnaMenuItem != null) {
-              dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), dlnaDevice.getIcon()));
-            }
-          }
-        });
-      }
+    Bitmap icon = dlnaDevicesAdapter.getChosenDlnaDeviceIcon();
+    dlnaMenuItem.setVisible((icon != null));
+    if (icon != null) {
       dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
     }
   }
