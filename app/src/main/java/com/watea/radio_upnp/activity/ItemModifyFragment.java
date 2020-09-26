@@ -118,11 +118,17 @@ public class ItemModifyFragment extends MainActivityFragment {
       urlEditText.setText(radioUrl);
       webPageEditText.setText(radioWebPage);
       darFmRadioButton.setChecked(true);
-    } else {
-      radio = radioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
-      radioIcon = BitmapFactory.decodeFile(
-        savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
-    }
+    } else
+      // Robustness; it happens it fails
+      try {
+        radio = radioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
+        radioIcon = BitmapFactory.decodeFile(
+          savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "onActivityCreated: internal failure restoring context");
+        radio = null;
+        radioIcon = null;
+      }
     // Icon init if necessary
     if (radioIcon == null) {
       radioIcon = BitmapFactory.decodeResource(

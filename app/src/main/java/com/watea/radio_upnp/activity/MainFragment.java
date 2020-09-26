@@ -37,7 +37,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.RemoteException;
 import android.os.SystemClock;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -222,19 +221,12 @@ public class MainFragment
         if (mediaBrowser == null) {
           return;
         }
-        try {
-          // Get a MediaController for the MediaSession
-          mediaController = new MediaControllerCompat(
-            context,
-            mediaBrowser.getSessionToken());
-          // Link to the callback controller
-          mediaController.registerCallback(mediaControllerCallback);
-          // Sync existing MediaSession state with UI
-          browserViewSync();
-        } catch (RemoteException remoteException) {
-          Log.d(LOG_TAG, "onConnected: problem: ", remoteException);
-          throw new RuntimeException(remoteException);
-        }
+        // Get a MediaController for the MediaSession
+        mediaController = new MediaControllerCompat(context, mediaBrowser.getSessionToken());
+        // Link to the callback controller
+        mediaController.registerCallback(mediaControllerCallback);
+        // Sync existing MediaSession state with UI
+        browserViewSync();
         // Nota: no mediaBrowser.subscribe here needed
       }
 
