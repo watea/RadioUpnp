@@ -54,7 +54,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Hashtable;
 import java.util.List;
@@ -338,8 +337,8 @@ public class MainActivity
         result = (radioLibrary.insertAndSaveIcon(
           new Radio(defaultRadio.name, new URL(defaultRadio.uRL), new URL(defaultRadio.webPageURL)),
           radioLibrary.resourceToBitmap(defaultRadio.drawable)) >= 0) || result;
-      } catch (MalformedURLException malformedURLException) {
-        Log.e(LOG_TAG, "setDefaultRadios: bad URL definition", malformedURLException);
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "setDefaultRadios: internal failure", exception);
       }
     }
     return result;

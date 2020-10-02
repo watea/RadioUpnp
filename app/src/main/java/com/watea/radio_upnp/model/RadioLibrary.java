@@ -40,7 +40,6 @@ import androidx.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.List;
 import java.util.Vector;
 
@@ -158,26 +157,21 @@ public class RadioLibrary {
 
   // Store bitmap as filename.png
   @NonNull
-  public File bitmapToFile(@NonNull Bitmap bitmap, @NonNull String fileName) {
-    File file;
+  public File bitmapToFile(@NonNull Bitmap bitmap, @NonNull String fileName)
+    throws FileNotFoundException, RuntimeException {
     fileName = fileName + ".png";
-    try (FileOutputStream fileOutputStream =
-           context.openFileOutput(fileName, Context.MODE_PRIVATE)) {
-      bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream);
-      file = new File(context.getFilesDir().getPath() + "/" + fileName);
-    } catch (FileNotFoundException fileNotFoundException) {
-      Log.e(LOG_TAG, "bitmapToFile: internal storage failure", fileNotFoundException);
-      throw new RuntimeException();
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "bitmapToFile: internal I/O failure", iOException);
+    FileOutputStream fileOutputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
+    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream)) {
+      Log.e(LOG_TAG, "bitmapToFile: internal failure");
       throw new RuntimeException();
     }
-    return file;
+    return new File(context.getFilesDir().getPath() + "/" + fileName);
   }
 
   // Add a radio with id as icon file name
   @NonNull
-  public Long insertAndSaveIcon(@NonNull Radio radio, @NonNull Bitmap icon) {
+  public Long insertAndSaveIcon(@NonNull Radio radio, @NonNull Bitmap icon)
+    throws FileNotFoundException, RuntimeException {
     // Store radio in database
     Long radioId = insert(radio);
     if (radioId >= 0) {
@@ -195,7 +189,8 @@ public class RadioLibrary {
     return radioId;
   }
 
-  public void setRadioIconFile(@NonNull Radio radio, @NonNull Bitmap icon) {
+  public void setRadioIconFile(@NonNull Radio radio, @NonNull Bitmap icon)
+    throws FileNotFoundException, RuntimeException {
     bitmapToFile(icon, radio.getId().toString());
   }
 
@@ -205,7 +200,7 @@ public class RadioLibrary {
   }
 
   @NonNull
-  public List<MediaBrowserCompat.MediaItem> getMediaItems() {
+  public List<MediaBrowserCompat.MediaItem> getMediaItems() throws RuntimeException {
     List<MediaBrowserCompat.MediaItem> result = new Vector<>();
     Cursor cursor = allIdsQuery();
     int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);

@@ -221,9 +221,16 @@ public class ItemModifyFragment extends MainActivityFragment {
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : radio.getId());
-    outState.putString(getString(R.string.key_radio_icon_file),
-      radioLibrary.bitmapToFile(radioIcon, Integer.toString(hashCode())).getPath());
+    // May fail
+    try {
+      // Order matters
+      outState.putString(
+        getString(R.string.key_radio_icon_file),
+        radioLibrary.bitmapToFile(radioIcon, Integer.toString(hashCode())).getPath());
+      outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : radio.getId());
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure");
+    }
   }
 
   @Override
@@ -241,15 +248,23 @@ public class ItemModifyFragment extends MainActivityFragment {
       } else {
         if (isAddMode()) {
           radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url);
-          if (radioLibrary.insertAndSaveIcon(radio, radioIcon) <= 0) {
-            Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding in database");
+          try {
+            if (radioLibrary.insertAndSaveIcon(radio, radioIcon) <= 0) {
+              Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding in database");
+            }
+          } catch (Exception exception) {
+            Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding icon");
           }
         } else {
           radio.setName(getRadioName());
           radio.setURL(urlWatcher.url);
           radio.setWebPageURL(webPageWatcher.url);
           // Same file name reused to store icon
-          radioLibrary.setRadioIconFile(radio, radioIcon);
+          try {
+            radioLibrary.setRadioIconFile(radio, radioIcon);
+          } catch (Exception exception) {
+            Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating icon");
+          }
           if (radioLibrary.updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
           }
@@ -275,7 +290,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     radioIcon = this.radio.getIcon();
   }
 
-  public boolean isAddMode() {
+  private boolean isAddMode() {
     return (radio == null);
   }
 

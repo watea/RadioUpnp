@@ -350,8 +350,11 @@ public class MainFragment
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     // Restore saved state, if any
+    String chosenDlnaDeviceIdentity = null;
     if (savedInstanceState != null) {
       isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
+      chosenDlnaDeviceIdentity =
+        savedInstanceState.getString(getString(R.string.key_selected_device));
     }
     // Shared preferences
     SharedPreferences sharedPreferences =
@@ -367,8 +370,7 @@ public class MainFragment
     if (dlnaDevicesAdapter == null) {
       dlnaDevicesAdapter = new DlnaDevicesAdapter(
         getActivity(),
-        (savedInstanceState == null) ?
-          null : savedInstanceState.getString(getString(R.string.key_selected_device)),
+        chosenDlnaDeviceIdentity,
         new DlnaDevicesAdapter.Listener() {
           @Override
           public void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen) {
@@ -531,11 +533,16 @@ public class MainFragment
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
-    DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
-    outState.putString(
-      getString(R.string.key_selected_device),
-      (chosenDlnaDevice == null) ? null : chosenDlnaDevice.getIdentity());
+    // May fail
+    try {
+      outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
+      DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
+      outState.putString(
+        getString(R.string.key_selected_device),
+        (chosenDlnaDevice == null) ? null : chosenDlnaDevice.getIdentity());
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure");
+    }
   }
 
   @Override

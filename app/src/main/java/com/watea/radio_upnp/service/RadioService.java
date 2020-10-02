@@ -301,8 +301,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     return builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
       .setMediaSession(getSessionToken())
       .setShowActionsInCompactView(0))
-      .setColor(ContextCompat.getColor(this, R.color.colorAccent))
-      .setSmallIcon(R.drawable.ic_launcher_foreground)
+      .setSmallIcon(R.drawable.ic_mic_white)
       // Pending intent that is fired when user clicks on notification
       .setContentIntent(PendingIntent.getActivity(
         this,
