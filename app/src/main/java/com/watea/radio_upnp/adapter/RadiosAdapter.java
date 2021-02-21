@@ -96,7 +96,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     boolean onPreferredClick(@NonNull Long radioId, Boolean isPreferred);
   }
 
-  class ViewHolder extends RecyclerView.ViewHolder {
+  protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
     private final LinearLayout linearLayout;
     @NonNull

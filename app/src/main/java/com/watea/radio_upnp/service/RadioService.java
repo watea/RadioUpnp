@@ -65,7 +65,11 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.controlpoint.ActionCallback;
+import org.fourthline.cling.model.action.ActionInvocation;
+import org.fourthline.cling.model.message.UpnpResponse;
+import org.fourthline.cling.model.meta.Action;
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.Service;
 
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -98,9 +102,9 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private MediaMetadataCompat mediaMetadataCompat = null;
   private boolean isStarted;
   private String lockKey;
-  private NotificationCompat.Action ActionPause;
-  private NotificationCompat.Action ActionStop;
-  private NotificationCompat.Action ActionPlay;
+  private NotificationCompat.Action actionPause;
+  private NotificationCompat.Action actionStop;
+  private NotificationCompat.Action actionPlay;
 
   @Override
   public void onCreate() {
@@ -167,15 +171,15 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     }
     isStarted = false;
     // Prepare notification
-    ActionPause = new NotificationCompat.Action(
+    actionPause = new NotificationCompat.Action(
       R.drawable.ic_pause_black_24dp,
       getString(R.string.action_pause),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE));
-    ActionStop = new NotificationCompat.Action(
+    actionStop = new NotificationCompat.Action(
       R.drawable.ic_stop_black_24dp,
       getString(R.string.action_stop),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP));
-    ActionPlay = new NotificationCompat.Action(
+    actionPlay = new NotificationCompat.Action(
       R.drawable.ic_play_arrow_black_24dp,
       getString(R.string.action_play),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY));
@@ -316,9 +320,92 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       // UPnP device doesn't support PAUSE action but STOP
       .addAction(playerAdapter.isPlaying() ? playerAdapter instanceof UpnpPlayerAdapter ?
-        ActionStop : ActionPause : ActionPlay)
+        actionStop : actionPause : actionPlay)
       .setOngoing(playerAdapter.isPlaying())
       .build();
+  }
+
+  public static abstract class UpnpAction {
+    @Nullable
+    private final Action<?> action;
+
+    public UpnpAction(@Nullable Service<?, ?> service, @NonNull String actionName) {
+      if (service == null) {
+        Log.d(LOG_TAG, "Service not available for: " + actionName);
+        action = null;
+      } else {
+        action = service.getAction(actionName);
+      }
+      if (action == null) {
+        Log.d(LOG_TAG, "Action not available: " + actionName);
+      }
+    }
+
+    public void execute(
+      @NonNull UpnpActionControler upnpActionControler, boolean isScheduled) {
+      AndroidUpnpService androidUpnpService = upnpActionControler.getAndroidUpnpService();
+      if (androidUpnpService == null) {
+        Log.d(LOG_TAG, "Try to execute UPnP action with no service");
+        if (isScheduled) {
+          upnpActionControler.release();
+        }
+      } else {
+        ActionCallback actionCallback =
+          new RadioService.UpnpActionCallback(this, getActionInvocation());
+        Log.d(LOG_TAG, "Execute: " + actionCallback);
+        androidUpnpService.getControlPoint().execute(actionCallback);
+      }
+    }
+
+    @NonNull
+    public Device<?, ?, ?> getDevice() {
+      assert action != null;
+      return action.getService().getDevice();
+    }
+
+    public boolean isAvailable() {
+      return (action != null);
+    }
+
+    @NonNull
+    protected ActionInvocation<?> getActionInvocation(@Nullable String instanceId) {
+      assert action != null;
+      ActionInvocation<?> actionInvocation = new ActionInvocation<>(action);
+      if (instanceId != null) {
+        actionInvocation.setInput("InstanceID", instanceId);
+      }
+      return actionInvocation;
+    }
+
+    protected abstract ActionInvocation<?> getActionInvocation();
+
+    protected abstract void success(@NonNull ActionInvocation<?> actionInvocation);
+
+    protected abstract void failure();
+  }
+
+  public static class UpnpActionCallback extends ActionCallback {
+    @NonNull
+    private final UpnpAction upnpAction;
+
+    public UpnpActionCallback(
+      @NonNull UpnpAction upnpAction, @NonNull ActionInvocation<?> actionInvocation) {
+      super(actionInvocation);
+      this.upnpAction = upnpAction;
+    }
+
+    @Override
+    public void success(ActionInvocation actionInvocation) {
+      Log.d(LOG_TAG, "Successfully called UPnP action: " + actionInvocation.getAction().getName());
+      upnpAction.success(actionInvocation);
+    }
+
+    @Override
+    public void failure(
+      ActionInvocation actionInvocation, UpnpResponse operation, String defaultMsg) {
+      Log.d(LOG_TAG, "UPnP error: " + actionInvocation.getAction().getName() + " => " + defaultMsg);
+      upnpAction.failure();
+    }
   }
 
   private class UpnpServiceConnection implements ServiceConnection {
@@ -424,65 +511,53 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   // Helper class for UPnP actions scheduling
   public class UpnpActionControler {
     private final Map<Radio, String> contentTypes = new Hashtable<>();
-    private final Map<Device<?, ?, ?>, String> protocolInfos = new Hashtable<>();
-    private final List<ActionCallback> actionCallbacks = new Vector<>();
-    private boolean isActionRunning = false;
+    private final Map<Device<?, ?, ?>, List<String>> protocolInfos = new Hashtable<>();
+    private final List<UpnpAction> upnpActions = new Vector<>();
+    private boolean isRunning = false;
 
     @Nullable
     public String getContentType(@NonNull Radio radio) {
       return contentTypes.get(radio);
     }
 
+    public AndroidUpnpService getAndroidUpnpService() {
+      return androidUpnpService;
+    }
+
+    @Nullable
+    public List<String> getProtocolInfo(@NonNull Device<?, ?, ?> device) {
+      return protocolInfos.get(device);
+    }
+
+    public void putProtocolInfo(@NonNull Device<?, ?, ?> device, @NonNull List<String> list) {
+      protocolInfos.put(device, list);
+    }
+
     public void putContentType(@NonNull Radio radio, @NonNull String contentType) {
       contentTypes.put(radio, contentType);
     }
 
-    @Nullable
-    public String getProtocolInfo(@NonNull Device<?, ?, ?> device) {
-      return protocolInfos.get(device);
-    }
-
-    public void putProtocolInfo(@NonNull Device<?, ?, ?> device, @NonNull String protocolInfo) {
-      protocolInfos.put(device, protocolInfo);
-    }
-
-    // Execute asynchronous in the background
-    public void executeAction(@NonNull ActionCallback actionCallback) {
-      Log.d(LOG_TAG, "executeAction: " + actionCallback);
-      if (androidUpnpService == null) {
-        actionCallback.failure(actionCallback.getActionInvocation(), null, "UpnpService is null");
-        release();
-      } else {
-        androidUpnpService.getControlPoint().execute(actionCallback);
-      }
-    }
-
-    // Does nothing if an action is already running
-    public void scheduleNextAction() {
-      isActionRunning = false;
-      scheduleAction(null);
-    }
-
-    public void scheduleAction(@Nullable final ActionCallback actionCallback) {
+    public void runNextAction() {
       handler.post(new Runnable() {
         @Override
         public void run() {
-          if (actionCallback != null) {
-            actionCallbacks.add(actionCallback);
-          }
-          if (!(actionCallbacks.isEmpty() || isActionRunning)) {
-            executeAction(actionCallbacks.remove(0));
-            isActionRunning = true;
+          if (upnpActions.isEmpty()) {
+            isRunning = false;
+          } else {
+            pullAction();
           }
         }
       });
     }
 
-    public void pushAction(@NonNull final ActionCallback actionCallback) {
+    public void schedule(@NonNull final UpnpAction upnpAction) {
       handler.post(new Runnable() {
         @Override
         public void run() {
-          actionCallbacks.add(0, actionCallback);
+          upnpActions.add(upnpAction);
+          if (!isRunning) {
+            pullAction();
+          }
         }
       });
     }
@@ -492,18 +567,13 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       handler.post(new Runnable() {
         @Override
         public void run() {
-          if (device == null) {
-            actionCallbacks.clear();
-          } else {
-            Iterator<ActionCallback> iter = actionCallbacks.iterator();
-            while (iter.hasNext()) {
-              if (iter.next().getActionInvocation().getAction().getService().getDevice() ==
-                device) {
-                iter.remove();
-              }
+          Iterator<UpnpAction> iter = upnpActions.iterator();
+          while (iter.hasNext()) {
+            if ((device == null) || iter.next().getDevice().equals(device)) {
+              iter.remove();
             }
           }
-          isActionRunning = false;
+          isRunning = false;
         }
       });
     }
@@ -511,8 +581,13 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     private void release() {
       contentTypes.clear();
       protocolInfos.clear();
-      actionCallbacks.clear();
-      isActionRunning = false;
+      upnpActions.clear();
+      isRunning = false;
+    }
+
+    private void pullAction() {
+      isRunning = true;
+      upnpActions.remove(0).execute(this, true);
     }
   }
 }

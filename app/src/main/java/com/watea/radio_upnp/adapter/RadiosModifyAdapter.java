@@ -122,9 +122,8 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
         radioIds.set(from, toId);
         notifyItemMoved(from, to);
         return true;
-      } else {
-        return false;
       }
+      return false;
     }
 
     @Override
@@ -148,7 +147,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     }
   }
 
-  class ViewHolder extends RecyclerView.ViewHolder {
+  protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
     private final TextView radioNameTextView;
     @Nullable

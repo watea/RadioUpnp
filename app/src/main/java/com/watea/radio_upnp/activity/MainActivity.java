@@ -118,7 +118,7 @@ public class MainActivity
     new DefaultRadio(
       "FUN",
       R.drawable.logo_fun,
-      "http://streaming.radio.funradio.fr/fun-1-48-192",
+      "http://icecast.funradio.fr/fun-1-44-128?listen=webCwsBCggNCQgLDQUGBAcGBg",
       "https://www.funradio.fr/")
   };
   // <HMI assets

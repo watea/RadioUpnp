@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
+import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -82,15 +83,13 @@ public class RadioHandler extends AbstractHandler {
   }
 
   // Add ID and lock key to given URI as query parameter
+  // Don't use several query parameters to avoid encoding troubles
   @NonNull
   public static Uri getHandledUri(
     @NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
       .buildUpon()
-      // Some weird devices (Seen on SONY) require ".mp3"
-      .appendEncodedPath(RadioHandler.class.getSimpleName() + radio.getId() + ".mp3")
-      // Add radio ID + lock key as query parameter
-      // Don't use several query parameters to avoid encoding troubles
+      .appendEncodedPath(RadioHandler.class.getSimpleName() + SEPARATOR + radio.getId())
       .appendQueryParameter(PARAMS, radio.getId() + SEPARATOR + lockKey)
       .build();
   }
@@ -132,7 +131,7 @@ public class RadioHandler extends AbstractHandler {
     String method = request.getMethod();
     Log.d(LOG_TAG,
       "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
-    // For further user
+    // For further use
     boolean isGet = GET.equals(method);
     remoteConnections.put(lockKey, getConnectionCount(lockKey) + 1);
     // Create WAN connection
@@ -164,27 +163,10 @@ public class RadioHandler extends AbstractHandler {
           response.setHeader(header, values.get(0));
         }
       }
-      /* Some DLNA devices (in particular infamous Samsung TVs, but not only), when emitting the HTTP GET request with the stream URL to the Media Server (eg MinimServer), add a custom DLNA HTTP Header:
-       *  getcontentFeatures.dlna.org: 1
-       * When this header is set, they expect the HTTP reply header to containing the 4th field of the protocolInfo containing DLNA profile info.
-       * For example for MP3:
-       *  contentFeatures.dlna.org: DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_CI=0
-       * This is an oddity of DLNA but some DLNA devices will not work without this reply header being present, and may return an error code to the caller of SetAVTransportURI (the Control Point).
-       * Handling this header is absolutely required to work with most DLNA TVs (Sony, LG, Samsung, …).
-       *
-       * If DLNA.ORG_OP=11, then left/rght keys uses range header, and up/down uses TimeSeekRange.DLNA.ORG header
-       * If DLNA.ORG_OP=10, then left/rght and up/down keys uses TimeSeekRange.DLNA.ORG header
-       * If DLNA.ORG_OP=01, then left/rght keys uses range header, and up/down keys are disabled
-       * and if DLNA.ORG_OP=00, then all keys are disabled
-       *
-       * DLNA.ORG_CI 0 = native 1, = transcoded
-       *
-       * DLNA.ORG_PN Media file format profile, usually combination of container/video codec/audio codec/sometimes region */
-      // Listener responsibility to ensure validity of next value:
-      String protocolInfo = currentListener.getProtocolInfo().split(":")[3];
-      Log.d(LOG_TAG, "Header contentFeatures.dlna.org: " + protocolInfo);
-      response.setHeader("contentFeatures.dlna.org", protocolInfo);
-      response.setHeader("transferMode.dlna.org", "Streaming");
+      if (currentListener instanceof UpnpPlayerAdapter) {
+        response.setHeader("contentFeatures.dlna.org", "*");
+        response.setHeader("transferMode.dlna.org", "Streaming");
+      }
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
       Log.d(LOG_TAG, "Response sent to LAN client");
@@ -333,8 +315,5 @@ public class RadioHandler extends AbstractHandler {
       @NonNull String lockKey);
 
     void onError(@NonNull Radio radio, @NonNull String lockKey);
-
-    @NonNull
-    String getProtocolInfo();
   }
 }
