@@ -48,6 +48,7 @@ import static android.content.Context.WIFI_SERVICE;
 public class NetworkTester {
   private static final String LOG_TAG = NetworkTester.class.getName();
   private static final String SCHEME = "http";
+  private static final int CONNECTION_TRY = 3;
 
   // Static class, no instance
   private NetworkTester() {
@@ -149,10 +150,11 @@ public class NetworkTester {
   @NonNull
   public static HttpURLConnection getActualHttpURLConnection(
     @NonNull HttpURLConnection httpURLConnection) throws IOException {
-    int status = httpURLConnection.getResponseCode();
-    return (status / 100 == 3) ?
-      (HttpURLConnection) new URL(httpURLConnection.getHeaderField("Location")).openConnection() :
-      httpURLConnection;
+    int connectionTry = 0;
+    while ((httpURLConnection.getResponseCode() / 100 == 3) && (connectionTry++ < CONNECTION_TRY))
+      httpURLConnection =
+        (HttpURLConnection) new URL(httpURLConnection.getHeaderField("Location")).openConnection();
+    return httpURLConnection;
   }
 
   @Nullable

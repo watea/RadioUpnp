@@ -48,15 +48,16 @@ import org.fourthline.cling.model.types.UDAServiceId;
 
 import java.util.List;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
-  private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
   public static final ServiceId AV_TRANSPORT_SERVICE_ID = new UDAServiceId("AVTransport");
+  private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
   private static final ServiceId RENDERING_CONTROL_ID = new UDAServiceId("RenderingControl");
   private static final ServiceId CONNECTION_MANAGER_ID = new UDAServiceId("ConnectionManager");
   private static final String PROTOCOL_INFO_HEADER = "http-get:*:";
   private static final String PROTOCOL_INFO_ALL = ":*";
-  private static final String DEFAULT_CONTENT_TYPE = "audio/mpeg";
   private static final String DEFAULT_PROTOCOL_INFO = PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
@@ -100,7 +101,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private final RadioService.UpnpAction actionGetProtocolInfo;
   @NonNull
-  private String contentType = DEFAULT_CONTENT_TYPE;
+  private String contentType = "audio/mpeg";
   @NonNull
   private String radioUri = "";
   private int currentVolume;
@@ -298,7 +299,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         public void success(@NonNull ActionInvocation<?> actionInvocation) {
           List<String> protocolInfos = new Vector<>();
           for (String protocolInfo : actionInvocation.getOutput("Sink").toString().split(",")) {
-            if (protocolInfo.contains("audio/")) {
+            if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
               Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
               protocolInfos.add(protocolInfo);
             }
@@ -445,19 +446,51 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
   }
 
-  // Special handling for aac MIME type
+  // Special handling for MIME type
   @NonNull
   private String getContentType() {
-    List<String> protocolInfos = upnpActionControler.getProtocolInfo(device);
-    if (protocolInfos == null) {
-      return contentType;
+    final String ALL_EXP = "[^:]*";
+    final String HEAD_EXP = "[a-z]*/";
+    // First choice: contentType
+    String result = searchContentType(contentType);
+    if (result != null) {
+      return result;
     }
-    for (String protocolInfo : protocolInfos) {
-      if (protocolInfo.toLowerCase().contains(contentType)) {
-        return contentType;
+    // Second choice: MIME subtype
+    result = searchContentType(
+      HEAD_EXP + ALL_EXP + contentType.replaceFirst(HEAD_EXP, "") + ALL_EXP);
+    if (result != null) {
+      return result;
+    }
+    // FLAC
+    if (contentType.contains("ogg") || contentType.contains("flac")) {
+      result = searchContentType(HEAD_EXP + ALL_EXP + "flac");
+      if (result != null) {
+        return result;
       }
     }
-    // Change aac in mp4 if any
-    return contentType.contains("aac") ? "audio/mp4" : contentType;
+    // AAC
+    if (contentType.contains("aac")) {
+      result = searchContentType(HEAD_EXP + "mp4");
+      if (result != null) {
+        return result;
+      }
+    }
+    return contentType;
+  }
+
+  @Nullable
+  private String searchContentType(@NonNull String contentType) {
+    List<String> protocolInfos = upnpActionControler.getProtocolInfo(device);
+    if (protocolInfos != null) {
+      Pattern mimePattern = Pattern.compile(".*:.*:(" + contentType + "):.*");
+      for (String protocolInfo : protocolInfos) {
+        Matcher matcher = mimePattern.matcher(protocolInfo);
+        if (matcher.find()) {
+          return matcher.group(1);
+        }
+      }
+    }
+    return null;
   }
 }

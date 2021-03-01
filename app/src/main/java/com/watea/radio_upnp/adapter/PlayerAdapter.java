@@ -40,6 +40,9 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
 
+import java.util.List;
+import java.util.Vector;
+
 import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
@@ -52,7 +55,14 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-   @NonNull
+  @NonNull
+  private static final List<String> AUDIO_CONTENTS = new Vector<String> () {
+    {
+      add("audio/");
+      add("application/");
+    }
+  };
+  @NonNull
   protected final Context context;
   @NonNull
   protected final HttpServer httpServer;
@@ -95,6 +105,14 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     if (audioManager == null) {
       Log.e(LOG_TAG, "AudioManager is null");
     }
+  }
+
+  public static boolean isHandling(String audioContent) {
+    for (String rawAudioContent : AUDIO_CONTENTS) {
+      if (audioContent.toLowerCase().contains(rawAudioContent))
+        return true;
+    }
+    return false;
   }
 
   @Override

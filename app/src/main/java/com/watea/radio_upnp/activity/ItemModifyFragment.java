@@ -52,6 +52,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.NetworkTester;
 
@@ -546,7 +547,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     protected void onPostExecute(String streamContent) {
       super.onPostExecute(streamContent);
       if (isActuallyAdded()) {
-        if ((streamContent == null) || !streamContent.contains("audio/")) {
+        if ((streamContent == null) || !PlayerAdapter.isHandling(streamContent)) {
           tell(R.string.connection_test_failed);
         } else {
           tell(getResources().getString(R.string.connection_test_successful) + streamContent + ".");

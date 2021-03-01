@@ -567,10 +567,14 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       handler.post(new Runnable() {
         @Override
         public void run() {
-          Iterator<UpnpAction> iter = upnpActions.iterator();
-          while (iter.hasNext()) {
-            if ((device == null) || iter.next().getDevice().equals(device)) {
-              iter.remove();
+          if (device == null)
+            upnpActions.clear();
+          else {
+            Iterator<UpnpAction> iter = upnpActions.iterator();
+            while (iter.hasNext()) {
+              if (iter.next().getDevice().equals(device)) {
+                iter.remove();
+              }
             }
           }
           isRunning = false;
