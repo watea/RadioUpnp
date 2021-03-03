@@ -348,7 +348,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           String contentType = NetworkTester.getStreamContentType(radio.getURL());
           // Now we can call GetProtocolInfo, only if current action not cancelled
           if (contentType != null) {
-            contentType = contentType.toLowerCase();
             upnpActionControler.putContentType(radio, contentType);
             UpnpPlayerAdapter.this.contentType = contentType;
           }
@@ -449,7 +448,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   // Special handling for MIME type
   @NonNull
   private String getContentType() {
-    final String ALL_EXP = "[^:]*";
     final String HEAD_EXP = "[a-z]*/";
     // First choice: contentType
     String result = searchContentType(contentType);
@@ -457,21 +455,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       return result;
     }
     // Second choice: MIME subtype
-    result = searchContentType(
-      HEAD_EXP + ALL_EXP + contentType.replaceFirst(HEAD_EXP, "") + ALL_EXP);
+    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
     if (result != null) {
       return result;
     }
-    // FLAC
-    if (contentType.contains("ogg") || contentType.contains("flac")) {
-      result = searchContentType(HEAD_EXP + ALL_EXP + "flac");
-      if (result != null) {
-        return result;
-      }
-    }
-    // AAC
+    // AAC special case
     if (contentType.contains("aac")) {
-      result = searchContentType(HEAD_EXP + "mp4");
+      result = searchContentType(AUDIO_CONTENT_TYPE + "mp4");
       if (result != null) {
         return result;
       }

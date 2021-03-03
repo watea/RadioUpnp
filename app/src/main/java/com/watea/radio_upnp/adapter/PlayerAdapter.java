@@ -50,16 +50,18 @@ import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
 // Warning: not threadsafe, execution shall be done in main UI thread
 @SuppressWarnings("WeakerAccess")
 public abstract class PlayerAdapter implements RadioHandler.Listener {
+  protected static final String AUDIO_CONTENT_TYPE = "audio/";
+  protected static final String APPLICATION_CONTENT_TYPE = "application/";
   private static final String LOG_TAG = PlayerAdapter.class.getName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
   @NonNull
-  private static final List<String> AUDIO_CONTENTS = new Vector<String> () {
+  private static final List<String> AUDIO_CONTENT_PREFIXS = new Vector<String>() {
     {
-      add("audio/");
-      add("application/");
+      add(AUDIO_CONTENT_TYPE);
+      add(APPLICATION_CONTENT_TYPE);
     }
   };
   @NonNull
@@ -107,9 +109,9 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     }
   }
 
-  public static boolean isHandling(String audioContent) {
-    for (String rawAudioContent : AUDIO_CONTENTS) {
-      if (audioContent.toLowerCase().contains(rawAudioContent))
+  public static boolean isHandling(@NonNull String protocolInfo) {
+    for (String audioContentPrefix : AUDIO_CONTENT_PREFIXS) {
+      if (protocolInfo.contains(audioContentPrefix))
         return true;
     }
     return false;
