@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
         targetSdkVersion 29
-        versionCode 239
-        versionName "2.39"
+        versionCode 240
+        versionName "2.40"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
@@ -56,7 +56,7 @@ repositories {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    androidTestImplementation('androidx.test.espresso:espresso-core:3.1.0', {
+    androidTestImplementation('androidx.test.espresso:espresso-core:3.3.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
 
@@ -67,7 +67,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.3.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     // jsoup HTML parser library @ http://jsoup.org/
-    implementation 'org.jsoup:jsoup:1.12.1'
+    implementation 'org.jsoup:jsoup:1.13.1'
     // exoplayer
     implementation 'com.google.android.exoplayer:exoplayer:2.8.2'
     // apache
@@ -82,7 +82,7 @@ dependencies {
     implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '8.2.0.v20160908'
     implementation group: 'org.eclipse.jetty', name: 'jetty-client', version: '8.2.0.v20160908'
     // Playstore
-    implementation 'com.google.apis:google-api-services-androidpublisher:v3-rev103-1.25.0'
+    implementation 'com.google.apis:google-api-services-androidpublisher:v1.1-rev99-1.23.0'
     // Test
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 }

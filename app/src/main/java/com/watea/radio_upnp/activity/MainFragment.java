@@ -48,7 +48,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -57,6 +56,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -94,7 +94,6 @@ public class MainFragment
   private final Handler handler = new Handler();
   // <HMI assets
   private LinearLayout playedRadioDataLinearLayout;
-  private FrameLayout playFrameLayout;
   private ImageButton playImageButton;
   private ProgressBar progressBar;
   private ImageView albumArtImageView;
@@ -197,7 +196,6 @@ public class MainFragment
 
       private void setFrameVisibility(boolean isVisible, boolean isPlayVisible) {
         playedRadioDataLinearLayout.setVisibility(getVisibility(isVisible));
-        playFrameLayout.setVisibility(getVisibility(isVisible));
         albumArtImageView.setVisibility(getVisibility(isVisible));
         playImageButton.setVisibility(getVisibility(isVisible && isPlayVisible));
         progressBar.setVisibility(getVisibility(isVisible && !isPlayVisible));
@@ -396,8 +394,7 @@ public class MainFragment
         });
     }
     radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
-    radiosView.setLayoutManager(
-      new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+    radiosView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
     radiosView.setAdapter(radiosAdapter);
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
@@ -518,7 +515,6 @@ public class MainFragment
     playedRadioInformationTextView = view.findViewById(R.id.played_radio_information_text_view);
     playedRadioInformationTextView.setSelected(true); // For scrolling
     playedRadioRateTextView = view.findViewById(R.id.played_radio_rate_text_view);
-    playFrameLayout = view.findViewById(R.id.play_frame_layout);
     progressBar = view.findViewById(R.id.progress_bar);
     playImageButton = view.findViewById(R.id.play_image_button);
     playImageButton.setOnClickListener(this);
@@ -558,6 +554,7 @@ public class MainFragment
       .apply();
   }
 
+  @SuppressLint("NonConstantResourceId")
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     switch (item.getItemId()) {

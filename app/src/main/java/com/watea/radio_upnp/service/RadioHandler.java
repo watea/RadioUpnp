@@ -154,13 +154,13 @@ public class RadioHandler extends AbstractHandler {
       httpURLConnection = NetworkTester.getActualHttpURLConnection(httpURLConnection);
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
-      Map<String, List<String>> headers = httpURLConnection.getHeaderFields();
-      for (String header : headers.keySet()) {
-        List<String> values = headers.get(header);
+      for (String header : httpURLConnection.getHeaderFields().keySet()) {
         // Icy data not forwarded
-        if ((header != null) && !header.toLowerCase().startsWith(ICY) &&
-          (values != null) && (values.size() > 0)) {
-          response.setHeader(header, values.get(0));
+        if ((header != null) && !header.toLowerCase().startsWith(ICY)) {
+          String value = httpURLConnection.getHeaderField(header);
+          if (value != null) {
+            response.setHeader(header, value);
+          }
         }
       }
       if (currentListener instanceof UpnpPlayerAdapter) {

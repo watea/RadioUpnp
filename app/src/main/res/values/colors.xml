@@ -29,7 +29,7 @@
     <color name="colorSecondaryText">#707070</color>
     <color name="colorTertiaryText">#212121</color>
     <color name="colorDivider">#BDBDBD</color>
-    <color name="colorLightBackgroung">#EEEEEE</color>
+    <color name="colorLightBackground">#CCEEEEEE</color>
     <color name="colorBackground">#F5F5F5</color>
     <color name="colorError">#B00020</color>
     <color name="ic_launcher_background">#FFFFFF</color>

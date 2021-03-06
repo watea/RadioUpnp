@@ -459,6 +459,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     if (result != null) {
       return result;
     }
+    // FLAC special case
+    if (contentType.contains("ogg")) {
+      result = searchContentType(AUDIO_CONTENT_TYPE + "flac");
+      if (result != null) {
+        return result;
+      }
+    }
     // AAC special case
     if (contentType.contains("aac")) {
       result = searchContentType(AUDIO_CONTENT_TYPE + "mp4");
