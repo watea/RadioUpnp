@@ -152,7 +152,6 @@ public class MainActivity
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     // Pass the event to ActionBarDrawerToggle, if it returns
     // true, then it has handled the app icon touch event
-    //noinspection ConstantConditions
     return
       drawerToggle.onOptionsItemSelected(item) ||
         // Handle action bar item clicks here. The action bar will

@@ -32,6 +32,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
@@ -196,7 +197,6 @@ public class MainFragment
 
       private void setFrameVisibility(boolean isVisible, boolean isPlayVisible) {
         playedRadioDataLinearLayout.setVisibility(getVisibility(isVisible));
-        albumArtImageView.setVisibility(getVisibility(isVisible));
         playImageButton.setVisibility(getVisibility(isVisible && isPlayVisible));
         progressBar.setVisibility(getVisibility(isVisible && !isPlayVisible));
       }
@@ -394,7 +394,8 @@ public class MainFragment
         });
     }
     radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
-    radiosView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+    radiosView.setLayoutManager(new GridLayoutManager(
+      getActivity(), getRadiosColumnCount(getContext().getResources().getConfiguration())));
     radiosView.setAdapter(radiosAdapter);
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
@@ -575,6 +576,13 @@ public class MainFragment
   }
 
   @Override
+  public void onConfigurationChanged(@NonNull Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    ((GridLayoutManager) radiosView.getLayoutManager()).setSpanCount(
+      getRadiosColumnCount(newConfig));
+  }
+
+  @Override
   public void onClick(View view) {
     // Should not happen
     if (mediaController == null) {
@@ -711,5 +719,9 @@ public class MainFragment
     if (icon != null) {
       dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
     }
+  }
+
+  private int getRadiosColumnCount(@NonNull Configuration newConfig) {
+    return (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : 3;
   }
 }
