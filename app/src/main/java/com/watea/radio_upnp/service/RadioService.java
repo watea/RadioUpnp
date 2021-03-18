@@ -41,6 +41,7 @@ import android.os.IBinder;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
@@ -101,16 +102,19 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private HttpServer httpServer;
   private MediaMetadataCompat mediaMetadataCompat = null;
   private boolean isStarted;
+  private boolean isAllowedToRelaunch;
   private String lockKey;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
   private NotificationCompat.Action actionPlay;
+  private MediaControllerCompat mediaController;
 
   @Override
   public void onCreate() {
     super.onCreate();
-    // Create a new MediaSession...
+    // Create a new MediaSession and controller...
     session = new MediaSessionCompat(this, LOG_TAG);
+    mediaController = session.getController();
     // Link to callback where actual media controls are called...
     session.setCallback(new MediaSessionCompatCallback());
     setSessionToken(session.getSessionToken());
@@ -170,6 +174,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     isStarted = false;
+    isAllowedToRelaunch = false;
     // Prepare notification
     actionPause = new NotificationCompat.Action(
       R.drawable.ic_pause_black_24dp,
@@ -186,12 +191,14 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     Log.d(LOG_TAG, "onCreate: done!");
   }
 
+  // Not used by app
   @Override
   public BrowserRoot onGetRoot(
     @NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
     return new BrowserRoot(radioLibrary.getRoot(), null);
   }
 
+  // Not used by app
   @Override
   public void onLoadChildren(
     @NonNull final String parentMediaId,
@@ -245,6 +252,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
                 isStarted = true;
               }
               startForeground(NOTIFICATION_ID, getNotification());
+              isAllowedToRelaunch = true;
               break;
             case PlaybackStateCompat.STATE_PAUSED:
               // Move service out started state
@@ -252,6 +260,33 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
               // Update notification
               notificationManager.notify(NOTIFICATION_ID, getNotification());
               break;
+            case PlaybackStateCompat.STATE_ERROR:
+              // Try to relaunch local player, just once
+              if (playerAdapter instanceof LocalPlayerAdapter) {
+                new Thread() {
+                  @Override
+                  public void run() {
+                    final String mediaId = getMediaId();
+                    final Bundle extras = mediaController.getExtras();
+                    try {
+                      Thread.sleep(2000);
+                    } catch (InterruptedException interruptedException) {
+                      Log.e(LOG_TAG, "onPlaybackStateChange: relaunch error");
+                    }
+                    handler.post(new Runnable() {
+                      @Override
+                      public void run() {
+                        if (isAllowedToRelaunch && !session.isActive()) {
+                          mediaController
+                            .getTransportControls()
+                            .prepareFromMediaId(mediaId, extras);
+                          isAllowedToRelaunch = false;
+                        }
+                      }
+                    });
+                  }
+                }.start();
+              }
             default:
               // Cancel session
               playerAdapter.release();
@@ -323,6 +358,11 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         actionStop : actionPause : actionPlay)
       .setOngoing(playerAdapter.isPlaying())
       .build();
+  }
+
+  @NonNull
+  private String getMediaId() {
+    return mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
   }
 
   public static abstract class UpnpAction {
@@ -492,6 +532,16 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     }
 
     @Override
+    public void onSkipToNext() {
+      skipTo(1);
+    }
+
+    @Override
+    public void onSkipToPrevious() {
+      skipTo(-1);
+    }
+
+    @Override
     public void onStop() {
       playerAdapter.stop();
     }
@@ -505,6 +555,21 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         }
       }
       return null;
+    }
+
+    // Do nothing if no active session or no radio fund
+    private void skipTo(int direction) {
+      if (session.isActive()) {
+        Bundle extras = mediaController.getExtras();
+        Long nextRadioId = radioLibrary.get(
+          Long.valueOf(getMediaId()),
+          extras.getBoolean(getString(R.string.key_preferred_radios)),
+          direction);
+        if (nextRadioId != null) {
+          // Same extras are reused
+          mediaController.getTransportControls().prepareFromMediaId(nextRadioId.toString(), extras);
+        }
+      }
     }
   }
 

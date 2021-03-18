@@ -218,6 +218,14 @@ public class RadioLibrary {
     return result;
   }
 
+  @Nullable
+  public Long get(@NonNull Long radioId, boolean isPreferred, int direction) {
+    List<Long> ids = isPreferred ? getPreferredRadioIds() : getAllRadioIds();
+    return ids.contains(radioId) ?
+      ids.get((ids.size() + ids.indexOf(radioId) + direction) % ids.size()) :
+      null;
+  }
+
   @NonNull
   private List<Long> cursorToIdListAndClose(@NonNull Cursor cursor) {
     int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);

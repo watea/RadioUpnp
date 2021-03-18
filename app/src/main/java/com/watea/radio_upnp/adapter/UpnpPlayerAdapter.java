@@ -428,8 +428,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
       "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
-      // object.item.audioItem.audioBroadcast not valid
-      "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
+      "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
       "<dc:title>" + radio.getName() + "</dc:title>" +
       "<upnp:artist>" + context.getString(R.string.app_name) + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
@@ -454,17 +453,17 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     if (result != null) {
       return result;
     }
-    // Second choice: MIME subtype
-    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
-    if (result != null) {
-      return result;
-    }
     // FLAC special case
     if (contentType.contains("ogg")) {
       result = searchContentType(AUDIO_CONTENT_TYPE + "flac");
       if (result != null) {
         return result;
       }
+    }
+    // Second choice: MIME subtype
+    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
+    if (result != null) {
+      return result;
     }
     // AAC special case
     if (contentType.contains("aac")) {

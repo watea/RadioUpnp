@@ -33,4 +33,5 @@
     <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
     <!-- Bundles -->
     <string name="key_dlna_device">key_dlna_device</string>
+    <string name="key_preferred">key_preferred</string>
 </resources>

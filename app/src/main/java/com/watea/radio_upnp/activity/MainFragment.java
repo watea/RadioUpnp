@@ -142,6 +142,8 @@ public class MainFragment
           // Play button stores state to reach
           switch (intState) {
             case PlaybackStateCompat.STATE_PLAYING:
+              // Allow error telling (relaunch case)
+              isErrorAllowedToTell = true;
               setFrameVisibility(true, true);
               // DLNA device doesn't support PAUSE but STOP
               boolean isDlna =
@@ -307,6 +309,10 @@ public class MainFragment
   };
   private long timeDlnaSearch = 0;
 
+  private static int getRadiosColumnCount(@NonNull Configuration newConfig) {
+    return (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : 3;
+  }
+
   @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
     return radioLibrary.getFrom(radioId);
@@ -395,7 +401,7 @@ public class MainFragment
     }
     radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
     radiosView.setLayoutManager(new GridLayoutManager(
-      getActivity(), getRadiosColumnCount(getContext().getResources().getConfiguration())));
+      getActivity(), getRadiosColumnCount(getActivity().getResources().getConfiguration())));
     radiosView.setAdapter(radiosAdapter);
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
@@ -543,6 +549,13 @@ public class MainFragment
   }
 
   @Override
+  public void onConfigurationChanged(@NonNull Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    ((GridLayoutManager) Objects.requireNonNull(radiosView.getLayoutManager())).setSpanCount(
+      getRadiosColumnCount(newConfig));
+  }
+
+  @Override
   public void onPause() {
     super.onPause();
     // Shared preferences
@@ -573,13 +586,6 @@ public class MainFragment
         // If we got here, the user's action was not recognized
         return false;
     }
-  }
-
-  @Override
-  public void onConfigurationChanged(@NonNull Configuration newConfig) {
-    super.onConfigurationChanged(newConfig);
-    ((GridLayoutManager) radiosView.getLayoutManager()).setSpanCount(
-      getRadiosColumnCount(newConfig));
   }
 
   @Override
@@ -704,6 +710,7 @@ public class MainFragment
     // Allow to tell error again
     isErrorAllowedToTell = true;
     Bundle bundle = new Bundle();
+    bundle.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
     DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
     if ((androidUpnpService != null) &&
       NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity())) &&
@@ -719,9 +726,5 @@ public class MainFragment
     if (icon != null) {
       dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
     }
-  }
-
-  private int getRadiosColumnCount(@NonNull Configuration newConfig) {
-    return (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : 3;
   }
 }
