@@ -394,7 +394,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected long getAvailableActions() {
+  public long getAvailableActions() {
     long actions = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID | PlaybackStateCompat.ACTION_STOP;
     switch (state) {
       case PlaybackStateCompat.STATE_NONE:

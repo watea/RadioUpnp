@@ -261,34 +261,32 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
               notificationManager.notify(NOTIFICATION_ID, getNotification());
               break;
             case PlaybackStateCompat.STATE_ERROR:
-              // Try to relaunch local player, just once
               if (playerAdapter instanceof LocalPlayerAdapter) {
-                new Thread() {
-                  @Override
-                  public void run() {
-                    final String mediaId = getMediaId();
-                    final Bundle extras = mediaController.getExtras();
-                    try {
-                      Thread.sleep(2000);
-                    } catch (InterruptedException interruptedException) {
-                      Log.e(LOG_TAG, "onPlaybackStateChange: relaunch error");
-                    }
-                    handler.post(new Runnable() {
-                      @Override
-                      public void run() {
-                        if (isAllowedToRelaunch && !session.isActive()) {
-                          mediaController
-                            .getTransportControls()
-                            .prepareFromMediaId(mediaId, extras);
-                          isAllowedToRelaunch = false;
-                        }
+                // Try to relaunch local player, just once
+                if (isAllowedToRelaunch) {
+                  isAllowedToRelaunch = false;
+                  new Thread() {
+                    @Override
+                    public void run() {
+                      try {
+                        Thread.sleep(4000);
+                        handler.post(new Runnable() {
+                          @Override
+                          public void run() {
+                            relaunch();
+                          }
+                        });
+                      } catch (InterruptedException interruptedException) {
+                        Log.e(LOG_TAG, "onPlaybackStateChange: relaunch error");
                       }
-                    });
-                  }
-                }.start();
+                    }
+                  }.start();
+                }
+                break;
               }
             default:
               // Cancel session
+              isAllowedToRelaunch = false;
               playerAdapter.release();
               session.setMetadata(mediaMetadataCompat = null);
               session.setActive(false);
@@ -363,6 +361,17 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   @NonNull
   private String getMediaId() {
     return mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
+  }
+
+  private boolean relaunch() {
+    if ((mediaController != null) &&
+      (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_ERROR)) {
+      mediaController
+        .getTransportControls()
+        .prepareFromMediaId(getMediaId(), mediaController.getExtras());
+      return true;
+    }
+    return false;
   }
 
   public static abstract class UpnpAction {
@@ -523,7 +532,10 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
 
     @Override
     public void onPlay() {
-      playerAdapter.play();
+      // Relaunch or play
+      if (!relaunch()) {
+        playerAdapter.play();
+      }
     }
 
     @Override

@@ -105,14 +105,14 @@ public class RadioHandler extends AbstractHandler {
     HttpServletRequest request,
     HttpServletResponse response) {
     // Request must contain a query with radio ID and lock key
-    String[] params = request.getParameter(PARAMS).split(SEPARATOR);
-    String radioId = (params.length > 0) ? params[0] : null;
-    String lockKey = (params.length > 1) ? params[1] : null;
+    final String[] params = request.getParameter(PARAMS).split(SEPARATOR);
+    final String radioId = (params.length > 0) ? params[0] : null;
+    final String lockKey = (params.length > 1) ? params[1] : null;
     final Listener currentListener = listener;
     if ((currentListener == null) || (radioId == null) || (lockKey == null)) {
       Log.d(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
     } else {
-      Radio radio = radioLibrary.getFrom(Long.decode(radioId));
+      final Radio radio = radioLibrary.getFrom(Long.decode(radioId));
       if (radio == null) {
         Log.d(LOG_TAG, "Unknown radio");
       } else {
@@ -123,19 +123,21 @@ public class RadioHandler extends AbstractHandler {
   }
 
   private void handleConnection(
-    @NonNull HttpServletRequest request,
-    @NonNull HttpServletResponse response,
+    @NonNull final HttpServletRequest request,
+    @NonNull final HttpServletResponse response,
     @NonNull final Radio radio,
     @NonNull final String lockKey,
     @NonNull final Listener currentListener) {
-    String method = request.getMethod();
+    final String method = request.getMethod();
     Log.d(LOG_TAG,
       "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
     // For further use
-    boolean isGet = GET.equals(method);
-    remoteConnections.put(lockKey, getConnectionCount(lockKey) + 1);
+    final boolean isGet = GET.equals(method);
+    remoteConnections.put(
+      lockKey, remoteConnections.containsKey(lockKey) ? remoteConnections.get(lockKey) + 1 : 1);
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
+    boolean isErrorDetected = false;
     try (OutputStream outputStream = response.getOutputStream()) {
       URL uRL = radio.getUrlFromM3u();
       if (uRL == null) {
@@ -172,7 +174,7 @@ public class RadioHandler extends AbstractHandler {
       Log.d(LOG_TAG, "Response sent to LAN client");
       if (isGet) {
         // Try to find charset
-        String contentEncoding = httpURLConnection.getContentEncoding();
+        final String contentEncoding = httpURLConnection.getContentEncoding();
         Charset charset = (contentEncoding == null) ?
           Charset.defaultCharset() : Charset.forName(contentEncoding);
         // Find metadata place, 0 if undefined
@@ -203,46 +205,30 @@ public class RadioHandler extends AbstractHandler {
       }
     } catch (IOException iOException) {
       Log.d(LOG_TAG, "IOException", iOException);
-      // Throw error only if stream is last requested.
-      // Used in case client request the stream several times before actually playing.
-      // As seen with BubbleUPnP.
-      new Thread() {
-        @Override
-        public void run() {
-          try {
-            sleep(500);
-          } catch (InterruptedException interruptedException) {
-            Log.e(LOG_TAG, "Sleep error, ignored...");
-          }
-          if (getConnectionCount(lockKey) <= 0) {
-            Log.d(LOG_TAG, "=> error sent to listener");
-            currentListener.onError(radio, lockKey);
-          } else {
-            Log.d(LOG_TAG, "=> error ignored");
-          }
-        }
-      }.start();
+      isErrorDetected = true;
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
       }
     }
-    remoteConnections.put(lockKey, getConnectionCount(lockKey) - 1);
+    remoteConnections.put(lockKey, remoteConnections.get(lockKey) - 1);
+    // Throw error only if stream is last requested.
+    // Used in case client request the stream several times before actually playing.
+    // As seen with BubbleUPnP.
+    if (isErrorDetected && (remoteConnections.get(lockKey) <= 0)) {
+      Log.d(LOG_TAG, "=> error sent to listener");
+      currentListener.onError(radio, lockKey);
+    }
     Log.d(LOG_TAG, "handleConnection: leaving");
-  }
-
-  private int getConnectionCount(@NonNull String lockKey) {
-    Integer count = remoteConnections.get(lockKey);
-    return (count == null) ? 0 : count;
   }
 
   // Forward stream data and handle metadata
   // metadataOffset = 0 if no metadata
   private void handleStreaming(
-    @NonNull InputStream inputStream,
-    @NonNull CharsetDecoder charsetDecoder,
-    int metadataOffset,
-    @NonNull OutputStream outputStream,
+    @NonNull final InputStream inputStream,
+    @NonNull final CharsetDecoder charsetDecoder,
+    final int metadataOffset,
+    @NonNull final OutputStream outputStream,
     @NonNull final Radio radio,
     @Nullable final String rate,
     @NonNull final String lockKey,

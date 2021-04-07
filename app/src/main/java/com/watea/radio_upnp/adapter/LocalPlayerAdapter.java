@@ -152,7 +152,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     simpleExoPlayer.setPlayWhenReady(true);
     simpleExoPlayer.prepare(
       new ExtractorMediaSource.Factory(
-        // Better management of bad wifi connection
+        // Better management of bad connection
         new DefaultHttpDataSourceFactory(
           context.getResources().getString(R.string.app_name),
           new DefaultBandwidthMeter(),
@@ -203,7 +203,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected long getAvailableActions() {
+  public long getAvailableActions() {
     long actions =
       PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
         PlaybackStateCompat.ACTION_STOP |

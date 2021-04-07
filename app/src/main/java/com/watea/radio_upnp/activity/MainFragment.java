@@ -117,7 +117,6 @@ public class MainFragment
   private boolean gotItPlayLongPress;
   private boolean gotItDlnaEnable;
   private MediaControllerCompat mediaController = null;
-  private boolean isErrorAllowedToTell = false;
   // Callback from media control
   private final MediaControllerCompat.Callback mediaControllerCallback =
     new MediaControllerCompat.Callback() {
@@ -138,16 +137,18 @@ public class MainFragment
         // Do nothing if view not defined
         if (isActuallyAdded()) {
           int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
+          boolean isDlna = (mediaController != null) &&
+            (mediaController.getExtras() != null) &&
+            mediaController.getExtras().containsKey(getString(R.string.key_dlna_device));
           Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
+          // Default
+          playImageButton.setImageResource(R.drawable.ic_play_arrow_black_24dp);
+          playImageButton.setTag(PlaybackStateCompat.STATE_PLAYING);
           // Play button stores state to reach
           switch (intState) {
             case PlaybackStateCompat.STATE_PLAYING:
-              // Allow error telling (relaunch case)
-              isErrorAllowedToTell = true;
               setFrameVisibility(true, true);
               // DLNA device doesn't support PAUSE but STOP
-              boolean isDlna =
-                mediaController.getExtras().containsKey(getString(R.string.key_dlna_device));
               playImageButton.setImageResource(
                 isDlna ? R.drawable.ic_stop_black_24dp : R.drawable.ic_pause_black_24dp);
               playImageButton.setTag(
@@ -155,8 +156,6 @@ public class MainFragment
               break;
             case PlaybackStateCompat.STATE_PAUSED:
               setFrameVisibility(true, true);
-              playImageButton.setImageResource(R.drawable.ic_play_arrow_black_24dp);
-              playImageButton.setTag(PlaybackStateCompat.STATE_PLAYING);
               break;
             case PlaybackStateCompat.STATE_BUFFERING:
             case PlaybackStateCompat.STATE_CONNECTING:
@@ -167,12 +166,8 @@ public class MainFragment
               setFrameVisibility(false, false);
               break;
             default:
-              setFrameVisibility(false, false);
-              // Tell error, just once per reading session
-              if (isErrorAllowedToTell) {
-                tell(R.string.radio_connection_error);
-                isErrorAllowedToTell = false;
-              }
+              setFrameVisibility(!isDlna, true);
+              tell(R.string.radio_connection_error);
           }
         }
       }
@@ -707,8 +702,6 @@ public class MainFragment
       tell(R.string.radio_connection_waiting);
       return;
     }
-    // Allow to tell error again
-    isErrorAllowedToTell = true;
     Bundle bundle = new Bundle();
     bundle.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
     DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();

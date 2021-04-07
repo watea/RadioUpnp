@@ -220,7 +220,7 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   protected abstract void onRelease();
 
   // Set the current capabilities available on this session
-  protected abstract long getAvailableActions();
+  public abstract long getAvailableActions();
 
   protected void changeAndNotifyState(int newState) {
     changeAndNotifyState(newState, lockKey);
