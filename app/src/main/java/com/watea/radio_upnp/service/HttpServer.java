@@ -32,6 +32,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -49,33 +50,30 @@ public class HttpServer extends Thread {
   @NonNull
   private final Context context;
   @NonNull
-  private final RadioHandler radioHandler;
-  @NonNull
   private final Listener listener;
 
   public HttpServer(
     @NonNull Context context,
-    @NonNull RadioHandler radioHandler,
+    @NonNull String userAgent,
+    @NonNull RadioLibrary radioLibrary,
+    @NonNull RadioHandler.Listener radioHandlerListener,
     @NonNull Listener listener) {
     this.context = context;
     this.listener = listener;
-    this.radioHandler = radioHandler;
     // Handler for local files
     ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setResourceBase(this.context.getFilesDir().getPath());
     // Add the ResourceHandler to the server
     HandlerList handlers = new HandlerList();
-    handlers.setHandlers(new Handler[]{resourceHandler, this.radioHandler});
+    handlers.setHandlers(new Handler[]{
+      resourceHandler,
+      new RadioHandler(userAgent, radioLibrary, radioHandlerListener)});
     server.setHandler(handlers);
   }
 
   @NonNull
   public static Uri getLoopbackUri() {
     return NetworkTester.getLoopbackUri(PORT);
-  }
-
-  public void setRadioHandlerListener(@Nullable RadioHandler.Listener listener) {
-    radioHandler.setListener(listener);
   }
 
   @Override

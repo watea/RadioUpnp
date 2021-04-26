@@ -29,16 +29,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.os.SystemClock;
-import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.HttpServer;
-import com.watea.radio_upnp.service.RadioHandler;
 
 import java.util.List;
 import java.util.Vector;
@@ -49,7 +45,7 @@ import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
 // and audio focus
 // Warning: not threadsafe, execution shall be done in main UI thread
 @SuppressWarnings("WeakerAccess")
-public abstract class PlayerAdapter implements RadioHandler.Listener {
+public abstract class PlayerAdapter {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
   protected static final String APPLICATION_CONTENT_TYPE = "application/";
   private static final String LOG_TAG = PlayerAdapter.class.getName();
@@ -66,8 +62,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   };
   @NonNull
   protected final Context context;
-  @NonNull
-  protected final HttpServer httpServer;
   // Current tag, always set before playing
   @NonNull
   protected final String lockKey;
@@ -94,19 +88,23 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
 
   public PlayerAdapter(
     @NonNull Context context,
-    @NonNull HttpServer httpServer,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey) {
     this.context = context;
     this.listener = listener;
-    this.httpServer = httpServer;
     this.radio = radio;
     this.lockKey = lockKey;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     if (audioManager == null) {
       Log.e(LOG_TAG, "AudioManager is null");
     }
+  }
+
+  public static PlaybackStateCompat.Builder getPlaybackStateCompat(int state) {
+    return new PlaybackStateCompat
+      .Builder()
+      .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 
   public static boolean isHandling(@NonNull String protocolInfo) {
@@ -117,30 +115,6 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     return false;
   }
 
-  @Override
-  public void onNewInformation(
-    @NonNull Radio radio,
-    @NonNull String information,
-    @Nullable String rate,
-    @NonNull String lockKey) {
-    // We add current radio information to current media data
-    listener.onInformationChange(
-      radio
-        .getMediaMetadataBuilder()
-        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
-        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
-        // Use WRITER for rate
-        .putString(MediaMetadataCompat.METADATA_KEY_WRITER, rate)
-        .build(),
-      lockKey);
-  }
-
-  @Override
-  public void onError(@NonNull Radio radio, @NonNull String lockKey) {
-    Log.d(LOG_TAG, "RadioHandler error received");
-    changeAndNotifyState(PlaybackStateCompat.STATE_ERROR, lockKey);
-  }
-
   public boolean isPlaying() {
     return (state == PlaybackStateCompat.STATE_PLAYING);
   }
@@ -149,11 +123,25 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   public final void prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
     state = PlaybackStateCompat.STATE_NONE;
-    httpServer.setRadioHandlerListener(this);
     // Audio focus management
     audioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
     onPrepareFromMediaId();
+    // Watchdog
+    new Thread() {
+      @Override
+      public void run() {
+        try {
+          Thread.sleep(8000);
+        } catch (InterruptedException interruptedException) {
+          Log.e(LOG_TAG, "onPrepareFromMediaId: watchdog error");
+        }
+        if (state == PlaybackStateCompat.STATE_NONE) {
+          Log.d(LOG_TAG, "onPrepareFromMediaId: watchdog fired");
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+        }
+      }
+    }.start();
   }
 
   public final void play() {
@@ -182,8 +170,8 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   }
 
   public final void stop() {
-    // Force playback state immediately on current lock key
-    changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED, lockKey);
+    // Force playback state immediately
+    changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED);
     // Now we can release
     releaseOwnResources();
     // Stop actual reader and release
@@ -204,6 +192,9 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
   public void adjustVolume(int direction) {
   }
 
+  // Set the current capabilities available on this session
+  public abstract long getAvailableActions();
+
   protected abstract boolean isLocal();
 
   protected abstract void onPrepareFromMediaId();
@@ -219,25 +210,14 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
 
   protected abstract void onRelease();
 
-  // Set the current capabilities available on this session
-  public abstract long getAvailableActions();
-
   protected void changeAndNotifyState(int newState) {
-    changeAndNotifyState(newState, lockKey);
-  }
-
-  protected void changeAndNotifyState(int newState, @NonNull String lockKey) {
     Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + lockKey);
     if (state == newState) {
       Log.d(LOG_TAG, "=> no change");
     } else {
       state = newState;
       listener.onPlaybackStateChange(
-        new PlaybackStateCompat.Builder()
-          .setActions(getAvailableActions())
-          .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime())
-          .build(),
-        lockKey);
+        getPlaybackStateCompat(state).setActions(getAvailableActions()).build(), lockKey);
     }
   }
 
@@ -259,14 +239,10 @@ public abstract class PlayerAdapter implements RadioHandler.Listener {
     // Release audio focus
     audioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
-    // Stop listening for RadioHandler, shall stop RadioHandler
-    httpServer.setRadioHandlerListener(null);
   }
 
   public interface Listener {
     void onPlaybackStateChange(@NonNull PlaybackStateCompat state, String lockKey);
-
-    void onInformationChange(@NonNull MediaMetadataCompat mediaMetadataCompat, String lockKey);
   }
 
   // Helper class for managing audio focus related tasks

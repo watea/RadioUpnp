@@ -79,7 +79,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.Vector;
 
-public class RadioService extends MediaBrowserServiceCompat implements PlayerAdapter.Listener {
+public class RadioService
+  extends MediaBrowserServiceCompat
+  implements PlayerAdapter.Listener, RadioHandler.Listener {
   private static final String LOG_TAG = RadioService.class.getName();
   private static final int NOTIFICATION_ID = 9;
   private static final int REQUEST_CODE = 501;
@@ -87,6 +89,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
   private final Handler handler = new Handler();
   private final UpnpActionControler upnpActionControler = new UpnpActionControler();
+  private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
   private MediaSessionCompat session;
   private RadioLibrary radioLibrary;
@@ -154,17 +157,18 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     // Radio library access
     radioLibrary = new RadioLibrary(this);
     // Init HTTP Server
-    RadioHandler radioHandler = new RadioHandler(getString(R.string.app_name), radioLibrary);
-    HttpServer.Listener httpServerListener = new HttpServer.Listener() {
-      @Override
-      public void onError() {
-        Log.d(LOG_TAG, "HTTP Server error");
-        stopSelf();
-      }
-    };
-    httpServer = new HttpServer(this, radioHandler, httpServerListener);
-    // Is current handler listener
-    radioHandler.setListener(playerAdapter);
+    httpServer = new HttpServer(
+      this,
+      getString(R.string.app_name),
+      radioLibrary,
+      this,
+      new HttpServer.Listener() {
+        @Override
+        public void onError() {
+          Log.d(LOG_TAG, "HTTP Server error");
+          stopSelf();
+        }
+      });
     httpServer.start();
     // Bind to UPnP service, launch if not already
     if (!bindService(
@@ -228,6 +232,48 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     stopSelf();
   }
 
+  @Override
+  public void onNewInformation(
+    @NonNull final String information,
+    @Nullable final String rate,
+    @NonNull final String lockKey) {
+    // We add current radio information to current media data
+    handler.post(new Runnable() {
+      @Override
+      public void run() {
+        if (hasLockKey(lockKey) && (radio != null)) {
+          session.setMetadata(RadioService.this.mediaMetadataCompat =
+            radio
+              .getMediaMetadataBuilder()
+              .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
+              .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
+              // Use WRITER for rate
+              .putString(MediaMetadataCompat.METADATA_KEY_WRITER, rate)
+              .build());
+          // Update notification
+          notificationManager.notify(NOTIFICATION_ID, getNotification());
+        }
+      }
+    });
+  }
+
+  @Override
+  public void onError(@NonNull String lockKey) {
+    Log.d(LOG_TAG, "RadioHandler error received");
+    onPlaybackStateChange(
+      PlayerAdapter.getPlaybackStateCompat(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
+  }
+
+  @Override
+  public boolean hasLockKey(@NonNull String lockKey) {
+    return session.isActive() && lockKey.equals(this.lockKey);
+  }
+
+  @Override
+  public boolean isUpnp() {
+    return (playerAdapter != null) && (playerAdapter instanceof UpnpPlayerAdapter);
+  }
+
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
@@ -236,7 +282,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     handler.post(new Runnable() {
       @Override
       public void run() {
-        if (isStillRunning(lockKey)) {
+        if (hasLockKey(lockKey)) {
           Log.d(LOG_TAG, "New valid state/lock key received: " + state + "/" + lockKey);
           // Report the state to the MediaSession
           session.setPlaybackState(state);
@@ -300,26 +346,6 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
         }
       }
     });
-  }
-
-  // Only if lockKey still valid
-  @Override
-  public void onInformationChange(
-    @NonNull final MediaMetadataCompat mediaMetadataCompat, @NonNull final String lockKey) {
-    handler.post(new Runnable() {
-      @Override
-      public void run() {
-        if (isStillRunning(lockKey)) {
-          session.setMetadata(RadioService.this.mediaMetadataCompat = mediaMetadataCompat);
-          // Update notification
-          notificationManager.notify(NOTIFICATION_ID, getNotification());
-        }
-      }
-    });
-  }
-
-  private boolean isStillRunning(@NonNull String lockKey) {
-    return session.isActive() && lockKey.equals(this.lockKey);
   }
 
   @NonNull
@@ -481,7 +507,7 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Radio retrieved in database
-      Radio radio = radioLibrary.getFrom(Long.valueOf(mediaId));
+      radio = radioLibrary.getFrom(Long.valueOf(mediaId));
       boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
       Device<?, ?, ?> chosenDevice = null;
       if (radio == null) {
@@ -510,17 +536,16 @@ public class RadioService extends MediaBrowserServiceCompat implements PlayerAda
       if (isDlna) {
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
-          httpServer,
           RadioService.this,
           radio,
           lockKey,
+          httpServer,
           chosenDevice,
           upnpActionControler);
         session.setPlaybackToRemote(volumeProviderCompat);
       } else {
         playerAdapter = new LocalPlayerAdapter(
           RadioService.this,
-          httpServer,
           RadioService.this,
           radio,
           lockKey);

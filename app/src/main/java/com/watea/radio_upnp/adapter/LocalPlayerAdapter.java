@@ -70,10 +70,12 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     @Override
     public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
       Log.i(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState +
-        " PlayWhenReady=" + playWhenReady);
+        "/PlayWhenReady=" + playWhenReady);
       switch (playbackState) {
-        case Player.STATE_BUFFERING:
         case Player.STATE_IDLE:
+          // Nothing to do
+          break;
+        case Player.STATE_BUFFERING:
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case Player.STATE_READY:
@@ -121,11 +123,10 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
 
   public LocalPlayerAdapter(
     @NonNull Context context,
-    @NonNull HttpServer httpServer,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey) {
-    super(context, httpServer, listener, radio, lockKey);
+    super(context, listener, radio, lockKey);
   }
 
   @Override

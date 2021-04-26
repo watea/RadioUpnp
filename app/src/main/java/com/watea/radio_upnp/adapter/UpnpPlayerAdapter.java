@@ -111,23 +111,23 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   public UpnpPlayerAdapter(
     @NonNull Context context,
-    @NonNull HttpServer httpServer,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
+    @NonNull HttpServer httpServer,
     @NonNull Device<?, ?, ?> device,
     @NonNull RadioService.UpnpActionControler upnpActionControler) {
-    super(context, httpServer, listener, radio, lockKey);
+    super(context, listener, radio, lockKey);
     this.device = device;
     this.upnpActionControler = upnpActionControler;
     // Shall not be null
-    Uri uri = this.httpServer.getUri();
+    Uri uri = httpServer.getUri();
     if (uri == null) {
       Log.e(LOG_TAG, "UpnpPlayerAdapter: service not available");
     } else {
       radioUri = RadioHandler.getHandledUri(uri, this.radio, this.lockKey).toString();
     }
-    logo = this.httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE);
+    logo = httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE);
     connectionManager = device.findService(CONNECTION_MANAGER_ID);
     avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
     renderingControl = device.findService(RENDERING_CONTROL_ID);
@@ -357,21 +357,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     } else {
       onPreparedPlay();
     }
-    // Watchdog
-    new Thread() {
-      @Override
-      public void run() {
-        try {
-          Thread.sleep(10000);
-        } catch (InterruptedException interruptedException) {
-          Log.e(LOG_TAG, "onPrepareFromMediaId: watchdog error");
-        }
-        if (state == PlaybackStateCompat.STATE_BUFFERING) {
-          Log.i(LOG_TAG, "onPrepareFromMediaId: watchdog fired");
-          abort();
-        }
-      }
-    }.start();
   }
 
   public void onPlay() {
