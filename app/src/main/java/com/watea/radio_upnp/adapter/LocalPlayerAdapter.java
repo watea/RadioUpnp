@@ -30,23 +30,13 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.google.android.exoplayer2.DefaultLoadControl;
-import com.google.android.exoplayer2.DefaultRenderersFactory;
-import com.google.android.exoplayer2.ExoPlaybackException;
-import com.google.android.exoplayer2.ExoPlayerFactory;
-import com.google.android.exoplayer2.PlaybackParameters;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.Timeline;
-import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
-import com.google.android.exoplayer2.source.ExtractorMediaSource;
-import com.google.android.exoplayer2.source.TrackGroupArray;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
+import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
-import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
@@ -56,33 +46,19 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final int HTTP_TIMEOUT_RATIO = 10;
   private final Player.EventListener playerEventListener = new Player.EventListener() {
     @Override
-    public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
-    }
-
-    @Override
-    public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
-    }
-
-    @Override
-    public void onLoadingChanged(boolean isLoading) {
-    }
-
-    @Override
-    public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-      Log.i(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState +
-        "/PlayWhenReady=" + playWhenReady);
+    public void onPlaybackStateChanged(int playbackState) {
+      Log.i(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState);
       switch (playbackState) {
-        case Player.STATE_IDLE:
+        case ExoPlayer.STATE_IDLE:
           // Nothing to do
           break;
-        case Player.STATE_BUFFERING:
+        case ExoPlayer.STATE_BUFFERING:
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           break;
-        case Player.STATE_READY:
-          changeAndNotifyState(
-            playWhenReady ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED);
+        case ExoPlayer.STATE_READY:
+          changeAndNotifyState(getPlayingPausedState(simpleExoPlayer.getPlayWhenReady()));
           break;
-        case Player.STATE_ENDED:
+        case ExoPlayer.STATE_ENDED:
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
           break;
         // Should not happen
@@ -93,29 +69,12 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     }
 
     @Override
-    public void onRepeatModeChanged(int repeatMode) {
+    public void onPlayWhenReadyChanged(boolean playWhenReady, int reason) {
+      changeAndNotifyState(getPlayingPausedState(playWhenReady));
     }
 
-    @Override
-    public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
-    }
-
-    @Override
-    public void onPlayerError(ExoPlaybackException exoPlaybackException) {
-      Log.d(LOG_TAG, "ExoPlayer: onPlayerError " + exoPlaybackException);
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-    }
-
-    @Override
-    public void onPositionDiscontinuity(int reason) {
-    }
-
-    @Override
-    public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
-    }
-
-    @Override
-    public void onSeekProcessed() {
+    private int getPlayingPausedState(boolean playWhenReady) {
+      return playWhenReady ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
     }
   };
   @Nullable
@@ -139,30 +98,48 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
+  public long getAvailableActions() {
+    long actions =
+      PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
+        PlaybackStateCompat.ACTION_STOP |
+        PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+    switch (state) {
+      case PlaybackStateCompat.STATE_PLAYING:
+        actions |= PlaybackStateCompat.ACTION_PAUSE;
+        break;
+      case PlaybackStateCompat.STATE_PAUSED:
+      case PlaybackStateCompat.STATE_BUFFERING:
+        actions |= PlaybackStateCompat.ACTION_PLAY;
+        break;
+      default:
+        // Nothing else
+    }
+    return actions;
+  }
+
+  @Override
   protected boolean isLocal() {
     return true;
   }
 
   @Override
   protected void onPrepareFromMediaId() {
-    simpleExoPlayer = ExoPlayerFactory.newSimpleInstance(
-      new DefaultRenderersFactory(context),
-      new DefaultTrackSelector(),
-      new DefaultLoadControl());
-    simpleExoPlayer.addListener(playerEventListener);
+    DefaultHttpDataSource.Factory defaultHttpDataSourceFactory =
+      new DefaultHttpDataSource.Factory();
+    defaultHttpDataSourceFactory.setReadTimeoutMs(
+      DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO);
+    simpleExoPlayer = new SimpleExoPlayer
+      .Builder(context)
+      .setMediaSourceFactory(
+        new DefaultMediaSourceFactory(
+          new DefaultDataSourceFactory(context, defaultHttpDataSourceFactory)))
+      .build();
+    simpleExoPlayer.setMediaItem(MediaItem.fromUri(
+      RadioHandler.getHandledUri(HttpServer.getLoopbackUri(), radio, lockKey)));
     simpleExoPlayer.setPlayWhenReady(true);
-    simpleExoPlayer.prepare(
-      new ExtractorMediaSource.Factory(
-        // Better management of bad connection
-        new DefaultHttpDataSourceFactory(
-          context.getResources().getString(R.string.app_name),
-          new DefaultBandwidthMeter(),
-          DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
-          DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO,
-          false))
-        .setExtractorsFactory(new DefaultExtractorsFactory())
-        .createMediaSource(
-          RadioHandler.getHandledUri(HttpServer.getLoopbackUri(), radio, lockKey)));
+    simpleExoPlayer.addListener(playerEventListener);
+    simpleExoPlayer.prepare();
   }
 
   @Override
@@ -201,26 +178,5 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
       simpleExoPlayer.release();
       simpleExoPlayer = null;
     }
-  }
-
-  @Override
-  public long getAvailableActions() {
-    long actions =
-      PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
-        PlaybackStateCompat.ACTION_STOP |
-        PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
-    switch (state) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        actions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-        actions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      default:
-        // Nothing else
-    }
-    return actions;
   }
 }
