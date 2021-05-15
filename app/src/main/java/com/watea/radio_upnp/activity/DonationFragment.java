@@ -85,7 +85,10 @@ public class DonationFragment
     logBillingResult("onPurchasesUpdated", billingResult);
     switch (billingResult.getResponseCode()) {
       case BillingClient.BillingResponseCode.OK:
-        if (list != null) {
+        // Consume purchase
+        if (list == null) {
+          Log.e(LOG_TAG, "onPurchasesUpdated: purchase list is null");
+        } else {
           for (com.android.billingclient.api.Purchase purchase : list) {
             Log.d(LOG_TAG, "onPurchasesUpdated: " + purchase);
             billingClient.consumeAsync(
@@ -230,6 +233,7 @@ public class DonationFragment
     String debugMessage = billingResult.getDebugMessage();
     switch (responseCode) {
       case BillingClient.BillingResponseCode.OK:
+      case BillingClient.BillingResponseCode.USER_CANCELED:
         Log.i(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
         break;
       case BillingClient.BillingResponseCode.SERVICE_DISCONNECTED:
@@ -239,9 +243,6 @@ public class DonationFragment
       case BillingClient.BillingResponseCode.DEVELOPER_ERROR:
       case BillingClient.BillingResponseCode.ERROR:
         Log.e(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
-        break;
-      case BillingClient.BillingResponseCode.USER_CANCELED:
-        Log.i(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
         break;
       // These response codes are not expected.
       case BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED:
