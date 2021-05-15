@@ -38,6 +38,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -85,9 +86,9 @@ public class RadioService
   private static final String LOG_TAG = RadioService.class.getName();
   private static final int NOTIFICATION_ID = 9;
   private static final int REQUEST_CODE = 501;
+  private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
-  private final Handler handler = new Handler();
   private final UpnpActionControler upnpActionControler = new UpnpActionControler();
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;

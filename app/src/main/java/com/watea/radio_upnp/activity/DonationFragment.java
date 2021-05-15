@@ -24,9 +24,9 @@
 package com.watea.radio_upnp.activity;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,109 +37,70 @@ import android.widget.Spinner;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.BuildConfig;
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.ConsumeParams;
+import com.android.billingclient.api.ConsumeResponseListener;
+import com.android.billingclient.api.PurchasesUpdatedListener;
+import com.android.billingclient.api.SkuDetails;
+import com.android.billingclient.api.SkuDetailsParams;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.util.IabHelper;
-import com.watea.radio_upnp.util.IabResult;
-import com.watea.radio_upnp.util.Purchase;
 
+import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
-import static com.watea.radio_upnp.util.IabHelper.BILLING_RESPONSE_RESULT_USER_CANCELED;
-import static com.watea.radio_upnp.util.IabHelper.IABHELPER_USER_CANCELLED;
-
-public class DonationFragment extends MainActivityFragment {
+public class DonationFragment
+  extends MainActivityFragment
+  implements ConsumeResponseListener, PurchasesUpdatedListener {
   private static final String LOG_TAG = DonationFragment.class.getName();
-  private static final String PUBKEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqPtND+7yhoE27XNfflnFLzGRaDZFJBt+xVkhxUeTa7YifViIWBUpBkTpCyl/DjWvNSLH7rqXHeU11NFFFmuTFn6GKpooh8GE2BJX1jxMxny3UBjIW3LwIb+PecWKeNB4B0goheE6jf49xcrrpLxeakfo+0x6WRbRP275+vcYutbqEIgEHPwCZpkzTwZgOlWHP4d0YAll7B8dG+lU4VZ8amaYAMsH5FNSluggmu/MJK+Icz2yOf1ogRivrnFbz6so+3t/3pKqsR9I76b0pabuMWslfF7H4BIrjxfm3K5g39PJh2DcMMiKaCu5k+MA8ZMUFN7wgUh5dBh4kVKus7x6VwIDAQAB";
-  private static final String[] GOOGLE_CATALOG = new String[]{
+  private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L; // 1s
+  private static final long RECONNECT_TIMER_MAX_TIME_MILLISECONDS = 1000L * 60L * 15L; // 15 mins
+  private static final List<String> GOOGLE_CATALOG = Arrays.asList(
     "radio_upnp.donation.1",
     "radio_upnp.donation.2",
-    "radio_upnp.donation.3"
-  };
-  // http://developer.android.com/google/play/billing/billing_testing.html
-  private static final String[] DEBUG_CATALOG = new String[]{
-    "android.test.purchased",
-    "android.test.canceled",
-    "android.test.item_unavailable"};
+    "radio_upnp.donation.3");
+  private static final Handler handler = new Handler(Looper.getMainLooper());
+  private final Map<String, SkuDetails> skuDetailss = new Hashtable<>();
+  private BillingClient billingClient;
   // <HMI assets
   private Spinner googleSpinner;
+  private AlertDialog.Builder paymentAlertDialogBuilder;
   // />
-  // Google Play helper object
-  private IabHelper iabHelper;
-  // Callback for when a purchase is finished
-  private final IabHelper.OnIabPurchaseFinishedListener purchaseFinishedListener =
-    new IabHelper.OnIabPurchaseFinishedListener() {
-      public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
-        Log.d(LOG_TAG, "Purchase finished: " + result + ", purchase: " + purchase);
-        // If we were disposed of in the meantime, quit
-        if (iabHelper == null) {
-          return;
-        }
-        if (result.isSuccess()) {
-          Log.d(LOG_TAG, "Purchase successful");
-          // Directly consume in-app purchase, so that people can donate multiple times
-          try {
-            iabHelper.consumeAsync(
-              purchase,
-              new IabHelper.OnConsumeFinishedListener() {
-                public void onConsumeFinished(Purchase purchase, IabResult result) {
-                  Log.d(LOG_TAG,
-                    "Consumption finished. Purchase: " + purchase + ", result: " + result);
-                  // If we were disposed of in the meantime, quit
-                  if (iabHelper == null) {
-                    return;
-                  }
-                  if (result.isSuccess()) {
-                    Log.d(LOG_TAG, "Consumption successful. Provisioning");
-                    // Show thanks openDialog
-                    openDialog(
-                      android.R.drawable.ic_dialog_info,
-                      R.string.donation_thanks_dialog_title,
-                      Objects.requireNonNull(getActivity())
-                        .getResources().getString(R.string.donation_thanks_dialog));
-                  } else {
-                    complaign(result.getMessage());
-                  }
-                  Log.d(LOG_TAG, "End consumption flow");
-                }
-              });
-          } catch (IabHelper.IabAsyncInProgressException iabAsyncInProgressException) {
-            complaign(Objects.requireNonNull(getActivity())
-              .getResources().getString(R.string.donation_alert_dialog_try_again));
-          }
-        } else {
-          // No error message for user cancel
-          if ((result.getResponse() != IABHELPER_USER_CANCELLED) &&
-            (result.getResponse() != BILLING_RESPONSE_RESULT_USER_CANCELED)) {
-            complaign(result.getMessage());
-          }
-        }
-      }
-    };
-  // Callback for when a purchase is finished
-  private final IabHelper.OnIabSetupFinishedListener setupFinishedListener =
-    new IabHelper.OnIabSetupFinishedListener() {
-      public void onIabSetupFinished(IabResult result) {
-        Log.d(LOG_TAG, "Setup finished");
-        // Have we been disposed of in the meantime? If so, quit
-        if (iabHelper == null) {
-          return;
-        }
-        if (!result.isSuccess()) {
-          complaign(result.getMessage());
-        }
-      }
-    };
 
   @Override
-  public void onActivityResult(int requestCode, int resultCode, Intent data) {
-    Log.d(LOG_TAG, "onActivityResult(" + requestCode + "," + resultCode + "," + data + ")");
-    // iabHelper may be null if disposed in the meantime
-    if ((iabHelper != null) && iabHelper.handleActivityResult(requestCode, resultCode, data)) {
-      Log.d(LOG_TAG, "onActivityResult handled by IABUtil");
-    } else {
-      // Not handeld here, we pass through
-      super.onActivityResult(requestCode, resultCode, data);
+  public void onConsumeResponse(@NonNull BillingResult billingResult, @NonNull String s) {
+    logBillingResult("onConsumeResponse", billingResult);
+    Log.d(LOG_TAG, "End consumption flow: " + s);
+  }
+
+  @Override
+  public void onPurchasesUpdated(
+    @NonNull BillingResult billingResult,
+    @Nullable List<com.android.billingclient.api.Purchase> list) {
+    logBillingResult("onPurchasesUpdated", billingResult);
+    switch (billingResult.getResponseCode()) {
+      case BillingClient.BillingResponseCode.OK:
+        if (list != null) {
+          for (com.android.billingclient.api.Purchase purchase : list) {
+            Log.d(LOG_TAG, "onPurchasesUpdated: " + purchase);
+            billingClient.consumeAsync(
+              ConsumeParams.newBuilder()
+                .setPurchaseToken(purchase.getPurchaseToken())
+                .build(),
+              this);
+          }
+        }
+        break;
+      case BillingClient.BillingResponseCode.USER_CANCELED:
+        // Nothing to do
+        break;
+      default:
+        paymentAlertDialogBuilder.show();
     }
   }
 
@@ -151,6 +112,15 @@ public class DonationFragment extends MainActivityFragment {
     final View view = inflater.inflate(R.layout.content_donation, container, false);
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
+    // Alert dialog
+    paymentAlertDialogBuilder = new AlertDialog.Builder(getActivity())
+      .setIcon(android.R.drawable.ic_dialog_alert)
+      .setTitle(R.string.donation_alert_dialog_title)
+      .setMessage(R.string.donation_alert_dialog_try_again)
+      .setCancelable(true)
+      .setNeutralButton(
+        R.string.donation_button_close,
+        (dialog, which) -> dialog.dismiss());
     return view;
   }
 
@@ -158,51 +128,88 @@ public class DonationFragment extends MainActivityFragment {
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     // Adapters
-    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<CharSequence>(
+    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
       Objects.requireNonNull(getActivity()),
       android.R.layout.simple_spinner_item,
-      BuildConfig.DEBUG ?
-        DEBUG_CATALOG : getResources().getStringArray(R.array.donation_google_catalog_values));
+      getResources().getStringArray(R.array.donation_google_catalog_values));
     donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     googleSpinner.setAdapter(donationAdapter);
-    // Create the helper, passing it our context and the public key to verify signatures with
-    iabHelper = new IabHelper(getActivity(), PUBKEY);
-    // Enable debug logging (for a production application, you should set this to false)
-    iabHelper.enableDebugLogging(BuildConfig.DEBUG);
-    // Start setup. This is asynchronous and the specified listener
-    // will be called once setup completes.
-    Log.d(LOG_TAG, "Starting setup");
-    iabHelper.startSetup(setupFinishedListener);
+    // BillingClient
+    billingClient = BillingClient.newBuilder(getActivity())
+      .enablePendingPurchases()
+      .setListener(this)
+      .build();
+    billingClient.startConnection(new BillingClientStateListener() {
+      private long reconnectMilliseconds = RECONNECT_TIMER_START_MILLISECONDS;
+
+      @Override
+      public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+        logBillingResult("onBillingSetupFinished", billingResult);
+        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+          // The billing client is ready. You can query purchases here.
+          // This doesn't mean that your app is set up correctly in the console -- it just
+          // means that you have a connection to the Billing service.
+          reconnectMilliseconds = RECONNECT_TIMER_START_MILLISECONDS;
+          // Query SKU details asynchronously
+          billingClient.querySkuDetailsAsync(
+            SkuDetailsParams.newBuilder()
+              .setType(BillingClient.SkuType.INAPP)
+              .setSkusList(GOOGLE_CATALOG)
+              .build(),
+            (skuDetailsBillingResult, skuDetailsAnss) -> {
+              logBillingResult("onSkuDetailsResponse", skuDetailsBillingResult);
+              if (skuDetailsBillingResult.getResponseCode() ==
+                BillingClient.BillingResponseCode.OK) {
+                if (skuDetailsAnss == null || skuDetailsAnss.isEmpty()) {
+                  Log.e(LOG_TAG, "onSkuDetailsResponse: " +
+                    "Found null or empty SkuDetails. " +
+                    "Check to see if the SKUs you requested are correctly published " +
+                    "in the Google Play Console.");
+                } else {
+                  for (SkuDetails skuDetails : skuDetailsAnss) {
+                    String sku = skuDetails.getSku();
+                    if (GOOGLE_CATALOG.contains(sku)) {
+                      skuDetailss.put(skuDetails.getSku(), skuDetails);
+                    } else {
+                      Log.e(LOG_TAG, "Unknown SKU: " + sku);
+                    }
+                  }
+                }
+              } else {
+                retryBillingServiceConnectionWithExponentialBackoff();
+              }
+            });
+        }
+      }
+
+      @Override
+      public void onBillingServiceDisconnected() {
+        skuDetailss.clear();
+        retryBillingServiceConnectionWithExponentialBackoff();
+      }
+
+      private void retryBillingServiceConnectionWithExponentialBackoff() {
+        handler.postDelayed(() -> billingClient.startConnection(this), reconnectMilliseconds);
+        reconnectMilliseconds =
+          Math.min(reconnectMilliseconds * 2, RECONNECT_TIMER_MAX_TIME_MILLISECONDS);
+      }
+    });
   }
 
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return new View.OnClickListener() {
-
-      @Override
-      public void onClick(View view) {
-        int index = googleSpinner.getSelectedItemPosition();
-        Log.d(LOG_TAG, "selected item in spinner: " + index);
-        // When debugging, choose android.test.x item
-        try {
-          iabHelper.launchPurchaseFlow(
-            getActivity(),
-            BuildConfig.DEBUG ? DEBUG_CATALOG[index] : GOOGLE_CATALOG[index],
-            0,
-            purchaseFinishedListener);
-        } catch (IabHelper.IabAsyncInProgressException iabAsyncInProgressException) {
-          // In some devices, it is impossible to setup IAB Helper
-          // and this exception is thrown, being almost "impossible"
-          // to the user to control it and forcing app close
-          Log.e(LOG_TAG, Objects.requireNonNull(iabAsyncInProgressException.getMessage()));
-          openDialog(
-            android.R.drawable.ic_dialog_alert,
-            R.string.donation_google_android_market_not_supported_title,
-            Objects.requireNonNull(getActivity())
-              .getResources()
-              .getString(R.string.donation_google_android_market_not_supported));
-        }
+    return (view) -> {
+      if (skuDetailss.isEmpty() || !billingClient.isReady()) {
+        paymentAlertDialogBuilder.show();
+      } else {
+        String item = GOOGLE_CATALOG.get(googleSpinner.getSelectedItemPosition());
+        Log.d(LOG_TAG, "Selected item in spinner: " + item);
+        billingClient.launchBillingFlow(
+          Objects.requireNonNull(getActivity()),
+          BillingFlowParams.newBuilder()
+            .setSkuDetails(Objects.requireNonNull(skuDetailss.get(item)))
+            .build());
       }
     };
   }
@@ -217,29 +224,31 @@ public class DonationFragment extends MainActivityFragment {
     return R.string.title_donate;
   }
 
-  private void openDialog(int icon, int title, @NonNull String message) {
-    new AlertDialog.Builder(getActivity())
-      .setIcon(icon)
-      .setTitle(title)
-      .setMessage(message)
-      .setCancelable(true)
-      .setNeutralButton(
-        R.string.donation_button_close,
-        new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(DialogInterface dialog, int which) {
-            dialog.dismiss();
-          }
-        }
-      )
-      .show();
-  }
-
-  private void complaign(@NonNull String message) {
-    openDialog(
-      android.R.drawable.ic_dialog_alert,
-      R.string.donation_alert_dialog_title,
-      Objects.requireNonNull(getActivity())
-        .getResources().getString(R.string.donation_alert_tip) + message);
+  private void logBillingResult(
+    @NonNull String location, @NonNull BillingResult billingResult) {
+    int responseCode = billingResult.getResponseCode();
+    String debugMessage = billingResult.getDebugMessage();
+    switch (responseCode) {
+      case BillingClient.BillingResponseCode.OK:
+        Log.i(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
+        break;
+      case BillingClient.BillingResponseCode.SERVICE_DISCONNECTED:
+      case BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE:
+      case BillingClient.BillingResponseCode.BILLING_UNAVAILABLE:
+      case BillingClient.BillingResponseCode.ITEM_UNAVAILABLE:
+      case BillingClient.BillingResponseCode.DEVELOPER_ERROR:
+      case BillingClient.BillingResponseCode.ERROR:
+        Log.e(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
+        break;
+      case BillingClient.BillingResponseCode.USER_CANCELED:
+        Log.i(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
+        break;
+      // These response codes are not expected.
+      case BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED:
+      case BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED:
+      case BillingClient.BillingResponseCode.ITEM_NOT_OWNED:
+      default:
+        Log.wtf(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
+    }
   }
 }
