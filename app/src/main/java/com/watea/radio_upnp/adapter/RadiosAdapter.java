@@ -112,34 +112,23 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
       radioNameTextView = itemView.findViewById(R.id.row_radio_name_text_view);
       preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
       // Listener on radio
-      radioNameTextView.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-          listener.onRowClick(radio);
-        }
-      });
+      radioNameTextView.setOnClickListener(v -> listener.onRowClick(radio));
       // Listener on web link
-      radioNameTextView.setOnLongClickListener(new View.OnLongClickListener() {
-        @Override
-        public boolean onLongClick(View v) {
-          Uri webPageUri = radio.getWebPageUri();
-          if (webPageUri == null) {
-            Snackbar.make(v, R.string.no_web_page, Snackbar.LENGTH_LONG).show();
-          } else {
-            context.startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
-          }
-          return true;
+      radioNameTextView.setOnLongClickListener(v -> {
+        Uri webPageUri = radio.getWebPageUri();
+        if (webPageUri == null) {
+          Snackbar.make(v, R.string.no_web_page, Snackbar.LENGTH_LONG).show();
+        } else {
+          context.startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
         }
+        return true;
       });
       // Listener on preferred device icon
-      preferredImageButton.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-          if (listener.onPreferredClick(radio.getId(), !radio.isPreferred())) {
-            // Database updated, update view
-            radio.togglePreferred();
-            setPreferredButton();
-          }
+      preferredImageButton.setOnClickListener(view -> {
+        if (listener.onPreferredClick(radio.getId(), !radio.isPreferred())) {
+          // Database updated, update view
+          radio.togglePreferred();
+          setPreferredButton();
         }
       });
     }
@@ -164,7 +153,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
     private void setPreferredButton() {
       preferredImageButton.setImageResource(radio.isPreferred() ?
-        R.drawable.ic_star_black_30dp : R.drawable.ic_star_border_black_30dp);
+        R.drawable.ic_star_blue_30dp : R.drawable.ic_star_border_blue_30dp);
     }
   }
 }

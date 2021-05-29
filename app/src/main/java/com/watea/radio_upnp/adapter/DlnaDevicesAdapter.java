@@ -23,10 +23,9 @@
 
 package com.watea.radio_upnp.adapter;
 
-import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,6 +34,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -44,31 +44,22 @@ import com.watea.radio_upnp.model.DlnaDevice;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Vector;
 
 public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
   private static final int ICON_SIZE = 100;
-  private final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
-  @NonNull
-  private final Bitmap CAST;
+  private static final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
   private final List<DlnaDevice> dlnaDevices = new Vector<>();
   @NonNull
-  private final Context context;
+  private final Listener listener;
   @Nullable
   private String chosenDlnaDeviceIdentity;
-  @NonNull
-  private Listener listener;
 
   public DlnaDevicesAdapter(
-    @NonNull Context context,
     @Nullable String chosenDlnaDeviceIdentity,
     @NonNull Listener listener) {
-    this.context = context;
     this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
     this.listener = listener;
-    CAST = BitmapFactory.decodeResource(this.context.getResources(), R.drawable.ic_cast);
-    DUMMY_DEVICE.setIcon(CAST);
     clear();
   }
 
@@ -110,11 +101,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   @Nullable
   public Bitmap getChosenDlnaDeviceIcon() {
     DlnaDevice dlnaDevice = getChosenDlnaDevice();
-    if (dlnaDevice == null) {
-      return null;
-    }
-    Bitmap icon = dlnaDevice.getIcon();
-    return (icon == null) ? CAST : icon;
+    return (dlnaDevice == null) ? null : dlnaDevice.getIcon();
   }
 
   public void removeChosenDlnaDevice() {
@@ -133,14 +120,11 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     dlnaDevices.add(dlnaDevice);
     notifyChange();
     // Wait for icon
-    dlnaDevice.addListener(new DlnaDevice.Listener() {
-      @Override
-      public void onNewIcon() {
-        if (dlnaDevices.contains(dlnaDevice)) {
-          notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
-          if (dlnaDevice == getChosenDlnaDevice()) {
-            listener.onChosenDeviceChange();
-          }
+    dlnaDevice.addListener(() -> {
+      if (dlnaDevices.contains(dlnaDevice)) {
+        notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
+        if (dlnaDevice == getChosenDlnaDevice()) {
+          listener.onChosenDeviceChange();
         }
       }
     });
@@ -187,48 +171,54 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     private final ProgressBar progressBar;
     @NonNull
     private final View view;
+    private final int defaultColor;
+    private final int selectedColor;
     @NonNull
-    DlnaDevice dlnaDevice = DUMMY_DEVICE;
+    private DlnaDevice dlnaDevice = DUMMY_DEVICE;
+
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
       view = itemView;
-      view.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-          setChosenDlnaDevice(
-            ((chosenDlnaDeviceIdentity == null) ||
-              !chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity())) ?
-              dlnaDevice : null);
-          listener.onRowClick(dlnaDevice, (getChosenDlnaDevice() != null));
-        }
+      view.setOnClickListener(view -> {
+        setChosenDlnaDevice(
+          ((chosenDlnaDeviceIdentity == null) ||
+            !chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity())) ?
+            dlnaDevice : null);
+        listener.onRowClick(dlnaDevice, (getChosenDlnaDevice() != null));
       });
       dlnaDeviceNameTextView = view.findViewById(R.id.row_dlna_device_name_text_view);
       progressBar = view.findViewById(R.id.progress_bar);
+      defaultColor = dlnaDeviceNameTextView.getCurrentTextColor();
+      selectedColor = ContextCompat.getColor(itemView.getContext(), R.color.lightBlue);
     }
 
     private void setView(@NonNull DlnaDevice dlnaDevice) {
       this.dlnaDevice = dlnaDevice;
-      boolean isWaitingOrNotFullyHydrated = (isWaiting() || !dlnaDevice.isFullyHydrated());
       // Waiting message not accessible
-      view.setEnabled(!isWaitingOrNotFullyHydrated);
+      view.setEnabled(!isWaiting() && dlnaDevice.isFullyHydrated());
       // Dummy device for waiting message
       if (isWaiting()) {
         dlnaDeviceNameTextView.setText(R.string.device_no_device_yet);
       } else {
         dlnaDeviceNameTextView.setText(dlnaDevice.toString());
       }
+      // Selected item
+      dlnaDeviceNameTextView.setTextColor(
+        (chosenDlnaDeviceIdentity != null) &&
+          chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity()) ?
+          selectedColor : defaultColor);
+      // Icon
       Bitmap bitmap = dlnaDevice.getIcon();
-      bitmap = Bitmap.createScaledBitmap(
-        (bitmap == null) ? CAST : bitmap, ICON_SIZE, ICON_SIZE, false);
+      Drawable drawable = (bitmap == null) ?
+        AppCompatResources.getDrawable(view.getContext(), R.drawable.ic_cast_black_24dp) :
+        new BitmapDrawable(view.getResources(), bitmap);
+      assert drawable != null;
+      drawable.setBounds(0, 0, ICON_SIZE, ICON_SIZE);
       dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        new BitmapDrawable(context.getResources(), bitmap), null, null, null);
-      dlnaDeviceNameTextView.setTextColor(ContextCompat.getColor(
-        context,
-        (isWaitingOrNotFullyHydrated ||
-          !Objects.requireNonNull(dlnaDevice.getIdentity()).equals(chosenDlnaDeviceIdentity)) ?
-          R.color.colorPrimaryText : R.color.colorPrimary));
-      progressBar.setVisibility(isWaitingOrNotFullyHydrated ? View.VISIBLE : View.INVISIBLE);
+        drawable, null, null, null);
+      // Wait
+      progressBar.setVisibility(view.isEnabled() ? View.INVISIBLE : View.VISIBLE);
     }
   }
 }

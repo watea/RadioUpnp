@@ -67,21 +67,12 @@ public abstract class MainActivityFragment extends Fragment {
 
   @NonNull
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-      }
-    };
+    return view -> {};
   }
 
   @NonNull
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return new View.OnLongClickListener() {
-      @Override
-      public boolean onLongClick(View view) {
-        return false;
-      }
-    };
+    return view -> false;
   }
 
   public int getFloatingActionButtonResource() {

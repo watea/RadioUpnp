@@ -38,8 +38,7 @@
         android:orientation="vertical"
         app:layout_constraintTop_toTopOf="parent">
 
-        <include
-            layout="@layout/view_spacer" />
+        <include layout="@layout/view_spacer" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/radios_recycler_view"
@@ -53,7 +52,7 @@
         android:id="@+id/played_radio_data_linear_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/colorLightBackground"
+        android:background="?attr/colorBackgroundFloating"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"

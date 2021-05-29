@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
@@ -42,7 +43,7 @@
     <string name="no_internet">Internet connexion not available</string>
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio found, please add a radio</string>
-    <string name="dlna_reset">DLNA selection reset</string>
+    <string name="dlna_search_relaunch">DLNA search relaunch</string>
     <string name="dlna_selection">DLNA device selection:\n</string>
     <string name="no_dlna_selection">No DLNA device selected</string>
     <string name="legend_name">MY RADIO</string>
@@ -69,7 +70,6 @@
     <string name="got_it">Got it!</string>
     <string name="donation_button_close">Close</string>
     <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer.\nThanks a lot!</string>
-    <string name="donation_google_android_market">Google Play Store</string>
     <string name="donation_google_android_market_description">Google charges a fee of 30%</string>
     <string name="donation_google_android_market_text">How much?</string>
     <string name="donation_alert_dialog_title">Error occurred</string>
@@ -92,6 +92,7 @@
     <string name="title_about">About</string>
     <string name="title_item_modify">Edit</string>
     <string name="title_dlna">DLNA</string>
+    <string name="title_dark_mode">Dark mode</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>

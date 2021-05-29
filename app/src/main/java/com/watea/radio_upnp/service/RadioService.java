@@ -163,12 +163,9 @@ public class RadioService
       getString(R.string.app_name),
       radioLibrary,
       this,
-      new HttpServer.Listener() {
-        @Override
-        public void onError() {
-          Log.d(LOG_TAG, "HTTP Server error");
-          stopSelf();
-        }
+      () -> {
+        Log.d(LOG_TAG, "HTTP Server error");
+        stopSelf();
       });
     httpServer.start();
     // Bind to UPnP service, launch if not already
@@ -239,21 +236,18 @@ public class RadioService
     @Nullable final String rate,
     @NonNull final String lockKey) {
     // We add current radio information to current media data
-    handler.post(new Runnable() {
-      @Override
-      public void run() {
-        if (hasLockKey(lockKey) && (radio != null)) {
-          session.setMetadata(RadioService.this.mediaMetadataCompat =
-            radio
-              .getMediaMetadataBuilder()
-              .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
-              .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
-              // Use WRITER for rate
-              .putString(MediaMetadataCompat.METADATA_KEY_WRITER, rate)
-              .build());
-          // Update notification
-          notificationManager.notify(NOTIFICATION_ID, getNotification());
-        }
+    handler.post(() -> {
+      if (hasLockKey(lockKey) && (radio != null)) {
+        session.setMetadata(RadioService.this.mediaMetadataCompat =
+          radio
+            .getMediaMetadataBuilder()
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
+            // Use WRITER for rate
+            .putString(MediaMetadataCompat.METADATA_KEY_WRITER, rate)
+            .build());
+        // Update notification
+        notificationManager.notify(NOTIFICATION_ID, getNotification());
       }
     });
   }
@@ -280,70 +274,62 @@ public class RadioService
   @Override
   public void onPlaybackStateChange(
     @NonNull final PlaybackStateCompat state, @NonNull final String lockKey) {
-    handler.post(new Runnable() {
-      @Override
-      public void run() {
-        if (hasLockKey(lockKey)) {
-          Log.d(LOG_TAG, "New valid state/lock key received: " + state + "/" + lockKey);
-          // Report the state to the MediaSession
-          session.setPlaybackState(state);
-          // Manage the started state of this service, and session activity
-          switch (state.getState()) {
-            case PlaybackStateCompat.STATE_BUFFERING:
-              break;
-            case PlaybackStateCompat.STATE_PLAYING:
-              // Start service if needed
-              if (!isStarted) {
-                ContextCompat.startForegroundService(
-                  RadioService.this, new Intent(RadioService.this, RadioService.class));
-                isStarted = true;
-              }
-              startForeground(NOTIFICATION_ID, getNotification());
-              isAllowedToRelaunch = true;
-              break;
-            case PlaybackStateCompat.STATE_PAUSED:
-              // Move service out started state
-              stopForeground(false);
-              // Update notification
-              notificationManager.notify(NOTIFICATION_ID, getNotification());
-              break;
-            case PlaybackStateCompat.STATE_ERROR:
-              if (playerAdapter instanceof LocalPlayerAdapter) {
-                // Try to relaunch local player, just once
-                if (isAllowedToRelaunch) {
-                  isAllowedToRelaunch = false;
-                  new Thread() {
-                    @Override
-                    public void run() {
-                      try {
-                        Thread.sleep(4000);
-                        handler.post(new Runnable() {
-                          @Override
-                          public void run() {
-                            relaunch();
-                          }
-                        });
-                      } catch (InterruptedException interruptedException) {
-                        Log.e(LOG_TAG, "onPlaybackStateChange: relaunch error");
-                      }
+    handler.post(() -> {
+      if (hasLockKey(lockKey)) {
+        Log.d(LOG_TAG, "New valid state/lock key received: " + state + "/" + lockKey);
+        // Report the state to the MediaSession
+        session.setPlaybackState(state);
+        // Manage the started state of this service, and session activity
+        switch (state.getState()) {
+          case PlaybackStateCompat.STATE_BUFFERING:
+            break;
+          case PlaybackStateCompat.STATE_PLAYING:
+            // Start service if needed
+            if (!isStarted) {
+              ContextCompat.startForegroundService(
+                RadioService.this, new Intent(RadioService.this, RadioService.class));
+              isStarted = true;
+            }
+            startForeground(NOTIFICATION_ID, getNotification());
+            isAllowedToRelaunch = true;
+            break;
+          case PlaybackStateCompat.STATE_PAUSED:
+            // Move service out started state
+            stopForeground(false);
+            // Update notification
+            notificationManager.notify(NOTIFICATION_ID, getNotification());
+            break;
+          case PlaybackStateCompat.STATE_ERROR:
+            if (playerAdapter instanceof LocalPlayerAdapter) {
+              // Try to relaunch local player, just once
+              if (isAllowedToRelaunch) {
+                isAllowedToRelaunch = false;
+                new Thread() {
+                  @Override
+                  public void run() {
+                    try {
+                      Thread.sleep(4000);
+                      handler.post(() -> relaunch());
+                    } catch (InterruptedException interruptedException) {
+                      Log.e(LOG_TAG, "onPlaybackStateChange: relaunch error");
                     }
-                  }.start();
-                }
-                break;
+                  }
+                }.start();
               }
-            default:
-              // Cancel session
-              isAllowedToRelaunch = false;
-              playerAdapter.release();
-              session.setMetadata(mediaMetadataCompat = null);
-              session.setActive(false);
-              // Move service out started state
-              if (isStarted) {
-                stopForeground(true);
-                stopSelf();
-                isStarted = false;
-              }
-          }
+              break;
+            }
+          default:
+            // Cancel session
+            isAllowedToRelaunch = false;
+            playerAdapter.release();
+            session.setMetadata(mediaMetadataCompat = null);
+            session.setActive(false);
+            // Move service out started state
+            if (isStarted) {
+              stopForeground(true);
+              stopSelf();
+              isStarted = false;
+            }
         }
       }
     });
@@ -641,47 +627,38 @@ public class RadioService
     }
 
     public void runNextAction() {
-      handler.post(new Runnable() {
-        @Override
-        public void run() {
-          if (upnpActions.isEmpty()) {
-            isRunning = false;
-          } else {
-            pullAction();
-          }
+      handler.post(() -> {
+        if (upnpActions.isEmpty()) {
+          isRunning = false;
+        } else {
+          pullAction();
         }
       });
     }
 
     public void schedule(@NonNull final UpnpAction upnpAction) {
-      handler.post(new Runnable() {
-        @Override
-        public void run() {
-          upnpActions.add(upnpAction);
-          if (!isRunning) {
-            pullAction();
-          }
+      handler.post(() -> {
+        upnpActions.add(upnpAction);
+        if (!isRunning) {
+          pullAction();
         }
       });
     }
 
     // Remove remaining actions on device or all (device == null)
     public void releaseActions(@Nullable final Device<?, ?, ?> device) {
-      handler.post(new Runnable() {
-        @Override
-        public void run() {
-          if (device == null) {
-            upnpActions.clear();
-          } else {
-            Iterator<UpnpAction> iter = upnpActions.iterator();
-            while (iter.hasNext()) {
-              if (iter.next().getDevice().equals(device)) {
-                iter.remove();
-              }
+      handler.post(() -> {
+        if (device == null) {
+          upnpActions.clear();
+        } else {
+          Iterator<UpnpAction> iter = upnpActions.iterator();
+          while (iter.hasNext()) {
+            if (iter.next().getDevice().equals(device)) {
+              iter.remove();
             }
           }
-          isRunning = false;
         }
+        isRunning = false;
       });
     }
 

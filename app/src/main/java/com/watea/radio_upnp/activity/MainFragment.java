@@ -28,7 +28,6 @@ import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -38,6 +37,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -92,7 +92,7 @@ public class MainFragment
   View.OnClickListener,
   View.OnLongClickListener {
   private static final String LOG_TAG = MainFragment.class.getName();
-  private final Handler handler = new Handler();
+  private final Handler handler = new Handler(Looper.getMainLooper());
   // <HMI assets
   private LinearLayout playedRadioDataLinearLayout;
   private ImageButton playImageButton;
@@ -248,12 +248,10 @@ public class MainFragment
         if (service.getServiceId().equals(AV_TRANSPORT_SERVICE_ID)) {
           Log.i(LOG_TAG, ">> is UPnP reader");
           // Add DlnaDevice to Adapter
-          handler.post(new Runnable() {
-            public void run() {
-              // Do nothing if we were disposed
-              if (dlnaDevicesAdapter != null) {
-                dlnaDevicesAdapter.addOrReplace(remoteDevice);
-              }
+          handler.post(() -> {
+            // Do nothing if we were disposed
+            if (dlnaDevicesAdapter != null) {
+              dlnaDevicesAdapter.addOrReplace(remoteDevice);
             }
           });
           break;
@@ -265,12 +263,10 @@ public class MainFragment
     public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
       Log.i(LOG_TAG,
         "remoteDeviceRemoved: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
-      handler.post(new Runnable() {
-        public void run() {
-          // Do nothing if we were disposed
-          if (dlnaDevicesAdapter != null) {
-            dlnaDevicesAdapter.remove(remoteDevice);
-          }
+      handler.post(() -> {
+        // Do nothing if we were disposed
+        if (dlnaDevicesAdapter != null) {
+          dlnaDevicesAdapter.remove(remoteDevice);
         }
       });
     }
@@ -368,7 +364,6 @@ public class MainFragment
     // Don't re-create if re-enter in fragment
     if (dlnaDevicesAdapter == null) {
       dlnaDevicesAdapter = new DlnaDevicesAdapter(
-        getActivity(),
         chosenDlnaDeviceIdentity,
         new DlnaDevicesAdapter.Listener() {
           @Override
@@ -401,30 +396,15 @@ public class MainFragment
     // Build alert dialogs
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
       .setMessage(R.string.radio_long_press)
-      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-          gotItRadioLongPress = true;
-        }
-      });
+      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItRadioLongPress = true);
     radioLongPressAlertDialog = alertDialogBuilder.create();
     alertDialogBuilder = new AlertDialog.Builder(getActivity())
       .setMessage(R.string.play_long_press)
-      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-          gotItPlayLongPress = true;
-        }
-      });
+      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItPlayLongPress = true);
     playLongPressAlertDialog = alertDialogBuilder.create();
     alertDialogBuilder = new AlertDialog.Builder(getActivity())
       .setMessage(R.string.dlna_enable)
-      .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-          gotItDlnaEnable = true;
-        }
-      });
+      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true);
     dlnaEnableAlertDialog = alertDialogBuilder.create();
     // Specific DLNA devices dialog
     dlnaAlertDialog = new AlertDialog.Builder(getActivity()).setView(dlnaView).create();
@@ -442,26 +422,23 @@ public class MainFragment
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
-          tell(R.string.LAN_required);
-          return;
-        }
-        if (androidUpnpService == null) {
-          tell(R.string.device_no_device_yet);
-          return;
-        }
-        // Do not search more than 1 peer 5 s
-        if (System.currentTimeMillis() - timeDlnaSearch > 5000) {
-          timeDlnaSearch = System.currentTimeMillis();
-          androidUpnpService.getControlPoint().search();
-        }
-        dlnaAlertDialog.show();
-        if (!gotItDlnaEnable) {
-          dlnaEnableAlertDialog.show();
-        }
+    return view -> {
+      if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+        tell(R.string.LAN_required);
+        return;
+      }
+      if (androidUpnpService == null) {
+        tell(R.string.device_no_device_yet);
+        return;
+      }
+      // Do not search more than 1 peer 5 s
+      if (System.currentTimeMillis() - timeDlnaSearch > 5000) {
+        timeDlnaSearch = System.currentTimeMillis();
+        androidUpnpService.getControlPoint().search();
+      }
+      dlnaAlertDialog.show();
+      if (!gotItDlnaEnable) {
+        dlnaEnableAlertDialog.show();
       }
     };
   }
@@ -469,22 +446,19 @@ public class MainFragment
   @NonNull
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return new View.OnLongClickListener() {
-      @Override
-      public boolean onLongClick(View view) {
-        if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
-          tell(R.string.LAN_required);
-          return true;
-        }
-        if (androidUpnpService == null) {
-          tell(R.string.device_no_device_yet);
-          return true;
-        }
-        dlnaDevicesAdapter.clear();
-        androidUpnpService.getRegistry().removeAllRemoteDevices();
-        tell(R.string.dlna_reset);
+    return view -> {
+      if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+        tell(R.string.LAN_required);
         return true;
       }
+      if (androidUpnpService == null) {
+        tell(R.string.device_no_device_yet);
+        return true;
+      }
+      dlnaDevicesAdapter.clear();
+      androidUpnpService.getRegistry().removeAllRemoteDevices();
+      tell(R.string.dlna_search_relaunch);
+      return true;
     };
   }
 
@@ -575,7 +549,7 @@ public class MainFragment
       case R.id.action_dlna:
         dlnaDevicesAdapter.removeChosenDlnaDevice();
         dlnaMenuItem.setVisible(false);
-        tell(R.string.dlna_reset);
+        tell(R.string.no_dlna_selection);
         return true;
       default:
         // If we got here, the user's action was not recognized
@@ -694,7 +668,7 @@ public class MainFragment
 
   private void setPreferredMenuItem() {
     preferredMenuItem.setIcon(
-      isPreferredRadios ? R.drawable.ic_star_black_30dp : R.drawable.ic_star_border_black_30dp);
+      isPreferredRadios ? R.drawable.ic_star_blue_30dp : R.drawable.ic_star_border_blue_30dp);
   }
 
   private void startReading(@NonNull Radio radio) {

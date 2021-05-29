@@ -25,7 +25,6 @@ package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -42,7 +41,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -157,7 +156,7 @@ public class MainActivity
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        getCurrentFragment().onOptionsItemSelected(item) ||
+        Objects.requireNonNull(getCurrentFragment()).onOptionsItemSelected(item) ||
         // If we got here, the user's action was not recognized
         // Invoke the superclass to handle it
         super.onOptionsItemSelected(item);
@@ -166,8 +165,12 @@ public class MainActivity
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
     Integer id = menuItem.getItemId();
+    // Note: switch not to use as id not final
     if (id == R.id.action_about) {
       aboutAlertDialog.show();
+    } else if (id == R.id.action_dark) {
+      // Nothing to do here
+      return true;
     } else {
       // Shall not fail to find!
       for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
@@ -245,17 +248,6 @@ public class MainActivity
   @Override
   protected void onResume() {
     super.onResume();
-    // Shared preferences
-    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    // Create default radios on first start
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
-      setDefaultRadios()) {
-      // To do just one time, store a flag
-      sharedPreferences
-        .edit()
-        .putBoolean(getString(R.string.key_first_start), false)
-        .apply();
-    }
     // Retrieve main fragment
     mainFragment = (MainFragment) ((getCurrentFragment() == null) ?
       setFragment(MainFragment.class) :
@@ -267,12 +259,27 @@ public class MainActivity
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    // Shared preferences
+    final SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    // Create default radios on first start
+    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
+      setDefaultRadios()) {
+      // To do just one time, store a flag
+      sharedPreferences
+        .edit()
+        .putBoolean(getString(R.string.key_first_start), false)
+        .apply();
+    }
+    // Set theme
+    final boolean darkMode = sharedPreferences.getBoolean(getString(R.string.key_dark_mode), false);
+    setTheme(darkMode ? R.style.AppThemeDark : R.style.BaseAppTheme);
+    // Create radio database
     radioLibrary = new RadioLibrary(this);
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
     // Toolbar
-    setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
+    setSupportActionBar(findViewById(R.id.toolbar));
     actionBar = getSupportActionBar();
     if (actionBar == null) {
       // Should not happen
@@ -288,8 +295,19 @@ public class MainActivity
     drawerLayout.addDrawerListener(drawerToggle);
     // Navigation drawer
     NavigationView navigationView = findViewById(R.id.navigation_view);
-    navigationMenu = navigationView.getMenu();
     navigationView.setNavigationItemSelectedListener(this);
+    navigationMenu = navigationView.getMenu();
+    SwitchCompat darkSwitch =
+      (SwitchCompat) navigationMenu.findItem(R.id.action_dark).getActionView();
+    darkSwitch.setChecked(darkMode);
+    darkSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+      // Store theme in preferences and recreate activity
+      sharedPreferences
+        .edit()
+        .putBoolean(getString(R.string.key_dark_mode), isChecked)
+        .apply();
+      recreate();
+    });
     // Build alert about dialog
     @SuppressLint("InflateParams")
     View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
@@ -297,12 +315,9 @@ public class MainActivity
       .setText(BuildConfig.VERSION_NAME);
     aboutAlertDialog = new AlertDialog.Builder(this)
       .setView(aboutView)
-      .setOnDismissListener(new DialogInterface.OnDismissListener() {
-        @Override
-        public void onDismiss(DialogInterface dialogInterface) {
-          // Restore checked item
-          checkNavigationMenu(navigationMenuCheckedId);
-        }
+      .setOnDismissListener(dialogInterface -> {
+        // Restore checked item
+        checkNavigationMenu(navigationMenuCheckedId);
       })
       .create();
     // FAB

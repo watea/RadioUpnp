@@ -1,4 +1,4 @@
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,22 +23,30 @@
 
 <resources>
     <!-- Base application theme -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:textColorPrimary">@color/colorPrimaryText</item>
-        <item name="android:textColorSecondary">@color/colorSecondaryText</item>
-        <item name="android:textColorTertiary">@color/colorTertiaryText</item>
-        <item name="titleTextColor">@color/colorPrimary</item>
-        <item name="android:windowBackground">@color/colorBackground</item>
+    <style name="BaseAppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/lightBlue</item>
+        <item name="colorPrimaryDark">@color/darkBlue</item>
+        <item name="colorAccent">@color/midGrey</item>
+        <item name="colorBackgroundFloating">@color/transVeryLightGrey</item>
+        <item name="titleTextColor">@color/lightBlue</item>
         <item name="imageButtonStyle">@style/Widget.AppCompat.Button.Borderless</item>
+    </style>
+    <!-- Base application theme dark -->
+    <style name="AppThemeDark" parent="BaseAppTheme">
+        <item name="android:textColor">@color/darkGrey</item>
+        <item name="android:textColorPrimary">@color/midGrey</item>
+        <item name="android:textColorSecondary">@color/midGrey</item>
+        <item name="android:textColorTertiary">@color/midGrey</item>
+        <item name="android:textColorHint">@color/darkGrey</item>
+        <item name="android:textColorPrimaryDisableOnly">@color/midGrey</item>
+        <item name="android:colorBackground">@color/midGrey</item>
+        <item name="android:windowBackground">@color/dark</item>
     </style>
 
     <!-- Just in case style extension -->
 
     <!-- For android.support.v7.widget.Toolbar -->
     <style name="AppTheme.toolBarTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="colorControlNormal">@color/colorPrimary</item>
+        <item name="colorControlNormal">@color/lightBlue</item>
     </style>
 </resources>

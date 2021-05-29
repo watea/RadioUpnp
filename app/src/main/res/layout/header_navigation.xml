@@ -38,6 +38,6 @@
         android:contentDescription="@string/app_name"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_launcher_foreground"
-        app:tint="@android:color/white" />
+        app:tint="?attr/colorBackgroundFloating" />
 
 </RelativeLayout>

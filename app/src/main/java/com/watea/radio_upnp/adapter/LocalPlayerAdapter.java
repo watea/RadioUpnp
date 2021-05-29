@@ -44,7 +44,9 @@ import com.watea.radio_upnp.service.RadioHandler;
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int HTTP_TIMEOUT_RATIO = 10;
-  private final Player.EventListener playerEventListener = new Player.EventListener() {
+  @Nullable
+  private SimpleExoPlayer simpleExoPlayer = null;
+  private final Player.Listener playerListener = new Player.Listener() {
     @Override
     public void onPlaybackStateChanged(int playbackState) {
       Log.i(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState);
@@ -56,7 +58,9 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case ExoPlayer.STATE_READY:
-          changeAndNotifyState(getPlayingPausedState(simpleExoPlayer.getPlayWhenReady()));
+          changeAndNotifyState((simpleExoPlayer == null) ?
+            PlaybackStateCompat.STATE_ERROR :
+            getPlayingPausedState(simpleExoPlayer.getPlayWhenReady()));
           break;
         case ExoPlayer.STATE_ENDED:
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
@@ -77,8 +81,6 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
       return playWhenReady ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
     }
   };
-  @Nullable
-  private SimpleExoPlayer simpleExoPlayer = null;
 
   public LocalPlayerAdapter(
     @NonNull Context context,
@@ -138,7 +140,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     simpleExoPlayer.setMediaItem(MediaItem.fromUri(
       RadioHandler.getHandledUri(HttpServer.getLoopbackUri(), radio, lockKey)));
     simpleExoPlayer.setPlayWhenReady(true);
-    simpleExoPlayer.addListener(playerEventListener);
+    simpleExoPlayer.addListener(playerListener);
     simpleExoPlayer.prepare();
   }
 
@@ -174,7 +176,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     if (simpleExoPlayer == null) {
       Log.i(LOG_TAG, "onRelease on null ExoPlayer");
     } else {
-      simpleExoPlayer.removeListener(playerEventListener);
+      simpleExoPlayer.removeListener(playerListener);
       simpleExoPlayer.release();
       simpleExoPlayer = null;
     }

@@ -25,6 +25,7 @@ package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
 import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -42,7 +43,7 @@ import java.util.Vector;
 public class DlnaDevice {
   private final List<Listener> listeners = new Vector<>();
   @Nullable
-  private RemoteDevice remoteDevice;
+  private final RemoteDevice remoteDevice;
   @Nullable
   private Bitmap icon = null;
 
@@ -97,7 +98,7 @@ public class DlnaDevice {
 
   public void searchIcon() {
     if (isFullyHydrated()) {
-      final Handler handler = new Handler();
+      final Handler handler = new Handler(Looper.getMainLooper());
       new Thread() {
         @Override
         public void run() {
@@ -115,12 +116,9 @@ public class DlnaDevice {
               NetworkTester.getBitmapFromUrl(remoteDevice.normalizeURI(largestIcon.getUri()));
             if (searchedIcon != null) {
               icon = searchedIcon;
-              handler.post(new Runnable() {
-                @Override
-                public void run() {
-                  for (Listener listener : listeners) {
-                    listener.onNewIcon();
-                  }
+              handler.post(() -> {
+                for (Listener listener : listeners) {
+                  listener.onNewIcon();
                 }
               });
             }

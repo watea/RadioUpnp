@@ -112,9 +112,9 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       @NonNull RecyclerView recyclerView,
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
-      int from = viewHolder.getAdapterPosition();
+      int from = viewHolder.getAbsoluteAdapterPosition();
       Long fromId = radioIds.get(from);
-      int to = targetViewHolder.getAdapterPosition();
+      int to = targetViewHolder.getAbsoluteAdapterPosition();
       Long toId = radioIds.get(to);
       if (listener.onMove(fromId, toId)) {
         // Database updated, update view
@@ -138,7 +138,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-      int position = viewHolder.getAdapterPosition();
+      int position = viewHolder.getAbsoluteAdapterPosition();
       if (listener.onDelete(radioIds.get(position))) {
         // Database updated, update view
         radioIds.remove(position);
@@ -158,12 +158,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       radioNameTextView = itemView.findViewById(R.id.row_modify_radio_name_text_view);
       // Edit action
       itemView.findViewById(R.id.row_modify_radio_name_text_view).setOnClickListener(
-        new View.OnClickListener() {
-          @Override
-          public void onClick(View view) {
-            listener.onModifyClick(radio);
-          }
-        });
+        view -> listener.onModifyClick(radio));
     }
 
     private void setView(@NonNull Radio radio) {

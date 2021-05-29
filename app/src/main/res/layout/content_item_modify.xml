@@ -63,14 +63,14 @@
                     android:id="@+id/dar_fm_radio_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:buttonTint="@color/colorPrimaryDark"
+                    android:buttonTint="@color/darkBlue"
                     android:text="@string/dar_fm_radio_button" />
 
                 <RadioButton
                     android:id="@+id/image_from_url_radio_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:buttonTint="@color/colorPrimaryDark"
+                    android:buttonTint="@color/darkBlue"
                     android:text="@string/image_from_url_radio_button" />
 
             </RadioGroup>
@@ -85,7 +85,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:tint="@color/colorPrimaryDark"
+                    android:tint="@color/darkBlue"
                     app:srcCompat="@drawable/ic_search_black_40dp"
                     tools:ignore="ContentDescription" />
 
@@ -94,7 +94,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:layout_gravity="center"
-                    android:tint="@color/colorPrimaryDark" />
+                    android:tint="@color/darkBlue" />
 
             </FrameLayout>
 

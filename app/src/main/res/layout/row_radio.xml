@@ -48,6 +48,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:contentDescription="@string/title_preferred"
-        android:src="@drawable/ic_star_border_black_30dp" />
+        android:src="@drawable/ic_star_border_blue_30dp" />
 
 </LinearLayout>

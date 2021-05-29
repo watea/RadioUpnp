@@ -23,14 +23,15 @@
   -->
 
 <menu
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <group
         android:id="@+id/group_home"
         android:checkableBehavior="single" >
         <item
             android:id="@+id/action_home"
-            android:icon="@drawable/ic_radio"
+            android:icon="@drawable/ic_radio_black_24dp"
             android:title="@string/title_main" />
         <item
             android:id="@+id/action_add_item"
@@ -44,6 +45,11 @@
     <group
         android:id="@+id/group_settings"
         android:checkableBehavior="single" >
+        <item
+            android:id="@+id/action_dark"
+            app:actionLayout="@layout/drawer_switch"
+            android:icon="@drawable/ic_baseline_flaky_24dp"
+            android:title="@string/title_dark_mode" />
         <item
             android:id="@+id/action_donate"
             android:icon="@drawable/ic_payment_black_24dp"

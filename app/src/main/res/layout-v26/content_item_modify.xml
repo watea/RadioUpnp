@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?><!--
+<?xml version="1.0" encoding="utf-8"?>
+<!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,7 +22,8 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
 
@@ -61,14 +63,14 @@
                     android:id="@+id/dar_fm_radio_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:buttonTint="@color/colorPrimaryDark"
+                    android:buttonTint="@color/darkBlue"
                     android:text="@string/dar_fm_radio_button" />
 
                 <RadioButton
                     android:id="@+id/image_from_url_radio_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:buttonTint="@color/colorPrimaryDark"
+                    android:buttonTint="@color/darkBlue"
                     android:text="@string/image_from_url_radio_button" />
 
             </RadioGroup>
@@ -83,7 +85,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:tint="@color/colorPrimaryDark"
+                    android:tint="@color/darkBlue"
                     app:srcCompat="@drawable/ic_search_black_40dp"
                     tools:ignore="ContentDescription" />
 
@@ -92,7 +94,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:layout_gravity="center"
-                    android:tint="@color/colorPrimaryDark" />
+                    android:tint="@color/darkBlue" />
 
             </FrameLayout>
 
