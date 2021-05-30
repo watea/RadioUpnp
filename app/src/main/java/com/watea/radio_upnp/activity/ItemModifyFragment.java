@@ -203,9 +203,10 @@ public class ItemModifyFragment extends MainActivityFragment {
         if (darFmRadioButton.isChecked()) {
           new DarFmSearcher();
         } else {
-          showSearchButton(false);
           URL webPageUrl = webPageWatcher.url;
-          if (webPageUrl != null) {
+          if (webPageUrl == null) {
+            tell(R.string.no_icon_found);
+          } else {
             new IconSearcher(webPageUrl);
           }
         }
