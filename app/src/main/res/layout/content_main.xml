@@ -101,6 +101,7 @@
                 android:layout_gravity="start"
                 android:ellipsize="marquee"
                 android:singleLine="true"
+                android:textColor="@color/dark"
                 android:textAllCaps="true"
                 android:textStyle="bold" />
 
@@ -111,7 +112,8 @@
                 android:layout_gravity="start"
                 android:ellipsize="marquee"
                 android:marqueeRepeatLimit="marquee_forever"
-                android:singleLine="true" />
+                android:singleLine="true"
+                android:textColor="@color/dark" />
 
             <TextView
                 android:id="@+id/played_radio_rate_text_view"
