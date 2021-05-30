@@ -47,7 +47,7 @@
         android:checkableBehavior="single" >
         <item
             android:id="@+id/action_dark"
-            app:actionLayout="@layout/drawer_switch"
+            app:actionLayout="@layout/view_switch"
             android:icon="@drawable/ic_baseline_flaky_24dp"
             android:title="@string/title_dark_mode" />
         <item
