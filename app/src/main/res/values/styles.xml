@@ -27,7 +27,6 @@
         <item name="colorPrimary">@color/lightBlue</item>
         <item name="colorPrimaryDark">@color/darkBlue</item>
         <item name="colorAccent">@color/midGrey</item>
-        <item name="colorBackgroundFloating">@color/midGrey</item>
         <item name="titleTextColor">@color/lightBlue</item>
         <item name="imageButtonStyle">@style/Widget.AppCompat.Button.Borderless</item>
     </style>
@@ -38,6 +37,7 @@
         <item name="android:textColorSecondary">@color/midGrey</item>
         <item name="android:textColorHint">@color/darkGrey</item>
         <item name="android:textColorPrimaryDisableOnly">@color/midGrey</item>
+        <item name="colorBackgroundFloating">@color/midGrey</item>
         <item name="android:colorBackground">@color/darkGrey</item>
         <item name="android:windowBackground">@color/dark</item>
     </style>
