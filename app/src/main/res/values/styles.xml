@@ -38,7 +38,7 @@
         <item name="android:textColorSecondary">@color/midGrey</item>
         <item name="android:textColorHint">@color/darkGrey</item>
         <item name="android:textColorPrimaryDisableOnly">@color/midGrey</item>
-        <item name="android:colorBackground">@color/midGrey</item>
+        <item name="android:colorBackground">@color/darkGrey</item>
         <item name="android:windowBackground">@color/dark</item>
     </style>
 
