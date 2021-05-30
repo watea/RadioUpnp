@@ -259,6 +259,8 @@ public class MainActivity
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    // Create radio database (order matters)
+    radioLibrary = new RadioLibrary(this);
     // Shared preferences
     final SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Create default radios on first start
@@ -273,8 +275,6 @@ public class MainActivity
     // Set theme
     final boolean darkMode = sharedPreferences.getBoolean(getString(R.string.key_dark_mode), false);
     setTheme(darkMode ? R.style.AppThemeDark : R.style.BaseAppTheme);
-    // Create radio database
-    radioLibrary = new RadioLibrary(this);
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
