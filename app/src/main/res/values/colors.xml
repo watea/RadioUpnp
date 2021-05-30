@@ -29,6 +29,6 @@
     <color name="dark">#212121</color>
     <color name="darkGrey">#505050</color>
     <color name="lightGrey">#BDBDBD</color>
-    <color name="transVeryLightGrey">#CCE5E5E5</color>
+    <color name="transMidGrey">#CC9E9E9E</color>
     <color name="darkRed">#B00020</color>
 </resources>

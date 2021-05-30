@@ -37,6 +37,7 @@
         android:drawablePadding="@dimen/app_horizontal_margin"
         android:gravity="center_vertical"
         android:padding="@dimen/app_vertical_margin"
+        android:textColor="@color/dark"
         android:textStyle="bold"
         app:layout_gravity="start|center_vertical" />
 

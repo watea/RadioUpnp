@@ -43,7 +43,7 @@
     <string name="no_internet">Internet connexion not available</string>
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio found, please add a radio</string>
-    <string name="dlna_search_relaunch">DLNA search relaunch</string>
+    <string name="dlna_search_reset">DLNA search reset</string>
     <string name="dlna_selection">DLNA device selection:\n</string>
     <string name="no_dlna_selection">No DLNA device selected</string>
     <string name="legend_name">MY RADIO</string>

@@ -48,8 +48,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_marginEnd="@dimen/app_horizontal_margin"
-            android:layout_marginBottom="@dimen/tile_size"
+            android:layout_marginEnd="@dimen/app_margin"
+            android:layout_marginBottom="@dimen/fab_vertical_margin"
             tools:ignore="ContentDescription" />
 
         <!-- Toolbar -->

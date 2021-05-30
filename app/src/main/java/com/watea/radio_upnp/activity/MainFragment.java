@@ -457,7 +457,7 @@ public class MainFragment
       }
       dlnaDevicesAdapter.clear();
       androidUpnpService.getRegistry().removeAllRemoteDevices();
-      tell(R.string.dlna_search_relaunch);
+      tell(R.string.dlna_search_reset);
       return true;
     };
   }

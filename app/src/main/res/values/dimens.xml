@@ -28,4 +28,5 @@
     <dimen name="app_horizontal_margin">6dp</dimen>
     <dimen name="app_vertical_margin">10dp</dimen>
     <dimen name="tile_size">110dp</dimen>
+    <dimen name="fab_vertical_margin">120dp</dimen>
 </resources>

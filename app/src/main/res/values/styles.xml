@@ -27,16 +27,15 @@
         <item name="colorPrimary">@color/lightBlue</item>
         <item name="colorPrimaryDark">@color/darkBlue</item>
         <item name="colorAccent">@color/midGrey</item>
-        <item name="colorBackgroundFloating">@color/transVeryLightGrey</item>
+        <item name="colorBackgroundFloating">@color/midGrey</item>
         <item name="titleTextColor">@color/lightBlue</item>
         <item name="imageButtonStyle">@style/Widget.AppCompat.Button.Borderless</item>
     </style>
     <!-- Base application theme dark -->
     <style name="AppThemeDark" parent="BaseAppTheme">
-        <item name="android:textColor">@color/darkGrey</item>
+        <item name="android:textColor">@color/lightGrey</item>
         <item name="android:textColorPrimary">@color/midGrey</item>
         <item name="android:textColorSecondary">@color/midGrey</item>
-        <item name="android:textColorTertiary">@color/midGrey</item>
         <item name="android:textColorHint">@color/darkGrey</item>
         <item name="android:textColorPrimaryDisableOnly">@color/midGrey</item>
         <item name="android:colorBackground">@color/midGrey</item>
