@@ -466,7 +466,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     @NonNull
     private final List<Map<String, String>> radios = new Vector<>();
     @Nullable
-    private Bitmap foundIcon;
+    private Bitmap foundIcon = null;
 
     private DarFmSearcher() {
       this(null);
@@ -483,7 +483,6 @@ public class ItemModifyFragment extends MainActivityFragment {
 
     @Override
     public void run() {
-      foundIcon = null;
       if (radios.isEmpty()) {
         try {
           Element search = Jsoup
