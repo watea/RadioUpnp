@@ -563,6 +563,11 @@ public class MainFragment
     if (mediaController == null) {
       tell(R.string.radio_connection_waiting);
     } else {
+      // Do nothing if radio were deleted in another fragment
+      if (getCurrentRadio() == null) {
+        tell(R.string.radio_deleted);
+        return;
+      }
       // Tag on button has stored state to reach
       switch ((int) playImageButton.getTag()) {
         case PlaybackStateCompat.STATE_PLAYING:
@@ -570,6 +575,9 @@ public class MainFragment
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           mediaController.getTransportControls().pause();
+          if (!gotItPlayLongPress) {
+            playLongPressAlertDialog.show();
+          }
           break;
         case PlaybackStateCompat.STATE_STOPPED:
           mediaController.getTransportControls().stop();
@@ -577,9 +585,6 @@ public class MainFragment
         default:
           // Should not happen
           Log.d(LOG_TAG, "Internal failure, no action to perform on play button");
-      }
-      if (!gotItPlayLongPress) {
-        playLongPressAlertDialog.show();
       }
     }
   }

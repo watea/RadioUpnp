@@ -42,6 +42,7 @@
     <string name="radio_connection_error">Radio connection error</string>
     <string name="no_internet">Internet connexion not available</string>
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
+    <string name="radio_deleted">Radio was deleted</string>
     <string name="radio_no_radio">No radio found, please add a radio</string>
     <string name="dlna_search_reset">DLNA search reset</string>
     <string name="dlna_selection">DLNA device selection:\n</string>

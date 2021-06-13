@@ -493,27 +493,26 @@ public class RadioService
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
-      // Radio retrieved in database
-      radio = radioLibrary.getFrom(Long.valueOf(mediaId));
-      boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
-      Device<?, ?, ?> chosenDevice = null;
-      if (radio == null) {
-        Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't retrieve radio");
-        throw new RuntimeException();
-      }
       // Ensure robustness
       upnpActionControler.releaseActions(null);
-      // Stop if any
+      // In any case, stop player if it exists
       if (playerAdapter != null) {
         playerAdapter.stop();
       }
+      // Radio retrieved in database
+      radio = radioLibrary.getFrom(Long.valueOf(mediaId));
+      // If radio is not found, abort (may happen if radio were deleted by user)
+      if (radio == null) {
+        Log.d(LOG_TAG, "onPrepareFromMediaId: radio not found");
+        return;
+      }
       // Set actual player DLNA? Extra shall contain DLNA device UDN.
-      if (isDlna) {
-        chosenDevice = getChosenDevice(extras.getString(getString(R.string.key_dlna_device)));
-        if (chosenDevice == null) {
-          Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
-          return;
-        }
+      boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
+      Device<?, ?, ?> chosenDevice = isDlna ?
+        getChosenDevice(extras.getString(getString(R.string.key_dlna_device))) : null;
+      if (isDlna && (chosenDevice == null)) {
+        Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
+        return;
       }
       // Synchronize session data
       session.setActive(true);
