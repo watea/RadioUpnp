@@ -51,9 +51,6 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     public void onPlaybackStateChanged(int playbackState) {
       Log.i(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState);
       switch (playbackState) {
-        case ExoPlayer.STATE_IDLE:
-          // Nothing to do
-          break;
         case ExoPlayer.STATE_BUFFERING:
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           break;
@@ -62,6 +59,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
             PlaybackStateCompat.STATE_ERROR :
             getPlayingPausedState(simpleExoPlayer.getPlayWhenReady()));
           break;
+        case ExoPlayer.STATE_IDLE:
         case ExoPlayer.STATE_ENDED:
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
           break;
