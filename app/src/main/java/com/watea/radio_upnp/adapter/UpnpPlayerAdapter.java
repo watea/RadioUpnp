@@ -43,6 +43,7 @@ import org.fourthline.cling.model.action.ActionArgumentValue;
 import org.fourthline.cling.model.action.ActionInvocation;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.model.types.DeviceType;
 import org.fourthline.cling.model.types.ServiceId;
 import org.fourthline.cling.model.types.UDAServiceId;
 
@@ -53,6 +54,8 @@ import java.util.regex.Pattern;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
   public static final ServiceId AV_TRANSPORT_SERVICE_ID = new UDAServiceId("AVTransport");
+  public static final DeviceType RENDERER_DEVICE_TYPE =
+    new DeviceType("schemas-upnp-org", "MediaRenderer", 1);
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
   private static final ServiceId RENDERING_CONTROL_ID = new UDAServiceId("RenderingControl");
   private static final ServiceId CONNECTION_MANAGER_ID = new UDAServiceId("ConnectionManager");

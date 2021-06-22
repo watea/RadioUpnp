@@ -72,6 +72,7 @@ import com.watea.radio_upnp.service.RadioService;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
+import org.fourthline.cling.model.message.header.DeviceTypeHeader;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.model.meta.Service;
@@ -84,6 +85,7 @@ import java.util.Objects;
 
 import static android.content.Context.BIND_AUTO_CREATE;
 import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.AV_TRANSPORT_SERVICE_ID;
+import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.RENDERER_DEVICE_TYPE;
 
 public class MainFragment
   extends MainActivityFragment
@@ -290,7 +292,7 @@ public class MainFragment
       }
       // Get ready for future device advertisements
       registry.addListener(browseRegistryListener);
-      androidUpnpService.getControlPoint().search();
+      upnpSearch();
     }
 
     @Override
@@ -298,7 +300,6 @@ public class MainFragment
       releaseUpnpResources();
     }
   };
-  private long timeDlnaSearch = 0;
 
   private static int getRadiosColumnCount(@NonNull Configuration newConfig) {
     return (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : 3;
@@ -431,11 +432,7 @@ public class MainFragment
         tell(R.string.device_no_device_yet);
         return;
       }
-      // Do not search more than 1 peer 5 s
-      if (System.currentTimeMillis() - timeDlnaSearch > 5000) {
-        timeDlnaSearch = System.currentTimeMillis();
-        androidUpnpService.getControlPoint().search();
-      }
+      upnpSearch();
       dlnaAlertDialog.show();
       if (!gotItDlnaEnable) {
         dlnaEnableAlertDialog.show();
@@ -698,5 +695,10 @@ public class MainFragment
     if (icon != null) {
       dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
     }
+  }
+
+  // Search for Render devices, 10s timeout
+  private void upnpSearch() {
+    androidUpnpService.getControlPoint().search(new DeviceTypeHeader(RENDERER_DEVICE_TYPE), 10);
   }
 }

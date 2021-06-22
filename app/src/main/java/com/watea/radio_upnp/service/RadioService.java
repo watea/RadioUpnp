@@ -351,7 +351,7 @@ public class RadioService
     return builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
       .setMediaSession(getSessionToken())
       .setShowActionsInCompactView(0))
-      .setSmallIcon(R.drawable.ic_mic_white)
+      .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
       .setContentIntent(PendingIntent.getActivity(
         this,
