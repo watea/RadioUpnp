@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,12 +22,11 @@
   -->
 
 <resources>
-    <color name="lightBlue">#03A9F4</color>
-    <color name="darkBlue">#0288D1</color>
-    <color name="midGrey">#9E9E9E</color>
-    <color name="dark">#212121</color>
-    <color name="darkGrey">#505050</color>
-    <color name="lightGrey">#BDBDBD</color>
-    <color name="transMidGrey">#EE9E9E9E</color>
-    <color name="darkRed">#B00020</color>
+    <color name="white">@android:color/white</color>
+    <color name="lightBlue">@android:color/holo_blue_light</color>
+    <color name="darkBlue">@android:color/holo_blue_dark</color>
+    <color name="dark">@android:color/background_dark</color>
+    <color name="darkGrey">@android:color/darker_gray</color>
+    <color name="darkRed">@android:color/holo_red_dark</color>
+    <color name="transparent">@android:color/transparent</color>
 </resources>

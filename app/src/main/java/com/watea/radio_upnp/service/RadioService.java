@@ -89,7 +89,7 @@ public class RadioService
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
-  private final UpnpActionControler upnpActionControler = new UpnpActionControler();
+  private final UpnpActionController upnpActionController = new UpnpActionController();
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
   private MediaSessionCompat session;
@@ -179,15 +179,15 @@ public class RadioService
     isAllowedToRelaunch = false;
     // Prepare notification
     actionPause = new NotificationCompat.Action(
-      R.drawable.ic_pause_black_24dp,
+      R.drawable.ic_pause_white_24dp,
       getString(R.string.action_pause),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE));
     actionStop = new NotificationCompat.Action(
-      R.drawable.ic_stop_black_24dp,
+      R.drawable.ic_stop_white_24dp,
       getString(R.string.action_stop),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP));
     actionPlay = new NotificationCompat.Action(
-      R.drawable.ic_play_arrow_black_24dp,
+      R.drawable.ic_play_arrow_white_24dp,
       getString(R.string.action_play),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY));
     Log.d(LOG_TAG, "onCreate: done!");
@@ -216,7 +216,7 @@ public class RadioService
     if (playerAdapter != null) {
       playerAdapter.release();
     }
-    upnpActionControler.release();
+    upnpActionController.release();
     httpServer.stopServer();
     upnpConnection.release();
     radioLibrary.close();
@@ -404,12 +404,12 @@ public class RadioService
     }
 
     public void execute(
-      @NonNull UpnpActionControler upnpActionControler, boolean isScheduled) {
-      AndroidUpnpService androidUpnpService = upnpActionControler.getAndroidUpnpService();
+      @NonNull UpnpActionController upnpActionController, boolean isScheduled) {
+      AndroidUpnpService androidUpnpService = upnpActionController.getAndroidUpnpService();
       if (androidUpnpService == null) {
         Log.d(LOG_TAG, "Try to execute UPnP action with no service");
         if (isScheduled) {
-          upnpActionControler.release();
+          upnpActionController.release();
         }
       } else {
         ActionCallback actionCallback =
@@ -494,7 +494,7 @@ public class RadioService
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Ensure robustness
-      upnpActionControler.releaseActions(null);
+      upnpActionController.releaseActions(null);
       // In any case, stop player if it exists
       if (playerAdapter != null) {
         playerAdapter.stop();
@@ -527,7 +527,7 @@ public class RadioService
           lockKey,
           httpServer,
           chosenDevice,
-          upnpActionControler);
+          upnpActionController);
         session.setPlaybackToRemote(volumeProviderCompat);
       } else {
         playerAdapter = new LocalPlayerAdapter(
@@ -597,7 +597,7 @@ public class RadioService
   }
 
   // Helper class for UPnP actions scheduling
-  public class UpnpActionControler {
+  public class UpnpActionController {
     private final Map<Radio, String> contentTypes = new Hashtable<>();
     private final Map<Device<?, ?, ?>, List<String>> protocolInfos = new Hashtable<>();
     private final List<UpnpAction> upnpActions = new Vector<>();

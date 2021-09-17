@@ -26,27 +26,22 @@
     <style name="BaseAppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/lightBlue</item>
         <item name="colorPrimaryDark">@color/darkBlue</item>
-        <item name="colorAccent">@color/midGrey</item>
-        <item name="titleTextColor">@color/lightBlue</item>
-        <item name="android:indeterminateTint">@color/lightBlue</item>
+        <item name="colorAccent">@color/darkGrey</item>
         <item name="imageButtonStyle">@style/Widget.AppCompat.Button.Borderless</item>
     </style>
+
     <!-- Base application theme dark -->
     <style name="AppThemeDark" parent="BaseAppTheme">
-        <item name="android:textColor">@color/lightGrey</item>
-        <item name="android:textColorPrimary">@color/midGrey</item>
-        <item name="android:textColorSecondary">@color/midGrey</item>
-        <item name="android:textColorHint">@color/darkGrey</item>
-        <item name="android:textColorPrimaryDisableOnly">@color/midGrey</item>
-        <item name="colorBackgroundFloating">@color/midGrey</item>
-        <item name="android:colorBackground">@color/darkGrey</item>
+        <item name="android:textColor">@color/darkGrey</item>
+        <item name="android:textColorPrimary">@color/darkGrey</item>
+        <item name="android:textColorSecondary">@color/white</item>
+        <item name="android:textColorHint">@color/white</item>
+        <item name="android:textColorPrimaryDisableOnly">@color/white</item>
         <item name="android:windowBackground">@color/dark</item>
     </style>
 
-    <!-- Just in case style extension -->
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
-    <!-- For android.support.v7.widget.Toolbar -->
-    <style name="AppTheme.toolBarTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="colorControlNormal">@color/lightBlue</item>
-    </style>
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
 </resources>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,8 +21,7 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
 
@@ -43,10 +41,10 @@
             android:layout_margin="@dimen/app_margin"
             android:drawablePadding="@dimen/app_horizontal_margin"
             android:hint="@string/legend_name"
+            android:importantForAutofill="no"
             android:inputType="textCapCharacters"
             android:maxLength="30"
-            android:textAllCaps="true"
-            android:importantForAutofill="no" />
+            android:textAllCaps="true" />
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -86,7 +84,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:tint="@color/darkBlue"
-                    app:srcCompat="@drawable/ic_search_black_40dp"
+                    app:srcCompat="@drawable/ic_search_white_40dp"
                     tools:ignore="ContentDescription" />
 
                 <ProgressBar
@@ -111,8 +109,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/legend_page_url_example"
-            android:inputType="textUri"
-            android:importantForAutofill="no" />
+            android:importantForAutofill="no"
+            android:inputType="textUri" />
 
         <TextView
             android:layout_width="match_parent"
@@ -125,9 +123,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/legend_streaming_url_example"
-            android:inputType="textUri"
-            android:importantForAutofill="no" />
+            android:importantForAutofill="no"
+            android:inputType="textUri" />
 
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

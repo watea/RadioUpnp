@@ -23,12 +23,17 @@
 
 package com.watea.radio_upnp.activity;
 
+import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.RENDERER_DEVICE_TYPE;
+
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -46,12 +51,20 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.service.NetworkTester;
+
+import org.fourthline.cling.android.AndroidUpnpService;
+import org.fourthline.cling.android.AndroidUpnpServiceImpl;
+import org.fourthline.cling.model.message.header.DeviceTypeHeader;
 
 import java.net.URL;
 import java.util.Hashtable;
@@ -64,8 +77,8 @@ public class MainActivity
   extends
   AppCompatActivity
   implements
-  MainActivityFragment.Provider,
   NavigationView.OnNavigationItemSelectedListener {
+  public static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new Hashtable<Class<? extends Fragment>, Integer>() {{
@@ -120,17 +133,35 @@ public class MainActivity
       "http://icecast.funradio.fr/fun-1-44-128?listen=webCwsBCggNCQgLDQUGBAcGBg",
       "https://www.funradio.fr/")
   };
+  private final PlayerController playerController = new PlayerController(this);
   // <HMI assets
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
-  private ActionBar actionBar;
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
   private AlertDialog aboutAlertDialog;
+  private CollapsingToolbarLayout actionBarLayout;
   // />
   private RadioLibrary radioLibrary;
   private Integer navigationMenuCheckedId;
   private MainFragment mainFragment;
+  private AndroidUpnpService androidUpnpService = null;
+  private final ServiceConnection upnpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName className, IBinder service) {
+      androidUpnpService = (AndroidUpnpService) service;
+      // Robustness, shall be defined here
+      if (mainFragment != null) {
+        mainFragment.onUpnpServiceConnected(androidUpnpService.getRegistry());
+      }
+      upnpSearch();
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName className) {
+      onUpnpServiceDisconnected();
+    }
+  };
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
@@ -183,16 +214,14 @@ public class MainActivity
     return true;
   }
 
-  @Override
   @NonNull
   public RadioLibrary getRadioLibrary() {
     return radioLibrary;
   }
 
-  @Override
   public void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
     invalidateOptionsMenu();
-    actionBar.setTitle(mainActivityFragment.getTitle());
+    actionBarLayout.setTitle(getResources().getString(mainActivityFragment.getTitle()));
     floatingActionButton.setOnClickListener(
       mainActivityFragment.getFloatingActionButtonOnClickListener());
     floatingActionButton.setOnLongClickListener(
@@ -203,6 +232,46 @@ public class MainActivity
     }
     checkNavigationMenu(
       Objects.requireNonNull(FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass())));
+  }
+
+  public void tell(int message) {
+    Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG).show();
+  }
+
+  public void tell(@NonNull String message) {
+    Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG).show();
+  }
+
+  // Search for Render devices, 10s timeout
+  public boolean upnpSearch() {
+    if (androidUpnpService == null) {
+      tell(R.string.device_no_device_yet);
+      return false;
+    } else {
+      androidUpnpService.getControlPoint().search(new DeviceTypeHeader(RENDERER_DEVICE_TYPE), 10);
+    }
+    return true;
+  }
+
+  public boolean upnpReset() {
+    if (androidUpnpService == null) {
+      tell(R.string.device_no_device_yet);
+      return false;
+    } else {
+      androidUpnpService.getRegistry().removeAllRemoteDevices();
+    }
+    return true;
+  }
+
+  // radio is null for current
+  public void startReading(@Nullable Radio radio) {
+    DlnaDevice chosenDlnaDevice = mainFragment.getChosenDlnaDevice();
+    playerController.startReading(
+      radio,
+      ((androidUpnpService != null) &&
+        (chosenDlnaDevice != null) &&
+        NetworkTester.hasWifiIpAddress(this)) ?
+        chosenDlnaDevice.getIdentity() : null);
   }
 
   @NonNull
@@ -242,7 +311,11 @@ public class MainActivity
   @Override
   protected void onPause() {
     super.onPause();
-    mainFragment.onActivityPause();
+    // Stop UPnP service
+    onUpnpServiceDisconnected();
+    unbindService(upnpConnection);
+    // PlayerController call
+    playerController.onActivityPause();
   }
 
   @Override
@@ -253,7 +326,15 @@ public class MainActivity
       setFragment(MainFragment.class) :
       // Shall exists as MainFragment always created
       getSupportFragmentManager().findFragmentByTag(MainFragment.class.getSimpleName()));
-    Objects.requireNonNull(mainFragment).onActivityResume(this);
+    // Start the UPnP service
+    if (!bindService(
+      new Intent(this, AndroidUpnpServiceImpl.class),
+      upnpConnection,
+      BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "onActivityResume: internal failure; AndroidUpnpService not bound");
+    }
+    // PlayerController call
+    playerController.onActivityResume();
   }
 
   @Override
@@ -262,7 +343,7 @@ public class MainActivity
     // Create radio database (order matters)
     radioLibrary = new RadioLibrary(this);
     // Shared preferences
-    final SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Create default radios on first start
     if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
       setDefaultRadios()) {
@@ -278,15 +359,17 @@ public class MainActivity
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
-    // Toolbar
-    setSupportActionBar(findViewById(R.id.toolbar));
-    actionBar = getSupportActionBar();
+    // ActionBar
+    setSupportActionBar(findViewById(R.id.actionbar));
+    actionBarLayout = findViewById(R.id.actionbar_layout);
+    playerController.onActivityCreated(actionBarLayout);
+    ActionBar actionBar = getSupportActionBar();
     if (actionBar == null) {
       // Should not happen
       Log.e(LOG_TAG, "onCreate: ActionBar is null");
     } else {
       actionBar.setDisplayHomeAsUpEnabled(true);
-      actionBar.setHomeButtonEnabled(true);
+      actionBar.setDisplayShowHomeEnabled(true);
     }
     // Set navigation drawer toggle (according to documentation)
     drawerToggle = new ActionBarDrawerToggle(
@@ -342,6 +425,8 @@ public class MainActivity
     super.onDestroy();
     // Close radios database
     radioLibrary.close();
+    // PlayerController call
+    playerController.onActivityDestroy();
   }
 
   private boolean setDefaultRadios() {
@@ -366,6 +451,17 @@ public class MainActivity
   private void checkNavigationMenu(@NonNull Integer id) {
     navigationMenuCheckedId = id;
     navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
+  }
+
+  private void onUpnpServiceDisconnected() {
+    // Robustness, shall be defined here
+    if (androidUpnpService != null) {
+      // Robustness, shall be defined here
+      if (mainFragment != null) {
+        mainFragment.onUpnpServiceDisConnected(androidUpnpService.getRegistry());
+      }
+      androidUpnpService = null;
+    }
   }
 
   private static class DefaultRadio {

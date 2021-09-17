@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -34,8 +35,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.content.res.AppCompatResources;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
@@ -52,14 +51,21 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   private final List<DlnaDevice> dlnaDevices = new Vector<>();
   @NonNull
   private final Listener listener;
+  private final int selectedColor;
+  @NonNull
+  private final Drawable castIcon;
   @Nullable
   private String chosenDlnaDeviceIdentity;
 
   public DlnaDevicesAdapter(
     @Nullable String chosenDlnaDeviceIdentity,
-    @NonNull Listener listener) {
+    @NonNull Listener listener,
+    int selectedColor,
+    @NonNull Drawable castIcon) {
     this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
     this.listener = listener;
+    this.selectedColor = selectedColor;
+    this.castIcon = castIcon;
     clear();
   }
 
@@ -145,6 +151,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     notifyChange();
   }
 
+  @SuppressLint("NotifyDataSetChanged")
   private void notifyChange() {
     listener.onChosenDeviceChange();
     notifyDataSetChanged();
@@ -172,15 +179,13 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     @NonNull
     private final View view;
     private final int defaultColor;
-    private final int selectedColor;
     @NonNull
     private DlnaDevice dlnaDevice = DUMMY_DEVICE;
-
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
       view = itemView;
-      view.setOnClickListener(view -> {
+      view.setOnClickListener(v -> {
         setChosenDlnaDevice(
           ((chosenDlnaDeviceIdentity == null) ||
             !chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity())) ?
@@ -190,7 +195,6 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
       dlnaDeviceNameTextView = view.findViewById(R.id.row_dlna_device_name_text_view);
       progressBar = view.findViewById(R.id.progress_bar);
       defaultColor = dlnaDeviceNameTextView.getCurrentTextColor();
-      selectedColor = ContextCompat.getColor(itemView.getContext(), R.color.lightBlue);
     }
 
     private void setView(@NonNull DlnaDevice dlnaDevice) {
@@ -210,10 +214,8 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
           selectedColor : defaultColor);
       // Icon
       Bitmap bitmap = dlnaDevice.getIcon();
-      Drawable drawable = (bitmap == null) ?
-        AppCompatResources.getDrawable(view.getContext(), R.drawable.ic_cast_black_24dp) :
-        new BitmapDrawable(view.getResources(), bitmap);
-      assert drawable != null;
+      Drawable drawable =
+        (bitmap == null) ? castIcon : new BitmapDrawable(view.getResources(), bitmap);
       drawable.setBounds(0, 0, ICON_SIZE, ICON_SIZE);
       dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         drawable, null, null, null);

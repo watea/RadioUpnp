@@ -23,14 +23,14 @@
 
 package com.watea.radio_upnp.activity;
 
+import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -52,7 +52,6 @@ import android.widget.SimpleAdapter;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.ContextCompat;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
@@ -88,7 +87,6 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
   private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
-  private static Bitmap DEFAULT_ICON = null;
   // <HMI assets
   private EditText nameEditText;
   private EditText urlEditText;
@@ -111,9 +109,39 @@ public class ItemModifyFragment extends MainActivityFragment {
     return element.getElementsByTag(tag).first().ownText();
   }
 
+  @NonNull
   @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return v -> {
+      if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
+        tell(R.string.no_internet);
+      } else {
+        if (urlWatcher.url == null) {
+          tell(R.string.connection_test_aborted);
+        } else {
+          new UrlTester(urlWatcher.url);
+        }
+      }
+    };
+  }
+
+  @Override
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_radio_white_24dp;
+  }
+
+  @Override
+  public int getMenuId() {
+    return R.menu.menu_item_modify;
+  }
+
+  @Override
+  public int getTitle() {
+    return isAddMode() ? R.string.title_item_add : R.string.title_item_modify;
+  }
+
+  @Override
+  protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
     // Order matters
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
@@ -142,44 +170,12 @@ public class ItemModifyFragment extends MainActivityFragment {
     showSearchButton(true);
   }
 
-  @NonNull
-  @Override
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return view -> {
-      if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
-        tell(R.string.no_internet);
-      } else {
-        if (urlWatcher.url == null) {
-          tell(R.string.connection_test_aborted);
-        } else {
-          new UrlTester(urlWatcher.url);
-        }
-      }
-    };
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_radio_black_24dp;
-  }
-
-  @Override
-  public int getMenuId() {
-    return R.menu.menu_item_modify;
-  }
-
-  @Override
-  public int getTitle() {
-    return isAddMode() ? R.string.title_item_add : R.string.title_item_modify;
-  }
-
   @Nullable
   @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
+  protected View onCreateViewFiltered(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
     // Inflate the view so that graphical objects exists
-    View view = inflater.inflate(R.layout.content_item_modify, container, false);
+    final View view = inflater.inflate(R.layout.content_item_modify, container, false);
     nameEditText = view.findViewById(R.id.name_edit_text);
     progressBar = view.findViewById(R.id.progress_bar);
     urlEditText = view.findViewById(R.id.url_edit_text);
@@ -191,11 +187,11 @@ public class ItemModifyFragment extends MainActivityFragment {
       (group, checkedId) -> {
         boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
         searchImageButton.setImageResource(
-          isDarFmSelected ? R.drawable.ic_search_black_40dp : R.drawable.ic_image_black_40dp);
+          isDarFmSelected ? R.drawable.ic_search_white_40dp : R.drawable.ic_image_white_40dp);
         webPageEditText.setEnabled(!isDarFmSelected);
         urlEditText.setEnabled(!isDarFmSelected);
       });
-    searchImageButton.setOnClickListener(searchView -> {
+    searchImageButton.setOnClickListener(v -> {
       flushKeyboard();
       if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
         tell(R.string.no_internet);
@@ -212,9 +208,6 @@ public class ItemModifyFragment extends MainActivityFragment {
         }
       }
     });
-    if (DEFAULT_ICON == null) {
-      createDefaultIcon();
-    }
     return view;
   }
 
@@ -345,23 +338,6 @@ public class ItemModifyFragment extends MainActivityFragment {
     tellWait();
   }
 
-  private void createDefaultIcon() {
-    assert getContext() != null;
-    Drawable drawable = ContextCompat.getDrawable(getContext(), R.drawable.ic_radio_black_24dp);
-    // Deep copy
-    assert drawable != null;
-    Drawable.ConstantState constantState = drawable.mutate().getConstantState();
-    assert constantState != null;
-    drawable = constantState.newDrawable();
-    drawable.setTint(getResources().getColor(R.color.lightGrey, getContext().getTheme()));
-    Canvas canvas = new Canvas();
-    DEFAULT_ICON = Bitmap.createBitmap(
-      drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-    canvas.setBitmap(DEFAULT_ICON);
-    drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-    drawable.draw(canvas);
-  }
-
   // Abstract class to handle web search
   private abstract class Searcher extends Thread {
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -382,7 +358,6 @@ public class ItemModifyFragment extends MainActivityFragment {
   // Utility class to listen for URL edition
   private class UrlWatcher implements TextWatcher {
     private final int defaultColor;
-    private final int errorColor;
     @NonNull
     private final EditText editText;
     @Nullable
@@ -392,12 +367,11 @@ public class ItemModifyFragment extends MainActivityFragment {
       this.editText = editText;
       this.editText.addTextChangedListener(this);
       defaultColor = this.editText.getCurrentTextColor();
-      errorColor = ContextCompat.getColor(this.editText.getContext(), R.color.darkRed);
       url = null;
     }
 
     @Override
-    public void beforeTextChanged(CharSequence s, int start, int ount, int after) {
+    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
     }
 
     @Override
@@ -416,7 +390,7 @@ public class ItemModifyFragment extends MainActivityFragment {
         url = null;
         isError = true;
       }
-      editText.setTextColor(isError ? errorColor : defaultColor);
+      editText.setTextColor(isError ? ERROR_COLOR : defaultColor);
     }
   }
 

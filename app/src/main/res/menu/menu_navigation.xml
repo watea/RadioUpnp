@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,41 +21,36 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<menu
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <group
-        android:id="@+id/group_home"
-        android:checkableBehavior="single" >
+    <group android:checkableBehavior="single">
         <item
             android:id="@+id/action_home"
-            android:icon="@drawable/ic_radio_black_24dp"
+            android:icon="@drawable/ic_radio_white_24dp"
             android:title="@string/title_main" />
         <item
             android:id="@+id/action_add_item"
-            android:icon="@drawable/ic_playlist_add_black_24dp"
+            android:icon="@drawable/ic_playlist_add_white_24dp"
             android:title="@string/title_item_add" />
         <item
             android:id="@+id/action_modify"
-            android:icon="@drawable/ic_edit_black_24dp"
+            android:icon="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />
     </group>
-    <group
-        android:id="@+id/group_settings"
-        android:checkableBehavior="single" >
+    <group android:checkableBehavior="single">
         <item
             android:id="@+id/action_dark"
-            app:actionLayout="@layout/view_switch"
-            android:icon="@drawable/ic_baseline_flaky_24dp"
-            android:title="@string/title_dark_mode" />
+            android:icon="@drawable/ic_baseline_flaky_white_24dp"
+            android:title="@string/title_dark_mode"
+            app:actionLayout="@layout/view_switch" />
         <item
             android:id="@+id/action_donate"
-            android:icon="@drawable/ic_payment_black_24dp"
+            android:icon="@drawable/ic_payment_white_24dp"
             android:title="@string/title_donate" />
         <item
             android:id="@+id/action_about"
-            android:icon="@drawable/ic_settings_black_24dp"
+            android:icon="@drawable/ic_settings_white_24dp"
             android:title="@string/title_about" />
     </group>
 </menu>

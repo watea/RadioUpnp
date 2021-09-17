@@ -23,39 +23,51 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
 
 public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder> {
+  private static final String LOG_TAG = RadiosModifyAdapter.class.getName();
   @NonNull
   private final Context context;
-  private final int iconSize;
   @NonNull
   private final Listener listener;
-  // Dummy default
+  private final int iconSize;
   @NonNull
-  private List<Long> radioIds = new Vector<>();
+  private final RadioLibrary radioLibrary;
+  @NonNull
+  private final List<Long> radioIds = new Vector<>();
 
-  public RadiosModifyAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {
+  public RadiosModifyAdapter(
+    @NonNull Context context,
+    @NonNull Listener listener,
+    @NonNull RadioLibrary radioLibrary,
+    int iconSize) {
     this.context = context;
     this.listener = listener;
+    this.radioLibrary = radioLibrary;
     this.iconSize = iconSize;
   }
 
@@ -64,9 +76,11 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
   }
 
-  // Content setter, must be called
-  public void setRadioIds(@NonNull List<Long> radioIds) {
-    this.radioIds = radioIds;
+  // Shall be called on view resume (only)
+  @SuppressLint("NotifyDataSetChanged")
+  public void onRefresh() {
+    radioIds.clear();
+    radioIds.addAll(radioLibrary.getAllRadioIds());
     notifyDataSetChanged();
   }
 
@@ -79,23 +93,21 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    viewHolder.setView(Objects.requireNonNull(listener.getRadioFromId(radioIds.get(position))));
+    viewHolder.setView(radioIds.isEmpty() ?
+      Radio.DUMMY_RADIO : Objects.requireNonNull(radioLibrary.getFrom(radioIds.get(position))));
   }
 
   @Override
   public int getItemCount() {
-    return radioIds.size();
+    return radioIds.isEmpty() ? 1 : radioIds.size();
+  }
+
+  private void databaseWarn() {
+    Log.w(LOG_TAG, "Internal failure, radio database update failed");
   }
 
   public interface Listener {
-    @Nullable
-    Radio getRadioFromId(@NonNull Long radioId);
-
     void onModifyClick(@NonNull Radio radio);
-
-    boolean onDelete(@NonNull Long radioId);
-
-    boolean onMove(@NonNull Long fromRadioId, @NonNull Long toRadioId);
   }
 
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
@@ -116,33 +128,36 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       Long fromId = radioIds.get(from);
       int to = targetViewHolder.getAbsoluteAdapterPosition();
       Long toId = radioIds.get(to);
-      if (listener.onMove(fromId, toId)) {
+      if (radioLibrary.move(fromId, toId)) {
         // Database updated, update view
         radioIds.set(to, fromId);
         radioIds.set(from, toId);
         notifyItemMoved(from, to);
         return true;
       }
+      databaseWarn();
       return false;
     }
 
     @Override
     public boolean isLongPressDragEnabled() {
-      return true;
+      return !radioIds.isEmpty();
     }
 
     @Override
     public boolean isItemViewSwipeEnabled() {
-      return true;
+      return !radioIds.isEmpty();
     }
 
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
       int position = viewHolder.getAbsoluteAdapterPosition();
-      if (listener.onDelete(radioIds.get(position))) {
+      if (radioLibrary.deleteFrom(radioIds.get(position)) > 0) {
         // Database updated, update view
         radioIds.remove(position);
         notifyItemRemoved(position);
+      } else {
+        databaseWarn();
       }
     }
   }
@@ -150,27 +165,67 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
     private final TextView radioNameTextView;
-    @Nullable
-    private Radio radio;
+    @NonNull
+    private final ImageButton preferredImageButton;
+    @NonNull
+    private Radio radio = Radio.DUMMY_RADIO;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
       radioNameTextView = itemView.findViewById(R.id.row_modify_radio_name_text_view);
+      preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
       // Edit action
       itemView.findViewById(R.id.row_modify_radio_name_text_view).setOnClickListener(
-        view -> listener.onModifyClick(radio));
+        v -> listener.onModifyClick(radio));
+      // Preferred action
+      preferredImageButton.setOnClickListener(v -> {
+        if (!radioLibrary.setPreferred(radio.getId(), !radio.isPreferred())) {
+          databaseWarn();
+        }
+      });
+      // Listener to detect Preferred change as it may be modified externally
+      radioLibrary.addListener((radioId, isPreferred) -> {
+        if (radio.getId().equals(radioId)) {
+          radio.togglePreferred();
+          setPreferredButton();
+        }
+      });
     }
 
     private void setView(@NonNull Radio radio) {
       this.radio = radio;
+      if (this.radio == Radio.DUMMY_RADIO) {
+        decorate(
+          Objects.requireNonNull(
+            ContextCompat.getDrawable(context, R.drawable.ic_error_grey_24dp)),
+          context.getString(R.string.radio_no_radio));
+      } else {
+        decorate(
+          new BitmapDrawable(
+            context.getResources(),
+            Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
+          this.radio.getName());
+      }
+      setPreferredButton();
+    }
+
+    private void decorate(
+      @NonNull Drawable drawable,
+      @NonNull String text) {
       radioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        new BitmapDrawable(
-          context.getResources(),
-          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
-        null,
-        null,
-        null);
-      radioNameTextView.setText(this.radio.getName());
+        drawable, null, null, null);
+      radioNameTextView.setText(text);
+      setPreferredButton();
+    }
+
+    private void setPreferredButton() {
+      preferredImageButton.setImageResource(radio.isPreferred() ?
+        R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+      preferredImageButton.setVisibility(getButtonVisibility());
+    }
+
+    private int getButtonVisibility() {
+      return (radio == Radio.DUMMY_RADIO) ? View.INVISIBLE : View.VISIBLE;
     }
   }
 }

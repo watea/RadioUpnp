@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -35,5 +34,4 @@
     <string name="key_dark_mode">key_dark_mode</string>
     <!-- Bundles -->
     <string name="key_dlna_device">key_dlna_device</string>
-    <string name="key_preferred">key_preferred</string>
 </resources>

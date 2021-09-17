@@ -23,6 +23,9 @@
 
 package com.watea.radio_upnp.model;
 
+import static com.watea.radio_upnp.model.RadioSQLContract.SQL_CREATE_ENTRIES;
+import static com.watea.radio_upnp.model.RadioSQLContract.SQL_DELETE_ENTRIES;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -43,12 +46,10 @@ import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Vector;
 
-import static com.watea.radio_upnp.model.RadioSQLContract.SQL_CREATE_ENTRIES;
-import static com.watea.radio_upnp.model.RadioSQLContract.SQL_DELETE_ENTRIES;
-
 public class RadioLibrary {
   private static final String LOG_TAG = RadioLibrary.class.getName();
   private static final int ICON_SIZE = 300;
+  private final List<Listener> listeners = new Vector<>();
   @NonNull
   private final SQLiteDatabase radioDataBase;
   @NonNull
@@ -226,6 +227,36 @@ public class RadioLibrary {
       null;
   }
 
+  public boolean setPreferred(@NonNull Long radioId, @NonNull Boolean isPreferred) {
+    ContentValues values = new ContentValues();
+    values.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
+    boolean result = (updateFrom(radioId, values) > 0);
+    if (result) {
+      for (Listener listener : listeners) {
+        listener.onPreferredChange(radioId, isPreferred);
+      }
+    }
+    return result;
+  }
+
+  public boolean move(@NonNull Long fromRadioId, @NonNull Long toRadioId) {
+    ContentValues fromPosition = positionContentValuesOf(fromRadioId);
+    ContentValues toPosition = positionContentValuesOf(toRadioId);
+    return (updateFrom(fromRadioId, toPosition) > 0) && (updateFrom(toRadioId, fromPosition) > 0);
+  }
+
+  public void addListener(@NonNull Listener listener) {
+    listeners.add(listener);
+  }
+
+  // Utility for database update of radio position
+  @NonNull
+  private ContentValues positionContentValuesOf(@NonNull Long radioId) {
+    ContentValues contentValues = new ContentValues();
+    contentValues.put(RadioSQLContract.Columns.COLUMN_POSITION, getPositionFrom(radioId));
+    return contentValues;
+  }
+
   @NonNull
   private List<Long> cursorToIdListAndClose(@NonNull Cursor cursor) {
     int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);
@@ -302,6 +333,10 @@ public class RadioLibrary {
     // Position = last
     contentValues.put(RadioSQLContract.Columns.COLUMN_POSITION, getMaxPosition() + 1);
     return radioDataBase.insert(RadioSQLContract.Columns.TABLE_RADIO, null, contentValues);
+  }
+
+  public interface Listener {
+    void onPreferredChange(@NonNull Long radioId, @NonNull Boolean isPreferred);
   }
 
   private static class RadioDbSQLHelper extends SQLiteOpenHelper {

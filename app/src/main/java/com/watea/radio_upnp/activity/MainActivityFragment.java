@@ -23,25 +23,40 @@
 
 package com.watea.radio_upnp.activity;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.color.MaterialColors;
+import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
 import java.util.Objects;
 
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
-  protected static final int RADIO_ICON_SIZE = 300;
   protected static final int DEFAULT_RESOURCE = -1;
+  protected static int ERROR_COLOR;
+  protected static int SELECTED_COLOR;
+  protected static Drawable CAST_ICON = null;
+  protected static Bitmap DEFAULT_ICON = null;
   protected RadioLibrary radioLibrary = null;
-  protected Provider provider = null;
+  private MainActivity mainActivity;
+  private View view;
+  private boolean isCreationDone = false;
 
   // Required empty constructor
   public MainActivityFragment() {
@@ -51,28 +66,56 @@ public abstract class MainActivityFragment extends Fragment {
   public void onCreateOptionsMenu(@NonNull Menu menu) {
   }
 
+  @Nullable
+  @Override
+  public View onCreateView(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    super.onCreateView(inflater, container, savedInstanceState);
+    if (!isCreationDone) {
+      view = onCreateViewFiltered(inflater, container);
+    }
+    return view;
+  }
+
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
-    provider = (Provider) getActivity();
-    radioLibrary = Objects.requireNonNull(provider).getRadioLibrary();
+    if (!isCreationDone) {
+      mainActivity = (MainActivity) getActivity();
+      radioLibrary = Objects.requireNonNull(mainActivity).getRadioLibrary();
+      // Fetch needed static values
+      Context context = getContext();
+      ERROR_COLOR = ContextCompat.getColor(Objects.requireNonNull(context), R.color.darkRed);
+      SELECTED_COLOR = MaterialColors.getColor(
+        context,
+        R.attr.colorPrimary,
+        ContextCompat.getColor(context, R.color.lightBlue));
+      // Static definition of cast icon color (may change with theme)
+      CAST_ICON = AppCompatResources.getDrawable(getActivity(), R.drawable.ic_cast_white_24dp);
+      Objects.requireNonNull(CAST_ICON).setTint(SELECTED_COLOR);
+      createDefaultIcon();
+      // Done
+      onActivityCreatedFiltered(savedInstanceState);
+      isCreationDone = true;
+    }
   }
 
   @Override
   public void onResume() {
     super.onResume();
     // Decorate
-    provider.onFragmentResume(this);
+    mainActivity.onFragmentResume(this);
   }
 
   @NonNull
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return view -> {};
+    return v -> {
+    };
   }
 
   @NonNull
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return view -> false;
+    return v -> false;
   }
 
   public int getFloatingActionButtonResource() {
@@ -85,25 +128,56 @@ public abstract class MainActivityFragment extends Fragment {
 
   public abstract int getTitle();
 
+  protected abstract void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState);
+
+  @Nullable
+  protected abstract View onCreateViewFiltered(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container);
+
   protected boolean isActuallyAdded() {
     return ((getActivity() != null) && isAdded());
   }
 
   protected void tell(int message) {
-    Snackbar.make(Objects.requireNonNull(getView()), message, Snackbar.LENGTH_LONG).show();
+    mainActivity.tell(message);
   }
 
   protected void tell(@NonNull String message) {
-    Snackbar.make(Objects.requireNonNull(getView()), message, Snackbar.LENGTH_LONG).show();
+    mainActivity.tell(message);
   }
 
-  public interface Provider {
-    @NonNull
-    RadioLibrary getRadioLibrary();
+  protected boolean upnpSearch() {
+    return mainActivity.upnpSearch();
+  }
 
-    void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment);
+  protected boolean upnpReset() {
+    return mainActivity.upnpReset();
+  }
 
-    @NonNull
-    Fragment setFragment(@NonNull Class<? extends Fragment> fragment);
+  // radio is null for current
+  protected void startReading(@Nullable Radio radio) {
+    mainActivity.startReading(radio);
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  @NonNull
+  protected Fragment setFragment(@NonNull Class<? extends Fragment> fragment) {
+    return mainActivity.setFragment(fragment);
+  }
+
+  private void createDefaultIcon() {
+    Drawable drawable = ContextCompat.getDrawable(mainActivity, R.drawable.ic_radio_white_24dp);
+    // Deep copy
+    assert drawable != null;
+    Drawable.ConstantState constantState = drawable.mutate().getConstantState();
+    assert constantState != null;
+    drawable = constantState.newDrawable();
+    drawable.setTint(getResources().getColor(R.color.darkGrey, mainActivity.getTheme()));
+    Canvas canvas = new Canvas();
+    DEFAULT_ICON = Bitmap.createBitmap(
+      drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+    canvas.setBitmap(DEFAULT_ICON);
+    drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+    drawable.draw(canvas);
   }
 }

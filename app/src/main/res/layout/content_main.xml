@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,107 +21,17 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
 
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <include layout="@layout/view_radios_default" />
-
-    <LinearLayout
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/radios_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
-        <include layout="@layout/view_spacer" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/radios_recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/played_radio_data_linear_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/transMidGrey"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent">
-
-        <ImageView
-            android:id="@+id/album_art_image_view"
-            android:layout_width="@dimen/tile_size"
-            android:layout_height="@dimen/tile_size"
-            android:scaleType="fitXY"
-            tools:ignore="ContentDescription" />
-
-        <FrameLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center">
-
-            <ImageButton
-                android:id="@+id/play_image_button"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/tile_size"
-                android:layout_gravity="center"
-                android:clickable="false"
-                android:scaleType="fitXY"
-                android:src="@drawable/ic_play_arrow_black_24dp"
-                tools:ignore="ContentDescription" />
-
-            <ProgressBar
-                android:id="@+id/progress_bar"
-                android:layout_width="@dimen/tile_size"
-                android:layout_height="match_parent"
-                android:layout_gravity="center" />
-
-        </FrameLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_gravity="start"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/played_radio_name_text_view"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="start"
-                android:ellipsize="marquee"
-                android:singleLine="true"
-                android:textColor="@color/dark"
-                android:textAllCaps="true"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/played_radio_information_text_view"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="start"
-                android:ellipsize="marquee"
-                android:marqueeRepeatLimit="marquee_forever"
-                android:singleLine="true"
-                android:textColor="@color/dark" />
-
-            <TextView
-                android:id="@+id/played_radio_rate_text_view"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="start" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

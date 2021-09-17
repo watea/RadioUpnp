@@ -23,37 +23,25 @@
 
 package com.watea.radio_upnp.activity;
 
+import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
+import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.AV_TRANSPORT_SERVICE_ID;
+
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import android.content.ComponentName;
-import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
-import android.os.SystemClock;
-import android.support.v4.media.MediaBrowserCompat;
-import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.session.MediaControllerCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -66,13 +54,8 @@ import com.watea.radio_upnp.adapter.DlnaDevicesAdapter;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioSQLContract;
 import com.watea.radio_upnp.service.NetworkTester;
-import com.watea.radio_upnp.service.RadioService;
 
-import org.fourthline.cling.android.AndroidUpnpService;
-import org.fourthline.cling.android.AndroidUpnpServiceImpl;
-import org.fourthline.cling.model.message.header.DeviceTypeHeader;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.model.meta.Service;
@@ -80,164 +63,25 @@ import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.registry.RegistryListener;
 
-import java.util.List;
 import java.util.Objects;
 
-import static android.content.Context.BIND_AUTO_CREATE;
-import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.AV_TRANSPORT_SERVICE_ID;
-import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.RENDERER_DEVICE_TYPE;
-
-public class MainFragment
-  extends MainActivityFragment
-  implements
-  RadiosAdapter.Listener,
-  View.OnClickListener,
-  View.OnLongClickListener {
+public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
   private static final String LOG_TAG = MainFragment.class.getName();
   private final Handler handler = new Handler(Looper.getMainLooper());
   // <HMI assets
-  private LinearLayout playedRadioDataLinearLayout;
-  private ImageButton playImageButton;
-  private ProgressBar progressBar;
-  private ImageView albumArtImageView;
-  private TextView playedRadioNameTextView;
-  private TextView playedRadioInformationTextView;
-  private TextView playedRadioRateTextView;
-  private View radiosDefaultView;
   private View dlnaView;
   private RecyclerView dlnaRecyclerView;
   private RecyclerView radiosView;
-  private MenuItem preferredMenuItem;
   private MenuItem dlnaMenuItem;
+  private MenuItem preferredMenuItem;
   private AlertDialog dlnaAlertDialog;
   private AlertDialog radioLongPressAlertDialog;
-  private AlertDialog playLongPressAlertDialog;
   private AlertDialog dlnaEnableAlertDialog;
   // />
   private boolean isPreferredRadios = false;
   private boolean gotItRadioLongPress;
-  private boolean gotItPlayLongPress;
   private boolean gotItDlnaEnable;
-  private MediaControllerCompat mediaController = null;
-  // Callback from media control
-  private final MediaControllerCompat.Callback mediaControllerCallback =
-    new MediaControllerCompat.Callback() {
-      // This might happen if the RadioService is killed while the Activity is in the
-      // foreground and onStart() has been called (but not onStop())
-      @Override
-      public void onSessionDestroyed() {
-        onPlaybackStateChanged(new PlaybackStateCompat
-          .Builder()
-          .setState(PlaybackStateCompat.STATE_ERROR, 0, 1.0f, SystemClock.elapsedRealtime())
-          .build());
-        Log.d(LOG_TAG, "onSessionDestroyed: RadioService is dead!!!");
-      }
-
-      @SuppressLint("SwitchIntDef")
-      @Override
-      public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
-        // Do nothing if view not defined
-        if (isActuallyAdded()) {
-          int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
-          boolean isDlna = (mediaController != null) &&
-            (mediaController.getExtras() != null) &&
-            mediaController.getExtras().containsKey(getString(R.string.key_dlna_device));
-          Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
-          // Default
-          playImageButton.setImageResource(R.drawable.ic_play_arrow_black_24dp);
-          playImageButton.setTag(PlaybackStateCompat.STATE_PLAYING);
-          // Play button stores state to reach
-          switch (intState) {
-            case PlaybackStateCompat.STATE_PLAYING:
-              setFrameVisibility(true, true);
-              // DLNA device doesn't support PAUSE but STOP
-              playImageButton.setImageResource(
-                isDlna ? R.drawable.ic_stop_black_24dp : R.drawable.ic_pause_black_24dp);
-              playImageButton.setTag(
-                isDlna ? PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
-              break;
-            case PlaybackStateCompat.STATE_PAUSED:
-              setFrameVisibility(true, true);
-              break;
-            case PlaybackStateCompat.STATE_BUFFERING:
-            case PlaybackStateCompat.STATE_CONNECTING:
-              setFrameVisibility(true, false);
-              break;
-            case PlaybackStateCompat.STATE_NONE:
-            case PlaybackStateCompat.STATE_STOPPED:
-              setFrameVisibility(false, false);
-              break;
-            default:
-              setFrameVisibility(!isDlna, true);
-              tell(R.string.radio_connection_error);
-          }
-        }
-      }
-
-      @Override
-      public void onMetadataChanged(final MediaMetadataCompat mediaMetadata) {
-        // Do nothing if view not defined or nothing to change
-        if (isActuallyAdded() && (mediaMetadata != null)) {
-          playedRadioNameTextView.setText(
-            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
-          playedRadioInformationTextView.setText(
-            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST));
-          // Use WRITER for rate
-          String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
-          playedRadioRateTextView.setText((rate == null) ? "" : rate + getString(R.string.kbs));
-          albumArtImageView.setImageBitmap(
-            Bitmap.createScaledBitmap(
-              mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
-              RADIO_ICON_SIZE,
-              RADIO_ICON_SIZE,
-              false));
-        }
-      }
-
-      private void setFrameVisibility(boolean isVisible, boolean isPlayVisible) {
-        playedRadioDataLinearLayout.setVisibility(getVisibility(isVisible));
-        playImageButton.setVisibility(getVisibility(isVisible && isPlayVisible));
-        progressBar.setVisibility(getVisibility(isVisible && !isPlayVisible));
-      }
-
-      private int getVisibility(boolean isVisible) {
-        return isVisible ? View.VISIBLE : View.INVISIBLE;
-      }
-    };
   private RadiosAdapter radiosAdapter;
-  private AndroidUpnpService androidUpnpService = null;
-  private MediaBrowserCompat mediaBrowser = null;
-  // Forced context has getActivity(), used when getActivity() may be null
-  private Context context = null;
-  // MediaController from the MediaBrowser when it has successfully connected
-  private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback =
-    new MediaBrowserCompat.ConnectionCallback() {
-      @Override
-      public void onConnected() {
-        // Do nothing if we were disposed
-        if (mediaBrowser == null) {
-          return;
-        }
-        // Get a MediaController for the MediaSession
-        mediaController = new MediaControllerCompat(context, mediaBrowser.getSessionToken());
-        // Link to the callback controller
-        mediaController.registerCallback(mediaControllerCallback);
-        // Sync existing MediaSession state with UI
-        browserViewSync();
-        // Nota: no mediaBrowser.subscribe here needed
-      }
-
-      @Override
-      public void onConnectionSuspended() {
-        releaseBrowserResources();
-        mediaBrowser = null;
-      }
-
-      @Override
-      public void onConnectionFailed() {
-        Log.d(LOG_TAG, "Connection to RadioService failed");
-      }
-    };
   // DLNA devices management
   private DlnaDevicesAdapter dlnaDevicesAdapter = null;
   // UPnP service listener
@@ -273,169 +117,56 @@ public class MainFragment
       });
     }
   };
-  private final ServiceConnection upnpConnection = new ServiceConnection() {
-    @Override
-    public void onServiceConnected(ComponentName className, IBinder service) {
-      androidUpnpService = (AndroidUpnpService) service;
-      Registry registry = androidUpnpService.getRegistry();
-      // May be null if onCreateView() not yet called
-      if (dlnaDevicesAdapter == null) {
-        registry.removeAllRemoteDevices();
-      } else {
-        dlnaDevicesAdapter.clear();
-        // Add all devices to the list we already know about
-        for (Device<?, ?, ?> device : registry.getDevices()) {
-          if (device instanceof RemoteDevice) {
-            browseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
-          }
-        }
-      }
-      // Get ready for future device advertisements
-      registry.addListener(browseRegistryListener);
-      upnpSearch();
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName className) {
-      releaseUpnpResources();
-    }
-  };
 
   private static int getRadiosColumnCount(@NonNull Configuration newConfig) {
     return (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : 3;
   }
 
   @Override
+  public void onClick(@NonNull Radio radio) {
+    if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
+      tell(R.string.no_internet);
+    } else {
+      startReading(radio);
+      if (!gotItRadioLongPress) {
+        radioLongPressAlertDialog.show();
+      }
+    }
+  }
+
+  @Nullable
+  @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
     return radioLibrary.getFrom(radioId);
   }
 
   @Override
-  public void onRowClick(@NonNull Radio radio) {
-    if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
-      tell(R.string.no_internet);
-      return;
-    }
-    startReading(radio);
-    if (!gotItRadioLongPress) {
-      radioLongPressAlertDialog.show();
-    }
-  }
-
-  @Override
-  public boolean onPreferredClick(@NonNull Long radioId, Boolean isPreferred) {
-    ContentValues values = new ContentValues();
-    values.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
-    if (radioLibrary.updateFrom(radioId, values) > 0) {
-      return true;
-    } else {
-      Log.w(LOG_TAG, "Internal failure, radio database update failed");
-      return false;
-    }
-  }
-
-  @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
-    preferredMenuItem = menu.findItem(R.id.action_preferred);
     dlnaMenuItem = menu.findItem(R.id.action_dlna);
-    setPreferredMenuItem();
+    preferredMenuItem = menu.findItem(R.id.action_preferred);
     setDlnaMenuItem();
-  }
-
-  @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
-    // Restore saved state, if any
-    String chosenDlnaDeviceIdentity = null;
-    if (savedInstanceState != null) {
-      isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
-      chosenDlnaDeviceIdentity =
-        savedInstanceState.getString(getString(R.string.key_selected_device));
-    }
-    // Shared preferences
-    SharedPreferences sharedPreferences =
-      Objects.requireNonNull(getActivity()).getPreferences(Context.MODE_PRIVATE);
-    gotItRadioLongPress =
-      sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
-    gotItPlayLongPress =
-      sharedPreferences.getBoolean(getString(R.string.key_play_long_press_got_it), false);
-    gotItDlnaEnable =
-      sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
-    // Adapters
-    // Don't re-create if re-enter in fragment
-    if (dlnaDevicesAdapter == null) {
-      dlnaDevicesAdapter = new DlnaDevicesAdapter(
-        chosenDlnaDeviceIdentity,
-        new DlnaDevicesAdapter.Listener() {
-          @Override
-          public void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen) {
-            if (isChosen) {
-              Radio radio = getCurrentRadio();
-              if (radio != null) {
-                startReading(radio);
-              }
-              tell(getResources().getString(R.string.dlna_selection) + dlnaDevice);
-            } else {
-              tell(R.string.no_dlna_selection);
-            }
-            dlnaAlertDialog.dismiss();
-          }
-
-          @Override
-          public void onChosenDeviceChange() {
-            // Do nothing if not yet created or if we were disposed
-            if ((dlnaMenuItem != null) && (getActivity() != null)) {
-              setDlnaMenuItem();
-            }
-          }
-        });
-    }
-    radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
-    radiosView.setLayoutManager(new GridLayoutManager(
-      getActivity(), getRadiosColumnCount(getActivity().getResources().getConfiguration())));
-    radiosView.setAdapter(radiosAdapter);
-    // Build alert dialogs
-    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setMessage(R.string.radio_long_press)
-      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItRadioLongPress = true);
-    radioLongPressAlertDialog = alertDialogBuilder.create();
-    alertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setMessage(R.string.play_long_press)
-      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItPlayLongPress = true);
-    playLongPressAlertDialog = alertDialogBuilder.create();
-    alertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setMessage(R.string.dlna_enable)
-      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true);
-    dlnaEnableAlertDialog = alertDialogBuilder.create();
-    // Specific DLNA devices dialog
-    dlnaAlertDialog = new AlertDialog.Builder(getActivity()).setView(dlnaView).create();
-    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-    dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
+    setPreferredMenuItem();
   }
 
   @Override
   public void onResume() {
     super.onResume();
-    browserViewSync();
     setRadiosView();
   }
 
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return view -> {
-      if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+    return v -> {
+      if (NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+        if (upnpSearch()) {
+          dlnaAlertDialog.show();
+          if (!gotItDlnaEnable) {
+            dlnaEnableAlertDialog.show();
+          }
+        }
+      } else {
         tell(R.string.LAN_required);
-        return;
-      }
-      if (androidUpnpService == null) {
-        tell(R.string.device_no_device_yet);
-        return;
-      }
-      upnpSearch();
-      dlnaAlertDialog.show();
-      if (!gotItDlnaEnable) {
-        dlnaEnableAlertDialog.show();
       }
     };
   }
@@ -443,25 +174,22 @@ public class MainFragment
   @NonNull
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return view -> {
-      if (!NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+    return v -> {
+      if (NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+        if (upnpReset()) {
+          dlnaDevicesAdapter.clear();
+          tell(R.string.dlna_search_reset);
+        }
+      } else {
         tell(R.string.LAN_required);
-        return true;
       }
-      if (androidUpnpService == null) {
-        tell(R.string.device_no_device_yet);
-        return true;
-      }
-      dlnaDevicesAdapter.clear();
-      androidUpnpService.getRegistry().removeAllRemoteDevices();
-      tell(R.string.dlna_search_reset);
       return true;
     };
   }
 
   @Override
   public int getFloatingActionButtonResource() {
-    return R.drawable.ic_cast_black_24dp;
+    return R.drawable.ic_cast_white_24dp;
   }
 
   @Override
@@ -474,26 +202,73 @@ public class MainFragment
     return R.string.title_main;
   }
 
+  @Override
+  protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
+    // Restore saved state, if any
+    String chosenDlnaDeviceIdentity = null;
+    if (savedInstanceState != null) {
+      isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
+      chosenDlnaDeviceIdentity =
+        savedInstanceState.getString(getString(R.string.key_selected_device));
+    }
+    // Shared preferences
+    SharedPreferences sharedPreferences =
+      Objects.requireNonNull(getActivity()).getPreferences(Context.MODE_PRIVATE);
+    gotItRadioLongPress =
+      sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
+    gotItDlnaEnable =
+      sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
+    // Adapters
+    dlnaDevicesAdapter = new DlnaDevicesAdapter(
+      chosenDlnaDeviceIdentity,
+      new DlnaDevicesAdapter.Listener() {
+        @Override
+        public void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen) {
+          if (isChosen) {
+            startReading(null);
+            tell(getResources().getString(R.string.dlna_selection) + dlnaDevice);
+          } else {
+            tell(R.string.no_dlna_selection);
+          }
+          dlnaAlertDialog.dismiss();
+        }
+
+        @Override
+        public void onChosenDeviceChange() {
+          // Do nothing if not yet created or if we were disposed
+          if ((dlnaMenuItem != null) && (getActivity() != null)) {
+            setDlnaMenuItem();
+          }
+        }
+      },
+      SELECTED_COLOR,
+      CAST_ICON);
+    radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
+    radiosView.setLayoutManager(new GridLayoutManager(
+      getActivity(), getRadiosColumnCount(getActivity().getResources().getConfiguration())));
+    radiosView.setAdapter(radiosAdapter);
+    // Build alert dialogs
+    radioLongPressAlertDialog = new AlertDialog.Builder(getActivity())
+      .setMessage(R.string.radio_long_press)
+      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItRadioLongPress = true)
+      .create();
+    dlnaEnableAlertDialog = new AlertDialog.Builder(getActivity())
+      .setMessage(R.string.dlna_enable)
+      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
+      .create();
+    // Specific DLNA devices dialog
+    dlnaAlertDialog = new AlertDialog.Builder(getActivity()).setView(dlnaView).create();
+    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+    dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
+  }
+
   @Nullable
   @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
+  protected View onCreateViewFiltered(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
     // Inflate the view so that graphical objects exists
-    View view = inflater.inflate(R.layout.content_main, container, false);
-    playedRadioDataLinearLayout = view.findViewById(R.id.played_radio_data_linear_layout);
-    albumArtImageView = view.findViewById(R.id.album_art_image_view);
-    playedRadioNameTextView = view.findViewById(R.id.played_radio_name_text_view);
-    playedRadioNameTextView.setSelected(true); // For scrolling
-    playedRadioInformationTextView = view.findViewById(R.id.played_radio_information_text_view);
-    playedRadioInformationTextView.setSelected(true); // For scrolling
-    playedRadioRateTextView = view.findViewById(R.id.played_radio_rate_text_view);
-    progressBar = view.findViewById(R.id.progress_bar);
-    playImageButton = view.findViewById(R.id.play_image_button);
-    playImageButton.setOnClickListener(this);
-    playImageButton.setOnLongClickListener(this);
+    final View view = inflater.inflate(R.layout.content_main, container, false);
     radiosView = view.findViewById(R.id.radios_recycler_view);
-    radiosDefaultView = view.findViewById(R.id.view_radios_default);
     dlnaView = inflater.inflate(R.layout.view_dlna_devices, container, false);
     dlnaRecyclerView = dlnaView.findViewById(R.id.dlna_devices_recycler_view);
     return view;
@@ -529,7 +304,6 @@ public class MainFragment
       .getPreferences(Context.MODE_PRIVATE)
       .edit()
       .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
-      .putBoolean(getString(R.string.key_play_long_press_got_it), gotItRadioLongPress)
       .putBoolean(getString(R.string.key_dlna_enable_got_it), gotItDlnaEnable)
       .apply();
   }
@@ -554,139 +328,36 @@ public class MainFragment
     }
   }
 
-  @Override
-  public void onClick(View view) {
-    // Should not happen
-    if (mediaController == null) {
-      tell(R.string.radio_connection_waiting);
+  public void onUpnpServiceConnected(@NonNull Registry registry) {
+    // May be null if onCreateView() not yet called
+    if (dlnaDevicesAdapter == null) {
+      registry.removeAllRemoteDevices();
     } else {
-      // Do nothing if radio were deleted in another fragment
-      if (getCurrentRadio() == null) {
-        tell(R.string.radio_deleted);
-        return;
-      }
-      // Tag on button has stored state to reach
-      switch ((int) playImageButton.getTag()) {
-        case PlaybackStateCompat.STATE_PLAYING:
-          mediaController.getTransportControls().play();
-          break;
-        case PlaybackStateCompat.STATE_PAUSED:
-          mediaController.getTransportControls().pause();
-          if (!gotItPlayLongPress) {
-            playLongPressAlertDialog.show();
-          }
-          break;
-        case PlaybackStateCompat.STATE_STOPPED:
-          mediaController.getTransportControls().stop();
-          break;
-        default:
-          // Should not happen
-          Log.d(LOG_TAG, "Internal failure, no action to perform on play button");
+      dlnaDevicesAdapter.clear();
+      // Add all devices to the list we already know about
+      for (Device<?, ?, ?> device : registry.getDevices()) {
+        if (device instanceof RemoteDevice) {
+          browseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
+        }
       }
     }
+    // Get ready for future device advertisements
+    registry.addListener(browseRegistryListener);
   }
 
-  @Override
-  public boolean onLongClick(View view) {
-    // Should not happen
-    if (mediaController == null) {
-      tell(R.string.radio_connection_waiting);
-    } else {
-      mediaController.getTransportControls().stop();
-    }
-    return true;
+  public void onUpnpServiceDisConnected(@NonNull Registry registry) {
+    registry.removeListener(browseRegistryListener);
   }
 
-  // Must be called on activity resume
-  // Handle services
-  public void onActivityResume(@NonNull Context context) {
-    // Force context setting to ensure it is known by MainFragment (getActivity() may be null)
-    this.context = context;
-    // Start the UPnP service
-    if (!this.context.bindService(
-      new Intent(this.context, AndroidUpnpServiceImpl.class),
-      upnpConnection,
-      BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "onActivityResume: internal failure; AndroidUpnpService not bound");
-    }
-    // MediaBrowser creation, launch RadioService
-    if (mediaBrowser == null) {
-      mediaBrowser = new MediaBrowserCompat(
-        this.context,
-        new ComponentName(this.context, RadioService.class),
-        mediaBrowserConnectionCallback,
-        null);
-      mediaBrowser.connect();
-    }
-  }
-
-  // Must be called on activity pause
-  // Handle services
-  public void onActivityPause() {
-    releaseBrowserResources();
-    if (mediaBrowser != null) {
-      mediaBrowser.disconnect();
-      mediaBrowser = null;
-    }
-    releaseUpnpResources();
-    context.unbindService(upnpConnection);
-  }
-
-  private void browserViewSync() {
-    if (mediaController != null) {
-      mediaControllerCallback.onMetadataChanged(mediaController.getMetadata());
-      mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
-    }
-  }
-
-  private void releaseUpnpResources() {
-    if (androidUpnpService != null) {
-      androidUpnpService.getRegistry().removeListener(browseRegistryListener);
-      androidUpnpService = null;
-    }
-  }
-
-  private void releaseBrowserResources() {
-    if (mediaController != null) {
-      mediaController.unregisterCallback(mediaControllerCallback);
-      mediaController = null;
-    }
-  }
-
-  // MediaController controls played radio
   @Nullable
-  private Radio getCurrentRadio() {
-    return (mediaController == null) ? null : radioLibrary.getFrom(mediaController.getMetadata());
+  public DlnaDevice getChosenDlnaDevice() {
+    return dlnaDevicesAdapter.getChosenDlnaDevice();
   }
 
   // Utility to set radio list views
   private void setRadiosView() {
-    List<Long> chosenRadioIds =
-      isPreferredRadios ? radioLibrary.getPreferredRadioIds() : radioLibrary.getAllRadioIds();
-    radiosAdapter.setRadioIds(chosenRadioIds);
-    // Default view if no radio
-    radiosDefaultView.setVisibility((chosenRadioIds.size() == 0) ? View.VISIBLE : View.INVISIBLE);
-  }
-
-  private void setPreferredMenuItem() {
-    preferredMenuItem.setIcon(
-      isPreferredRadios ? R.drawable.ic_star_blue_30dp : R.drawable.ic_star_border_blue_30dp);
-  }
-
-  private void startReading(@NonNull Radio radio) {
-    if (mediaController == null) {
-      tell(R.string.radio_connection_waiting);
-      return;
-    }
-    Bundle bundle = new Bundle();
-    bundle.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
-    DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
-    if ((androidUpnpService != null) &&
-      NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity())) &&
-      (chosenDlnaDevice != null)) {
-      bundle.putString(getString(R.string.key_dlna_device), chosenDlnaDevice.getIdentity());
-    }
-    mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
+    radiosAdapter.onRefresh(isPreferredRadios ?
+      radioLibrary.getPreferredRadioIds() : radioLibrary.getAllRadioIds());
   }
 
   private void setDlnaMenuItem() {
@@ -697,8 +368,8 @@ public class MainFragment
     }
   }
 
-  // Search for Render devices, 10s timeout
-  private void upnpSearch() {
-    androidUpnpService.getControlPoint().search(new DeviceTypeHeader(RENDERER_DEVICE_TYPE), 10);
+  private void setPreferredMenuItem() {
+    preferredMenuItem.setIcon(isPreferredRadios ?
+      R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
   }
 }

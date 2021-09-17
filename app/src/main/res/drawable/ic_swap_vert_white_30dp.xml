@@ -21,16 +21,12 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
-
-    <item
-        android:id="@+id/action_dlna"
-        android:title="@string/title_dlna"
-        app:showAsAction="ifRoom" />
-    <item
-        android:id="@+id/action_preferred"
-        android:icon="@drawable/ic_star_white_30dp"
-        android:title="@string/title_preferred"
-        app:showAsAction="ifRoom" />
-</menu>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="30.0"
+    android:viewportHeight="30.0">
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M16,17.01V10h-2v7.01h-3L15,21l4,-3.99h-3zM9,3L5,6.99h3V14h2V6.99h3L9,3z" />
+</vector>

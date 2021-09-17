@@ -23,6 +23,8 @@
 
 package com.watea.radio_upnp.service;
 
+import static android.content.Context.WIFI_SERVICE;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -41,8 +43,6 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
-
-import static android.content.Context.WIFI_SERVICE;
 
 @SuppressWarnings("WeakerAccess")
 public class NetworkTester {

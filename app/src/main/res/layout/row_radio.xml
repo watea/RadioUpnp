@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,32 +21,15 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
 
-    android:id="@+id/row_radio_linearLayout"
+    android:id="@+id/row_radio_name_text_view"
+    style="@style/Widget.AppCompat.Button.Borderless"
     android:layout_width="@dimen/tile_size"
-    android:layout_height="wrap_content"
+    android:layout_height="@dimen/tile_size"
     android:layout_margin="@dimen/app_horizontal_margin"
-    android:orientation="vertical">
-
-    <TextView
-        android:id="@+id/row_radio_name_text_view"
-        style="@style/Widget.AppCompat.Button.Borderless"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textStyle="bold"
-        android:textAllCaps="true"
-        android:ellipsize="marquee"
-        android:singleLine="true"
-        android:marqueeRepeatLimit="marquee_forever" />
-
-    <ImageButton
-        android:id="@+id/row_radio_preferred_image_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:contentDescription="@string/title_preferred"
-        android:src="@drawable/ic_star_border_blue_30dp" />
-
-</LinearLayout>
+    android:ellipsize="marquee"
+    android:marqueeRepeatLimit="marquee_forever"
+    android:singleLine="true"
+    android:textAllCaps="true"
+    android:textStyle="bold" />

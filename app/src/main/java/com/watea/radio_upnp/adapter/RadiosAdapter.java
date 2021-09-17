@@ -23,20 +23,21 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -53,19 +54,24 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
   private final int iconSize;
   @NonNull
   private final Listener listener;
-  // Dummy default
   @NonNull
-  private List<Long> radioIds = new Vector<>();
+  private final Drawable noRadioDrawable;
+  @NonNull
+  private final List<Long> radioIds = new Vector<>();
 
   public RadiosAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {
     this.context = context;
     this.listener = listener;
     this.iconSize = iconSize;
+    noRadioDrawable =
+      Objects.requireNonNull(ContextCompat.getDrawable(context, R.drawable.ic_error_grey_24dp));
   }
 
   // Content setter, must be called
-  public void setRadioIds(@NonNull List<Long> radioIds) {
-    this.radioIds = radioIds;
+  @SuppressLint("NotifyDataSetChanged")
+  public void onRefresh(@NonNull List<Long> radioIds) {
+    this.radioIds.clear();
+    this.radioIds.addAll(radioIds);
     notifyDataSetChanged();
   }
 
@@ -79,42 +85,35 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    viewHolder.setView(Objects.requireNonNull(listener.getRadioFromId(radioIds.get(i))));
+    viewHolder.setView(radioIds.isEmpty() ?
+      Radio.DUMMY_RADIO : Objects.requireNonNull(listener.getRadioFromId(radioIds.get(i))));
   }
 
   @Override
   public int getItemCount() {
-    return radioIds.size();
+    return radioIds.isEmpty() ? 1 : radioIds.size();
   }
 
   public interface Listener {
+    void onClick(@NonNull Radio radio);
+
     @Nullable
     Radio getRadioFromId(@NonNull Long radioId);
-
-    void onRowClick(@NonNull Radio radio);
-
-    boolean onPreferredClick(@NonNull Long radioId, Boolean isPreferred);
   }
 
   protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
-    private final LinearLayout linearLayout;
-    @NonNull
-    private final TextView radioNameTextView;
-    @NonNull
-    private final ImageButton preferredImageButton;
+    private final TextView radioTextView;
     @NonNull
     private Radio radio = Radio.DUMMY_RADIO;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
-      linearLayout = (LinearLayout) itemView;
-      radioNameTextView = itemView.findViewById(R.id.row_radio_name_text_view);
-      preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
+      radioTextView = (TextView) itemView;
       // Listener on radio
-      radioNameTextView.setOnClickListener(v -> listener.onRowClick(radio));
+      radioTextView.setOnClickListener(v -> listener.onClick(radio));
       // Listener on web link
-      radioNameTextView.setOnLongClickListener(v -> {
+      radioTextView.setOnLongClickListener(v -> {
         Uri webPageUri = radio.getWebPageUri();
         if (webPageUri == null) {
           Snackbar.make(v, R.string.no_web_page, Snackbar.LENGTH_LONG).show();
@@ -122,14 +121,6 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
           context.startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
         }
         return true;
-      });
-      // Listener on preferred device icon
-      preferredImageButton.setOnClickListener(view -> {
-        if (listener.onPreferredClick(radio.getId(), !radio.isPreferred())) {
-          // Database updated, update view
-          radio.togglePreferred();
-          setPreferredButton();
-        }
       });
     }
 
@@ -139,21 +130,33 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
     private void setView(@NonNull Radio radio) {
       this.radio = radio;
-      linearLayout.setBackgroundColor(getDominantColor(this.radio.getIcon()));
-      radioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        null,
-        new BitmapDrawable(
-          context.getResources(),
-          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
-        null,
-        null);
-      radioNameTextView.setText(this.radio.getName());
-      setPreferredButton();
+      if (isDummy()) {
+        decorate(
+          context.getResources().getColor(R.color.transparent, context.getTheme()),
+          noRadioDrawable,
+          context.getString(R.string.radio_no_radio));
+      } else {
+        decorate(
+          getDominantColor(this.radio.getIcon()),
+          new BitmapDrawable(
+            context.getResources(),
+            Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
+          this.radio.getName());
+      }
     }
 
-    private void setPreferredButton() {
-      preferredImageButton.setImageResource(radio.isPreferred() ?
-        R.drawable.ic_star_blue_30dp : R.drawable.ic_star_border_blue_30dp);
+    private void decorate(
+      int backgroundColor,
+      @NonNull Drawable drawable,
+      @NonNull String text) {
+      radioTextView.setBackgroundColor(backgroundColor);
+      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(null, drawable, null, null);
+      radioTextView.setText(text);
+      radioTextView.setEnabled(!isDummy());
+    }
+
+    private boolean isDummy() {
+      return (radio == Radio.DUMMY_RADIO);
     }
   }
 }

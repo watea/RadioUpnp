@@ -21,13 +21,12 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<menu
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
         android:id="@+id/action_done"
+        android:icon="@drawable/ic_done_white_30dp"
         android:title="@string/action_done"
-        android:icon="@drawable/ic_done_blue_30dp"
         app:showAsAction="ifRoom" />
 </menu>

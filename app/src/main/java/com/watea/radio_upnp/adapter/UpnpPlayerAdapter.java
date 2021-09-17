@@ -78,7 +78,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private final Device<?, ?, ?> device;
   @NonNull
-  private final RadioService.UpnpActionControler upnpActionControler;
+  private final RadioService.UpnpActionController upnpActionController;
   @Nullable
   private final Uri logo;
   @Nullable
@@ -119,10 +119,10 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     @NonNull String lockKey,
     @NonNull HttpServer httpServer,
     @NonNull Device<?, ?, ?> device,
-    @NonNull RadioService.UpnpActionControler upnpActionControler) {
+    @NonNull RadioService.UpnpActionController upnpActionController) {
     super(context, listener, radio, lockKey);
     this.device = device;
-    this.upnpActionControler = upnpActionControler;
+    this.upnpActionController = upnpActionController;
     // Shall not be null
     Uri uri = httpServer.getUri();
     if (uri == null) {
@@ -145,7 +145,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
-        UpnpPlayerAdapter.this.upnpActionControler.runNextAction();
+        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
       }
 
       @Override
@@ -162,7 +162,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
-        UpnpPlayerAdapter.this.upnpActionControler.runNextAction();
+        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
       }
 
       @Override
@@ -179,7 +179,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         changeAndNotifyState(PlaybackStateCompat.STATE_NONE);
-        UpnpPlayerAdapter.this.upnpActionControler.runNextAction();
+        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
       }
 
       @Override
@@ -205,7 +205,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           if (instanceIdArgument != null) {
             instanceId = instanceIdArgument.getValue().toString();
           }
-          UpnpPlayerAdapter.this.upnpActionControler.runNextAction();
+          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
         }
 
         @Override
@@ -250,11 +250,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         switch (volumeDirection) {
           case AudioManager.ADJUST_LOWER:
             currentVolume = Math.max(0, --currentVolume);
-            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionControler, false);
+            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionController, false);
             break;
           case AudioManager.ADJUST_RAISE:
             currentVolume++;
-            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionControler, false);
+            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionController, false);
             break;
           default:
             // Nothing to do
@@ -283,7 +283,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          UpnpPlayerAdapter.this.upnpActionControler.runNextAction();
+          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
         }
 
         @Override
@@ -308,10 +308,10 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
             }
           }
           if (!protocolInfos.isEmpty()) {
-            UpnpPlayerAdapter.this.upnpActionControler.putProtocolInfo(
+            UpnpPlayerAdapter.this.upnpActionController.putProtocolInfo(
               getDevice(), protocolInfos);
           }
-          UpnpPlayerAdapter.this.upnpActionControler.runNextAction();
+          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
         }
 
         @Override
@@ -326,59 +326,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     // Do only if nothing done currently
     if (actionGetVolume.isAvailable() && (volumeDirection == AudioManager.ADJUST_SAME)) {
       volumeDirection = direction;
-      actionGetVolume.execute(upnpActionControler, false);
+      actionGetVolume.execute(upnpActionController, false);
     }
-  }
-
-  @Override
-  protected boolean isLocal() {
-    return false;
-  }
-
-  @Override
-  protected void onPrepareFromMediaId() {
-    if ((connectionManager == null) || (avTransportService == null)) {
-      Log.e(LOG_TAG, "onPrepareFromMediaId: services not available");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-      return;
-    }
-    changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
-    if (upnpActionControler.getContentType(radio) == null) {
-      // Fetch ContentType before launching
-      new Thread() {
-        @Override
-        public void run() {
-          String contentType = NetworkTester.getStreamContentType(radio.getURL());
-          // Now we can call GetProtocolInfo, only if current action not cancelled
-          if (contentType != null) {
-            upnpActionControler.putContentType(radio, contentType);
-            UpnpPlayerAdapter.this.contentType = contentType;
-          }
-          onPreparedPlay();
-        }
-      }.start();
-    } else {
-      onPreparedPlay();
-    }
-  }
-
-  public void onPlay() {
-    upnpActionControler.schedule(actionPlay);
-  }
-
-  // Nota: as tested, not supported by DLNA device
-  @Override
-  public void onPause() {
-    upnpActionControler.schedule(actionPause);
-  }
-
-  @Override
-  public void onStop() {
-    upnpActionControler.schedule(actionStop);
-  }
-
-  @Override
-  public void onRelease() {
   }
 
   @Override
@@ -396,16 +345,67 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     return actions;
   }
 
+  @Override
+  protected boolean isLocal() {
+    return false;
+  }
+
+  @Override
+  protected void onPrepareFromMediaId() {
+    if ((connectionManager == null) || (avTransportService == null)) {
+      Log.e(LOG_TAG, "onPrepareFromMediaId: services not available");
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+      return;
+    }
+    changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+    if (upnpActionController.getContentType(radio) == null) {
+      // Fetch ContentType before launching
+      new Thread() {
+        @Override
+        public void run() {
+          String contentType = NetworkTester.getStreamContentType(radio.getURL());
+          // Now we can call GetProtocolInfo, only if current action not cancelled
+          if (contentType != null) {
+            upnpActionController.putContentType(radio, contentType);
+            UpnpPlayerAdapter.this.contentType = contentType;
+          }
+          onPreparedPlay();
+        }
+      }.start();
+    } else {
+      onPreparedPlay();
+    }
+  }
+
+  public void onPlay() {
+    upnpActionController.schedule(actionPlay);
+  }
+
+  // Nota: as tested, not supported by DLNA device
+  @Override
+  public void onPause() {
+    upnpActionController.schedule(actionPause);
+  }
+
+  @Override
+  public void onStop() {
+    upnpActionController.schedule(actionStop);
+  }
+
+  @Override
+  public void onRelease() {
+  }
+
   private void onPreparedPlay() {
     // Do prepare if available
     if (actionPrepareForConnection.isAvailable()) {
-      upnpActionControler.schedule(actionPrepareForConnection);
+      upnpActionController.schedule(actionPrepareForConnection);
     }
-    if (upnpActionControler.getProtocolInfo(device) == null) {
-      upnpActionControler.schedule(actionGetProtocolInfo);
+    if (upnpActionController.getProtocolInfo(device) == null) {
+      upnpActionController.schedule(actionGetProtocolInfo);
     }
-    upnpActionControler.schedule(actionSetAvTransportUri);
-    upnpActionControler.schedule(actionPlay);
+    upnpActionController.schedule(actionSetAvTransportUri);
+    upnpActionController.schedule(actionPlay);
   }
 
   // Create DIDL-Lite metadata
@@ -428,7 +428,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   private void abort() {
-    upnpActionControler.releaseActions(device);
+    upnpActionController.releaseActions(device);
     changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
   }
 
@@ -458,7 +458,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Nullable
   private String searchContentType(@NonNull String contentType) {
-    List<String> protocolInfos = upnpActionControler.getProtocolInfo(device);
+    List<String> protocolInfos = upnpActionController.getProtocolInfo(device);
     if (protocolInfos != null) {
       Pattern mimePattern = Pattern.compile(".*:.*:(" + contentType + "):.*");
       for (String protocolInfo : protocolInfos) {

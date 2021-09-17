@@ -23,6 +23,8 @@
 
 package com.watea.radio_upnp.adapter;
 
+import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -38,8 +40,6 @@ import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
 import java.util.Vector;
-
-import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus

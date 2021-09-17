@@ -107,43 +107,22 @@ public class DonationFragment
     }
   }
 
-  @Nullable
-  @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
-    final View view = inflater.inflate(R.layout.content_donation, container, false);
-    // Choose donation amount
-    googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
-    // Alert dialog
-    paymentAlertDialogBuilder = new AlertDialog.Builder(getActivity())
-      .setIcon(android.R.drawable.ic_dialog_alert)
-      .setTitle(R.string.donation_alert_dialog_title)
-      .setMessage(R.string.donation_alert_dialog_try_again)
-      .setCancelable(true)
-      .setNeutralButton(
-        R.string.donation_button_close,
-        (dialog, which) -> dialog.dismiss());
-    return view;
-  }
-
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
-    // Adapters
-    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
-      Objects.requireNonNull(getActivity()),
-      android.R.layout.simple_spinner_item,
-      getResources().getStringArray(R.array.donation_google_catalog_values));
-    donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-    googleSpinner.setAdapter(donationAdapter);
-    // BillingClient
-    billingClient = BillingClient.newBuilder(getActivity())
+    // BillingClient, new each time
+    billingClient = BillingClient.newBuilder(Objects.requireNonNull(getActivity()))
       .enablePendingPurchases()
       .setListener(this)
       .build();
     billingClient.startConnection(new BillingClientStateListener() {
       private long reconnectMilliseconds = RECONNECT_TIMER_START_MILLISECONDS;
+
+      @Override
+      public void onBillingServiceDisconnected() {
+        skuDetailss.clear();
+        retryBillingServiceConnectionWithExponentialBackoff();
+      }
 
       @Override
       public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
@@ -185,12 +164,6 @@ public class DonationFragment
         }
       }
 
-      @Override
-      public void onBillingServiceDisconnected() {
-        skuDetailss.clear();
-        retryBillingServiceConnectionWithExponentialBackoff();
-      }
-
       private void retryBillingServiceConnectionWithExponentialBackoff() {
         handler.postDelayed(() -> billingClient.startConnection(this), reconnectMilliseconds);
         reconnectMilliseconds =
@@ -202,7 +175,7 @@ public class DonationFragment
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return (view) -> {
+    return v -> {
       if (skuDetailss.isEmpty() || !billingClient.isReady()) {
         paymentAlertDialogBuilder.show();
       } else {
@@ -219,7 +192,7 @@ public class DonationFragment
 
   @Override
   public int getFloatingActionButtonResource() {
-    return R.drawable.ic_payment_black_24dp;
+    return R.drawable.ic_payment_white_24dp;
   }
 
   @Override
@@ -227,8 +200,37 @@ public class DonationFragment
     return R.string.title_donate;
   }
 
-  private void logBillingResult(
-    @NonNull String location, @NonNull BillingResult billingResult) {
+  @Override
+  public void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
+    // Adapters
+    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
+      Objects.requireNonNull(getActivity()),
+      android.R.layout.simple_spinner_item,
+      getResources().getStringArray(R.array.donation_google_catalog_values));
+    donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+    googleSpinner.setAdapter(donationAdapter);
+  }
+
+  @Nullable
+  @Override
+  protected View onCreateViewFiltered(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
+    final View view = inflater.inflate(R.layout.content_donation, container, false);
+    // Choose donation amount
+    googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
+    // Alert dialog
+    paymentAlertDialogBuilder = new AlertDialog.Builder(getActivity())
+      .setIcon(android.R.drawable.ic_dialog_alert)
+      .setTitle(R.string.donation_alert_dialog_title)
+      .setMessage(R.string.donation_alert_dialog_try_again)
+      .setCancelable(true)
+      .setNeutralButton(
+        R.string.donation_button_close,
+        (dialog, which) -> dialog.dismiss());
+    return view;
+  }
+
+  private void logBillingResult(@NonNull String location, @NonNull BillingResult billingResult) {
     int responseCode = billingResult.getResponseCode();
     String debugMessage = billingResult.getDebugMessage();
     switch (responseCode) {

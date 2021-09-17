@@ -5,6 +5,51 @@
       <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
     </configurations>
   </component>
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_flaky_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_flaky_white_24dp.xml" value="0.186328125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_mic_white_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_cast_black_24dp.xml" value="0.186328125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_done_blue_30dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_done_white_30dp.xml" value="0.29375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_edit_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_white_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_image_black_24dp.xml" value="0.221484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_image_black_40dp.xml" value="0.221484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_pause_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_pause_white_24dp.xml" value="0.186328125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_payment_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_play_arrow_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_play_arrow_white_24dp.xml" value="0.186328125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_playlist_add_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_radio_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_search_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_search_black_40dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_settings_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_star_blue_30dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_star_border_blue_30dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_star_border_white_30dp.xml" value="0.18203125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_star_white_30dp.xml" value="0.29375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_stop_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_stop_white_24dp.xml" value="0.186328125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_swap_vert_blue_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_swap_vert_white_24dp.xml" value="0.18203125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/content_item_modify.xml" value="0.1" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/header_navigation.xml" value="0.134375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/row_modify_radio.xml" value="0.1" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/row_radio.xml" value="0.1" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/view_player.xml" value="0.1" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/view_radios_default.xml" value="0.134375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/menu/menu_item_modify.xml" value="0.169921875" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/menu/menu_main.xml" value="0.27837837837837837" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.186328125" />
+      </map>
+    </option>
+  </component>
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="org.jetbrains.annotations.Nullable" />
     <option name="myDefaultNotNull" value="androidx.annotation.RecentlyNonNull" />
@@ -31,7 +76,7 @@
     </option>
     <option name="myNotNulls">
       <value>
-        <list size="14">
+        <list size="15">
           <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
           <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
           <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.NonNull" />
@@ -46,6 +91,7 @@
           <item index="11" class="java.lang.String" itemvalue="org.eclipse.jdt.annotation.NonNull" />
           <item index="12" class="java.lang.String" itemvalue="io.reactivex.annotations.NonNull" />
           <item index="13" class="java.lang.String" itemvalue="io.reactivex.rxjava3.annotations.NonNull" />
+          <item index="14" class="java.lang.String" itemvalue="lombok.NonNull" />
         </list>
       </value>
     </option>

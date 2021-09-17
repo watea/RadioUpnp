@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,9 +23,9 @@
 
 <resources>
     <!-- Default screen margins, per the Android Design guidelines. -->
-    <dimen name="app_margin">16dp</dimen>
+    <dimen name="app_margin">10dp</dimen>
+    <dimen name="app_half_margin">5dp</dimen>
     <dimen name="app_horizontal_margin">6dp</dimen>
     <dimen name="app_vertical_margin">10dp</dimen>
     <dimen name="tile_size">110dp</dimen>
-    <dimen name="fab_vertical_margin">120dp</dimen>
 </resources>

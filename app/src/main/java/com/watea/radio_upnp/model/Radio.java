@@ -245,6 +245,7 @@ public class Radio {
     this.quality = quality;
   }
 
+  @NonNull
   public Boolean isPreferred() {
     return isPreferred;
   }
