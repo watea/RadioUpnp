@@ -269,6 +269,12 @@ public class RadioService
     return (playerAdapter != null) && (playerAdapter instanceof UpnpPlayerAdapter);
   }
 
+  @Override
+  public boolean isPaused() {
+    return
+      (session.getController().getPlaybackState().getState() == PlaybackStateCompat.STATE_PAUSED);
+  }
+
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override

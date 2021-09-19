@@ -26,7 +26,8 @@
     <color name="lightBlue">@android:color/holo_blue_light</color>
     <color name="darkBlue">@android:color/holo_blue_dark</color>
     <color name="dark">@android:color/background_dark</color>
-    <color name="darkGrey">@android:color/darker_gray</color>
+    <color name="darkGray">#757575</color>
+    <color name="lightGray">@android:color/darker_gray</color>
     <color name="darkRed">@android:color/holo_red_dark</color>
     <color name="transparent">@android:color/transparent</color>
 </resources>

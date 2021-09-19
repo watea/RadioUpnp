@@ -81,6 +81,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final String DAR_FM_STATIONS_REQUEST = DAR_FM_API + "darstations.php?station_id=";
   private static final String WILDCARD = "*";
   private static final String SPACE_FOR_SEARCH = "%20";
+  private static final String COUNTRY_FOR_SEARCH = "@COUNTRY";
   private static final String DAR_FM_PARTNER_TOKEN = "&partner_token=6453742475";
   private static final String DAR_FM_BASE_URL = "http://stream.dar.fm/";
   private static final String DAR_FM_NAME = "name";
@@ -89,6 +90,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
   // <HMI assets
   private EditText nameEditText;
+  private EditText countryEditText;
   private EditText urlEditText;
   private EditText webPageEditText;
   private RadioButton darFmRadioButton;
@@ -177,6 +179,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     // Inflate the view so that graphical objects exists
     final View view = inflater.inflate(R.layout.content_item_modify, container, false);
     nameEditText = view.findViewById(R.id.name_edit_text);
+    countryEditText = view.findViewById(R.id.country_edit_text);
     progressBar = view.findViewById(R.id.progress_bar);
     urlEditText = view.findViewById(R.id.url_edit_text);
     webPageEditText = view.findViewById(R.id.web_page_edit_text);
@@ -290,6 +293,15 @@ public class ItemModifyFragment extends MainActivityFragment {
   @NonNull
   private String getRadioName() {
     return nameEditText.getText().toString().toUpperCase();
+  }
+
+  @NonNull
+  private String getCountrySearch() {
+    String countrySearch = countryEditText.getText().toString().toUpperCase().replace(" ", "");
+    if (countrySearch.length() > 0) {
+      countrySearch = COUNTRY_FOR_SEARCH + SPACE_FOR_SEARCH + countrySearch;
+    }
+    return countrySearch;
   }
 
   private void flushKeyboard() {
@@ -461,8 +473,11 @@ public class ItemModifyFragment extends MainActivityFragment {
       if (radios.isEmpty()) {
         try {
           Element search = Jsoup
-            .connect(DAR_FM_PLAYLIST_REQUEST + getRadioName().replace(" ", SPACE_FOR_SEARCH) +
-              WILDCARD + DAR_FM_PARTNER_TOKEN)
+            .connect(
+              DAR_FM_PLAYLIST_REQUEST +
+                getRadioName().replace(" ", SPACE_FOR_SEARCH) + WILDCARD +
+                getCountrySearch() +
+                DAR_FM_PARTNER_TOKEN)
             .get();
           // Parse data
           for (Element station : search.getElementsByTag("station")) {

@@ -64,7 +64,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     this.listener = listener;
     this.iconSize = iconSize;
     noRadioDrawable =
-      Objects.requireNonNull(ContextCompat.getDrawable(context, R.drawable.ic_error_grey_24dp));
+      Objects.requireNonNull(ContextCompat.getDrawable(context, R.drawable.ic_error_gray_24dp));
   }
 
   // Content setter, must be called
