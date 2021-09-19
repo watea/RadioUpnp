@@ -31,8 +31,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintTop_toTopOf="parent">
+        android:orientation="vertical">
 
         <EditText
             android:id="@+id/name_edit_text"
@@ -44,7 +43,32 @@
             android:inputType="textCapCharacters"
             android:maxLength="30"
             android:textAllCaps="true"
-            tools:ignore="Autofill" />
+            android:importantForAutofill="no" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/country_edit_text"
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/app_margin"
+            android:hint="@string/legend_country_example"
+            android:inputType="textCapCharacters"
+            android:maxLength="2"
+            android:textAllCaps="true"
+            android:importantForAutofill="no" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:padding="@dimen/app_horizontal_margin"
+            android:text="@string/legend_country" />
+
+    </LinearLayout>
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -61,14 +85,14 @@
                     android:id="@+id/dar_fm_radio_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-
+                    android:buttonTint="@color/darkBlue"
                     android:text="@string/dar_fm_radio_button" />
 
                 <RadioButton
                     android:id="@+id/image_from_url_radio_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-
+                    android:buttonTint="@color/darkBlue"
                     android:text="@string/image_from_url_radio_button" />
 
             </RadioGroup>
@@ -109,8 +133,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/legend_page_url_example"
-            android:inputType="textUri"
-            tools:ignore="Autofill" />
+            android:importantForAutofill="no"
+            android:inputType="textUri" />
 
         <TextView
             android:layout_width="match_parent"
@@ -123,8 +147,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/legend_streaming_url_example"
-            android:inputType="textUri"
-            tools:ignore="Autofill" />
+            android:importantForAutofill="no"
+            android:inputType="textUri" />
 
     </LinearLayout>
 

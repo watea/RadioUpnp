@@ -172,7 +172,7 @@ public abstract class MainActivityFragment extends Fragment {
     Drawable.ConstantState constantState = drawable.mutate().getConstantState();
     assert constantState != null;
     drawable = constantState.newDrawable();
-    drawable.setTint(getResources().getColor(R.color.darkGrey, mainActivity.getTheme()));
+    drawable.setTint(getResources().getColor(R.color.darkGray, mainActivity.getTheme()));
     Canvas canvas = new Canvas();
     DEFAULT_ICON = Bitmap.createBitmap(
       drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);

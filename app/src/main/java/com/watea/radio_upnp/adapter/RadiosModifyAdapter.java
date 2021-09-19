@@ -197,7 +197,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       if (this.radio == Radio.DUMMY_RADIO) {
         decorate(
           Objects.requireNonNull(
-            ContextCompat.getDrawable(context, R.drawable.ic_error_grey_24dp)),
+            ContextCompat.getDrawable(context, R.drawable.ic_error_gray_24dp)),
           context.getString(R.string.radio_no_radio));
       } else {
         decorate(

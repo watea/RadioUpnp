@@ -46,7 +46,9 @@
     <string name="dlna_search_reset">DLNA search reset</string>
     <string name="dlna_selection">DLNA device selection:\n</string>
     <string name="no_dlna_selection">No DLNA device selected</string>
+    <string name="legend_country_example">--</string>
     <string name="legend_name">MY RADIO</string>
+    <string name="legend_country">Country code for search (optional)</string>
     <string name="legend_streaming_url">Streaming URL</string>
     <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
     <string name="legend_page_url">Web page URL</string>
