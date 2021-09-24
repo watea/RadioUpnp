@@ -22,41 +22,47 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
 
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <androidx.gridlayout.widget.GridLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="@dimen/app_margin"
-        app:columnCount="3">
+        android:padding="@dimen/app_margin">
 
         <TextView
             android:id="@+id/row_modify_radio_name_text_view"
-            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_width="250dp"
+            android:layout_alignParentStart="true"
             android:clickable="false"
             android:drawablePadding="@dimen/app_horizontal_margin"
             android:gravity="center_vertical"
-            android:textStyle="bold" />
+            android:textStyle="bold"  />
 
         <ImageButton
             android:id="@+id/row_radio_preferred_image_button"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:layout_toStartOf="@id/row_modify_radio_move_image_button"
             android:gravity="center"
             android:contentDescription="@string/preferred"
             android:src="@drawable/ic_star_border_white_30dp"
-            android:tint="@color/darkBlue" />
+            android:tint="@color/darkBlue"  />
 
         <ImageButton
             android:id="@+id/row_modify_radio_move_image_button"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:layout_alignParentEnd="true"
             android:gravity="center"
             android:contentDescription="@string/action_move"
             android:src="@drawable/ic_swap_vert_white_30dp"
             android:tint="@color/darkBlue" />
 
-    </androidx.gridlayout.widget.GridLayout>
+    </RelativeLayout>
 
     <View
         android:layout_width="match_parent"

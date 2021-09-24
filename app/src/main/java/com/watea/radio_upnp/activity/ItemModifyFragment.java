@@ -81,7 +81,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final String DAR_FM_STATIONS_REQUEST = DAR_FM_API + "darstations.php?station_id=";
   private static final String WILDCARD = "*";
   private static final String SPACE_FOR_SEARCH = "%20";
-  private static final String COUNTRY_FOR_SEARCH = "@COUNTRY";
+  private static final String COUNTRY_FOR_SEARCH = "@COUNTRY%20";
   private static final String DAR_FM_PARTNER_TOKEN = "&partner_token=6453742475";
   private static final String DAR_FM_BASE_URL = "http://stream.dar.fm/";
   private static final String DAR_FM_NAME = "name";
@@ -298,10 +298,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   @NonNull
   private String getCountrySearch() {
     String countrySearch = countryEditText.getText().toString().toUpperCase().replace(" ", "");
-    if (countrySearch.length() > 0) {
-      countrySearch = COUNTRY_FOR_SEARCH + SPACE_FOR_SEARCH + countrySearch;
-    }
-    return countrySearch;
+    return (countrySearch.length() > 0) ? COUNTRY_FOR_SEARCH + countrySearch : "";
   }
 
   private void flushKeyboard() {

@@ -224,9 +224,7 @@ public class DonationFragment
       .setTitle(R.string.donation_alert_dialog_title)
       .setMessage(R.string.donation_alert_dialog_try_again)
       .setCancelable(true)
-      .setNeutralButton(
-        R.string.donation_button_close,
-        (dialog, which) -> dialog.dismiss());
+      .setNeutralButton(R.string.donation_button_close, (dialog, which) -> dialog.dismiss());
     return view;
   }
 
@@ -246,7 +244,7 @@ public class DonationFragment
       case BillingClient.BillingResponseCode.ERROR:
         Log.e(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
         break;
-      // These response codes are not expected.
+      // These response codes are not expected
       case BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED:
       case BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED:
       case BillingClient.BillingResponseCode.ITEM_NOT_OWNED:
