@@ -81,6 +81,8 @@
     <string name="image_from_url_radio_button">Manual fill in (icon fetch in web page)</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>
+    <string name="not_to_modify">Current radio cannot be edited</string>
+    <string name="not_to_delete">Current radio cannot be deleted</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>

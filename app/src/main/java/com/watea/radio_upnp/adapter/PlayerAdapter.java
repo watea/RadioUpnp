@@ -54,8 +54,7 @@ public abstract class PlayerAdapter {
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
   @NonNull
-  private static final List<String> AUDIO_CONTENT_PREFIXS = new Vector<String>() {
-    {
+  private static final List<String> AUDIO_CONTENT_PREFIXS = new Vector<String>() {{
       add(AUDIO_CONTENT_TYPE);
       add(APPLICATION_CONTENT_TYPE);
     }
@@ -113,10 +112,6 @@ public abstract class PlayerAdapter {
         return true;
     }
     return false;
-  }
-
-  public boolean isPlaying() {
-    return (state == PlaybackStateCompat.STATE_PLAYING);
   }
 
   // Must be called
@@ -219,6 +214,10 @@ public abstract class PlayerAdapter {
       listener.onPlaybackStateChange(
         getPlaybackStateCompat(state).setActions(getAvailableActions()).build(), lockKey);
     }
+  }
+
+  private boolean isPlaying() {
+    return (state == PlaybackStateCompat.STATE_PLAYING);
   }
 
   private void registerAudioNoisyReceiver() {

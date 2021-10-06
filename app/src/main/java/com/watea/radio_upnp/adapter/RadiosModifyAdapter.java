@@ -27,7 +27,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -36,7 +35,6 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -64,16 +62,16 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     @NonNull Context context,
     @NonNull Listener listener,
     @NonNull RadioLibrary radioLibrary,
-    int iconSize) {
+    int iconSize,
+    @NonNull RecyclerView recyclerView) {
     this.context = context;
     this.listener = listener;
     this.radioLibrary = radioLibrary;
     this.iconSize = iconSize;
-  }
-
-  // Shall be called
-  public void attachToRecyclerView(@NonNull RecyclerView recyclerView) {
+    // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
+    // Adapter shall be defined for RecyclerView
+    recyclerView.setAdapter(this);
   }
 
   // Shall be called on view resume (only)
@@ -82,6 +80,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     radioIds.clear();
     radioIds.addAll(radioLibrary.getAllRadioIds());
     notifyDataSetChanged();
+    notifyEmpty();
   }
 
   @NonNull
@@ -93,30 +92,39 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    viewHolder.setView(radioIds.isEmpty() ?
-      Radio.DUMMY_RADIO : Objects.requireNonNull(radioLibrary.getFrom(radioIds.get(position))));
+    viewHolder.setView(Objects.requireNonNull(radioLibrary.getFrom(radioIds.get(position))));
   }
 
   @Override
   public int getItemCount() {
-    return radioIds.isEmpty() ? 1 : radioIds.size();
+    return radioIds.size();
   }
 
   private void databaseWarn() {
     Log.w(LOG_TAG, "Internal failure, radio database update failed");
   }
 
+  private void notifyEmpty() {
+    listener.onEmpty(radioIds.isEmpty());
+  }
+
   public interface Listener {
     void onModifyClick(@NonNull Radio radio);
+
+    boolean onCheckChange(@NonNull Radio radio);
+
+    void onEmpty(boolean isEmpty);
   }
 
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
+    private static final int DRAG_FLAGS = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
+    private static final int IDLE_FLAGS = ItemTouchHelper.START | ItemTouchHelper.END;
+
     @Override
     public int getMovementFlags(
       @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-      int dragFlags = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
-      int swipeFlags = ItemTouchHelper.START | ItemTouchHelper.END;
-      return makeMovementFlags(dragFlags, swipeFlags);
+      return makeMovementFlags(
+        DRAG_FLAGS, listener.onCheckChange(((ViewHolder) viewHolder).radio) ? IDLE_FLAGS : 0);
     }
 
     @Override
@@ -141,21 +149,22 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
     @Override
     public boolean isLongPressDragEnabled() {
-      return !radioIds.isEmpty();
+      return true;
     }
 
     @Override
     public boolean isItemViewSwipeEnabled() {
-      return !radioIds.isEmpty();
+      return true;
     }
 
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-      int position = viewHolder.getAbsoluteAdapterPosition();
+      final int position = viewHolder.getAbsoluteAdapterPosition();
       if (radioLibrary.deleteFrom(radioIds.get(position)) > 0) {
         // Database updated, update view
         radioIds.remove(position);
         notifyItemRemoved(position);
+        notifyEmpty();
       } else {
         databaseWarn();
       }
@@ -175,8 +184,9 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       radioNameTextView = itemView.findViewById(R.id.row_modify_radio_name_text_view);
       preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
       // Edit action
-      itemView.findViewById(R.id.row_modify_radio_name_text_view).setOnClickListener(
-        v -> listener.onModifyClick(radio));
+      itemView
+        .findViewById(R.id.row_modify_radio_name_text_view)
+        .setOnClickListener(v -> listener.onModifyClick(radio));
       // Preferred action
       preferredImageButton.setOnClickListener(v -> {
         if (!radioLibrary.setPreferred(radio.getId(), !radio.isPreferred())) {
@@ -194,38 +204,20 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
     private void setView(@NonNull Radio radio) {
       this.radio = radio;
-      if (this.radio == Radio.DUMMY_RADIO) {
-        decorate(
-          Objects.requireNonNull(
-            ContextCompat.getDrawable(context, R.drawable.ic_error_gray_24dp)),
-          context.getString(R.string.radio_no_radio));
-      } else {
-        decorate(
-          new BitmapDrawable(
-            context.getResources(),
-            Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
-          this.radio.getName());
-      }
-      setPreferredButton();
-    }
-
-    private void decorate(
-      @NonNull Drawable drawable,
-      @NonNull String text) {
       radioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        drawable, null, null, null);
-      radioNameTextView.setText(text);
+        new BitmapDrawable(
+          context.getResources(),
+          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
+        null,
+        null,
+        null);
+      radioNameTextView.setText(this.radio.getName());
       setPreferredButton();
     }
 
     private void setPreferredButton() {
       preferredImageButton.setImageResource(radio.isPreferred() ?
         R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
-      preferredImageButton.setVisibility(getButtonVisibility());
-    }
-
-    private int getButtonVisibility() {
-      return (radio == Radio.DUMMY_RADIO) ? View.INVISIBLE : View.VISIBLE;
     }
   }
 }

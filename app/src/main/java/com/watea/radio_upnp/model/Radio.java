@@ -310,7 +310,7 @@ public class Radio {
   }
 
   @Override
-  public boolean equals(Object object) {
+  public boolean equals(@Nullable Object object) {
     return ((object instanceof Radio) && (id.longValue() == ((Radio) object).id.longValue()));
   }
 

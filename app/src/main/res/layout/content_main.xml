@@ -23,15 +23,43 @@
 
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
 
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/radios_recycler_view"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/radios_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <FrameLayout
+            android:id="@+id/view_radios_default"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/tile_size"
+                android:src="@drawable/ic_error_gray_24dp"
+                tools:ignore="ContentDescription" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/radio_no_radio"
+                android:textColor="@color/darkBlue"
+                android:textStyle="bold" />
+
+        </FrameLayout>
+
+    </FrameLayout>
 
 </androidx.core.widget.NestedScrollView>

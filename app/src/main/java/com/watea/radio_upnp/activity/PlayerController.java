@@ -50,10 +50,12 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.service.RadioService;
 
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
+  private final RadioLibrary radioLibrary;
   // <HMI assets
   private ImageButton playImageButton;
   private ImageButton preferredImageButton;
@@ -117,6 +119,7 @@ public class PlayerController {
               setFrameVisibility(false, false);
               break;
             default:
+              // On error, leave Play button on if not UPnP
               setFrameVisibility(!isDlna, false);
               mainActivity.tell(R.string.radio_connection_error);
           }
@@ -137,18 +140,18 @@ public class PlayerController {
         String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
         playedRadioRateTextView.setText(
           (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
-        albumArtImageView.setImageBitmap(
-          Bitmap.createScaledBitmap(
+        albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
             mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
             RADIO_ICON_SIZE,
             RADIO_ICON_SIZE,
             false));
-        Radio radio = mainActivity.getRadioLibrary().getFrom(mediaMetadata);
+        Radio radio = radioLibrary.getFrom(mediaMetadata);
         if (radio == null) {
-          preferredImageButton.setVisibility(View.INVISIBLE);
           // Should not happen
-          Log.d(LOG_TAG, "internal failure; radio is null");
+          Log.d(LOG_TAG, "Internal failure; radio is null");
         } else {
+          // albumArtImageView stores radioId for possible further use
+          albumArtImageView.setTag(radio.getId());
           setPreferredButton(radio.isPreferred());
         }
       }
@@ -198,9 +201,10 @@ public class PlayerController {
 
   public PlayerController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
+    radioLibrary = mainActivity.getRadioLibrary();
   }
 
-  public void onActivityCreated(@NonNull View view) {
+  public void onActivityCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     // Shared preferences
     SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
     gotItPlayLongPress = sharedPreferences.getBoolean(
@@ -267,16 +271,28 @@ public class PlayerController {
         Log.d(LOG_TAG, "Internal failure, radio is null");
         preferredImageButton.setVisibility(View.INVISIBLE);
       } else {
-        mainActivity.getRadioLibrary().setPreferred(radio.getId(), !radio.isPreferred());
+        radioLibrary.setPreferred(radio.getId(), !radio.isPreferred());
       }
     });
     // Preferred data may be modified externally
-    mainActivity.getRadioLibrary().addListener((radioId, isPreferred) -> {
+    radioLibrary.addListener((radioId, isPreferred) -> {
       Radio radio = getCurrentRadio();
       if ((radio != null) && radio.getId().equals(radioId)) {
         setPreferredButton(isPreferred);
       }
     });
+    // Restore saved state, if any
+    if (savedInstanceState != null) {
+      long playedRadioId =
+        savedInstanceState.getLong(mainActivity.getString(R.string.key_played_radio_id));
+      if (playedRadioId != 0L) {
+        Radio radio = radioLibrary.getFrom(playedRadioId);
+        if (radio != null) {
+          // We simulate a new played radio
+          mediaControllerCallback.onMetadataChanged(radio.getMediaMetadataBuilder().build());
+        }
+      }
+    }
   }
 
   // Must be called on activity resume
@@ -311,6 +327,19 @@ public class PlayerController {
     }
   }
 
+  public void onSaveInstanceState(@NonNull Bundle outState) {
+    // May fail
+    try {
+      Radio currentRadio = getCurrentRadio();
+      if (currentRadio != null) {
+        outState.putLong(
+          mainActivity.getString(R.string.key_played_radio_id), currentRadio.getId());
+      }
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure");
+    }
+  }
+
   // radio == null for current, do nothing if no current
   public void startReading(@Nullable Radio radio, @Nullable String dlnaDeviceIdentity) {
     if (radio == null) {
@@ -336,11 +365,18 @@ public class PlayerController {
   }
 
   @Nullable
-  private Radio getCurrentRadio() {
-    return (mediaController == null) ?
-      null :
-      // MediaController controls played radio
-      mainActivity.getRadioLibrary().getFrom(mediaController.getMetadata());
+  public Radio getCurrentRadio() {
+    // No current radio if controller not there
+    if (mediaController == null) {
+      return null;
+    }
+    // MediaController controls played radio
+    Radio radio = radioLibrary.getFrom(mediaController.getMetadata());
+    // If radio is not played, radioId may be stored in icon
+    if ((radio == null) && (albumArtImageView.getVisibility() == View.VISIBLE)) {
+      radio = radioLibrary.getFrom((Long) albumArtImageView.getTag());
+    }
+    return radio;
   }
 
   private boolean isContextDisposed() {
@@ -363,7 +399,7 @@ public class PlayerController {
 
   private void setPreferredButton(boolean isPreferred) {
     preferredImageButton.setVisibility(View.VISIBLE);
-    preferredImageButton.setImageResource(isPreferred ?
-      R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+    preferredImageButton.setImageResource(
+      isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
   }
 }

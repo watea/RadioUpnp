@@ -70,7 +70,6 @@ import java.net.URL;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Vector;
 
 public class MainActivity
@@ -86,11 +85,13 @@ public class MainActivity
       put(ItemModifyFragment.class, R.id.action_add_item);
       put(ModifyFragment.class, R.id.action_modify);
       put(DonationFragment.class, R.id.action_donate);
-    }};
+    }
+  };
   private static final List<Class<? extends Fragment>> ALWAYS_NEW_FRAGMENTS =
     new Vector<Class<? extends Fragment>>() {{
       add(ItemModifyFragment.class);
-    }};
+    }
+  };
   private static final DefaultRadio[] DEFAULT_RADIOS = {
     new DefaultRadio(
       "FRANCE INTER",
@@ -133,7 +134,6 @@ public class MainActivity
       "http://icecast.funradio.fr/fun-1-44-128?listen=webCwsBCggNCQgLDQUGBAcGBg",
       "https://www.funradio.fr/")
   };
-  private final PlayerController playerController = new PlayerController(this);
   // <HMI assets
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
@@ -141,9 +141,10 @@ public class MainActivity
   private Menu navigationMenu;
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
+  private PlayerController playerController;
   // />
   private RadioLibrary radioLibrary;
-  private Integer navigationMenuCheckedId;
+  private int navigationMenuCheckedId;
   private MainFragment mainFragment;
   private AndroidUpnpService androidUpnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -182,12 +183,14 @@ public class MainActivity
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     // Pass the event to ActionBarDrawerToggle, if it returns
     // true, then it has handled the app icon touch event
+    final Fragment currentFragment = getCurrentFragment();
+    assert currentFragment != null;
     return
       drawerToggle.onOptionsItemSelected(item) ||
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        Objects.requireNonNull(getCurrentFragment()).onOptionsItemSelected(item) ||
+        currentFragment.onOptionsItemSelected(item) ||
         // If we got here, the user's action was not recognized
         // Invoke the superclass to handle it
         super.onOptionsItemSelected(item);
@@ -230,8 +233,9 @@ public class MainActivity
     if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
       floatingActionButton.setImageResource(resource);
     }
-    checkNavigationMenu(
-      Objects.requireNonNull(FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass())));
+    final Integer fragmentMenuId = FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass());
+    assert fragmentMenuId != null;
+    checkNavigationMenu(fragmentMenuId);
   }
 
   public void tell(int message) {
@@ -298,6 +302,11 @@ public class MainActivity
     return fragment;
   }
 
+  @Nullable
+  public Radio getCurrentRadio() {
+    return playerController.getCurrentRadio();
+  }
+
   @Override
   protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
@@ -362,7 +371,8 @@ public class MainActivity
     // ActionBar
     setSupportActionBar(findViewById(R.id.actionbar));
     actionBarLayout = findViewById(R.id.actionbar_layout);
-    playerController.onActivityCreated(actionBarLayout);
+    playerController = new PlayerController(this);
+    playerController.onActivityCreated(actionBarLayout, savedInstanceState);
     ActionBar actionBar = getSupportActionBar();
     if (actionBar == null) {
       // Should not happen
@@ -398,13 +408,13 @@ public class MainActivity
       .setText(BuildConfig.VERSION_NAME);
     aboutAlertDialog = new AlertDialog.Builder(this)
       .setView(aboutView)
-      .setOnDismissListener(dialogInterface -> {
-        // Restore checked item
-        checkNavigationMenu(navigationMenuCheckedId);
-      })
+      // Restore checked item
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu(navigationMenuCheckedId))
       .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
+    // Fragments
+    MainActivityFragment.onActivityCreated(this);
   }
 
   @Override
@@ -429,6 +439,12 @@ public class MainActivity
     playerController.onActivityDestroy();
   }
 
+  @Override
+  protected void onSaveInstanceState(@NonNull Bundle outState) {
+    super.onSaveInstanceState(outState);
+    playerController.onSaveInstanceState(outState);
+  }
+
   private boolean setDefaultRadios() {
     boolean result = false;
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
@@ -448,7 +464,7 @@ public class MainActivity
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
   }
 
-  private void checkNavigationMenu(@NonNull Integer id) {
+  private void checkNavigationMenu(int id) {
     navigationMenuCheckedId = id;
     navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
   }

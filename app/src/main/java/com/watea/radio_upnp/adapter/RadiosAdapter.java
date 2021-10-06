@@ -37,7 +37,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -55,16 +54,12 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
   @NonNull
   private final Listener listener;
   @NonNull
-  private final Drawable noRadioDrawable;
-  @NonNull
   private final List<Long> radioIds = new Vector<>();
 
   public RadiosAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {
     this.context = context;
     this.listener = listener;
     this.iconSize = iconSize;
-    noRadioDrawable =
-      Objects.requireNonNull(ContextCompat.getDrawable(context, R.drawable.ic_error_gray_24dp));
   }
 
   // Content setter, must be called
@@ -85,13 +80,12 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    viewHolder.setView(radioIds.isEmpty() ?
-      Radio.DUMMY_RADIO : Objects.requireNonNull(listener.getRadioFromId(radioIds.get(i))));
+    viewHolder.setView(Objects.requireNonNull(listener.getRadioFromId(radioIds.get(i))));
   }
 
   @Override
   public int getItemCount() {
-    return radioIds.isEmpty() ? 1 : radioIds.size();
+    return radioIds.size();
   }
 
   public interface Listener {
@@ -130,33 +124,15 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
     private void setView(@NonNull Radio radio) {
       this.radio = radio;
-      if (isDummy()) {
-        decorate(
-          context.getResources().getColor(R.color.transparent, context.getTheme()),
-          noRadioDrawable,
-          context.getString(R.string.radio_no_radio));
-      } else {
-        decorate(
-          getDominantColor(this.radio.getIcon()),
-          new BitmapDrawable(
-            context.getResources(),
-            Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
-          this.radio.getName());
-      }
-    }
-
-    private void decorate(
-      int backgroundColor,
-      @NonNull Drawable drawable,
-      @NonNull String text) {
-      radioTextView.setBackgroundColor(backgroundColor);
-      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(null, drawable, null, null);
-      radioTextView.setText(text);
-      radioTextView.setEnabled(!isDummy());
-    }
-
-    private boolean isDummy() {
-      return (radio == Radio.DUMMY_RADIO);
+      radioTextView.setBackgroundColor(getDominantColor(this.radio.getIcon()));
+      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+        null,
+        new BitmapDrawable(
+          context.getResources(),
+          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
+        null,
+        null);
+      radioTextView.setText(this.radio.getName());
     }
   }
 }

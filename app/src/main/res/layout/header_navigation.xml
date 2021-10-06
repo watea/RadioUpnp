@@ -23,17 +23,16 @@
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
 
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="fill_parent"
     android:layout_height="140dp"
     android:layout_alignParentTop="true"
     android:background="@drawable/wallhaven">
 
     <ImageView
-        android:layout_width="80dp"
-        android:layout_height="80dp"
+        android:layout_width="@dimen/tile_size"
+        android:layout_height="@dimen/tile_size"
         android:layout_centerInParent="true"
         android:contentDescription="@string/app_name"
-        android:src="@drawable/ic_launcher_foreground" />
+        android:src="@mipmap/ic_launcher_foreground" />
 
 </RelativeLayout>

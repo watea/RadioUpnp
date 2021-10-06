@@ -27,6 +27,7 @@
     <string name="key_preferred_radios">key_preferred_radios</string>
     <string name="key_selected_device">key_selected_device</string>
     <string name="key_radio_id">key_radio_id</string>
+    <string name="key_played_radio_id">key_played_radio_id</string>
     <string name="key_radio_icon_file">key_radio_icon_file</string>
     <string name="key_radio_long_press_got_it">key_radio_long_press_got_it</string>
     <string name="key_play_long_press_got_it">key_play_long_press_got_it</string>

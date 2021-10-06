@@ -131,8 +131,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
       DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO);
     simpleExoPlayer = new SimpleExoPlayer
       .Builder(context)
-      .setMediaSourceFactory(
-        new DefaultMediaSourceFactory(
+      .setMediaSourceFactory(new DefaultMediaSourceFactory(
           new DefaultDataSourceFactory(context, defaultHttpDataSourceFactory)))
       .build();
     simpleExoPlayer.setMediaItem(MediaItem.fromUri(

@@ -29,6 +29,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,11 +40,12 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
 
-import java.util.Objects;
+import java.util.List;
 
 public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
   // <HMI assets
   private RecyclerView radiosRecyclerView;
+  private FrameLayout defaultFrameLayout;
   // />
   private RadiosModifyAdapter radiosModifyAdapter;
 
@@ -71,14 +73,14 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
 
   @Override
   protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
+    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(MAIN_ACTIVITY));
     // Adapters
     radiosModifyAdapter = new RadiosModifyAdapter(
-      Objects.requireNonNull(getActivity()), this, radioLibrary, RADIO_ICON_SIZE / 2);
-    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-    // RecyclerView shall be defined for Adapter
-    radiosModifyAdapter.attachToRecyclerView(radiosRecyclerView);
-    // Adapter shall be defined for RecyclerView
-    radiosRecyclerView.setAdapter(radiosModifyAdapter);
+      MAIN_ACTIVITY,
+      this,
+      getRadioLibrary(),
+      RADIO_ICON_SIZE / 2,
+      radiosRecyclerView);
   }
 
   @Nullable
@@ -86,13 +88,30 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   protected View onCreateViewFiltered(
     @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
     // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_modify, container, false);
+    final View view = inflater.inflate(R.layout.content_main, container, false);
     radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     return view;
   }
 
   @Override
   public void onModifyClick(@NonNull Radio radio) {
     ((ItemModifyFragment) setFragment(ItemModifyFragment.class)).set(radio);
+  }
+
+  // Radio shall not be changed if currently played
+  @Override
+  public boolean onCheckChange(@NonNull Radio radio) {
+    Radio currentRadio = MAIN_ACTIVITY.getCurrentRadio();
+    if ((currentRadio != null) && currentRadio.equals(radio)) {
+      tell(R.string.not_to_delete);
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public void onEmpty(boolean isEmpty) {
+    defaultFrameLayout.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
   }
 }

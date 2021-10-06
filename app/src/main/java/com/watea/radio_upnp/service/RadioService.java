@@ -300,6 +300,8 @@ public class RadioService
             isAllowedToRelaunch = true;
             break;
           case PlaybackStateCompat.STATE_PAUSED:
+            // No relaunch on pause
+            isAllowedToRelaunch = false;
             // Move service out started state
             stopForeground(false);
             // Update notification
@@ -310,19 +312,9 @@ public class RadioService
               // Try to relaunch local player, just once
               if (isAllowedToRelaunch) {
                 isAllowedToRelaunch = false;
-                new Thread() {
-                  @Override
-                  public void run() {
-                    try {
-                      Thread.sleep(4000);
-                      handler.post(() -> relaunch());
-                    } catch (InterruptedException interruptedException) {
-                      Log.e(LOG_TAG, "onPlaybackStateChange: relaunch error");
-                    }
-                  }
-                }.start();
+                handler.postDelayed(this::relaunch, 4000);
+                break;
               }
-              break;
             }
           default:
             // Cancel session
@@ -341,6 +333,7 @@ public class RadioService
     });
   }
 
+  @SuppressLint("UnspecifiedImmutableFlag")
   @NonNull
   private Notification getNotification() {
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
@@ -348,13 +341,14 @@ public class RadioService
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
     } else {
       MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
-      builder.setLargeIcon(description.getIconBitmap())
+      builder
+        .setLargeIcon(description.getIconBitmap())
         // Title, radio name
         .setContentTitle(description.getTitle())
         // Radio current track
         .setContentText(description.getSubtitle());
     }
-    return builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+    builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
       .setMediaSession(getSessionToken())
       .setShowActionsInCompactView(0))
       .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
@@ -369,12 +363,19 @@ public class RadioService
       .setDeleteIntent(
         MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
       // Show controls on lock screen even when user hides sensitive content
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      // UPnP device doesn't support PAUSE action but STOP
-      .addAction(playerAdapter.isPlaying() ? playerAdapter instanceof UpnpPlayerAdapter ?
-        actionStop : actionPause : actionPlay)
-      .setOngoing(playerAdapter.isPlaying())
-      .build();
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+    // UPnP device doesn't support PAUSE action but STOP
+    if (mediaController == null) {
+      Log.e(LOG_TAG, "getNotification: internal failure; no mediaController");
+    } else {
+      boolean isPlaying =
+        (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_PLAYING);
+      builder
+        .addAction(isPlaying ?
+          playerAdapter instanceof UpnpPlayerAdapter ? actionStop : actionPause : actionPlay)
+        .setOngoing(isPlaying);
+    }
+    return builder.build();
   }
 
   @NonNull

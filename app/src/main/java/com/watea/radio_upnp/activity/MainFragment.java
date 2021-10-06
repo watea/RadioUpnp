@@ -42,6 +42,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -63,7 +64,7 @@ import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.registry.RegistryListener;
 
-import java.util.Objects;
+import java.util.List;
 
 public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
   private static final String LOG_TAG = MainFragment.class.getName();
@@ -71,7 +72,8 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   // <HMI assets
   private View dlnaView;
   private RecyclerView dlnaRecyclerView;
-  private RecyclerView radiosView;
+  private RecyclerView radiosRecyclerView;
+  private FrameLayout defaultFrameLayout;
   private MenuItem dlnaMenuItem;
   private MenuItem preferredMenuItem;
   private AlertDialog dlnaAlertDialog;
@@ -124,7 +126,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
   @Override
   public void onClick(@NonNull Radio radio) {
-    if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
+    if (NetworkTester.isDeviceOffline(MAIN_ACTIVITY)) {
       tell(R.string.no_internet);
     } else {
       startReading(radio);
@@ -137,7 +139,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Nullable
   @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
-    return radioLibrary.getFrom(radioId);
+    return getRadioLibrary().getFrom(radioId);
   }
 
   @Override
@@ -158,7 +160,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+      if (NetworkTester.hasWifiIpAddress(MAIN_ACTIVITY)) {
         if (upnpSearch()) {
           dlnaAlertDialog.show();
           if (!gotItDlnaEnable) {
@@ -175,7 +177,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
-      if (NetworkTester.hasWifiIpAddress(Objects.requireNonNull(getActivity()))) {
+      if (NetworkTester.hasWifiIpAddress(MAIN_ACTIVITY)) {
         if (upnpReset()) {
           dlnaDevicesAdapter.clear();
           tell(R.string.dlna_search_reset);
@@ -212,8 +214,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         savedInstanceState.getString(getString(R.string.key_selected_device));
     }
     // Shared preferences
-    SharedPreferences sharedPreferences =
-      Objects.requireNonNull(getActivity()).getPreferences(Context.MODE_PRIVATE);
+    SharedPreferences sharedPreferences = MAIN_ACTIVITY.getPreferences(Context.MODE_PRIVATE);
     gotItRadioLongPress =
       sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
     gotItDlnaEnable =
@@ -236,29 +237,29 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         @Override
         public void onChosenDeviceChange() {
           // Do nothing if not yet created or if we were disposed
-          if ((dlnaMenuItem != null) && (getActivity() != null)) {
+          if ((dlnaMenuItem != null) && isActuallyAdded()) {
             setDlnaMenuItem();
           }
         }
       },
       SELECTED_COLOR,
       CAST_ICON);
-    radiosAdapter = new RadiosAdapter(getActivity(), this, RADIO_ICON_SIZE / 2);
-    radiosView.setLayoutManager(new GridLayoutManager(
-      getActivity(), getRadiosColumnCount(getActivity().getResources().getConfiguration())));
-    radiosView.setAdapter(radiosAdapter);
+    radiosAdapter = new RadiosAdapter(MAIN_ACTIVITY, this, RADIO_ICON_SIZE / 2);
+    radiosRecyclerView.setLayoutManager(new GridLayoutManager(
+      MAIN_ACTIVITY, getRadiosColumnCount(MAIN_ACTIVITY.getResources().getConfiguration())));
+    radiosRecyclerView.setAdapter(radiosAdapter);
     // Build alert dialogs
-    radioLongPressAlertDialog = new AlertDialog.Builder(getActivity())
+    radioLongPressAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY)
       .setMessage(R.string.radio_long_press)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItRadioLongPress = true)
       .create();
-    dlnaEnableAlertDialog = new AlertDialog.Builder(getActivity())
+    dlnaEnableAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY)
       .setMessage(R.string.dlna_enable)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
       .create();
     // Specific DLNA devices dialog
     dlnaAlertDialog = new AlertDialog.Builder(getActivity()).setView(dlnaView).create();
-    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(MAIN_ACTIVITY));
     dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
   }
 
@@ -268,7 +269,8 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
     // Inflate the view so that graphical objects exists
     final View view = inflater.inflate(R.layout.content_main, container, false);
-    radiosView = view.findViewById(R.id.radios_recycler_view);
+    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     dlnaView = inflater.inflate(R.layout.view_dlna_devices, container, false);
     dlnaRecyclerView = dlnaView.findViewById(R.id.dlna_devices_recycler_view);
     return view;
@@ -292,15 +294,16 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
-    ((GridLayoutManager) Objects.requireNonNull(radiosView.getLayoutManager())).setSpanCount(
-      getRadiosColumnCount(newConfig));
+    final GridLayoutManager gridLayoutManager = (GridLayoutManager) radiosRecyclerView.getLayoutManager();
+    assert gridLayoutManager != null;
+    gridLayoutManager.setSpanCount(getRadiosColumnCount(newConfig));
   }
 
   @Override
   public void onPause() {
     super.onPause();
     // Shared preferences
-    Objects.requireNonNull(getActivity())
+    MAIN_ACTIVITY
       .getPreferences(Context.MODE_PRIVATE)
       .edit()
       .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
@@ -356,8 +359,10 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
   // Utility to set radio list views
   private void setRadiosView() {
-    radiosAdapter.onRefresh(isPreferredRadios ?
-      radioLibrary.getPreferredRadioIds() : radioLibrary.getAllRadioIds());
+    List<Long> radios = isPreferredRadios ?
+      getRadioLibrary().getPreferredRadioIds() : getRadioLibrary().getAllRadioIds();
+    radiosAdapter.onRefresh(radios);
+    defaultFrameLayout.setVisibility(radios.isEmpty() ? View.VISIBLE : View.INVISIBLE);
   }
 
   private void setDlnaMenuItem() {
@@ -369,7 +374,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   }
 
   private void setPreferredMenuItem() {
-    preferredMenuItem.setIcon(isPreferredRadios ?
-      R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+    preferredMenuItem.setIcon(
+      isPreferredRadios ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
   }
 }

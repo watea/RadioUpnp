@@ -23,7 +23,6 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
@@ -44,8 +43,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
-import java.util.Objects;
-
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
@@ -53,14 +50,76 @@ public abstract class MainActivityFragment extends Fragment {
   protected static int SELECTED_COLOR;
   protected static Drawable CAST_ICON = null;
   protected static Bitmap DEFAULT_ICON = null;
-  protected RadioLibrary radioLibrary = null;
-  private MainActivity mainActivity;
+  protected static MainActivity MAIN_ACTIVITY = null;
   private View view;
   private boolean isCreationDone = false;
 
   // Required empty constructor
   public MainActivityFragment() {
     super();
+  }
+
+  public static void onActivityCreated(@NonNull MainActivity mainActivity) {
+    MAIN_ACTIVITY = mainActivity;
+    // Fetch needed static values
+    ERROR_COLOR = ContextCompat.getColor(MAIN_ACTIVITY, R.color.darkRed);
+    SELECTED_COLOR = MaterialColors.getColor(
+      MAIN_ACTIVITY,
+      R.attr.colorPrimary,
+      ContextCompat.getColor(MAIN_ACTIVITY, R.color.lightBlue));
+    // Static definition of cast icon color (may change with theme)
+    CAST_ICON = AppCompatResources.getDrawable(MAIN_ACTIVITY, R.drawable.ic_cast_white_24dp);
+    assert CAST_ICON != null;
+    CAST_ICON.setTint(SELECTED_COLOR);
+    createDefaultIcon();
+  }
+
+  private static void createDefaultIcon() {
+    Drawable drawable = ContextCompat.getDrawable(MAIN_ACTIVITY, R.drawable.ic_radio_white_24dp);
+    // Deep copy
+    assert drawable != null;
+    Drawable.ConstantState constantState = drawable.mutate().getConstantState();
+    assert constantState != null;
+    drawable = constantState.newDrawable();
+    drawable.setTint(
+      MAIN_ACTIVITY.getResources().getColor(R.color.darkGray, MAIN_ACTIVITY.getTheme()));
+    Canvas canvas = new Canvas();
+    DEFAULT_ICON = Bitmap.createBitmap(
+      drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+    canvas.setBitmap(DEFAULT_ICON);
+    drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+    drawable.draw(canvas);
+  }
+
+  public static RadioLibrary getRadioLibrary() {
+    return MAIN_ACTIVITY.getRadioLibrary();
+  }
+
+  protected static void tell(int message) {
+    MAIN_ACTIVITY.tell(message);
+  }
+
+  protected static void tell(@NonNull String message) {
+    MAIN_ACTIVITY.tell(message);
+  }
+
+  protected static boolean upnpSearch() {
+    return MAIN_ACTIVITY.upnpSearch();
+  }
+
+  protected static boolean upnpReset() {
+    return MAIN_ACTIVITY.upnpReset();
+  }
+
+  // radio is null for current
+  protected static void startReading(@Nullable Radio radio) {
+    MAIN_ACTIVITY.startReading(radio);
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  @NonNull
+  protected static Fragment setFragment(@NonNull Class<? extends Fragment> fragment) {
+    return MAIN_ACTIVITY.setFragment(fragment);
   }
 
   public void onCreateOptionsMenu(@NonNull Menu menu) {
@@ -81,20 +140,6 @@ public abstract class MainActivityFragment extends Fragment {
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     if (!isCreationDone) {
-      mainActivity = (MainActivity) getActivity();
-      radioLibrary = Objects.requireNonNull(mainActivity).getRadioLibrary();
-      // Fetch needed static values
-      Context context = getContext();
-      ERROR_COLOR = ContextCompat.getColor(Objects.requireNonNull(context), R.color.darkRed);
-      SELECTED_COLOR = MaterialColors.getColor(
-        context,
-        R.attr.colorPrimary,
-        ContextCompat.getColor(context, R.color.lightBlue));
-      // Static definition of cast icon color (may change with theme)
-      CAST_ICON = AppCompatResources.getDrawable(getActivity(), R.drawable.ic_cast_white_24dp);
-      Objects.requireNonNull(CAST_ICON).setTint(SELECTED_COLOR);
-      createDefaultIcon();
-      // Done
       onActivityCreatedFiltered(savedInstanceState);
       isCreationDone = true;
     }
@@ -104,7 +149,7 @@ public abstract class MainActivityFragment extends Fragment {
   public void onResume() {
     super.onResume();
     // Decorate
-    mainActivity.onFragmentResume(this);
+    MAIN_ACTIVITY.onFragmentResume(this);
   }
 
   @NonNull
@@ -136,48 +181,5 @@ public abstract class MainActivityFragment extends Fragment {
 
   protected boolean isActuallyAdded() {
     return ((getActivity() != null) && isAdded());
-  }
-
-  protected void tell(int message) {
-    mainActivity.tell(message);
-  }
-
-  protected void tell(@NonNull String message) {
-    mainActivity.tell(message);
-  }
-
-  protected boolean upnpSearch() {
-    return mainActivity.upnpSearch();
-  }
-
-  protected boolean upnpReset() {
-    return mainActivity.upnpReset();
-  }
-
-  // radio is null for current
-  protected void startReading(@Nullable Radio radio) {
-    mainActivity.startReading(radio);
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NonNull
-  protected Fragment setFragment(@NonNull Class<? extends Fragment> fragment) {
-    return mainActivity.setFragment(fragment);
-  }
-
-  private void createDefaultIcon() {
-    Drawable drawable = ContextCompat.getDrawable(mainActivity, R.drawable.ic_radio_white_24dp);
-    // Deep copy
-    assert drawable != null;
-    Drawable.ConstantState constantState = drawable.mutate().getConstantState();
-    assert constantState != null;
-    drawable = constantState.newDrawable();
-    drawable.setTint(getResources().getColor(R.color.darkGray, mainActivity.getTheme()));
-    Canvas canvas = new Canvas();
-    DEFAULT_ICON = Bitmap.createBitmap(
-      drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-    canvas.setBitmap(DEFAULT_ICON);
-    drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-    drawable.draw(canvas);
   }
 }

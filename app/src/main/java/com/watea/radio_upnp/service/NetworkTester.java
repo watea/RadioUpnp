@@ -97,7 +97,7 @@ public class NetworkTester {
   }
 
   public static boolean isDeviceOffline(@NonNull Context context) {
-    // Robustness; to be multithread safe
+    // Robustness; to be multithreading safe
     try {
       ConnectivityManager connectivityManager =
         (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);

@@ -52,7 +52,6 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class DonationFragment
   extends MainActivityFragment
@@ -111,7 +110,7 @@ public class DonationFragment
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     // BillingClient, new each time
-    billingClient = BillingClient.newBuilder(Objects.requireNonNull(getActivity()))
+    billingClient = BillingClient.newBuilder(MAIN_ACTIVITY)
       .enablePendingPurchases()
       .setListener(this)
       .build();
@@ -181,11 +180,10 @@ public class DonationFragment
       } else {
         String item = GOOGLE_CATALOG.get(googleSpinner.getSelectedItemPosition());
         Log.d(LOG_TAG, "Selected item in spinner: " + item);
+        final SkuDetails skuDetails = skuDetailss.get(item);
+        assert skuDetails != null;
         billingClient.launchBillingFlow(
-          Objects.requireNonNull(getActivity()),
-          BillingFlowParams.newBuilder()
-            .setSkuDetails(Objects.requireNonNull(skuDetailss.get(item)))
-            .build());
+          MAIN_ACTIVITY, BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build());
       }
     };
   }
@@ -204,7 +202,7 @@ public class DonationFragment
   public void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
     // Adapters
     ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
-      Objects.requireNonNull(getActivity()),
+      MAIN_ACTIVITY,
       android.R.layout.simple_spinner_item,
       getResources().getStringArray(R.array.donation_google_catalog_values));
     donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -219,7 +217,7 @@ public class DonationFragment
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
     // Alert dialog
-    paymentAlertDialogBuilder = new AlertDialog.Builder(getActivity())
+    paymentAlertDialogBuilder = new AlertDialog.Builder(MAIN_ACTIVITY)
       .setIcon(android.R.drawable.ic_dialog_alert)
       .setTitle(R.string.donation_alert_dialog_title)
       .setMessage(R.string.donation_alert_dialog_try_again)

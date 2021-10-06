@@ -26,7 +26,6 @@ package com.watea.radio_upnp.activity;
 import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -52,6 +51,7 @@ import android.widget.SimpleAdapter;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.FragmentManager;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
@@ -67,7 +67,6 @@ import java.net.URL;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -115,7 +114,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
+      if (NetworkTester.isDeviceOffline(MAIN_ACTIVITY)) {
         tell(R.string.no_internet);
       } else {
         if (urlWatcher.url == null) {
@@ -156,7 +155,8 @@ public class ItemModifyFragment extends MainActivityFragment {
     } else
       // Robustness; it happens it fails
       try {
-        radio = radioLibrary.getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
+        radio =
+          getRadioLibrary().getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
         radioIcon = BitmapFactory.decodeFile(
           savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
       } catch (Exception exception) {
@@ -196,7 +196,7 @@ public class ItemModifyFragment extends MainActivityFragment {
       });
     searchImageButton.setOnClickListener(v -> {
       flushKeyboard();
-      if (NetworkTester.isDeviceOffline(Objects.requireNonNull(getActivity()))) {
+      if (NetworkTester.isDeviceOffline(MAIN_ACTIVITY)) {
         tell(R.string.no_internet);
       } else {
         if (darFmRadioButton.isChecked()) {
@@ -222,7 +222,7 @@ public class ItemModifyFragment extends MainActivityFragment {
       // Order matters
       outState.putString(
         getString(R.string.key_radio_icon_file),
-        radioLibrary.bitmapToFile(radioIcon, Integer.toString(hashCode())).getPath());
+        getRadioLibrary().bitmapToFile(radioIcon, Integer.toString(hashCode())).getPath());
       outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : radio.getId());
     } catch (Exception exception) {
       Log.e(LOG_TAG, "onSaveInstanceState: internal failure");
@@ -245,28 +245,30 @@ public class ItemModifyFragment extends MainActivityFragment {
         if (isAddMode()) {
           radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url);
           try {
-            if (radioLibrary.insertAndSaveIcon(radio, radioIcon) <= 0) {
+            if (getRadioLibrary().insertAndSaveIcon(radio, radioIcon) <= 0) {
               Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding in database");
             }
           } catch (Exception exception) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding icon");
           }
+          getBack();
+        } else if (radio.equals(MAIN_ACTIVITY.getCurrentRadio())) {
+          tell(R.string.not_to_modify);
         } else {
           radio.setName(getRadioName());
           radio.setURL(urlWatcher.url);
           radio.setWebPageURL(webPageWatcher.url);
           // Same file name reused to store icon
           try {
-            radioLibrary.setRadioIconFile(radio, radioIcon);
+            getRadioLibrary().setRadioIconFile(radio, radioIcon);
           } catch (Exception exception) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating icon");
           }
-          if (radioLibrary.updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
+          if (getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
           }
+          getBack();
         }
-        // Back to previous fragment
-        Objects.requireNonNull(getFragmentManager()).popBackStack();
       }
     } else {
       // If we got here, the user's action was not recognized
@@ -286,6 +288,13 @@ public class ItemModifyFragment extends MainActivityFragment {
     radioIcon = this.radio.getIcon();
   }
 
+  // Back to previous fragment
+  private void getBack() {
+    final FragmentManager fragmentManager = getFragmentManager();
+    assert fragmentManager != null;
+    fragmentManager.popBackStack();
+  }
+
   private boolean isAddMode() {
     return (radio == null);
   }
@@ -302,11 +311,9 @@ public class ItemModifyFragment extends MainActivityFragment {
   }
 
   private void flushKeyboard() {
-    Activity activity = getActivity();
-    View view = getView();
-    assert activity != null;
+    final View view = getView();
     assert view != null;
-    ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+    ((InputMethodManager) MAIN_ACTIVITY.getSystemService(Context.INPUT_METHOD_SERVICE))
       .hideSoftInputFromWindow(view.getWindowToken(), 0);
   }
 
@@ -347,25 +354,8 @@ public class ItemModifyFragment extends MainActivityFragment {
     tellWait();
   }
 
-  // Abstract class to handle web search
-  private abstract class Searcher extends Thread {
-    private final Handler handler = new Handler(Looper.getMainLooper());
-
-    @Override
-    public void run() {
-      handler.post(() -> {
-        if (isActuallyAdded()) {
-          onPostExecute();
-        }
-      });
-    }
-
-    protected void onPostExecute() {
-    }
-  }
-
   // Utility class to listen for URL edition
-  private class UrlWatcher implements TextWatcher {
+  private static class UrlWatcher implements TextWatcher {
     private final int defaultColor;
     @NonNull
     private final EditText editText;
@@ -400,6 +390,23 @@ public class ItemModifyFragment extends MainActivityFragment {
         isError = true;
       }
       editText.setTextColor(isError ? ERROR_COLOR : defaultColor);
+    }
+  }
+
+  // Abstract class to handle web search
+  private abstract class Searcher extends Thread {
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    @Override
+    public void run() {
+      handler.post(() -> {
+        if (isActuallyAdded()) {
+          onPostExecute();
+        }
+      });
+    }
+
+    protected void onPostExecute() {
     }
   }
 
@@ -537,7 +544,7 @@ public class ItemModifyFragment extends MainActivityFragment {
           break;
         default:
           new AlertDialog
-            .Builder(Objects.requireNonNull(getActivity()))
+            .Builder(MAIN_ACTIVITY)
             .setAdapter(
               new SimpleAdapter(
                 getActivity(),
@@ -545,10 +552,8 @@ public class ItemModifyFragment extends MainActivityFragment {
                 R.layout.row_darfm_radio,
                 new String[]{DAR_FM_NAME},
                 new int[]{R.id.row_darfm_radio_name_text_view}),
-              (dialogInterface, i) -> {
-                // Call recursively for selected radio
-                new DarFmSearcher(radios.get(i));
-              })
+              // Call recursively for selected radio
+              (dialogInterface, i) -> new DarFmSearcher(radios.get(i)))
             .setCancelable(true)
             .create()
             .show();
