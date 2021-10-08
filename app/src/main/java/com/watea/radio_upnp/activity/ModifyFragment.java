@@ -40,8 +40,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
 
-import java.util.List;
-
 public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
   // <HMI assets
   private RecyclerView radiosRecyclerView;
