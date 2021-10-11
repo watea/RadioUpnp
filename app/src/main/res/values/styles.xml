@@ -24,20 +24,16 @@
 <resources>
     <!-- Base application theme -->
     <style name="BaseAppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/lightBlue</item>
-        <item name="colorPrimaryDark">@color/darkBlue</item>
-        <item name="colorAccent">@color/darkGray</item>
-        <item name="imageButtonStyle">@style/Widget.AppCompat.Button.Borderless</item>
-    </style>
-
-    <!-- Base application theme dark -->
-    <style name="AppThemeDark" parent="BaseAppTheme">
-        <item name="android:textColor">@color/darkGray</item>
-        <item name="android:textColorPrimary">@color/darkGray</item>
-        <item name="android:textColorSecondary">@color/lightGray</item>
-        <item name="android:textColorHint">@color/lightGray</item>
-        <item name="android:textColorPrimaryDisableOnly">@color/lightGray</item>
+        <item name="colorPrimary">@color/dark_gray</item>
+        <item name="colorPrimaryDark">@color/dark_gray</item>
+        <item name="colorAccent">@color/dark_gray</item>
+        <item name="android:textColor">@color/light_gray</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white</item>
+        <item name="android:textColorHint">@color/dark_gray</item>
+        <item name="android:textColorPrimaryDisableOnly">@color/dark_blue</item>
         <item name="android:windowBackground">@color/dark</item>
+        <item name="imageButtonStyle">@style/Widget.AppCompat.Button.Borderless</item>
     </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />

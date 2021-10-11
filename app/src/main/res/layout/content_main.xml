@@ -47,7 +47,7 @@
             <ImageView
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/tile_size"
-                android:src="@drawable/ic_error_gray_24dp"
+                android:src="@drawable/ic_error_blue_24dp"
                 tools:ignore="ContentDescription" />
 
             <TextView
@@ -55,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="@string/radio_no_radio"
-                android:textColor="@color/darkBlue"
+                android:textColor="@color/dark_blue"
                 android:textStyle="bold" />
 
         </FrameLayout>

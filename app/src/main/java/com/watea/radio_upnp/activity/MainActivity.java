@@ -46,7 +46,6 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -80,18 +79,20 @@ public class MainActivity
   public static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
-    new Hashtable<Class<? extends Fragment>, Integer>() {{
-      put(MainFragment.class, R.id.action_home);
-      put(ItemModifyFragment.class, R.id.action_add_item);
-      put(ModifyFragment.class, R.id.action_modify);
-      put(DonationFragment.class, R.id.action_donate);
-    }
-  };
+    new Hashtable<Class<? extends Fragment>, Integer>() {
+      {
+        put(MainFragment.class, R.id.action_home);
+        put(ItemModifyFragment.class, R.id.action_add_item);
+        put(ModifyFragment.class, R.id.action_modify);
+        put(DonationFragment.class, R.id.action_donate);
+      }
+    };
   private static final List<Class<? extends Fragment>> ALWAYS_NEW_FRAGMENTS =
-    new Vector<Class<? extends Fragment>>() {{
-      add(ItemModifyFragment.class);
-    }
-  };
+    new Vector<Class<? extends Fragment>>() {
+      {
+        add(ItemModifyFragment.class);
+      }
+    };
   private static final DefaultRadio[] DEFAULT_RADIOS = {
     new DefaultRadio(
       "FRANCE INTER",
@@ -202,9 +203,6 @@ public class MainActivity
     // Note: switch not to use as id not final
     if (id == R.id.action_about) {
       aboutAlertDialog.show();
-    } else if (id == R.id.action_dark) {
-      // Nothing to do here
-      return true;
     } else {
       // Shall not fail to find!
       for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
@@ -362,9 +360,6 @@ public class MainActivity
         .putBoolean(getString(R.string.key_first_start), false)
         .apply();
     }
-    // Set theme
-    final boolean darkMode = sharedPreferences.getBoolean(getString(R.string.key_dark_mode), false);
-    setTheme(darkMode ? R.style.AppThemeDark : R.style.BaseAppTheme);
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
@@ -390,17 +385,6 @@ public class MainActivity
     NavigationView navigationView = findViewById(R.id.navigation_view);
     navigationView.setNavigationItemSelectedListener(this);
     navigationMenu = navigationView.getMenu();
-    SwitchCompat darkSwitch =
-      (SwitchCompat) navigationMenu.findItem(R.id.action_dark).getActionView();
-    darkSwitch.setChecked(darkMode);
-    darkSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-      // Store theme in preferences and recreate activity
-      sharedPreferences
-        .edit()
-        .putBoolean(getString(R.string.key_dark_mode), isChecked)
-        .apply();
-      recreate();
-    });
     // Build alert about dialog
     @SuppressLint("InflateParams")
     View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);

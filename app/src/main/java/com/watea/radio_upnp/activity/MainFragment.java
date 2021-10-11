@@ -242,7 +242,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
           }
         }
       },
-      SELECTED_COLOR,
+      DLNA_COLOR,
       CAST_ICON);
     radiosAdapter = new RadiosAdapter(MAIN_ACTIVITY, this, RADIO_ICON_SIZE / 2);
     radiosRecyclerView.setLayoutManager(new GridLayoutManager(

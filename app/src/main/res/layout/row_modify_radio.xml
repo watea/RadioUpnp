@@ -50,7 +50,7 @@
             android:gravity="center"
             android:contentDescription="@string/preferred"
             android:src="@drawable/ic_star_border_white_30dp"
-            android:tint="@color/darkBlue"  />
+            android:tint="@color/dark_blue"  />
 
         <ImageButton
             android:id="@+id/row_modify_radio_move_image_button"
@@ -60,7 +60,7 @@
             android:gravity="center"
             android:contentDescription="@string/action_move"
             android:src="@drawable/ic_swap_vert_white_30dp"
-            android:tint="@color/darkBlue" />
+            android:tint="@color/dark_blue" />
 
     </RelativeLayout>
 

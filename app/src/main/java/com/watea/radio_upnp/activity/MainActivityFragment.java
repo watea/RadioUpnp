@@ -38,7 +38,6 @@ import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.color.MaterialColors;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
@@ -47,7 +46,7 @@ import com.watea.radio_upnp.model.RadioLibrary;
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
   protected static int ERROR_COLOR;
-  protected static int SELECTED_COLOR;
+  protected static int DLNA_COLOR;
   protected static Drawable CAST_ICON = null;
   protected static Bitmap DEFAULT_ICON = null;
   protected static MainActivity MAIN_ACTIVITY = null;
@@ -62,15 +61,12 @@ public abstract class MainActivityFragment extends Fragment {
   public static void onActivityCreated(@NonNull MainActivity mainActivity) {
     MAIN_ACTIVITY = mainActivity;
     // Fetch needed static values
-    ERROR_COLOR = ContextCompat.getColor(MAIN_ACTIVITY, R.color.darkRed);
-    SELECTED_COLOR = MaterialColors.getColor(
-      MAIN_ACTIVITY,
-      R.attr.colorPrimary,
-      ContextCompat.getColor(MAIN_ACTIVITY, R.color.lightBlue));
+    ERROR_COLOR = ContextCompat.getColor(MAIN_ACTIVITY, R.color.dark_red);
+    DLNA_COLOR = ContextCompat.getColor(MAIN_ACTIVITY, R.color.dark_blue);
     // Static definition of cast icon color (may change with theme)
     CAST_ICON = AppCompatResources.getDrawable(MAIN_ACTIVITY, R.drawable.ic_cast_white_24dp);
     assert CAST_ICON != null;
-    CAST_ICON.setTint(SELECTED_COLOR);
+    CAST_ICON.setTint(DLNA_COLOR);
     createDefaultIcon();
   }
 
@@ -82,7 +78,7 @@ public abstract class MainActivityFragment extends Fragment {
     assert constantState != null;
     drawable = constantState.newDrawable();
     drawable.setTint(
-      MAIN_ACTIVITY.getResources().getColor(R.color.darkGray, MAIN_ACTIVITY.getTheme()));
+      MAIN_ACTIVITY.getResources().getColor(R.color.dark_gray, MAIN_ACTIVITY.getTheme()));
     Canvas canvas = new Canvas();
     DEFAULT_ICON = Bitmap.createBitmap(
       drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);

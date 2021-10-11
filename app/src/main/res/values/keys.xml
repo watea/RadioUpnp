@@ -32,7 +32,6 @@
     <string name="key_radio_long_press_got_it">key_radio_long_press_got_it</string>
     <string name="key_play_long_press_got_it">key_play_long_press_got_it</string>
     <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
-    <string name="key_dark_mode">key_dark_mode</string>
     <!-- Bundles -->
     <string name="key_dlna_device">key_dlna_device</string>
 </resources>

@@ -21,8 +21,7 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <group android:checkableBehavior="single">
         <item
@@ -39,11 +38,6 @@
             android:title="@string/title_modify" />
     </group>
     <group android:checkableBehavior="single">
-        <item
-            android:id="@+id/action_dark"
-            android:icon="@drawable/ic_baseline_flaky_white_24dp"
-            android:title="@string/title_dark_mode"
-            app:actionLayout="@layout/view_switch" />
         <item
             android:id="@+id/action_donate"
             android:icon="@drawable/ic_payment_white_24dp"
