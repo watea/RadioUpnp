@@ -53,6 +53,8 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.service.RadioService;
 
+import java.util.Objects;
+
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
   private final RadioLibrary radioLibrary;
@@ -88,7 +90,7 @@ public class PlayerController {
       @Override
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
         // Do nothing if view not defined
-        if (!isContextDisposed()) {
+        if (isContextActiv()) {
           int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
           boolean isDlna = (mediaController != null) &&
             (mediaController.getExtras() != null) &&
@@ -112,6 +114,7 @@ public class PlayerController {
               break;
             case PlaybackStateCompat.STATE_BUFFERING:
             case PlaybackStateCompat.STATE_CONNECTING:
+              setAlbumArtDisplay(Objects.requireNonNull(getCurrentRadio()));
               setFrameVisibility(true, true);
               break;
             case PlaybackStateCompat.STATE_NONE:
@@ -119,7 +122,13 @@ public class PlayerController {
               setFrameVisibility(false, false);
               break;
             default:
-              // On error, leave Play button on if not UPnP
+              // On error, leave radio data visibility ON, if not DLNA streaming.
+              // Important notice: this is for user convenience only.
+              // Display state is not saved if the context is disposed
+              // (as it would require a Radio Service safe context,
+              // too complex to implement).
+              playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
+              playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
               setFrameVisibility(!isDlna, false);
               mainActivity.tell(R.string.radio_connection_error);
           }
@@ -127,32 +136,15 @@ public class PlayerController {
       }
 
       @Override
-      public void onMetadataChanged(final MediaMetadataCompat mediaMetadata) {
+      public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
         // Do nothing if view not defined or nothing to change
-        if (isContextDisposed() || (mediaMetadata == null)) {
-          return;
-        }
-        playedRadioNameTextView.setText(
-          mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
-        playedRadioInformationTextView.setText(
-          mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST));
-        // Use WRITER for rate
-        String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
-        playedRadioRateTextView.setText(
-          (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
-        albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
-            mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
-            RADIO_ICON_SIZE,
-            RADIO_ICON_SIZE,
-            false));
-        Radio radio = radioLibrary.getFrom(mediaMetadata);
-        if (radio == null) {
-          // Should not happen
-          Log.d(LOG_TAG, "Internal failure; radio is null");
-        } else {
-          // albumArtImageView stores radioId for possible further use
-          albumArtImageView.setTag(radio.getId());
-          setPreferredButton(radio.isPreferred());
+        if (isContextActiv() && (mediaMetadata != null)) {
+          playedRadioInformationTextView.setText(
+            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST));
+          // Use WRITER for rate
+          String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
+          playedRadioRateTextView.setText(
+            (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
         }
       }
 
@@ -166,6 +158,14 @@ public class PlayerController {
 
       private int getVisibleFrom(boolean isVisible) {
         return isVisible ? View.VISIBLE : View.INVISIBLE;
+      }
+
+      private void setAlbumArtDisplay(@NonNull Radio radio) {
+        playedRadioNameTextView.setText(radio.getName());
+        albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
+          radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, false));
+        // Init Preferred
+        setPreferredButton(radio.isPreferred());
       }
     };
   private MediaBrowserCompat mediaBrowser = null;
@@ -204,7 +204,7 @@ public class PlayerController {
     radioLibrary = mainActivity.getRadioLibrary();
   }
 
-  public void onActivityCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+  public void onActivityCreated(@NonNull View view) {
     // Shared preferences
     SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
     gotItPlayLongPress = sharedPreferences.getBoolean(
@@ -248,6 +248,9 @@ public class PlayerController {
           case PlaybackStateCompat.STATE_STOPPED:
             mediaController.getTransportControls().stop();
             break;
+          case PlaybackStateCompat.STATE_REWINDING:
+            mediaController.getTransportControls().rewind();
+            break;
           default:
             // Should not happen
             Log.d(LOG_TAG, "Internal failure, no action to perform on play button");
@@ -269,7 +272,6 @@ public class PlayerController {
       if (radio == null) {
         // Should not happen
         Log.d(LOG_TAG, "Internal failure, radio is null");
-        preferredImageButton.setVisibility(View.INVISIBLE);
       } else {
         radioLibrary.setPreferred(radio.getId(), !radio.isPreferred());
       }
@@ -281,18 +283,6 @@ public class PlayerController {
         setPreferredButton(isPreferred);
       }
     });
-    // Restore saved state, if any
-    if (savedInstanceState != null) {
-      long playedRadioId =
-        savedInstanceState.getLong(mainActivity.getString(R.string.key_played_radio_id));
-      if (playedRadioId != 0L) {
-        Radio radio = radioLibrary.getFrom(playedRadioId);
-        if (radio != null) {
-          // We simulate a new played radio
-          mediaControllerCallback.onMetadataChanged(radio.getMediaMetadataBuilder().build());
-        }
-      }
-    }
   }
 
   // Must be called on activity resume
@@ -327,19 +317,6 @@ public class PlayerController {
     }
   }
 
-  public void onSaveInstanceState(@NonNull Bundle outState) {
-    // May fail
-    try {
-      Radio currentRadio = getCurrentRadio();
-      if (currentRadio != null) {
-        outState.putLong(
-          mainActivity.getString(R.string.key_played_radio_id), currentRadio.getId());
-      }
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "onSaveInstanceState: internal failure");
-    }
-  }
-
   // radio == null for current, do nothing if no current
   public void startReading(@Nullable Radio radio, @Nullable String dlnaDeviceIdentity) {
     if (radio == null) {
@@ -366,21 +343,11 @@ public class PlayerController {
 
   @Nullable
   public Radio getCurrentRadio() {
-    // No current radio if controller not there
-    if (mediaController == null) {
-      return null;
-    }
-    // MediaController controls played radio
-    Radio radio = radioLibrary.getFrom(mediaController.getMetadata());
-    // If radio is not played, radioId may be stored in icon
-    if ((radio == null) && (albumArtImageView.getVisibility() == View.VISIBLE)) {
-      radio = radioLibrary.getFrom((Long) albumArtImageView.getTag());
-    }
-    return radio;
+    return (mediaController == null) ? null : radioLibrary.getFrom(mediaController.getMetadata());
   }
 
-  private boolean isContextDisposed() {
-    return (mainActivity == null);
+  private boolean isContextActiv() {
+    return (mainActivity != null);
   }
 
   private void browserViewSync() {
@@ -398,7 +365,6 @@ public class PlayerController {
   }
 
   private void setPreferredButton(boolean isPreferred) {
-    preferredImageButton.setVisibility(View.VISIBLE);
     preferredImageButton.setImageResource(
       isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
   }

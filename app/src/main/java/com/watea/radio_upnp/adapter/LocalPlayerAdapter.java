@@ -112,6 +112,9 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
       case PlaybackStateCompat.STATE_BUFFERING:
         actions |= PlaybackStateCompat.ACTION_PLAY;
         break;
+      case PlaybackStateCompat.STATE_ERROR:
+        actions |= PlaybackStateCompat.ACTION_REWIND;
+        break;
       default:
         // Nothing else
     }
@@ -132,7 +135,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     simpleExoPlayer = new SimpleExoPlayer
       .Builder(context)
       .setMediaSourceFactory(new DefaultMediaSourceFactory(
-          new DefaultDataSourceFactory(context, defaultHttpDataSourceFactory)))
+        new DefaultDataSourceFactory(context, defaultHttpDataSourceFactory)))
       .build();
     simpleExoPlayer.setMediaItem(MediaItem.fromUri(
       RadioHandler.getHandledUri(HttpServer.getLoopbackUri(), radio, lockKey)));

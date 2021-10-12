@@ -90,6 +90,8 @@ public class RadioService
   private static String CHANNEL_ID;
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
   private final UpnpActionController upnpActionController = new UpnpActionController();
+  private final MediaSessionCompatCallback mediaSessionCompatCallback =
+    new MediaSessionCompatCallback();
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
   private MediaSessionCompat session;
@@ -106,11 +108,12 @@ public class RadioService
   private HttpServer httpServer;
   private MediaMetadataCompat mediaMetadataCompat = null;
   private boolean isStarted;
-  private boolean isAllowedToRelaunch;
+  private boolean isAllowedToRewind;
   private String lockKey;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
   private NotificationCompat.Action actionPlay;
+  private NotificationCompat.Action actionRewind;
   private MediaControllerCompat mediaController;
 
   @Override
@@ -120,7 +123,7 @@ public class RadioService
     session = new MediaSessionCompat(this, LOG_TAG);
     mediaController = session.getController();
     // Link to callback where actual media controls are called...
-    session.setCallback(new MediaSessionCompatCallback());
+    session.setCallback(mediaSessionCompatCallback);
     setSessionToken(session.getSessionToken());
     // Notification
     CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
@@ -176,7 +179,7 @@ public class RadioService
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     isStarted = false;
-    isAllowedToRelaunch = false;
+    isAllowedToRewind = false;
     // Prepare notification
     actionPause = new NotificationCompat.Action(
       R.drawable.ic_pause_white_24dp,
@@ -190,6 +193,10 @@ public class RadioService
       R.drawable.ic_play_arrow_white_24dp,
       getString(R.string.action_play),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY));
+    actionRewind = new NotificationCompat.Action(
+      R.drawable.ic_baseline_replay_24dp,
+      getString(R.string.action_relaunch),
+      MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_REWIND));
     Log.d(LOG_TAG, "onCreate: done!");
   }
 
@@ -205,8 +212,8 @@ public class RadioService
   public void onLoadChildren(
     @NonNull final String parentMediaId,
     @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
-    result.sendResult(parentMediaId.equals(radioLibrary.getRoot()) ?
-      radioLibrary.getMediaItems() : null);
+    result.sendResult(
+      parentMediaId.equals(radioLibrary.getRoot()) ? radioLibrary.getMediaItems() : null);
   }
 
   @Override
@@ -297,28 +304,43 @@ public class RadioService
               isStarted = true;
             }
             startForeground(NOTIFICATION_ID, getNotification());
-            isAllowedToRelaunch = true;
+            isAllowedToRewind = true;
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
-            isAllowedToRelaunch = false;
+            isAllowedToRewind = false;
             // Move service out started state
             stopForeground(false);
             // Update notification
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
+            // For user convenience in local mode, session is kept alive.
             if (playerAdapter instanceof LocalPlayerAdapter) {
-              // Try to relaunch local player, just once
-              if (isAllowedToRelaunch) {
-                isAllowedToRelaunch = false;
-                handler.postDelayed(this::relaunch, 4000);
-                break;
+              // Try to relaunch just once
+              if (isAllowedToRewind) {
+                isAllowedToRewind = false;
+                handler.postDelayed(() -> {
+                    // No relaunch if we were disposed or not in error state anymore
+                    if ((mediaController != null) &&
+                      (mediaController.isSessionReady()) &&
+                      (mediaController.getPlaybackState().getState() ==
+                        PlaybackStateCompat.STATE_ERROR)) {
+                      mediaSessionCompatCallback.onRewind();
+                    }
+                  },
+                  4000);
+              } else {
+                // Move service out started state
+                stopForeground(false);
+                // Update notification
+                notificationManager.notify(NOTIFICATION_ID, getNotification());
               }
+              break;
             }
           default:
             // Cancel session
-            isAllowedToRelaunch = false;
+            isAllowedToRewind = false;
             playerAdapter.release();
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
@@ -333,10 +355,26 @@ public class RadioService
     });
   }
 
-  @SuppressLint("UnspecifiedImmutableFlag")
+  @SuppressLint("SwitchIntDef")
   @NonNull
   private Notification getNotification() {
-    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+          .setMediaSession(getSessionToken())
+          .setShowActionsInCompactView(0))
+        .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
+        // Pending intent that is fired when user clicks on notification
+        .setContentIntent(PendingIntent.getActivity(
+          this,
+          REQUEST_CODE,
+          new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+          PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
+        // When notification is deleted (when playback is paused and notification can be
+        // deleted) fire MediaButtonPendingIntent with ACTION_STOP
+        .setDeleteIntent(
+          MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
+        // Show controls on lock screen even when user hides sensitive content
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
     if (mediaMetadataCompat == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
     } else {
@@ -348,32 +386,23 @@ public class RadioService
         // Radio current track
         .setContentText(description.getSubtitle());
     }
-    builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-      .setMediaSession(getSessionToken())
-      .setShowActionsInCompactView(0))
-      .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
-      // Pending intent that is fired when user clicks on notification
-      .setContentIntent(PendingIntent.getActivity(
-        this,
-        REQUEST_CODE,
-        new Intent(this, MainActivity.class)
-          .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_CANCEL_CURRENT))
-      // When notification is deleted (when playback is paused and notification can be
-      // deleted) fire MediaButtonPendingIntent with ACTION_STOP
-      .setDeleteIntent(
-        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
-      // Show controls on lock screen even when user hides sensitive content
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-    // UPnP device doesn't support PAUSE action but STOP
     if (mediaController == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no mediaController");
     } else {
-      boolean isPlaying =
-        (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_PLAYING);
-      builder
-        .addAction(isPlaying ?
-          playerAdapter instanceof UpnpPlayerAdapter ? actionStop : actionPause : actionPlay)
-        .setOngoing(isPlaying);
+      switch (mediaController.getPlaybackState().getState()) {
+        case PlaybackStateCompat.STATE_PLAYING:
+          // UPnP device doesn't support PAUSE action but STOP
+          builder.addAction(playerAdapter instanceof UpnpPlayerAdapter ? actionStop : actionPause);
+          builder.setOngoing(true);
+          break;
+        case PlaybackStateCompat.STATE_PAUSED:
+          builder.addAction(actionPlay);
+          builder.setOngoing(false);
+          break;
+        default:
+          builder.addAction(actionRewind);
+          builder.setOngoing(false);
+      }
     }
     return builder.build();
   }
@@ -381,17 +410,6 @@ public class RadioService
   @NonNull
   private String getMediaId() {
     return mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
-  }
-
-  private boolean relaunch() {
-    if ((mediaController != null) &&
-      (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_ERROR)) {
-      mediaController
-        .getTransportControls()
-        .prepareFromMediaId(getMediaId(), mediaController.getExtras());
-      return true;
-    }
-    return false;
   }
 
   public static abstract class UpnpAction {
@@ -550,10 +568,7 @@ public class RadioService
 
     @Override
     public void onPlay() {
-      // Relaunch or play
-      if (!relaunch()) {
-        playerAdapter.play();
-      }
+      playerAdapter.play();
     }
 
     @Override
@@ -569,6 +584,11 @@ public class RadioService
     @Override
     public void onSkipToPrevious() {
       skipTo(-1);
+    }
+
+    @Override
+    public void onRewind() {
+      mediaSessionCompatCallback.onPrepareFromMediaId(getMediaId(), mediaController.getExtras());
     }
 
     @Override
@@ -597,7 +617,7 @@ public class RadioService
           direction);
         if (nextRadioId != null) {
           // Same extras are reused
-          mediaController.getTransportControls().prepareFromMediaId(nextRadioId.toString(), extras);
+          mediaSessionCompatCallback.onPrepareFromMediaId(nextRadioId.toString(), extras);
         }
       }
     }

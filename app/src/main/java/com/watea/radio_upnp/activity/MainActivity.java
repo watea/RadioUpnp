@@ -367,7 +367,7 @@ public class MainActivity
     setSupportActionBar(findViewById(R.id.actionbar));
     actionBarLayout = findViewById(R.id.actionbar_layout);
     playerController = new PlayerController(this);
-    playerController.onActivityCreated(actionBarLayout, savedInstanceState);
+    playerController.onActivityCreated(actionBarLayout);
     ActionBar actionBar = getSupportActionBar();
     if (actionBar == null) {
       // Should not happen
@@ -404,7 +404,7 @@ public class MainActivity
   @Override
   protected void onPostCreate(Bundle savedInstanceState) {
     super.onPostCreate(savedInstanceState);
-    // Sync the toggle state after onRestoreInstanceState has occurred.
+    // Sync the toggle state after onRestoreInstanceState has occurred
     drawerToggle.syncState();
   }
 
@@ -421,12 +421,6 @@ public class MainActivity
     radioLibrary.close();
     // PlayerController call
     playerController.onActivityDestroy();
-  }
-
-  @Override
-  protected void onSaveInstanceState(@NonNull Bundle outState) {
-    super.onSaveInstanceState(outState);
-    playerController.onSaveInstanceState(outState);
   }
 
   private boolean setDefaultRadios() {

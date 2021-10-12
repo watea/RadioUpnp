@@ -191,7 +191,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
   @Override
   public int getFloatingActionButtonResource() {
-    return R.drawable.ic_cast_white_24dp;
+    return R.drawable.ic_cast_blue_24dp;
   }
 
   @Override
@@ -242,8 +242,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
           }
         }
       },
-      DLNA_COLOR,
-      CAST_ICON);
+      MAIN_ACTIVITY);
     radiosAdapter = new RadiosAdapter(MAIN_ACTIVITY, this, RADIO_ICON_SIZE / 2);
     radiosRecyclerView.setLayoutManager(new GridLayoutManager(
       MAIN_ACTIVITY, getRadiosColumnCount(MAIN_ACTIVITY.getResources().getConfiguration())));

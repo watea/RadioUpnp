@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.adapter;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -35,6 +36,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
@@ -43,6 +46,7 @@ import com.watea.radio_upnp.model.DlnaDevice;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Vector;
 
 public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
@@ -60,12 +64,12 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   public DlnaDevicesAdapter(
     @Nullable String chosenDlnaDeviceIdentity,
     @NonNull Listener listener,
-    int selectedColor,
-    @NonNull Drawable castIcon) {
+    @NonNull Context context) {
     this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
     this.listener = listener;
-    this.selectedColor = selectedColor;
-    this.castIcon = castIcon;
+    this.selectedColor = ContextCompat.getColor(context, R.color.dark_blue);
+    this.castIcon = Objects.requireNonNull(
+      AppCompatResources.getDrawable(context, R.drawable.ic_cast_blue_24dp));
     clear();
   }
 

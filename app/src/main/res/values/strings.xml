@@ -104,6 +104,7 @@
     <string name="action_done">OK</string>
     <string name="action_test">Test URL</string>
     <string name="action_move">Move</string>
+    <string name="action_relaunch">Relaunch</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
 </resources>

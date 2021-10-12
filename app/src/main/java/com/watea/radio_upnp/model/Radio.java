@@ -29,6 +29,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.RatingCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -301,7 +302,9 @@ public class Radio {
       .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id.toString())
       //.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, "MediaURI")
       //.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1)
-      //.putRating(MediaMetadataCompat.METADATA_KEY_RATING, RatingCompat.newPercentageRating(100))
+      .putRating(
+        MediaMetadataCompat.METADATA_KEY_RATING,
+        RatingCompat.newPercentageRating(isPreferred ? 100 : 0))
       .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name);
     //.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 0)
     //.putRating(MediaMetadataCompat.METADATA_KEY_USER_RATING,  RatingCompat.newPercentageRating(100))

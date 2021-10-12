@@ -55,7 +55,6 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="@string/radio_no_radio"
-                android:textColor="@color/dark_blue"
                 android:textStyle="bold" />
 
         </FrameLayout>
