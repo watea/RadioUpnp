@@ -127,8 +127,10 @@ public class PlayerController {
               // Display state is not saved if the context is disposed
               // (as it would require a Radio Service safe context,
               // too complex to implement).
-              playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
-              playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
+              if (!isDlna) {
+                playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
+                playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
+              }
               setFrameVisibility(!isDlna, false);
               mainActivity.tell(R.string.radio_connection_error);
           }
