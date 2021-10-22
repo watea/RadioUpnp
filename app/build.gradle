@@ -24,11 +24,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     defaultConfig {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode 250
         versionName "2.50"
         vectorDrawables.useSupportLibrary = true
@@ -60,7 +60,7 @@ repositories {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.core:core:1.6.0'
-    implementation 'androidx.media:media:1.4.2'
+    implementation 'androidx.media:media:1.4.3'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'com.google.android.material:material:1.4.0'
