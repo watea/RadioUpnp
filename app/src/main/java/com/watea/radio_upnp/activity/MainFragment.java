@@ -248,16 +248,18 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       MAIN_ACTIVITY, getRadiosColumnCount(MAIN_ACTIVITY.getResources().getConfiguration())));
     radiosRecyclerView.setAdapter(radiosAdapter);
     // Build alert dialogs
-    radioLongPressAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY)
+    radioLongPressAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
       .setMessage(R.string.radio_long_press)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItRadioLongPress = true)
       .create();
-    dlnaEnableAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY)
+    dlnaEnableAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
       .setMessage(R.string.dlna_enable)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
       .create();
     // Specific DLNA devices dialog
-    dlnaAlertDialog = new AlertDialog.Builder(getActivity()).setView(dlnaView).create();
+    dlnaAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
+      .setView(dlnaView)
+      .create();
     dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(MAIN_ACTIVITY));
     dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
   }

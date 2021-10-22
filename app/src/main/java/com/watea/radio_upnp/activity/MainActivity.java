@@ -390,7 +390,7 @@ public class MainActivity
     View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
     ((TextView) aboutView.findViewById(R.id.version_name_text_view))
       .setText(BuildConfig.VERSION_NAME);
-    aboutAlertDialog = new AlertDialog.Builder(this)
+    aboutAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
       .setView(aboutView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu(navigationMenuCheckedId))

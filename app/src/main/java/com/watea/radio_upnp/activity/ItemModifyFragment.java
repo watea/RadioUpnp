@@ -515,8 +515,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             R.string.dar_fm_done : R.string.dar_fm_went_wrong);
           break;
         default:
-          new AlertDialog
-            .Builder(MAIN_ACTIVITY)
+          new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
             .setAdapter(
               new SimpleAdapter(
                 getActivity(),

@@ -212,7 +212,7 @@ public class PlayerController {
     gotItPlayLongPress = sharedPreferences.getBoolean(
       mainActivity.getString(R.string.key_play_long_press_got_it), false);
     // Build alert dialogs
-    playLongPressAlertDialog = new AlertDialog.Builder(mainActivity)
+    playLongPressAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
       .setMessage(R.string.play_long_press)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItPlayLongPress = true)
       .create();
