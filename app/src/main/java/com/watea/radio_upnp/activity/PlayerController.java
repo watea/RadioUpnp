@@ -53,8 +53,6 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.service.RadioService;
 
-import java.util.Objects;
-
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
   private final RadioLibrary radioLibrary;
@@ -114,7 +112,7 @@ public class PlayerController {
               break;
             case PlaybackStateCompat.STATE_BUFFERING:
             case PlaybackStateCompat.STATE_CONNECTING:
-              setAlbumArtDisplay(Objects.requireNonNull(getCurrentRadio()));
+              setAlbumArtDisplay();
               setFrameVisibility(true, true);
               break;
             case PlaybackStateCompat.STATE_NONE:
@@ -160,14 +158,6 @@ public class PlayerController {
 
       private int getVisibleFrom(boolean isVisible) {
         return isVisible ? View.VISIBLE : View.INVISIBLE;
-      }
-
-      private void setAlbumArtDisplay(@NonNull Radio radio) {
-        playedRadioNameTextView.setText(radio.getName());
-        albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
-          radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, false));
-        // Init Preferred
-        setPreferredButton(radio.isPreferred());
       }
     };
   private MediaBrowserCompat mediaBrowser = null;
@@ -352,10 +342,22 @@ public class PlayerController {
     return (mainActivity != null);
   }
 
+  private void setAlbumArtDisplay() {
+    Radio radio = getCurrentRadio();
+    if (radio != null) {
+      playedRadioNameTextView.setText(radio.getName());
+      albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
+        radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, false));
+      // Init Preferred
+      setPreferredButton(radio.isPreferred());
+    }
+  }
+
   private void browserViewSync() {
     if (mediaController != null) {
-      mediaControllerCallback.onMetadataChanged(mediaController.getMetadata());
       mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
+      mediaControllerCallback.onMetadataChanged(mediaController.getMetadata());
+      setAlbumArtDisplay();
     }
   }
 
