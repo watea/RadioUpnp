@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
         targetSdkVersion 31
-        versionCode 252
-        versionName "2.52"
+        versionCode 253
+        versionName "2.53"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {

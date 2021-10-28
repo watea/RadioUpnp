@@ -322,8 +322,8 @@ public class RadioService
                 isAllowedToRewind = false;
                 handler.postDelayed(() -> {
                     // No relaunch if we were disposed or not in error state anymore
-                    if ((mediaController != null) &&
-                      (mediaController.isSessionReady()) &&
+                    if (session.isActive() &&
+                      (mediaController != null) &&
                       (mediaController.getPlaybackState().getState() ==
                         PlaybackStateCompat.STATE_ERROR)) {
                       mediaSessionCompatCallback.onRewind();
