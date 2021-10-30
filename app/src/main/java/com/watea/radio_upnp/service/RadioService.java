@@ -321,12 +321,14 @@ public class RadioService
               if (isAllowedToRewind) {
                 isAllowedToRewind = false;
                 handler.postDelayed(() -> {
-                    // No relaunch if we were disposed or not in error state anymore
-                    if (session.isActive() &&
-                      (mediaController != null) &&
-                      (mediaController.getPlaybackState().getState() ==
-                        PlaybackStateCompat.STATE_ERROR)) {
-                      mediaSessionCompatCallback.onRewind();
+                    try {
+                      // Still in error?
+                      if (mediaController.getPlaybackState().getState() ==
+                        PlaybackStateCompat.STATE_ERROR) {
+                        mediaSessionCompatCallback.onRewind();
+                      }
+                    } catch (Exception exception) {
+                      Log.i(LOG_TAG, "Relaunch failed");
                     }
                   },
                   4000);
@@ -359,22 +361,22 @@ public class RadioService
   @NonNull
   private Notification getNotification() {
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-        .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-          .setMediaSession(getSessionToken())
-          .setShowActionsInCompactView(0))
-        .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
-        // Pending intent that is fired when user clicks on notification
-        .setContentIntent(PendingIntent.getActivity(
-          this,
-          REQUEST_CODE,
-          new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-          PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
-        // When notification is deleted (when playback is paused and notification can be
-        // deleted) fire MediaButtonPendingIntent with ACTION_STOP
-        .setDeleteIntent(
-          MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
-        // Show controls on lock screen even when user hides sensitive content
-        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+      .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+        .setMediaSession(getSessionToken())
+        .setShowActionsInCompactView(0))
+      .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
+      // Pending intent that is fired when user clicks on notification
+      .setContentIntent(PendingIntent.getActivity(
+        this,
+        REQUEST_CODE,
+        new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
+      // When notification is deleted (when playback is paused and notification can be
+      // deleted) fire MediaButtonPendingIntent with ACTION_STOP
+      .setDeleteIntent(
+        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
+      // Show controls on lock screen even when user hides sensitive content
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
     if (mediaMetadataCompat == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
     } else {

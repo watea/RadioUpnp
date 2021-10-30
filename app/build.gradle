@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
         targetSdkVersion 31
-        versionCode 253
-        versionName "2.53"
+        versionCode 254
+        versionName "2.54"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -59,7 +59,7 @@ repositories {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'androidx.core:core:1.6.0'
+    implementation 'androidx.core:core:1.7.0'
     implementation 'androidx.media:media:1.4.3'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
