@@ -55,7 +55,7 @@ import com.watea.radio_upnp.adapter.DlnaDevicesAdapter;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.NetworkTester;
+import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
@@ -126,7 +126,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
   @Override
   public void onClick(@NonNull Radio radio) {
-    if (NetworkTester.isDeviceOffline(MAIN_ACTIVITY)) {
+    if (NetworkProxy.isDeviceOffline(MAIN_ACTIVITY)) {
       tell(R.string.no_internet);
     } else {
       startReading(radio);
@@ -160,7 +160,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (NetworkTester.hasWifiIpAddress(MAIN_ACTIVITY)) {
+      if (NetworkProxy.hasWifiIpAddress(MAIN_ACTIVITY)) {
         if (upnpSearch()) {
           dlnaAlertDialog.show();
           if (!gotItDlnaEnable) {
@@ -177,7 +177,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
-      if (NetworkTester.hasWifiIpAddress(MAIN_ACTIVITY)) {
+      if (NetworkProxy.hasWifiIpAddress(MAIN_ACTIVITY)) {
         if (upnpReset()) {
           dlnaDevicesAdapter.clear();
           tell(R.string.dlna_search_reset);

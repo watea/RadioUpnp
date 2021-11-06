@@ -56,7 +56,7 @@ import androidx.fragment.app.FragmentManager;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.NetworkTester;
+import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -114,7 +114,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (NetworkTester.isDeviceOffline(MAIN_ACTIVITY)) {
+      if (NetworkProxy.isDeviceOffline(MAIN_ACTIVITY)) {
         tell(R.string.no_internet);
       } else {
         if (urlWatcher.url == null) {
@@ -182,7 +182,7 @@ public class ItemModifyFragment extends MainActivityFragment {
       });
     searchImageButton.setOnClickListener(v -> {
       flushKeyboard();
-      if (NetworkTester.isDeviceOffline(MAIN_ACTIVITY)) {
+      if (NetworkProxy.isDeviceOffline(MAIN_ACTIVITY)) {
         tell(R.string.no_internet);
       } else {
         if (darFmRadioButton.isChecked()) {
@@ -402,7 +402,7 @@ public class ItemModifyFragment extends MainActivityFragment {
         // Parse site data
         Matcher matcher = PATTERN.matcher(head.toString());
         if (matcher.find()) {
-          foundIcon = NetworkTester.getBitmapFromUrl(new URL(matcher.group(1)));
+          foundIcon = NetworkProxy.getBitmapFromUrl(new URL(matcher.group(1)));
         }
       } catch (Exception exception) {
         Log.i(LOG_TAG, "Error performing radio site search");
@@ -479,7 +479,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             .connect(DAR_FM_STATIONS_REQUEST + foundRadio.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
             .get();
           foundRadio.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
-          foundIcon = NetworkTester.getBitmapFromUrl(new URL(extractValue(station, "imageurl")));
+          foundIcon = NetworkProxy.getBitmapFromUrl(new URL(extractValue(station, "imageurl")));
         } catch (MalformedURLException malformedURLException) {
           Log.i(LOG_TAG, "Error performing icon search");
         } catch (IOException iOexception) {
@@ -548,7 +548,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     @Override
     public void run() {
       URL uRL = Radio.getUrlFromM3u(url);
-      streamContent = (uRL == null) ? null : NetworkTester.getStreamContentType(uRL);
+      streamContent = (uRL == null) ? null : NetworkProxy.getStreamContentType(uRL);
       super.run();
     }
 

@@ -35,7 +35,7 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
-import com.watea.radio_upnp.service.NetworkTester;
+import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.service.RadioHandler;
 import com.watea.radio_upnp.service.RadioService;
 
@@ -363,7 +363,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       new Thread() {
         @Override
         public void run() {
-          String contentType = NetworkTester.getStreamContentType(radio.getURL());
+          String contentType = NetworkProxy.getStreamContentType(radio.getURL());
           // Now we can call GetProtocolInfo, only if current action not cancelled
           if (contentType != null) {
             upnpActionController.putContentType(radio, contentType);

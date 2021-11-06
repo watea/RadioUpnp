@@ -41,7 +41,6 @@ import org.eclipse.jetty.server.handler.ResourceHandler;
 
 import java.io.FileOutputStream;
 
-@SuppressWarnings("WeakerAccess")
 public class HttpServer extends Thread {
   private static final String LOG_TAG = HttpServer.class.getName();
   private static final String LOGO_FILE = "logo";
@@ -73,7 +72,7 @@ public class HttpServer extends Thread {
 
   @NonNull
   public static Uri getLoopbackUri() {
-    return NetworkTester.getLoopbackUri(PORT);
+    return NetworkProxy.getLoopbackUri(PORT);
   }
 
   @Override
@@ -115,7 +114,7 @@ public class HttpServer extends Thread {
 
   @Nullable
   public Uri getUri() {
-    return NetworkTester.getUri(context, PORT);
+    return NetworkProxy.getUri(context, PORT);
   }
 
   public interface Listener {

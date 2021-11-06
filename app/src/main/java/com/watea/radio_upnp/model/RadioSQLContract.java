@@ -25,7 +25,6 @@ package com.watea.radio_upnp.model;
 
 import android.provider.BaseColumns;
 
-@SuppressWarnings("WeakerAccess")
 public final class RadioSQLContract {
   static final String SQL_CREATE_ENTRIES =
     "CREATE TABLE " + Columns.TABLE_RADIO + " (" +

@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.model;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -35,16 +36,17 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.service.NetworkTester;
+import com.watea.radio_upnp.service.NetworkProxy;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-@SuppressWarnings({"unused"})
+@SuppressWarnings("unused")
 public class Radio {
   public static final Radio DUMMY_RADIO;
   private static final String LOG_TAG = Radio.class.getName();
@@ -105,6 +107,7 @@ public class Radio {
   }
 
   // SQL constructor
+  @SuppressLint("Range")
   public Radio(@NonNull Cursor cursor) {
     id = cursor.getLong(cursor.getColumnIndex(RadioSQLContract.Columns._ID));
     name = cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_NAME));
@@ -138,8 +141,9 @@ public class Radio {
     if (!uRL.toString().endsWith(".m3u")) {
       return uRL;
     }
-    try (BufferedReader bufferedReader = new BufferedReader(
-      new InputStreamReader(NetworkTester.getActualHttpURLConnection(uRL).getInputStream()))) {
+    HttpURLConnection httpURLConnection = null;
+    try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+      (httpURLConnection = NetworkProxy.getActualHttpURLConnection(uRL)).getInputStream()))) {
       String result;
       while ((result = bufferedReader.readLine()) != null) {
         if (result.startsWith("http://") || result.startsWith("https://")) {
@@ -148,6 +152,10 @@ public class Radio {
       }
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "Error getting M3U", iOException);
+    } finally {
+      if (httpURLConnection != null) {
+        httpURLConnection.disconnect();
+      }
     }
     return null;
   }

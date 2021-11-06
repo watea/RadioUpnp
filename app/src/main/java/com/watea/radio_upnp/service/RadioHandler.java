@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -129,21 +128,18 @@ public class RadioHandler extends AbstractHandler {
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {
-      URL uRL = radio.getUrlFromM3u();
-      if (uRL == null) {
-        throw new IOException("Wrong radio URL");
-      }
-      httpURLConnection = (HttpURLConnection) uRL.openConnection();
-      // Won't work HTTP -> HTTPS or vice versa
-      httpURLConnection.setInstanceFollowRedirects(true);
-      httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
-      httpURLConnection.setReadTimeout(READ_TIMEOUT);
-      httpURLConnection.setRequestMethod(isGet ? GET : HEAD);
-      httpURLConnection.setRequestProperty(USER_AGENT, userAgent);
-      if (isGet) {
-        httpURLConnection.setRequestProperty("Icy-metadata", "1");
-      }
-      httpURLConnection = NetworkTester.getActualHttpURLConnection(httpURLConnection);
+      httpURLConnection = NetworkProxy.getActualHttpURLConnection(
+        // Accept M3U format
+        radio.getUrlFromM3u(),
+        connection -> {
+          connection.setConnectTimeout(CONNECT_TIMEOUT);
+          connection.setReadTimeout(READ_TIMEOUT);
+          connection.setRequestMethod(isGet ? GET : HEAD);
+          connection.setRequestProperty(USER_AGENT, userAgent);
+          if (isGet) {
+            connection.setRequestProperty("Icy-metadata", "1");
+          }
+        });
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
       for (String header : httpURLConnection.getHeaderFields().keySet()) {
@@ -191,8 +187,8 @@ public class RadioHandler extends AbstractHandler {
           httpURLConnection.getHeaderField("icy-br"),
           lockKey);
       }
-    } catch (IOException iOException) {
-      Log.d(LOG_TAG, "IOException", iOException);
+    } catch (Exception exception) {
+      Log.d(LOG_TAG, "handleConnection error", exception);
       listener.onError(lockKey);
     } finally {
       if (httpURLConnection != null) {

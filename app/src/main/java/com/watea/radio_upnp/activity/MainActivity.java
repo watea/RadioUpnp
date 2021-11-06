@@ -59,7 +59,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
-import com.watea.radio_upnp.service.NetworkTester;
+import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
@@ -272,7 +272,7 @@ public class MainActivity
       radio,
       ((androidUpnpService != null) &&
         (chosenDlnaDevice != null) &&
-        NetworkTester.hasWifiIpAddress(this)) ?
+        NetworkProxy.hasWifiIpAddress(this)) ?
         chosenDlnaDevice.getIdentity() : null);
   }
 
