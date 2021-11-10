@@ -23,7 +23,10 @@
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <group android:checkableBehavior="single">
+    <group
+        android:id="@+id/main"
+        android:checkableBehavior="single">
+
         <item
             android:id="@+id/action_home"
             android:icon="@drawable/ic_radio_white_24dp"
@@ -37,7 +40,14 @@
             android:icon="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />
     </group>
-    <group android:checkableBehavior="single">
+    <group
+        android:id="@+id/sub"
+        android:checkableBehavior="single">
+
+        <item
+            android:id="@+id/action_log"
+            android:icon="@drawable/ic_baseline_attach_email_white_24"
+            android:title="@string/title_log" />
         <item
             android:id="@+id/action_donate"
             android:icon="@drawable/ic_payment_white_24dp"

@@ -83,6 +83,7 @@
     <string name="preferred">Preferred</string>
     <string name="not_to_modify">Current radio cannot be edited</string>
     <string name="not_to_delete">Current radio cannot be deleted</string>
+    <string name="report_error">Error, report could not be generated</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
@@ -97,7 +98,7 @@
     <string name="title_about">About</string>
     <string name="title_item_modify">Edit</string>
     <string name="title_dlna">DLNA</string>
-    <string name="title_dark_mode">Dark mode</string>
+    <string name="title_log">Report</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>

@@ -234,11 +234,9 @@ public class RadioHandler extends AbstractHandler {
             if (metadataIndex == 0) {
               metadataSize = buffer[0] * 16;
               metadataBuffer.clear();
-            } else {
+            } else if (metadataIndex <= METADATA_MAX) {
               // Other bytes are metadata
-              if (metadataIndex <= METADATA_MAX) {
-                metadataBuffer.put(buffer[0]);
-              }
+              metadataBuffer.put(buffer[0]);
             }
             // End of metadata, extract pattern
             if (metadataIndex == metadataSize) {
@@ -258,8 +256,8 @@ public class RadioHandler extends AbstractHandler {
                 }
                 Matcher matcher = PATTERN_ICY.matcher(metadata);
                 // Tell listener
-                String information = (matcher.find() && (matcher.groupCount() > 0)) ?
-                  matcher.group(1) : null;
+                String information =
+                  (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
                 if (information != null) {
                   listener.onNewInformation(information, rate, lockKey);
                 }

@@ -8,31 +8,40 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_attach_email_white_24.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_flaky_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_flaky_white_24dp.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_mic_white_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_replay_24dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_cast_black_24dp.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_cast_blue_24dp.xml" value="0.168359375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_cast_white_24dp.xml" value="0.24027777777777778" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_done_blue_30dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_done_white_30dp.xml" value="0.29375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_edit_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_edit_white_24dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_gray_24dp.xml" value="0.11736111111111111" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_white_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_image_black_24dp.xml" value="0.221484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_image_black_40dp.xml" value="0.221484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_image_white_40dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_pause_black_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_pause_white_24dp.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_payment_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_payment_white_24dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_play_arrow_black_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_play_arrow_white_24dp.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_playlist_add_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_playlist_add_white_24dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_radio_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_radio_white_24dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_search_black_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_search_black_40dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_search_white_40dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_settings_black_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_settings_white_24dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_star_blue_30dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_star_border_blue_30dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_star_border_white_30dp.xml" value="0.18203125" />
@@ -41,6 +50,7 @@
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_stop_white_24dp.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_swap_vert_blue_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_swap_vert_white_24dp.xml" value="0.18203125" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_swap_vert_white_30dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout-v26/content_item_modify.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/content_item_modify.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/layout/header_navigation.xml" value="0.134375" />
@@ -52,6 +62,7 @@
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/menu/menu_main.xml" value="0.27837837837837837" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.1265625" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/xml/filepaths.xml" value="0.181640625" />
       </map>
     </option>
   </component>

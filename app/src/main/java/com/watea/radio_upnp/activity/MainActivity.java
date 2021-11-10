@@ -46,6 +46,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -65,7 +66,12 @@ import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Calendar;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -197,19 +203,25 @@ public class MainActivity
         super.onOptionsItemSelected(item);
   }
 
+  @SuppressLint("NonConstantResourceId")
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
     Integer id = menuItem.getItemId();
     // Note: switch not to use as id not final
-    if (id == R.id.action_about) {
-      aboutAlertDialog.show();
-    } else {
-      // Shall not fail to find!
-      for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
-        if (id.equals(FRAGMENT_MENU_IDS.get(fragment))) {
-          setFragment(fragment);
+    switch (id) {
+      case R.id.action_about:
+        aboutAlertDialog.show();
+        break;
+      case R.id.action_log:
+        sendLogcatMail();
+        break;
+      default:
+        // Shall not fail to find!
+        for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
+          if (id.equals(FRAGMENT_MENU_IDS.get(fragment))) {
+            setFragment(fragment);
+          }
         }
-      }
     }
     drawerLayout.closeDrawers();
     return true;
@@ -303,6 +315,34 @@ public class MainActivity
   @Nullable
   public Radio getCurrentRadio() {
     return playerController.getCurrentRadio();
+  }
+
+  public void sendLogcatMail() {
+    // File is stored at root
+    File logFile = new File(getFilesDir(), "logcat.txt");
+    // Write log filtered on PID
+    String pid = String.valueOf(android.os.Process.myPid());
+    try (FileWriter out = new FileWriter(logFile)) {
+      Process process = Runtime.getRuntime().exec("logcat -d");
+      BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+      String currentLine;
+      while ((currentLine = reader.readLine()) != null) {
+        if (currentLine.contains(pid)) {
+          out.write(currentLine + "\n");
+        }
+      }
+      // Prepare mail
+      startActivity(new Intent(Intent.ACTION_SEND)
+        .setType("message/rfc822")
+        .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"})
+        .putExtra(Intent.EXTRA_SUBJECT, "RadioUPnP report / " + Calendar.getInstance().getTime())
+        .putExtra(
+          Intent.EXTRA_STREAM,
+          FileProvider.getUriForFile(this, "com.watea.radio_upnp.fileprovider", logFile)));
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "SendLogcatMail: internal failure", exception);
+      tell(R.string.report_error);
+    }
   }
 
   @Override
