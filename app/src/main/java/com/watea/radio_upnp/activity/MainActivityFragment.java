@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.activity;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
@@ -45,7 +46,7 @@ import com.watea.radio_upnp.model.RadioLibrary;
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
   protected static Bitmap DEFAULT_ICON = null;
-  protected static MainActivity MAIN_ACTIVITY = null;
+  private static MainActivity mainActivity = null;
   private View view;
   private boolean isCreationDone = false;
 
@@ -55,20 +56,20 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   public static void onActivityCreated(@NonNull MainActivity mainActivity) {
-    MAIN_ACTIVITY = mainActivity;
+    MainActivityFragment.mainActivity = mainActivity;
     // Fetch needed static values
     createDefaultIcon();
   }
 
   private static void createDefaultIcon() {
-    Drawable drawable = ContextCompat.getDrawable(MAIN_ACTIVITY, R.drawable.ic_radio_white_24dp);
+    Drawable drawable = ContextCompat.getDrawable(mainActivity, R.drawable.ic_radio_white_24dp);
     // Deep copy
     assert drawable != null;
     Drawable.ConstantState constantState = drawable.mutate().getConstantState();
     assert constantState != null;
     drawable = constantState.newDrawable();
     drawable.setTint(
-      MAIN_ACTIVITY.getResources().getColor(R.color.dark_gray, MAIN_ACTIVITY.getTheme()));
+      mainActivity.getResources().getColor(R.color.dark_gray, mainActivity.getTheme()));
     Canvas canvas = new Canvas();
     DEFAULT_ICON = Bitmap.createBitmap(
       drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
@@ -77,38 +78,47 @@ public abstract class MainActivityFragment extends Fragment {
     drawable.draw(canvas);
   }
 
-  public static RadioLibrary getRadioLibrary() {
-    return MAIN_ACTIVITY.getRadioLibrary();
+  protected static RadioLibrary getRadioLibrary() {
+    return mainActivity.getRadioLibrary();
   }
 
   protected static void tell(int message) {
-    MAIN_ACTIVITY.tell(message);
+    mainActivity.tell(message);
   }
 
   protected static void tell(@NonNull String message) {
-    MAIN_ACTIVITY.tell(message);
+    mainActivity.tell(message);
   }
 
   protected static boolean upnpSearch() {
-    return MAIN_ACTIVITY.upnpSearch();
+    return mainActivity.upnpSearch();
   }
 
   protected static boolean upnpReset() {
-    return MAIN_ACTIVITY.upnpReset();
+    return mainActivity.upnpReset();
   }
 
   // radio is null for current
   protected static void startReading(@Nullable Radio radio) {
-    MAIN_ACTIVITY.startReading(radio);
+    mainActivity.startReading(radio);
   }
 
   @SuppressWarnings("SameParameterValue")
   @NonNull
   protected static Fragment setFragment(@NonNull Class<? extends Fragment> fragment) {
-    return MAIN_ACTIVITY.setFragment(fragment);
+    return mainActivity.setFragment(fragment);
   }
 
-  public void onCreateOptionsMenu(@NonNull Menu menu) {
+  @Nullable
+  protected static MainActivity getMainActivity() {
+    return mainActivity;
+  }
+
+  @Nullable
+  @Override
+  public Context getContext() {
+    Context context = super.getContext();
+    return (context == null) ? mainActivity : context;
   }
 
   @Nullable
@@ -135,7 +145,10 @@ public abstract class MainActivityFragment extends Fragment {
   public void onResume() {
     super.onResume();
     // Decorate
-    MAIN_ACTIVITY.onFragmentResume(this);
+    mainActivity.onFragmentResume(this);
+  }
+
+  public void onCreateOptionsMenu(@NonNull Menu menu) {
   }
 
   @NonNull

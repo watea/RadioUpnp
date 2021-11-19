@@ -71,10 +71,12 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
 
   @Override
   protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
-    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(MAIN_ACTIVITY));
+    // Context exists
+    assert getContext() != null;
+    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
     // Adapters
     radiosModifyAdapter = new RadiosModifyAdapter(
-      MAIN_ACTIVITY,
+      getContext(),
       this,
       getRadioLibrary(),
       RADIO_ICON_SIZE / 2,
@@ -100,7 +102,8 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   // Radio shall not be changed if currently played
   @Override
   public boolean onCheckChange(@NonNull Radio radio) {
-    Radio currentRadio = MAIN_ACTIVITY.getCurrentRadio();
+    assert getMainActivity() != null;
+    Radio currentRadio = getMainActivity().getCurrentRadio();
     if ((currentRadio != null) && currentRadio.equals(radio)) {
       tell(R.string.not_to_delete);
       return false;

@@ -128,9 +128,8 @@ public class RadioHandler extends AbstractHandler {
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {
-      httpURLConnection = NetworkProxy.getActualHttpURLConnection(
-        // Accept M3U format
-        radio.getUrlFromM3u(),
+      // Accept M3U format
+      httpURLConnection = new RadioURL(radio.getUrlFromM3u()).getActualHttpURLConnection(
         connection -> {
           connection.setConnectTimeout(CONNECT_TIMEOUT);
           connection.setReadTimeout(READ_TIMEOUT);

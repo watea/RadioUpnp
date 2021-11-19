@@ -36,7 +36,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.service.NetworkProxy;
+import com.watea.radio_upnp.service.RadioURL;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -143,7 +143,7 @@ public class Radio {
     }
     HttpURLConnection httpURLConnection = null;
     try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-      (httpURLConnection = NetworkProxy.getActualHttpURLConnection(uRL)).getInputStream()))) {
+      (httpURLConnection = new RadioURL(uRL).getActualHttpURLConnection()).getInputStream()))) {
       String result;
       while ((result = bufferedReader.readLine()) != null) {
         if (result.startsWith("http://") || result.startsWith("https://")) {

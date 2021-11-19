@@ -26,8 +26,6 @@ package com.watea.radio_upnp.service;
 import static android.content.Context.WIFI_SERVICE;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -37,64 +35,20 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.io.IOException;
 import java.math.BigInteger;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
 
 public class NetworkProxy {
   private static final String LOG_TAG = NetworkProxy.class.getName();
   private static final String SCHEME = "http";
-  private static final int CONNECTION_TRY = 3;
-  // Create the SSL connection for HTTPS
-  private static final SSLSocketFactory sSLSocketFactory;
 
-  static {
-    SSLContext sSLContext = null;
-    try {
-      sSLContext = SSLContext.getInstance("TLS");
-      sSLContext.init(
-        null, new TrustManager[]{new EasyX509TrustManager()}, new java.security.SecureRandom());
-    } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
-      Log.i(LOG_TAG, "Error handling SSL connection");
-    }
-    sSLSocketFactory = (sSLContext == null) ? null : sSLContext.getSocketFactory();
-  }
+  @NonNull
+  private final Context context;
 
-  // Static class, no instance
-  private NetworkProxy() {
-  }
-
-  @Nullable
-  public static String getStreamContentType(@NonNull URL uRL) {
-    String streamContent = null;
-    HttpURLConnection httpURLConnection = null;
-    try {
-      httpURLConnection = getActualHttpURLConnection(uRL);
-      streamContent = httpURLConnection.getHeaderField("Content-Type");
-      // If we get there, connection has occurred
-      Log.d(LOG_TAG, "Connection status/contentType: " +
-        httpURLConnection.getResponseCode() + "/" + streamContent);
-    } catch (IOException iOException) {
-      // Fires also in case of timeout
-      Log.i(LOG_TAG, "URL IO exception");
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
-    return streamContent;
+  public NetworkProxy(@NonNull Context context) {
+    this.context = context;
   }
 
   @Nullable
@@ -111,14 +65,18 @@ public class NetworkProxy {
 
   @NonNull
   private static Uri getUri(@NonNull String address, int port) {
-    return new Uri
-      .Builder()
+    return new Uri.Builder()
       .scheme(SCHEME)
       .appendEncodedPath("/" + address + ":" + port)
       .build();
   }
 
-  public static boolean isDeviceOffline(@NonNull Context context) {
+  @NonNull
+  public static Uri getLoopbackUri(int port) {
+    return getUri("127.0.0.1", port);
+  }
+
+  public boolean isDeviceOffline() {
     boolean result = true;
     try {
       ConnectivityManager connectivityManager
@@ -131,8 +89,17 @@ public class NetworkProxy {
     return result;
   }
 
+  public boolean hasWifiIpAddress() {
+    return (getIpAddress() != null);
+  }
+
+  public Uri getUri(int port) {
+    String ipAddress = getIpAddress();
+    return (ipAddress == null) ? null : getUri(ipAddress, port);
+  }
+
   @Nullable
-  private static String getIpAddress(@NonNull Context context) {
+  private String getIpAddress() {
     String result = null;
     try {
       WifiManager wifiManager =
@@ -142,76 +109,5 @@ public class NetworkProxy {
       Log.e(LOG_TAG, "Error getting IP address", exception);
     }
     return result;
-  }
-
-  public static boolean hasWifiIpAddress(@NonNull Context context) {
-    return (getIpAddress(context) != null);
-  }
-
-  @NonNull
-  public static Uri getLoopbackUri(int port) {
-    return getUri("127.0.0.1", port);
-  }
-
-  public static Uri getUri(@NonNull Context context, int port) {
-    String ipAddress = getIpAddress(context);
-    return (ipAddress == null) ? null : getUri(ipAddress, port);
-  }
-
-  @NonNull
-  public static HttpURLConnection getActualHttpURLConnection(@Nullable URL uRL) throws IOException {
-    return getActualHttpURLConnection(uRL, null);
-  }
-
-  // Handle redirection
-  // Consumer sets connection headers
-  @NonNull
-  public static HttpURLConnection getActualHttpURLConnection(
-    @Nullable URL uRL,
-    @Nullable HttpURLConnectionConsumer httpURLConnectionConsumer) throws IOException {
-    if (uRL == null) {
-      throw new IOException("getActualHttpURLConnection: URL is null");
-    }
-    HttpURLConnection httpURLConnection;
-    int connectionTry = 0;
-    do {
-      // Set headers
-      httpURLConnection = (HttpURLConnection) uRL.openConnection();
-      httpURLConnection.setInstanceFollowRedirects(true);
-      if (httpURLConnection instanceof HttpsURLConnection) {
-        ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
-      }
-      if (httpURLConnectionConsumer != null) {
-        httpURLConnectionConsumer.accept(httpURLConnection);
-      }
-      // Get answer
-      if (httpURLConnection.getResponseCode() / 100 == 3) {
-        uRL = new URL(httpURLConnection.getHeaderField("Location"));
-      } else {
-        break;
-      }
-    } while (connectionTry++ < CONNECTION_TRY);
-    return httpURLConnection;
-  }
-
-  @Nullable
-  public static Bitmap getBitmapFromUrl(@NonNull URL uRL) {
-    HttpURLConnection httpURLConnection = null;
-    Bitmap bitmap = null;
-    try {
-      httpURLConnection = getActualHttpURLConnection(uRL);
-      bitmap = BitmapFactory.decodeStream(httpURLConnection.getInputStream());
-    } catch (IOException iOException) {
-      Log.i(LOG_TAG, "Error decoding image: " + uRL);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
-    return bitmap;
-  }
-
-  public interface HttpURLConnectionConsumer {
-    void accept(@NonNull HttpURLConnection httpURLConnection) throws IOException;
   }
 }

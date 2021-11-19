@@ -77,8 +77,7 @@ public class PlayerController {
       // foreground and onStart() has been called (but not onStop())
       @Override
       public void onSessionDestroyed() {
-        onPlaybackStateChanged(new PlaybackStateCompat
-          .Builder()
+        onPlaybackStateChanged(new PlaybackStateCompat.Builder()
           .setState(PlaybackStateCompat.STATE_ERROR, 0, 1.0f, SystemClock.elapsedRealtime())
           .build());
         Log.d(LOG_TAG, "onSessionDestroyed: RadioService is dead!!!");

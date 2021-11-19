@@ -57,6 +57,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.NetworkProxy;
+import com.watea.radio_upnp.service.RadioURL;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -67,6 +68,7 @@ import java.net.URL;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -87,6 +89,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
   private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
+  private NetworkProxy networkProxy;
   // <HMI assets
   private EditText nameEditText;
   private EditText countryEditText;
@@ -114,7 +117,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (NetworkProxy.isDeviceOffline(MAIN_ACTIVITY)) {
+      if (networkProxy.isDeviceOffline()) {
         tell(R.string.no_internet);
       } else {
         if (urlWatcher.url == null) {
@@ -143,6 +146,10 @@ public class ItemModifyFragment extends MainActivityFragment {
 
   @Override
   protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
+    // Context exists
+    assert getContext() != null;
+    // Network
+    networkProxy = new NetworkProxy(getContext());
     // Order matters
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
@@ -182,7 +189,7 @@ public class ItemModifyFragment extends MainActivityFragment {
       });
     searchImageButton.setOnClickListener(v -> {
       flushKeyboard();
-      if (NetworkProxy.isDeviceOffline(MAIN_ACTIVITY)) {
+      if (networkProxy.isDeviceOffline()) {
         tell(R.string.no_internet);
       } else {
         if (darFmRadioButton.isChecked()) {
@@ -223,22 +230,25 @@ public class ItemModifyFragment extends MainActivityFragment {
             Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, adding icon");
           }
           getBack();
-        } else if (radio.equals(MAIN_ACTIVITY.getCurrentRadio())) {
-          tell(R.string.not_to_modify);
         } else {
-          radio.setName(getRadioName());
-          radio.setURL(urlWatcher.url);
-          radio.setWebPageURL(webPageWatcher.url);
-          // Same file name reused to store icon
-          try {
-            getRadioLibrary().setRadioIconFile(radio, radioIcon);
-          } catch (Exception exception) {
-            Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating icon");
+          assert getMainActivity() != null;
+          if (radio.equals(getMainActivity().getCurrentRadio())) {
+            tell(R.string.not_to_modify);
+          } else {
+            radio.setName(getRadioName());
+            radio.setURL(urlWatcher.url);
+            radio.setWebPageURL(webPageWatcher.url);
+            // Same file name reused to store icon
+            try {
+              getRadioLibrary().setRadioIconFile(radio, radioIcon);
+            } catch (Exception exception) {
+              Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating icon");
+            }
+            if (getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
+              Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
+            }
+            getBack();
           }
-          if (getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
-            Log.e(LOG_TAG, "onOptionsItemSelected: internal failure, updating database");
-          }
-          getBack();
         }
       }
     } else {
@@ -284,7 +294,9 @@ public class ItemModifyFragment extends MainActivityFragment {
   private void flushKeyboard() {
     final View view = getView();
     assert view != null;
-    ((InputMethodManager) MAIN_ACTIVITY.getSystemService(Context.INPUT_METHOD_SERVICE))
+    ((InputMethodManager) Objects
+      .requireNonNull(getContext())
+      .getSystemService(Context.INPUT_METHOD_SERVICE))
       .hideSoftInputFromWindow(view.getWindowToken(), 0);
   }
 
@@ -326,7 +338,7 @@ public class ItemModifyFragment extends MainActivityFragment {
   }
 
   // Utility class to listen for URL edition
-  private static class UrlWatcher implements TextWatcher {
+  private class UrlWatcher implements TextWatcher {
     private final int defaultColor;
     @NonNull
     private final EditText editText;
@@ -350,6 +362,8 @@ public class ItemModifyFragment extends MainActivityFragment {
 
     @Override
     public void afterTextChanged(Editable s) {
+      // Context exists
+      assert getContext() != null;
       boolean isError = false;
       try {
         url = new URL(s.toString());
@@ -361,7 +375,7 @@ public class ItemModifyFragment extends MainActivityFragment {
         isError = true;
       }
       editText.setTextColor(
-        isError ? ContextCompat.getColor(MAIN_ACTIVITY, R.color.dark_red) : defaultColor);
+        isError ? ContextCompat.getColor(getContext(), R.color.dark_red) : defaultColor);
     }
   }
 
@@ -402,7 +416,7 @@ public class ItemModifyFragment extends MainActivityFragment {
         // Parse site data
         Matcher matcher = PATTERN.matcher(head.toString());
         if (matcher.find()) {
-          foundIcon = NetworkProxy.getBitmapFromUrl(new URL(matcher.group(1)));
+          foundIcon = new RadioURL(new URL(matcher.group(1))).getBitmap();
         }
       } catch (Exception exception) {
         Log.i(LOG_TAG, "Error performing radio site search");
@@ -479,7 +493,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             .connect(DAR_FM_STATIONS_REQUEST + foundRadio.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
             .get();
           foundRadio.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
-          foundIcon = NetworkProxy.getBitmapFromUrl(new URL(extractValue(station, "imageurl")));
+          foundIcon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
         } catch (MalformedURLException malformedURLException) {
           Log.i(LOG_TAG, "Error performing icon search");
         } catch (IOException iOexception) {
@@ -492,6 +506,8 @@ public class ItemModifyFragment extends MainActivityFragment {
     @SuppressLint("SetTextI18n")
     @Override
     protected void onPostExecute() {
+      // Context exists
+      assert getContext() != null;
       switch (radios.size()) {
         case 0:
           tell(R.string.dar_fm_failed);
@@ -515,7 +531,7 @@ public class ItemModifyFragment extends MainActivityFragment {
             R.string.dar_fm_done : R.string.dar_fm_went_wrong);
           break;
         default:
-          new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
+          new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
             .setAdapter(
               new SimpleAdapter(
                 getActivity(),
@@ -548,7 +564,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     @Override
     public void run() {
       URL uRL = Radio.getUrlFromM3u(url);
-      streamContent = (uRL == null) ? null : NetworkProxy.getStreamContentType(uRL);
+      streamContent = (uRL == null) ? null : new RadioURL(uRL).getStreamContentType();
       super.run();
     }
 

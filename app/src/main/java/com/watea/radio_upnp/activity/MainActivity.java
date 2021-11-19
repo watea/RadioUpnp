@@ -141,6 +141,7 @@ public class MainActivity
       "http://icecast.funradio.fr/fun-1-44-128?listen=webCwsBCggNCQgLDQUGBAcGBg",
       "https://www.funradio.fr/")
   };
+  private final NetworkProxy networkProxy = new NetworkProxy(this);
   // <HMI assets
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
@@ -284,7 +285,7 @@ public class MainActivity
       radio,
       ((androidUpnpService != null) &&
         (chosenDlnaDevice != null) &&
-        NetworkProxy.hasWifiIpAddress(this)) ?
+        networkProxy.hasWifiIpAddress()) ?
         chosenDlnaDevice.getIdentity() : null);
   }
 
@@ -343,6 +344,11 @@ public class MainActivity
       Log.e(LOG_TAG, "SendLogcatMail: internal failure", exception);
       tell(R.string.report_error);
     }
+  }
+
+  @NonNull
+  public NetworkProxy getNetworkProxy() {
+    return networkProxy;
   }
 
   @Override

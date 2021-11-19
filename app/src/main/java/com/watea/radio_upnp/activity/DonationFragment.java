@@ -91,7 +91,8 @@ public class DonationFragment
           for (com.android.billingclient.api.Purchase purchase : list) {
             Log.d(LOG_TAG, "onPurchasesUpdated: " + purchase);
             billingClient.consumeAsync(
-              ConsumeParams.newBuilder()
+              ConsumeParams
+                .newBuilder()
                 .setPurchaseToken(purchase.getPurchaseToken())
                 .build(),
               this);
@@ -109,8 +110,10 @@ public class DonationFragment
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
+    // Context exists
+    assert getContext() != null;
     // BillingClient, new each time
-    billingClient = BillingClient.newBuilder(MAIN_ACTIVITY)
+    billingClient = BillingClient.newBuilder(getContext())
       .enablePendingPurchases()
       .setListener(this)
       .build();
@@ -174,6 +177,8 @@ public class DonationFragment
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    // Context exists
+    assert getActivity() != null;
     return v -> {
       if (skuDetailss.isEmpty() || !billingClient.isReady()) {
         paymentAlertDialogBuilder.show();
@@ -183,7 +188,8 @@ public class DonationFragment
         final SkuDetails skuDetails = skuDetailss.get(item);
         assert skuDetails != null;
         billingClient.launchBillingFlow(
-          MAIN_ACTIVITY, BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build());
+          getActivity(),
+          BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build());
       }
     };
   }
@@ -200,9 +206,11 @@ public class DonationFragment
 
   @Override
   public void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
+    // Context exists
+    assert getContext() != null;
     // Adapters
     ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
-      MAIN_ACTIVITY,
+      getContext(),
       android.R.layout.simple_spinner_item,
       getResources().getStringArray(R.array.donation_google_catalog_values));
     donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -217,7 +225,7 @@ public class DonationFragment
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
     // Alert dialog
-    paymentAlertDialogBuilder = new AlertDialog.Builder(MAIN_ACTIVITY)
+    paymentAlertDialogBuilder = new AlertDialog.Builder(getContext())
       .setIcon(android.R.drawable.ic_dialog_alert)
       .setTitle(R.string.donation_alert_dialog_title)
       .setMessage(R.string.donation_alert_dialog_try_again)

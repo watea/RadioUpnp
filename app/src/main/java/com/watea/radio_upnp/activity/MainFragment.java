@@ -84,6 +84,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   private boolean gotItRadioLongPress;
   private boolean gotItDlnaEnable;
   private RadiosAdapter radiosAdapter;
+  private NetworkProxy networkProxy = null;
   // DLNA devices management
   private DlnaDevicesAdapter dlnaDevicesAdapter = null;
   // UPnP service listener
@@ -126,7 +127,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
   @Override
   public void onClick(@NonNull Radio radio) {
-    if (NetworkProxy.isDeviceOffline(MAIN_ACTIVITY)) {
+    if (networkProxy.isDeviceOffline()) {
       tell(R.string.no_internet);
     } else {
       startReading(radio);
@@ -143,6 +144,12 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   }
 
   @Override
+  public void onResume() {
+    super.onResume();
+    setRadiosView();
+  }
+
+  @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     dlnaMenuItem = menu.findItem(R.id.action_dlna);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
@@ -150,17 +157,11 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     setPreferredMenuItem();
   }
 
-  @Override
-  public void onResume() {
-    super.onResume();
-    setRadiosView();
-  }
-
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (NetworkProxy.hasWifiIpAddress(MAIN_ACTIVITY)) {
+      if (networkProxy.hasWifiIpAddress()) {
         if (upnpSearch()) {
           dlnaAlertDialog.show();
           if (!gotItDlnaEnable) {
@@ -177,7 +178,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
-      if (NetworkProxy.hasWifiIpAddress(MAIN_ACTIVITY)) {
+      if (networkProxy.hasWifiIpAddress()) {
         if (upnpReset()) {
           dlnaDevicesAdapter.clear();
           tell(R.string.dlna_search_reset);
@@ -206,6 +207,10 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
   @Override
   protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
+    // Context exists
+    assert getContext() != null;
+    assert getActivity() != null;
+    assert getMainActivity() != null;
     // Restore saved state, if any
     String chosenDlnaDeviceIdentity = null;
     if (savedInstanceState != null) {
@@ -214,11 +219,13 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         savedInstanceState.getString(getString(R.string.key_selected_device));
     }
     // Shared preferences
-    SharedPreferences sharedPreferences = MAIN_ACTIVITY.getPreferences(Context.MODE_PRIVATE);
+    SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
     gotItRadioLongPress =
       sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
     gotItDlnaEnable =
       sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
+    // Network
+    networkProxy = getMainActivity().getNetworkProxy();
     // Adapters
     dlnaDevicesAdapter = new DlnaDevicesAdapter(
       chosenDlnaDeviceIdentity,
@@ -242,25 +249,25 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
           }
         }
       },
-      MAIN_ACTIVITY);
-    radiosAdapter = new RadiosAdapter(MAIN_ACTIVITY, this, RADIO_ICON_SIZE / 2);
+      getContext());
+    radiosAdapter = new RadiosAdapter(getContext(), this, RADIO_ICON_SIZE / 2);
     radiosRecyclerView.setLayoutManager(new GridLayoutManager(
-      MAIN_ACTIVITY, getRadiosColumnCount(MAIN_ACTIVITY.getResources().getConfiguration())));
+      getContext(), getRadiosColumnCount(getActivity().getResources().getConfiguration())));
     radiosRecyclerView.setAdapter(radiosAdapter);
     // Build alert dialogs
-    radioLongPressAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
+    radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setMessage(R.string.radio_long_press)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItRadioLongPress = true)
       .create();
-    dlnaEnableAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
+    dlnaEnableAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setMessage(R.string.dlna_enable)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
       .create();
     // Specific DLNA devices dialog
-    dlnaAlertDialog = new AlertDialog.Builder(MAIN_ACTIVITY, R.style.AlertDialogStyle)
+    dlnaAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setView(dlnaView)
       .create();
-    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(MAIN_ACTIVITY));
+    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
     dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
   }
 
@@ -295,7 +302,8 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
-    final GridLayoutManager gridLayoutManager = (GridLayoutManager) radiosRecyclerView.getLayoutManager();
+    final GridLayoutManager gridLayoutManager =
+      (GridLayoutManager) radiosRecyclerView.getLayoutManager();
     assert gridLayoutManager != null;
     gridLayoutManager.setSpanCount(getRadiosColumnCount(newConfig));
   }
@@ -303,8 +311,10 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public void onPause() {
     super.onPause();
+    // Context exists
+    assert getActivity() != null;
     // Shared preferences
-    MAIN_ACTIVITY
+    getActivity()
       .getPreferences(Context.MODE_PRIVATE)
       .edit()
       .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)

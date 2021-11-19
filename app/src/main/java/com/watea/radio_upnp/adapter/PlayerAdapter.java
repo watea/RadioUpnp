@@ -54,7 +54,8 @@ public abstract class PlayerAdapter {
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
   @NonNull
-  private static final List<String> AUDIO_CONTENT_PREFIXS = new Vector<String>() {{
+  private static final List<String> AUDIO_CONTENT_PREFIXS = new Vector<String>() {
+    {
       add(AUDIO_CONTENT_TYPE);
       add(APPLICATION_CONTENT_TYPE);
     }
@@ -101,8 +102,7 @@ public abstract class PlayerAdapter {
   }
 
   public static PlaybackStateCompat.Builder getPlaybackStateCompat(int state) {
-    return new PlaybackStateCompat
-      .Builder()
+    return new PlaybackStateCompat.Builder()
       .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 

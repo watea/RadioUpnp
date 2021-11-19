@@ -49,6 +49,8 @@ public class HttpServer extends Thread {
   @NonNull
   private final Context context;
   @NonNull
+  private final NetworkProxy networkProxy;
+  @NonNull
   private final Listener listener;
 
   public HttpServer(
@@ -59,9 +61,10 @@ public class HttpServer extends Thread {
     @NonNull Listener listener) {
     this.context = context;
     this.listener = listener;
+    networkProxy = new NetworkProxy(this.context);
     // Handler for local files
     ResourceHandler resourceHandler = new ResourceHandler();
-    resourceHandler.setResourceBase(this.context.getFilesDir().getPath());
+    resourceHandler.setResourceBase(context.getFilesDir().getPath());
     // Add the ResourceHandler to the server
     HandlerList handlers = new HandlerList();
     handlers.setHandlers(new Handler[]{
@@ -114,7 +117,7 @@ public class HttpServer extends Thread {
 
   @Nullable
   public Uri getUri() {
-    return NetworkProxy.getUri(context, PORT);
+    return networkProxy.getUri(PORT);
   }
 
   public interface Listener {

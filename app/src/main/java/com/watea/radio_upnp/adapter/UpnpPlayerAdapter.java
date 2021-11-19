@@ -35,9 +35,9 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
-import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.service.RadioHandler;
 import com.watea.radio_upnp.service.RadioService;
+import com.watea.radio_upnp.service.RadioURL;
 
 import org.fourthline.cling.model.action.ActionArgumentValue;
 import org.fourthline.cling.model.action.ActionInvocation;
@@ -61,7 +61,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final ServiceId CONNECTION_MANAGER_ID = new UDAServiceId("ConnectionManager");
   private static final String PROTOCOL_INFO_HEADER = "http-get:*:";
   private static final String PROTOCOL_INFO_ALL = ":*";
-  private static final String DEFAULT_PROTOCOL_INFO = PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
+  private static final String DEFAULT_PROTOCOL_INFO =
+    PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
   private static final String ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
@@ -363,7 +364,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       new Thread() {
         @Override
         public void run() {
-          String contentType = NetworkProxy.getStreamContentType(radio.getURL());
+          String contentType = new RadioURL(radio.getURL()).getStreamContentType();
           // Now we can call GetProtocolInfo, only if current action not cancelled
           if (contentType != null) {
             upnpActionController.putContentType(radio, contentType);

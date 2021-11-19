@@ -56,7 +56,7 @@ public class EasyX509TrustManager implements X509TrustManager {
   @Override
   public void checkClientTrusted(X509Certificate[] certificates, String authType)
     throws java.security.cert.CertificateException {
-      standardTrustManager.checkClientTrusted(certificates, authType);
+    standardTrustManager.checkClientTrusted(certificates, authType);
   }
 
   @Override

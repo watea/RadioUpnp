@@ -30,7 +30,7 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.service.NetworkProxy;
+import com.watea.radio_upnp.service.RadioURL;
 
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Icon;
@@ -113,7 +113,7 @@ public class DlnaDevice {
           }
           if (largestIcon != null) {
             Bitmap searchedIcon =
-              NetworkProxy.getBitmapFromUrl(remoteDevice.normalizeURI(largestIcon.getUri()));
+              new RadioURL(remoteDevice.normalizeURI(largestIcon.getUri())).getBitmap();
             if (searchedIcon != null) {
               icon = searchedIcon;
               handler.post(() -> {
