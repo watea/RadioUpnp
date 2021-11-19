@@ -53,15 +53,11 @@ import javax.servlet.http.HttpServletResponse;
 
 public class RadioHandler extends AbstractHandler {
   private static final String LOG_TAG = RadioHandler.class.getName();
-  private static final int CONNECT_TIMEOUT = 5000;
-  private static final int READ_TIMEOUT = 10000;
   private static final int METADATA_MAX = 256;
   private static final String GET = "GET";
   private static final String HEAD = "HEAD";
-  private static final String USER_AGENT = "User-Agent";
   private static final String PARAMS = "params";
   private static final String SEPARATOR = "_";
-  private static final String ICY = "icy-";
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
@@ -131,19 +127,17 @@ public class RadioHandler extends AbstractHandler {
       // Accept M3U format
       httpURLConnection = new RadioURL(radio.getUrlFromM3u()).getActualHttpURLConnection(
         connection -> {
-          connection.setConnectTimeout(CONNECT_TIMEOUT);
-          connection.setReadTimeout(READ_TIMEOUT);
           connection.setRequestMethod(isGet ? GET : HEAD);
-          connection.setRequestProperty(USER_AGENT, userAgent);
+          connection.setRequestProperty("User-Agent", userAgent);
           if (isGet) {
-            connection.setRequestProperty("Icy-metadata", "1");
+            connection.setRequestProperty("Icy-Metadata", "1");
           }
         });
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
       for (String header : httpURLConnection.getHeaderFields().keySet()) {
         // Icy data not forwarded
-        if ((header != null) && !header.toLowerCase().startsWith(ICY)) {
+        if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
           String value = httpURLConnection.getHeaderField(header);
           if (value != null) {
             response.setHeader(header, value);

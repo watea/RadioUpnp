@@ -130,7 +130,8 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     if (networkProxy.isDeviceOffline()) {
       tell(R.string.no_internet);
     } else {
-      startReading(radio);
+      assert getMainActivity() != null;
+      getMainActivity().startReading(radio);
       if (!gotItRadioLongPress) {
         radioLongPressAlertDialog.show();
       }
@@ -162,7 +163,8 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
       if (networkProxy.hasWifiIpAddress()) {
-        if (upnpSearch()) {
+        assert getMainActivity() != null;
+        if (getMainActivity().upnpSearch()) {
           dlnaAlertDialog.show();
           if (!gotItDlnaEnable) {
             dlnaEnableAlertDialog.show();
@@ -179,7 +181,8 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
       if (networkProxy.hasWifiIpAddress()) {
-        if (upnpReset()) {
+        assert getMainActivity() != null;
+        if (getMainActivity().upnpReset()) {
           dlnaDevicesAdapter.clear();
           tell(R.string.dlna_search_reset);
         }
@@ -233,7 +236,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         @Override
         public void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen) {
           if (isChosen) {
-            startReading(null);
+            getMainActivity().startReading(null);
             tell(getResources().getString(R.string.dlna_selection) + dlnaDevice);
           } else {
             tell(R.string.no_dlna_selection);

@@ -56,7 +56,8 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> setFragment(ItemModifyFragment.class);
+    assert getMainActivity() != null;
+    return v -> getMainActivity().setFragment(ItemModifyFragment.class);
   }
 
   @Override
@@ -96,7 +97,8 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
 
   @Override
   public void onModifyClick(@NonNull Radio radio) {
-    ((ItemModifyFragment) setFragment(ItemModifyFragment.class)).set(radio);
+    assert getMainActivity() != null;
+    ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
   }
 
   // Radio shall not be changed if currently played

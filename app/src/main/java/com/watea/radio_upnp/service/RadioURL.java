@@ -45,6 +45,8 @@ import javax.net.ssl.TrustManager;
 public class RadioURL {
   private static final String LOG_TAG = RadioURL.class.getName();
   private static final int CONNECTION_TRY = 3;
+  private static final int CONNECT_TIMEOUT = 5000;
+  private static final int READ_TIMEOUT = CONNECT_TIMEOUT;
   // Create the SSL connection for HTTPS
   private static final SSLSocketFactory sSLSocketFactory;
 
@@ -55,7 +57,7 @@ public class RadioURL {
       sSLContext.init(
         null, new TrustManager[]{new EasyX509TrustManager()}, new java.security.SecureRandom());
     } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
-      Log.i(LOG_TAG, "Error handling SSL connection");
+      Log.i(LOG_TAG, "Error handling SSL connection", exception);
     }
     sSLSocketFactory = (sSLContext == null) ? null : sSLContext.getSocketFactory();
   }
@@ -79,7 +81,7 @@ public class RadioURL {
         httpURLConnection.getResponseCode() + "/" + streamContent);
     } catch (IOException iOException) {
       // Fires also in case of timeout
-      Log.i(LOG_TAG, "URL IO exception");
+      Log.i(LOG_TAG, "URL IO exception: " + uRL, iOException);
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
@@ -107,6 +109,8 @@ public class RadioURL {
     do {
       // Set headers
       httpURLConnection = (HttpURLConnection) uRL.openConnection();
+      httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
+      httpURLConnection.setReadTimeout(READ_TIMEOUT);
       httpURLConnection.setInstanceFollowRedirects(true);
       if (httpURLConnection instanceof HttpsURLConnection) {
         ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
@@ -132,7 +136,7 @@ public class RadioURL {
       httpURLConnection = getActualHttpURLConnection();
       bitmap = BitmapFactory.decodeStream(httpURLConnection.getInputStream());
     } catch (IOException iOException) {
-      Log.i(LOG_TAG, "Error decoding image: " + uRL);
+      Log.i(LOG_TAG, "Error decoding image: " + uRL, iOException);
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
