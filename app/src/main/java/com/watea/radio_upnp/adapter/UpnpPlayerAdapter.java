@@ -105,8 +105,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private final RadioService.UpnpAction actionGetProtocolInfo;
   @NonNull
-  private String contentType = "audio/mpeg";
-  @NonNull
   private String radioUri = "";
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
@@ -365,12 +363,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         @Override
         public void run() {
           String contentType = new RadioURL(radio.getURL()).getStreamContentType();
-          // Now we can call GetProtocolInfo, only if current action not cancelled
           if (contentType != null) {
             upnpActionController.putContentType(radio, contentType);
-            UpnpPlayerAdapter.this.contentType = contentType;
           }
-          onPreparedPlay();
+          // Now we can call prepare, only if we are still waiting
+          if (state == PlaybackStateCompat.STATE_BUFFERING) {
+            onPreparedPlay();
+          }
         }
       }.start();
     } else {
@@ -437,6 +436,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private String getContentType() {
     final String HEAD_EXP = "[a-z]*/";
+    String contentType = upnpActionController.getContentType(radio);
+    // Default value
+    if (contentType == null) {
+      contentType = "audio/mpeg";
+    }
     // First choice: contentType
     String result = searchContentType(contentType);
     if (result != null) {
@@ -454,6 +458,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         return result;
       }
     }
+    // Default case
     return contentType;
   }
 
