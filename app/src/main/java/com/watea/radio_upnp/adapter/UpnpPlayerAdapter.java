@@ -177,7 +177,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-        changeAndNotifyState(PlaybackStateCompat.STATE_NONE);
+        // No state change here, it hase been done before
         UpnpPlayerAdapter.this.upnpActionController.runNextAction();
       }
 

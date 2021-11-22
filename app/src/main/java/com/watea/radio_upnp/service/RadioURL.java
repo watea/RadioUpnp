@@ -121,7 +121,9 @@ public class RadioURL {
       // Get answer
       if (httpURLConnection.getResponseCode() / 100 == 3) {
         uRL = new URL(httpURLConnection.getHeaderField("Location"));
+        Log.i(LOG_TAG, "Redirecting to URL: " + uRL);
       } else {
+        Log.i(LOG_TAG, "Connection to URL: " + uRL);
         break;
       }
     } while (connectionTry++ < CONNECTION_TRY);
