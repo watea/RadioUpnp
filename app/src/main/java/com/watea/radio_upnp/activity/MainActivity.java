@@ -336,10 +336,12 @@ public class MainActivity
       startActivity(new Intent(Intent.ACTION_SEND)
         .setType("message/rfc822")
         .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"})
-        .putExtra(Intent.EXTRA_SUBJECT, "RadioUPnP report / " + Calendar.getInstance().getTime())
+        .putExtra(
+          Intent.EXTRA_SUBJECT,
+          BuildConfig.VERSION_NAME + " RadioUPnP report / " + Calendar.getInstance().getTime())
         .putExtra(
           Intent.EXTRA_STREAM,
-          FileProvider.getUriForFile(this, "com.watea.radio_upnp.fileprovider", logFile)));
+          FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", logFile)));
     } catch (Exception exception) {
       Log.e(LOG_TAG, "SendLogcatMail: internal failure", exception);
       tell(R.string.report_error);
