@@ -88,7 +88,8 @@ public class ItemModifyFragment extends MainActivityFragment {
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
-  private static final Pattern PATTERN = Pattern.compile(".*(http.*\\.(png|jpg)).*");
+  private final Pattern PATTERN =
+    Pattern.compile(".*(https?://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+\\.(png|jpg)).*");
   private NetworkProxy networkProxy;
   // <HMI assets
   private EditText nameEditText;
@@ -414,10 +415,16 @@ public class ItemModifyFragment extends MainActivityFragment {
     protected void onSearch() {
       try {
         Element head = Jsoup.connect(url.toString()).get().head();
-        // Parse site data
-        Matcher matcher = PATTERN.matcher(head.toString());
-        if (matcher.find()) {
-          foundIcon = new RadioURL(new URL(matcher.group(1))).getBitmap();
+        // Parse site data, try to accelerate
+        for (Element element : head.getAllElements()) {
+          String string;
+          if ((element != head) && ((string = element.toString()).contains("http"))) {
+            Matcher matcher = PATTERN.matcher(string);
+            if (matcher.find() &&
+              ((foundIcon = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null)) {
+              break;
+            }
+          }
         }
       } catch (Exception exception) {
         Log.i(LOG_TAG, "Error performing radio site search");
