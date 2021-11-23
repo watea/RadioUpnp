@@ -381,19 +381,20 @@ public class ItemModifyFragment extends MainActivityFragment {
 
   // Abstract class to handle web search
   private abstract class Searcher extends Thread {
-    private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
     public void run() {
-      handler.post(() -> {
+      onSearch();
+      new Handler(Looper.getMainLooper()).post(() -> {
         if (isActuallyAdded()) {
-          onPostExecute();
+          onPostSearch();
         }
       });
     }
 
-    protected void onPostExecute() {
-    }
+    protected abstract void onSearch();
+
+    protected abstract void onPostSearch();
   }
 
   private class IconSearcher extends Searcher {
@@ -410,7 +411,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     }
 
     @Override
-    public void run() {
+    protected void onSearch() {
       try {
         Element head = Jsoup.connect(url.toString()).get().head();
         // Parse site data
@@ -421,11 +422,10 @@ public class ItemModifyFragment extends MainActivityFragment {
       } catch (Exception exception) {
         Log.i(LOG_TAG, "Error performing radio site search");
       }
-      super.run();
     }
 
     @Override
-    protected void onPostExecute() {
+    protected void onPostSearch() {
       showSearchButton(true);
       if (foundIcon == null) {
         tell(R.string.no_icon_found);
@@ -459,7 +459,7 @@ public class ItemModifyFragment extends MainActivityFragment {
     }
 
     @Override
-    public void run() {
+    protected void onSearch() {
       if (radios.isEmpty()) {
         try {
           Element search = Jsoup
@@ -500,12 +500,11 @@ public class ItemModifyFragment extends MainActivityFragment {
           Log.i(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOexception);
         }
       }
-      super.run();
     }
 
     @SuppressLint("SetTextI18n")
     @Override
-    protected void onPostExecute() {
+    protected void onPostSearch() {
       // Context exists
       assert getContext() != null;
       switch (radios.size()) {
@@ -556,20 +555,20 @@ public class ItemModifyFragment extends MainActivityFragment {
     private String streamContent = null;
 
     private UrlTester(@NonNull URL url) {
+      super();
       this.url = url;
       tellWait();
       start();
     }
 
     @Override
-    public void run() {
+    protected void onSearch() {
       URL uRL = Radio.getUrlFromM3u(url);
       streamContent = (uRL == null) ? null : new RadioURL(uRL).getStreamContentType();
-      super.run();
     }
 
     @Override
-    protected void onPostExecute() {
+    protected void onPostSearch() {
       if ((streamContent == null) || !PlayerAdapter.isHandling(streamContent)) {
         tell(R.string.connection_test_failed);
       } else {

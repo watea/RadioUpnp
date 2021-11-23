@@ -650,8 +650,19 @@ public class RadioService
       protocolInfos.put(device, list);
     }
 
-    public void putContentType(@NonNull Radio radio, @NonNull String contentType) {
-      contentTypes.put(radio, contentType);
+    public void fetchContentTypeAndRun(@NonNull Radio radio, @NonNull Runnable runnable) {
+      if (contentTypes.get(radio) == null) {
+        new Thread(() -> {
+          String contentType = new RadioURL(radio.getURL()).getStreamContentType();
+          if (contentType != null) {
+            contentTypes.put(radio, contentType);
+          }
+          // runnable is executed in thread-safe mode
+          handler.post(runnable);
+        }).start();
+      } else {
+        runnable.run();
+      }
     }
 
     public void runNextAction() {

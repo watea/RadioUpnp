@@ -37,7 +37,6 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.HttpServer;
 import com.watea.radio_upnp.service.RadioHandler;
 import com.watea.radio_upnp.service.RadioService;
-import com.watea.radio_upnp.service.RadioURL;
 
 import org.fourthline.cling.model.action.ActionArgumentValue;
 import org.fourthline.cling.model.action.ActionInvocation;
@@ -144,7 +143,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
-        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
+        upnpActionController.runNextAction();
       }
 
       @Override
@@ -161,7 +160,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
-        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
+        upnpActionController.runNextAction();
       }
 
       @Override
@@ -178,7 +177,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         // No state change here, it hase been done before
-        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
+        upnpActionController.runNextAction();
       }
 
       @Override
@@ -204,7 +203,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           if (instanceIdArgument != null) {
             instanceId = instanceIdArgument.getValue().toString();
           }
-          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
+          upnpActionController.runNextAction();
         }
 
         @Override
@@ -249,11 +248,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         switch (volumeDirection) {
           case AudioManager.ADJUST_LOWER:
             currentVolume = Math.max(0, --currentVolume);
-            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionController, false);
+            actionSetVolume.execute(upnpActionController, false);
             break;
           case AudioManager.ADJUST_RAISE:
             currentVolume++;
-            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionController, false);
+            actionSetVolume.execute(upnpActionController, false);
             break;
           default:
             // Nothing to do
@@ -282,7 +281,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
+          upnpActionController.runNextAction();
         }
 
         @Override
@@ -307,10 +306,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
             }
           }
           if (!protocolInfos.isEmpty()) {
-            UpnpPlayerAdapter.this.upnpActionController.putProtocolInfo(
-              getDevice(), protocolInfos);
+            upnpActionController.putProtocolInfo(getDevice(), protocolInfos);
           }
-          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
+          upnpActionController.runNextAction();
         }
 
         @Override
@@ -357,24 +355,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       return;
     }
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
-    if (upnpActionController.getContentType(radio) == null) {
-      // Fetch ContentType before launching
-      new Thread() {
-        @Override
-        public void run() {
-          String contentType = new RadioURL(radio.getURL()).getStreamContentType();
-          if (contentType != null) {
-            upnpActionController.putContentType(radio, contentType);
-          }
-          // Now we can call prepare, only if we are still waiting
-          if (state == PlaybackStateCompat.STATE_BUFFERING) {
-            onPreparedPlay();
-          }
+    upnpActionController.fetchContentTypeAndRun(
+      radio,
+      () -> {
+        // We can call prepare, only if we are still waiting
+        if (state == PlaybackStateCompat.STATE_BUFFERING) {
+          onPreparedPlay();
         }
-      }.start();
-    } else {
-      onPreparedPlay();
-    }
+      });
   }
 
   public void onPlay() {

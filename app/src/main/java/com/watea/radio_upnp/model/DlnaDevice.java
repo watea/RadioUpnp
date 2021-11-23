@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Vector;
 
 public class DlnaDevice {
-  private final List<Listener> listeners = new Vector<>();
+  private final List<Runnable> listeners = new Vector<>();
   @Nullable
   private final RemoteDevice remoteDevice;
   @Nullable
@@ -54,7 +54,7 @@ public class DlnaDevice {
     return device.getIdentity().getUdn().getIdentifierString();
   }
 
-  public void addListener(@NonNull Listener listener) {
+  public void addListener(@NonNull Runnable listener) {
     listeners.add(listener);
   }
 
@@ -98,37 +98,30 @@ public class DlnaDevice {
   public void searchIcon() {
     if (isFullyHydrated()) {
       final Handler handler = new Handler(Looper.getMainLooper());
-      new Thread() {
-        @Override
-        public void run() {
-          Icon largestIcon = null;
-          int maxWidth = 0;
-          assert remoteDevice != null;
-          for (Icon deviceIcon : remoteDevice.getIcons()) {
-            int width = deviceIcon.getWidth();
-            if (width > maxWidth) {
-              maxWidth = width;
-              largestIcon = deviceIcon;
-            }
-          }
-          if (largestIcon != null) {
-            Bitmap searchedIcon =
-              new RadioURL(remoteDevice.normalizeURI(largestIcon.getUri())).getBitmap();
-            if (searchedIcon != null) {
-              icon = searchedIcon;
-              handler.post(() -> {
-                for (Listener listener : listeners) {
-                  listener.onNewIcon();
-                }
-              });
-            }
+      new Thread(() -> {
+        Icon largestIcon = null;
+        int maxWidth = 0;
+        assert remoteDevice != null;
+        for (Icon deviceIcon : remoteDevice.getIcons()) {
+          int width = deviceIcon.getWidth();
+          if (width > maxWidth) {
+            maxWidth = width;
+            largestIcon = deviceIcon;
           }
         }
-      }.start();
+        if (largestIcon != null) {
+          Bitmap searchedIcon =
+            new RadioURL(remoteDevice.normalizeURI(largestIcon.getUri())).getBitmap();
+          if (searchedIcon != null) {
+            icon = searchedIcon;
+            handler.post(() -> {
+              for (Runnable listener : listeners) {
+                listener.run();
+              }
+            });
+          }
+        }
+      }).start();
     }
-  }
-
-  public interface Listener {
-    void onNewIcon();
   }
 }

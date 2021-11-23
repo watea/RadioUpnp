@@ -123,20 +123,17 @@ public abstract class PlayerAdapter {
     unregisterAudioNoisyReceiver();
     onPrepareFromMediaId();
     // Watchdog
-    new Thread() {
-      @Override
-      public void run() {
-        try {
-          Thread.sleep(8000);
-        } catch (InterruptedException interruptedException) {
-          Log.e(LOG_TAG, "onPrepareFromMediaId: watchdog error");
-        }
+    new Thread(() -> {
+      try {
+        Thread.sleep(8000);
         if (state == PlaybackStateCompat.STATE_NONE) {
           Log.d(LOG_TAG, "onPrepareFromMediaId: watchdog fired");
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
         }
+      } catch (InterruptedException interruptedException) {
+        Log.e(LOG_TAG, "onPrepareFromMediaId: watchdog error");
       }
-    }.start();
+    }).start();
   }
 
   public final void play() {
