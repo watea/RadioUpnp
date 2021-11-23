@@ -143,7 +143,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
-        upnpActionController.runNextAction();
+        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
       }
 
       @Override
@@ -160,7 +160,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
-        upnpActionController.runNextAction();
+        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
       }
 
       @Override
@@ -177,7 +177,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       protected void success(@NonNull ActionInvocation<?> actionInvocation) {
         // No state change here, it hase been done before
-        upnpActionController.runNextAction();
+        UpnpPlayerAdapter.this.upnpActionController.runNextAction();
       }
 
       @Override
@@ -203,7 +203,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           if (instanceIdArgument != null) {
             instanceId = instanceIdArgument.getValue().toString();
           }
-          upnpActionController.runNextAction();
+          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
         }
 
         @Override
@@ -248,11 +248,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         switch (volumeDirection) {
           case AudioManager.ADJUST_LOWER:
             currentVolume = Math.max(0, --currentVolume);
-            actionSetVolume.execute(upnpActionController, false);
+            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionController, false);
             break;
           case AudioManager.ADJUST_RAISE:
             currentVolume++;
-            actionSetVolume.execute(upnpActionController, false);
+            actionSetVolume.execute(UpnpPlayerAdapter.this.upnpActionController, false);
             break;
           default:
             // Nothing to do
@@ -281,7 +281,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          upnpActionController.runNextAction();
+          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
         }
 
         @Override
@@ -306,9 +306,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
             }
           }
           if (!protocolInfos.isEmpty()) {
-            upnpActionController.putProtocolInfo(getDevice(), protocolInfos);
+            UpnpPlayerAdapter.this.upnpActionController.putProtocolInfo(getDevice(), protocolInfos);
           }
-          upnpActionController.runNextAction();
+          UpnpPlayerAdapter.this.upnpActionController.runNextAction();
         }
 
         @Override
