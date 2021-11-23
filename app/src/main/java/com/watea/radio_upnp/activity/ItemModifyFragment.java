@@ -418,11 +418,14 @@ public class ItemModifyFragment extends MainActivityFragment {
         // Parse site data, try to accelerate
         for (Element element : head.getAllElements()) {
           String string;
+          Bitmap bitmap;
           if ((element != head) && ((string = element.toString()).contains("http"))) {
             Matcher matcher = PATTERN.matcher(string);
+            // Fetch largest icon
             if (matcher.find() &&
-              ((foundIcon = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null)) {
-              break;
+              ((bitmap = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null) &&
+              ((foundIcon == null) || (bitmap.getByteCount() > foundIcon.getByteCount()))) {
+              foundIcon = bitmap;
             }
           }
         }
