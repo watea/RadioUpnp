@@ -42,7 +42,7 @@ import com.watea.radio_upnp.service.RadioHandler;
 
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
-  private static final int HTTP_TIMEOUT_RATIO = 10;
+  private static final int READ_TIMEOUT = DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * 10;
   @Nullable
   private ExoPlayer exoPlayer = null;
   private final Player.Listener playerListener = new Player.Listener() {
@@ -131,7 +131,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
       .setMediaSourceFactory(new DefaultMediaSourceFactory(new DefaultDataSource.Factory(
         context,
         new DefaultHttpDataSource.Factory()
-          .setReadTimeoutMs(DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * HTTP_TIMEOUT_RATIO)
+          .setReadTimeoutMs(READ_TIMEOUT)
           .setAllowCrossProtocolRedirects(true))))
       .build();
     exoPlayer.setMediaItem(MediaItem.fromUri(

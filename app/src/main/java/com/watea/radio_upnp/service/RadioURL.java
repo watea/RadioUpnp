@@ -30,6 +30,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -45,8 +47,9 @@ import javax.net.ssl.TrustManager;
 public class RadioURL {
   private static final String LOG_TAG = RadioURL.class.getName();
   private static final int CONNECTION_TRY = 3;
-  private static final int CONNECT_TIMEOUT = 5000;
-  private static final int READ_TIMEOUT = CONNECT_TIMEOUT;
+  private static final int CONNECT_TIMEOUT =
+    DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS * 2;
+  private static final int READ_TIMEOUT = DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * 2;
   // Create the SSL connection for HTTPS
   private static final SSLSocketFactory sSLSocketFactory;
 

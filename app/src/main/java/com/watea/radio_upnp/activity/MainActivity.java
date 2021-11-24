@@ -140,7 +140,12 @@ public class MainActivity
       "FUN",
       R.drawable.logo_fun,
       "http://icecast.funradio.fr/fun-1-44-128?listen=webCwsBCggNCQgLDQUGBAcGBg",
-      "https://www.funradio.fr/")
+      "https://www.funradio.fr/"),
+    new DefaultRadio(
+      "RADIO PARADISE",
+      R.drawable.logo_radio_paradise,
+      "http://stream.radioparadise.com/flac",
+      "https://www.radioparadise.com/")
   };
   private final NetworkProxy networkProxy = new NetworkProxy(this);
   // <HMI assets
