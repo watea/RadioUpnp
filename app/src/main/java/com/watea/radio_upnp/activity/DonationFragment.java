@@ -91,8 +91,7 @@ public class DonationFragment
           for (com.android.billingclient.api.Purchase purchase : list) {
             Log.d(LOG_TAG, "onPurchasesUpdated: " + purchase);
             billingClient.consumeAsync(
-              ConsumeParams
-                .newBuilder()
+              ConsumeParams.newBuilder()
                 .setPurchaseToken(purchase.getPurchaseToken())
                 .build(),
               this);

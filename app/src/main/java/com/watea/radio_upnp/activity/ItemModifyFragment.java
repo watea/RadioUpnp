@@ -51,7 +51,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentManager;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
@@ -68,7 +67,6 @@ import java.net.URL;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -272,9 +270,8 @@ public class ItemModifyFragment extends MainActivityFragment {
 
   // Back to previous fragment
   private void getBack() {
-    final FragmentManager fragmentManager = getFragmentManager();
-    assert fragmentManager != null;
-    fragmentManager.popBackStack();
+    assert getFragmentManager() != null;
+    getFragmentManager().popBackStack();
   }
 
   private boolean isAddMode() {
@@ -293,12 +290,10 @@ public class ItemModifyFragment extends MainActivityFragment {
   }
 
   private void flushKeyboard() {
-    final View view = getView();
-    assert view != null;
-    ((InputMethodManager) Objects
-      .requireNonNull(getContext())
-      .getSystemService(Context.INPUT_METHOD_SERVICE))
-      .hideSoftInputFromWindow(view.getWindowToken(), 0);
+    assert getView() != null;
+    assert getContext() != null;
+    ((InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE))
+      .hideSoftInputFromWindow(getView().getWindowToken(), 0);
   }
 
   private void setRadioIcon(@NonNull Bitmap icon) {

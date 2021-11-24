@@ -246,8 +246,7 @@ public class RadioService
     handler.post(() -> {
       if (hasLockKey(lockKey) && (radio != null)) {
         session.setMetadata(RadioService.this.mediaMetadataCompat =
-          radio
-            .getMediaMetadataBuilder()
+          radio.getMediaMetadataBuilder()
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
             .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
             // Use WRITER for rate

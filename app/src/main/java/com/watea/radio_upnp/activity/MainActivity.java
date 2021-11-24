@@ -75,6 +75,7 @@ import java.util.Calendar;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Vector;
 
 public class MainActivity
@@ -191,14 +192,13 @@ public class MainActivity
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     // Pass the event to ActionBarDrawerToggle, if it returns
     // true, then it has handled the app icon touch event
-    final Fragment currentFragment = getCurrentFragment();
-    assert currentFragment != null;
+    assert getCurrentFragment() != null;
     return
       drawerToggle.onOptionsItemSelected(item) ||
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        currentFragment.onOptionsItemSelected(item) ||
+        getCurrentFragment().onOptionsItemSelected(item) ||
         // If we got here, the user's action was not recognized
         // Invoke the superclass to handle it
         super.onOptionsItemSelected(item);
@@ -244,9 +244,8 @@ public class MainActivity
     if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
       floatingActionButton.setImageResource(resource);
     }
-    final Integer fragmentMenuId = FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass());
-    assert fragmentMenuId != null;
-    checkNavigationMenu(fragmentMenuId);
+    checkNavigationMenu(
+      Objects.requireNonNull(FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass())));
   }
 
   public void tell(int message) {
