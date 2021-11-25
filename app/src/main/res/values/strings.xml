@@ -72,7 +72,7 @@
     <string name="got_it">Got it!</string>
     <string name="donation_button_close">Close</string>
     <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer.\nThanks a lot!</string>
-    <string name="donation_google_android_market_description">Google charges a fee of 30%</string>
+    <string name="donation_google_android_market_description">(Google charges a fee of 15%)</string>
     <string name="donation_google_android_market_text">How much?</string>
     <string name="donation_alert_dialog_title">Error occurred</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
