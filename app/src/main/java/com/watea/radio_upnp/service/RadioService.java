@@ -114,6 +114,8 @@ public class RadioService
   private NotificationCompat.Action actionStop;
   private NotificationCompat.Action actionPlay;
   private NotificationCompat.Action actionRewind;
+  private NotificationCompat.Action actionSkipToNext;
+  private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
 
   @Override
@@ -197,6 +199,16 @@ public class RadioService
       R.drawable.ic_baseline_replay_24dp,
       getString(R.string.action_relaunch),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_REWIND));
+    actionSkipToNext = new NotificationCompat.Action(
+      R.drawable.ic_baseline_skip_next_white_24dp,
+      getString(R.string.action_skip_to_next),
+      MediaButtonReceiver.buildMediaButtonPendingIntent(
+        this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT));
+    actionSkipToPrevious = new NotificationCompat.Action(
+      R.drawable.ic_baseline_skip_previous_white_24dp,
+      getString(R.string.action_skip_to_previous),
+      MediaButtonReceiver.buildMediaButtonPendingIntent(
+        this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS));
     Log.d(LOG_TAG, "onCreate: done!");
   }
 
@@ -393,17 +405,23 @@ public class RadioService
       switch (mediaController.getPlaybackState().getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
           // UPnP device doesn't support PAUSE action but STOP
-          builder.addAction(playerAdapter instanceof UpnpPlayerAdapter ? actionStop : actionPause);
-          builder.setOngoing(true);
+          builder
+            .addAction(playerAdapter instanceof UpnpPlayerAdapter ? actionStop : actionPause)
+            .setOngoing(true);
           break;
         case PlaybackStateCompat.STATE_PAUSED:
-          builder.addAction(actionPlay);
-          builder.setOngoing(false);
+          builder
+            .addAction(actionPlay)
+            .setOngoing(false);
           break;
         default:
-          builder.addAction(actionRewind);
-          builder.setOngoing(false);
+          builder
+            .addAction(actionRewind)
+            .setOngoing(false);
       }
+      builder
+        .addAction(actionSkipToPrevious)
+        .addAction(actionSkipToNext);
     }
     return builder.build();
   }
