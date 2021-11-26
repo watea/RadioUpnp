@@ -145,7 +145,12 @@ public class MainActivity
       "RADIO PARADISE",
       R.drawable.logo_radio_paradise,
       "http://stream.radioparadise.com/flac",
-      "https://www.radioparadise.com/")
+      "https://www.radioparadise.com/"),
+    new DefaultRadio(
+      "PBB",
+      R.drawable.logo_pbb_radio,
+      "https://pbbradio.com:8443/128",
+      "https://www.allzicradio.com/en/player/listen/2579/pbb-laurent-garnier")
   };
   private final NetworkProxy networkProxy = new NetworkProxy(this);
   // <HMI assets
