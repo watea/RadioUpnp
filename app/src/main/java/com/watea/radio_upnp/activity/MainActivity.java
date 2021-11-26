@@ -342,7 +342,7 @@ public class MainActivity
         .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"})
         .putExtra(
           Intent.EXTRA_SUBJECT,
-          BuildConfig.VERSION_NAME + " RadioUPnP report / " + Calendar.getInstance().getTime())
+          "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
         .putExtra(
           Intent.EXTRA_STREAM,
           FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", logFile)));

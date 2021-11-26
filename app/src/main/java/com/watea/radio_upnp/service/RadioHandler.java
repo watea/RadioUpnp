@@ -127,7 +127,7 @@ public class RadioHandler extends AbstractHandler {
       // Accept M3U format
       httpURLConnection = new RadioURL(radio.getUrlFromM3u()).getActualHttpURLConnection(
         connection -> {
-          connection.setRequestMethod(isGet ? GET : HEAD);
+          // Default request method GET is used as some radio server handles HEAD too bad
           connection.setRequestProperty("User-Agent", userAgent);
           if (isGet) {
             connection.setRequestProperty("Icy-Metadata", "1");

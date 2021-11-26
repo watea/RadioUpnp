@@ -28,7 +28,6 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/dlna_devices_recycler_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="?attr/colorBackgroundFloating" />
+        android:layout_height="match_parent" />
 
 </FrameLayout>

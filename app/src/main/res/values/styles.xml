@@ -27,6 +27,7 @@
         <item name="colorPrimary">@color/dark_gray</item>
         <item name="colorPrimaryDark">@color/dark_gray</item>
         <item name="colorAccent">@color/dark_gray</item>
+        <item name="colorControlHighlight">@color/dark_blue</item>
         <item name="android:textColor">@color/light_gray</item>
         <item name="android:textColorPrimary">@color/white</item>
         <item name="android:textColorSecondary">@color/white</item>
