@@ -79,10 +79,12 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   private AlertDialog dlnaAlertDialog;
   private AlertDialog radioLongPressAlertDialog;
   private AlertDialog dlnaEnableAlertDialog;
+  private AlertDialog preferredRadiosAlertDialog;
   // />
   private boolean isPreferredRadios = false;
   private boolean gotItRadioLongPress;
   private boolean gotItDlnaEnable;
+  private boolean gotItPreferredRadios;
   private RadiosAdapter radiosAdapter;
   private NetworkProxy networkProxy = null;
   // DLNA devices management
@@ -98,7 +100,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
           Log.i(LOG_TAG, ">> is UPnP reader");
           // Add DlnaDevice to Adapter
           handler.post(() -> {
-            // Do nothing if we were disposed
+            // May not exist
             if (dlnaDevicesAdapter != null) {
               dlnaDevicesAdapter.addOrReplace(remoteDevice);
             }
@@ -113,7 +115,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       Log.i(LOG_TAG,
         "remoteDeviceRemoved: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
       handler.post(() -> {
-        // Do nothing if we were disposed
+        // May not exist
         if (dlnaDevicesAdapter != null) {
           dlnaDevicesAdapter.remove(remoteDevice);
         }
@@ -227,6 +229,8 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
     gotItDlnaEnable =
       sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
+    gotItPreferredRadios =
+      sharedPreferences.getBoolean(getString(R.string.key_preferred_radios_got_it), false);
     // Network
     networkProxy = getMainActivity().getNetworkProxy();
     // Adapters
@@ -266,6 +270,10 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       .setMessage(R.string.dlna_enable)
       .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
       .create();
+    preferredRadiosAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
+      .setMessage(R.string.preferred_radios)
+      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
+      .create();
     // Specific DLNA devices dialog
     dlnaAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setView(dlnaView)
@@ -290,16 +298,13 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    // May fail
-    try {
-      outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
-      DlnaDevice chosenDlnaDevice = dlnaDevicesAdapter.getChosenDlnaDevice();
-      outState.putString(
-        getString(R.string.key_selected_device),
-        (chosenDlnaDevice == null) ? null : chosenDlnaDevice.getIdentity());
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "onSaveInstanceState: internal failure");
-    }
+    outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
+    // May not exists
+    DlnaDevice chosenDlnaDevice =
+      (dlnaDevicesAdapter == null) ? null : dlnaDevicesAdapter.getChosenDlnaDevice();
+    outState.putString(
+      getString(R.string.key_selected_device),
+      (chosenDlnaDevice == null) ? null : chosenDlnaDevice.getIdentity());
   }
 
   @Override
@@ -322,6 +327,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       .edit()
       .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
       .putBoolean(getString(R.string.key_dlna_enable_got_it), gotItDlnaEnable)
+      .putBoolean(getString(R.string.key_preferred_radios_got_it), gotItPreferredRadios)
       .apply();
   }
 
@@ -333,6 +339,9 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         isPreferredRadios = !isPreferredRadios;
         setPreferredMenuItem();
         setRadiosView();
+        if (!gotItPreferredRadios) {
+          preferredRadiosAlertDialog.show();
+        }
         return true;
       case R.id.action_dlna:
         dlnaDevicesAdapter.removeChosenDlnaDevice();

@@ -129,6 +129,7 @@ public class RadioHandler extends AbstractHandler {
         connection -> {
           // Default request method GET is used as some radio server handles HEAD too bad
           connection.setRequestProperty("User-Agent", userAgent);
+          // ICY request
           if (isGet) {
             connection.setRequestProperty("Icy-Metadata", "1");
           }
@@ -136,7 +137,7 @@ public class RadioHandler extends AbstractHandler {
       Log.d(LOG_TAG, "Connected to radio URL");
       // Response to LAN
       for (String header : httpURLConnection.getHeaderFields().keySet()) {
-        // Icy data not forwarded
+        // ICY data not forwarded, as only used here
         if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
           String value = httpURLConnection.getHeaderField(header);
           if (value != null) {
@@ -144,6 +145,7 @@ public class RadioHandler extends AbstractHandler {
           }
         }
       }
+      // DLNA header, as found in documentation, not sure it is useful (should not)
       if (listener.isUpnp()) {
         response.setHeader("contentFeatures.dlna.org", "*");
         response.setHeader("transferMode.dlna.org", "Streaming");
