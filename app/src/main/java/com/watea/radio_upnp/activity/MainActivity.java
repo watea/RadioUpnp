@@ -147,7 +147,12 @@ public class MainActivity
       "PBB",
       R.drawable.logo_pbb_radio,
       "https://pbbradio.com:8443/128",
-      "https://www.allzicradio.com/en/player/listen/2579/pbb-laurent-garnier")
+      "https://www.allzicradio.com/en/player/listen/2579/pbb-laurent-garnier"),
+    new DefaultRadio(
+      "FIP",
+      R.drawable.logo_fip,
+      "http://icecast.radiofrance.fr/fip-hifi.aac",
+      "https://www.fip.fr/")
   };
   private final NetworkProxy networkProxy = new NetworkProxy(this);
   // <HMI assets
