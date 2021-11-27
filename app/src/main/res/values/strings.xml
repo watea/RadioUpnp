@@ -59,6 +59,7 @@
     <string name="live_streaming">Live streaming</string>
     <string name="no_icon_found">Icon search failed, check if Web page URL is valid</string>
     <string name="connection_test_failed">Connection test failed</string>
+    <string name="mime_not_authorized">Warning! MIME type is not authorized.\nAudio content: </string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
     <string name="connection_test_successful">Connection test successful.\nAudio content: </string>
     <string name="LAN_required">No LAN/Wifi connection found for DLNA function</string>

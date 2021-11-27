@@ -574,8 +574,10 @@ public class ItemModifyFragment extends MainActivityFragment {
 
     @Override
     protected void onPostSearch() {
-      if ((streamContent == null) || !PlayerAdapter.isHandling(streamContent)) {
+      if (streamContent == null) {
         tell(R.string.connection_test_failed);
+      } else if (!PlayerAdapter.isHandling(streamContent)) {
+        tell(getResources().getString(R.string.mime_not_authorized) + streamContent + ".");
       } else {
         tell(getResources().getString(R.string.connection_test_successful) + streamContent + ".");
       }

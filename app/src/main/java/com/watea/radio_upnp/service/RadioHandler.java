@@ -54,8 +54,6 @@ import javax.servlet.http.HttpServletResponse;
 public class RadioHandler extends AbstractHandler {
   private static final String LOG_TAG = RadioHandler.class.getName();
   private static final int METADATA_MAX = 256;
-  private static final String GET = "GET";
-  private static final String HEAD = "HEAD";
   private static final String PARAMS = "params";
   private static final String SEPARATOR = "_";
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
@@ -120,7 +118,7 @@ public class RadioHandler extends AbstractHandler {
     Log.d(LOG_TAG,
       "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
     // For further use
-    final boolean isGet = GET.equals(method);
+    final boolean isGet = (method != null) && method.equals("GET");
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {

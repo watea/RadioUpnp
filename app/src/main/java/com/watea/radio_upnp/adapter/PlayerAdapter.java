@@ -38,8 +38,8 @@ import androidx.annotation.NonNull;
 
 import com.watea.radio_upnp.model.Radio;
 
+import java.util.Arrays;
 import java.util.List;
-import java.util.Vector;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
@@ -47,6 +47,7 @@ import java.util.Vector;
 @SuppressWarnings("WeakerAccess")
 public abstract class PlayerAdapter {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
+  protected static final String DEFAULT_CONTENT_TYPE = AUDIO_CONTENT_TYPE + "mpeg";
   protected static final String APPLICATION_CONTENT_TYPE = "application/";
   private static final String LOG_TAG = PlayerAdapter.class.getName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
@@ -54,12 +55,8 @@ public abstract class PlayerAdapter {
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
   @NonNull
-  private static final List<String> AUDIO_CONTENT_PREFIXS = new Vector<String>() {
-    {
-      add(AUDIO_CONTENT_TYPE);
-      add(APPLICATION_CONTENT_TYPE);
-    }
-  };
+  private static final List<String> AUDIO_CONTENT_PREFIXS =
+    Arrays.asList(AUDIO_CONTENT_TYPE, APPLICATION_CONTENT_TYPE);
   @NonNull
   protected final Context context;
   // Current tag, always set before playing

@@ -72,11 +72,11 @@ import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Vector;
 
 public class MainActivity
   extends
@@ -94,12 +94,9 @@ public class MainActivity
         put(DonationFragment.class, R.id.action_donate);
       }
     };
+  // Only one class at this time, may be extended
   private static final List<Class<? extends Fragment>> ALWAYS_NEW_FRAGMENTS =
-    new Vector<Class<? extends Fragment>>() {
-      {
-        add(ItemModifyFragment.class);
-      }
-    };
+    Collections.singletonList(ItemModifyFragment.class);
   private static final DefaultRadio[] DEFAULT_RADIOS = {
     new DefaultRadio(
       "FRANCE INTER",

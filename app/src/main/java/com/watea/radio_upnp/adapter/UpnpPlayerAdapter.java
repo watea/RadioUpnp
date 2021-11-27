@@ -427,7 +427,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     String contentType = upnpActionController.getContentType(radio);
     // Default value
     if (contentType == null) {
-      contentType = "audio/mpeg";
+      contentType = DEFAULT_CONTENT_TYPE;
     }
     // First choice: contentType
     String result = searchContentType(contentType);
