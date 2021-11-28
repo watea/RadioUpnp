@@ -152,7 +152,12 @@ public class MainActivity
       "FIP",
       R.drawable.logo_fip,
       "http://icecast.radiofrance.fr/fip-hifi.aac",
-      "https://www.fip.fr/")
+      "https://www.fip.fr/"),
+    new DefaultRadio(
+      "DAVIDE",
+      R.drawable.logo_davide,
+      "https://streaming01.zfast.co.uk/proxy/davideof",
+      "http://www.davideofmimic.com/")
   };
   private final NetworkProxy networkProxy = new NetworkProxy(this);
   // <HMI assets
