@@ -186,7 +186,7 @@ public class PlayerController {
 
       @Override
       public void onConnectionFailed() {
-        Log.d(LOG_TAG, "Connection to RadioService failed");
+        Log.i(LOG_TAG, "Connection to RadioService failed");
       }
     };
 
@@ -244,7 +244,7 @@ public class PlayerController {
             break;
           default:
             // Should not happen
-            Log.d(LOG_TAG, "Internal failure, no action to perform on play button");
+            Log.i(LOG_TAG, "Internal failure, no action to perform on play button");
         }
       }
     });
@@ -262,7 +262,7 @@ public class PlayerController {
       Radio radio = getCurrentRadio();
       if (radio == null) {
         // Should not happen
-        Log.d(LOG_TAG, "Internal failure, radio is null");
+        Log.i(LOG_TAG, "Internal failure, radio is null");
       } else {
         radioLibrary.setPreferred(radio.getId(), !radio.isPreferred());
       }

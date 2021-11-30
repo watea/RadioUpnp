@@ -156,7 +156,7 @@ public class RadioService
           notificationManager.createNotificationChannel(notificationChannel);
           Log.d(LOG_TAG, "New channel created");
         } else {
-          Log.d(LOG_TAG, "Existing channel reused");
+          Log.i(LOG_TAG, "Existing channel reused");
         }
       }
     }
@@ -443,7 +443,7 @@ public class RadioService
         action = service.getAction(actionName);
       }
       if (action == null) {
-        Log.d(LOG_TAG, "Action not available: " + actionName);
+        Log.i(LOG_TAG, "Action not available: " + actionName);
       }
     }
 

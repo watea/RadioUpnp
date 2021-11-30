@@ -96,7 +96,7 @@ public class HttpServer extends Thread {
       Log.d(LOG_TAG, "HTTP server stop");
       server.stop();
     } catch (Exception exception) {
-      Log.d(LOG_TAG, "HTTP server stop error");
+      Log.i(LOG_TAG, "HTTP server stop error");
     }
   }
 

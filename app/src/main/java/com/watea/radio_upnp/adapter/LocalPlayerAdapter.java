@@ -48,7 +48,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   private final Player.Listener playerListener = new Player.Listener() {
     @Override
     public void onPlaybackStateChanged(int playbackState) {
-      Log.i(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState);
+      Log.d(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState);
       switch (playbackState) {
         case ExoPlayer.STATE_BUFFERING:
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);

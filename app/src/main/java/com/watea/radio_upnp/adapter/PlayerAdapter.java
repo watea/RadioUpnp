@@ -202,7 +202,7 @@ public abstract class PlayerAdapter {
   protected void changeAndNotifyState(int newState) {
     Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + lockKey);
     if (state == newState) {
-      Log.d(LOG_TAG, "=> no change");
+      Log.i(LOG_TAG, "=> no change");
     } else {
       state = newState;
       listener.onPlaybackStateChange(

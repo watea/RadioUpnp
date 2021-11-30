@@ -97,11 +97,11 @@ public class RadioHandler extends AbstractHandler {
     final String radioId = (params.length > 0) ? params[0] : null;
     final String lockKey = (params.length > 1) ? params[1] : null;
     if ((radioId == null) || (lockKey == null)) {
-      Log.d(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
+      Log.i(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
     } else {
       final Radio radio = radioLibrary.getFrom(Long.decode(radioId));
       if (radio == null) {
-        Log.d(LOG_TAG, "Unknown radio");
+        Log.i(LOG_TAG, "Unknown radio");
       } else {
         baseRequest.setHandled(true);
         handleConnection(request, response, radio, lockKey);
@@ -165,9 +165,9 @@ public class RadioHandler extends AbstractHandler {
           Log.w(LOG_TAG, "Malformed header icy-metaint");
         }
         if (metadataOffset > 0) {
-          Log.d(LOG_TAG, "Metadata expected at index: " + metadataOffset);
+          Log.i(LOG_TAG, "Metadata expected at index: " + metadataOffset);
         } else if (metadataOffset == 0) {
-          Log.d(LOG_TAG, "No metadata expected");
+          Log.i(LOG_TAG, "No metadata expected");
         } else {
           metadataOffset = 0;
           Log.w(LOG_TAG, "Wrong metadata value");

@@ -60,7 +60,7 @@ public class RadioURL {
       sSLContext.init(
         null, new TrustManager[]{new EasyX509TrustManager()}, new java.security.SecureRandom());
     } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
-      Log.i(LOG_TAG, "Error handling SSL connection", exception);
+      Log.e(LOG_TAG, "Error handling SSL connection", exception);
     }
     sSLSocketFactory = (sSLContext == null) ? null : sSLContext.getSocketFactory();
   }
@@ -115,6 +115,7 @@ public class RadioURL {
     HttpURLConnection httpURLConnection;
     int connectionTry = 0;
     URL uRL = this.uRL;
+    Log.d(LOG_TAG, "Try connect to URL: " + uRL);
     do {
       // Set headers
       httpURLConnection = (HttpURLConnection) uRL.openConnection();
@@ -130,9 +131,9 @@ public class RadioURL {
       // Get answer
       if (httpURLConnection.getResponseCode() / 100 == 3) {
         uRL = new URL(httpURLConnection.getHeaderField("Location"));
-        Log.i(LOG_TAG, "Redirecting to URL: " + uRL);
+        Log.d(LOG_TAG, "Redirecting to URL: " + uRL);
       } else {
-        Log.i(LOG_TAG, "Connection to URL: " + uRL);
+        Log.d(LOG_TAG, "Connection to URL: " + uRL);
         break;
       }
     } while (connectionTry++ < CONNECTION_TRY);

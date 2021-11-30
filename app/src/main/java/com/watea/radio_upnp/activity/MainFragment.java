@@ -59,7 +59,9 @@ import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
+import org.fourthline.cling.model.meta.RemoteService;
 import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.model.types.ServiceId;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.registry.RegistryListener;
@@ -93,11 +95,15 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   private final RegistryListener browseRegistryListener = new DefaultRegistryListener() {
     @Override
     public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
-      Log.i(LOG_TAG,
+      RemoteService[] remoteServices = remoteDevice.getServices();
+      Log.d(LOG_TAG,
         "remoteDeviceAdded: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
-      for (Service<?, ?> service : remoteDevice.getServices()) {
-        if (service.getServiceId().equals(AV_TRANSPORT_SERVICE_ID)) {
-          Log.i(LOG_TAG, ">> is UPnP reader");
+      Log.d(LOG_TAG, "> Found services: " + remoteServices.length);
+      for (Service<?, ?> service : remoteServices) {
+        ServiceId serviceId = service.getServiceId();
+        Log.d(LOG_TAG, ">> Service found: " + serviceId);
+        if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
+          Log.d(LOG_TAG, ">>> is UPnP reader");
           // Add DlnaDevice to Adapter
           handler.post(() -> {
             // May not exist
@@ -105,14 +111,13 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
               dlnaDevicesAdapter.addOrReplace(remoteDevice);
             }
           });
-          break;
         }
       }
     }
 
     @Override
     public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
-      Log.i(LOG_TAG,
+      Log.d(LOG_TAG,
         "remoteDeviceRemoved: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
       handler.post(() -> {
         // May not exist

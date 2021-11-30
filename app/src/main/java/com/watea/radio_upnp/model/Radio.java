@@ -127,7 +127,7 @@ public class Radio {
       webPageUrl =
         new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_WEB_PAGE)));
     } catch (MalformedURLException malformedURLException) {
-      Log.d(LOG_TAG, "Bad WebPageURL definition");
+      Log.i(LOG_TAG, "Bad WebPageURL definition");
     }
     quality = Quality.valueOf(
       cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_QUALITY)));
