@@ -141,7 +141,7 @@ public class MainActivity
     new DefaultRadio(
       "RADIO PARADISE",
       R.drawable.logo_radio_paradise,
-      "http://stream.radioparadise.com/flac",
+      "http://stream.radioparadise.com/flacm",
       "https://www.radioparadise.com/"),
     new DefaultRadio(
       "PBB",
