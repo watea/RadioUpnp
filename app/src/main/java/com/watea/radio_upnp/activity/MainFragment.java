@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.activity;
 
 import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
-import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.AV_TRANSPORT_SERVICE_ID;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -34,9 +33,6 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -57,20 +53,11 @@ import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.NetworkProxy;
 
-import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
-import org.fourthline.cling.model.meta.RemoteService;
-import org.fourthline.cling.model.meta.Service;
-import org.fourthline.cling.model.types.ServiceId;
-import org.fourthline.cling.registry.DefaultRegistryListener;
-import org.fourthline.cling.registry.Registry;
-import org.fourthline.cling.registry.RegistryListener;
 
 import java.util.List;
 
 public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
-  private static final String LOG_TAG = MainFragment.class.getName();
-  private final Handler handler = new Handler(Looper.getMainLooper());
   // <HMI assets
   private View dlnaView;
   private RecyclerView dlnaRecyclerView;
@@ -91,42 +78,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   private NetworkProxy networkProxy = null;
   // DLNA devices management
   private DlnaDevicesAdapter dlnaDevicesAdapter = null;
-  // UPnP service listener
-  private final RegistryListener browseRegistryListener = new DefaultRegistryListener() {
-    @Override
-    public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
-      RemoteService[] remoteServices = remoteDevice.getServices();
-      Log.d(LOG_TAG,
-        "remoteDeviceAdded: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
-      Log.d(LOG_TAG, "> Found services: " + remoteServices.length);
-      for (Service<?, ?> service : remoteServices) {
-        ServiceId serviceId = service.getServiceId();
-        Log.d(LOG_TAG, ">> Service found: " + serviceId);
-        if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
-          Log.d(LOG_TAG, ">>> is UPnP reader");
-          // Add DlnaDevice to Adapter
-          handler.post(() -> {
-            // May not exist
-            if (dlnaDevicesAdapter != null) {
-              dlnaDevicesAdapter.addOrReplace(remoteDevice);
-            }
-          });
-        }
-      }
-    }
-
-    @Override
-    public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
-      Log.d(LOG_TAG,
-        "remoteDeviceRemoved: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
-      handler.post(() -> {
-        // May not exist
-        if (dlnaDevicesAdapter != null) {
-          dlnaDevicesAdapter.remove(remoteDevice);
-        }
-      });
-    }
-  };
 
   private static int getRadiosColumnCount(@NonNull Configuration newConfig) {
     return (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : 3;
@@ -300,6 +251,24 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     return view;
   }
 
+  public void onAddOrReplace(RemoteDevice remoteDevice) {
+    if (dlnaDevicesAdapter != null) {
+      dlnaDevicesAdapter.addOrReplace(remoteDevice);
+    }
+  }
+
+  public void onRemove(RemoteDevice remoteDevice) {
+    if (dlnaDevicesAdapter != null) {
+      dlnaDevicesAdapter.remove(remoteDevice);
+    }
+  }
+
+  public void onResetRemoteDevices() {
+    if (dlnaDevicesAdapter != null) {
+      dlnaDevicesAdapter.clear();
+    }
+  }
+
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
@@ -357,27 +326,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         // If we got here, the user's action was not recognized
         return false;
     }
-  }
-
-  public void onUpnpServiceConnected(@NonNull Registry registry) {
-    // May be null if onCreateView() not yet called
-    if (dlnaDevicesAdapter == null) {
-      registry.removeAllRemoteDevices();
-    } else {
-      dlnaDevicesAdapter.clear();
-      // Add all devices to the list we already know about
-      for (Device<?, ?, ?> device : registry.getDevices()) {
-        if (device instanceof RemoteDevice) {
-          browseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
-        }
-      }
-    }
-    // Get ready for future device advertisements
-    registry.addListener(browseRegistryListener);
-  }
-
-  public void onUpnpServiceDisConnected(@NonNull Registry registry) {
-    registry.removeListener(browseRegistryListener);
   }
 
   @Nullable

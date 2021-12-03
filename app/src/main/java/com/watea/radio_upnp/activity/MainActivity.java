@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.activity;
 
+import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.AV_TRANSPORT_SERVICE_ID;
 import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.RENDERER_DEVICE_TYPE;
 
 import android.annotation.SuppressLint;
@@ -33,7 +34,9 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -65,6 +68,14 @@ import com.watea.radio_upnp.service.NetworkProxy;
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
+import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.RemoteDevice;
+import org.fourthline.cling.model.meta.RemoteService;
+import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.model.types.ServiceId;
+import org.fourthline.cling.registry.DefaultRegistryListener;
+import org.fourthline.cling.registry.Registry;
+import org.fourthline.cling.registry.RegistryListener;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -164,6 +175,7 @@ public class MainActivity
       "http://ice.bassdrive.net:80/stream",
       "http://www.bassdrive.com/v2/")
   };
+  private final Handler handler = new Handler(Looper.getMainLooper());
   private final NetworkProxy networkProxy = new NetworkProxy(this);
   // <HMI assets
   private DrawerLayout drawerLayout;
@@ -177,15 +189,60 @@ public class MainActivity
   private RadioLibrary radioLibrary;
   private int navigationMenuCheckedId;
   private MainFragment mainFragment;
+  // UPnP service listener
+  private final RegistryListener browseRegistryListener = new DefaultRegistryListener() {
+    @Override
+    public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
+      RemoteService[] remoteServices = remoteDevice.getServices();
+      Log.d(LOG_TAG,
+        "remoteDeviceAdded: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
+      Log.d(LOG_TAG, "> Found services: " + remoteServices.length);
+      for (Service<?, ?> service : remoteServices) {
+        ServiceId serviceId = service.getServiceId();
+        Log.d(LOG_TAG, ">> Service found: " + serviceId);
+        if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
+          Log.d(LOG_TAG, ">>> is UPnP reader");
+          // Tell MainFragment
+          handler.post(() -> {
+            if (mainFragment != null) {
+              mainFragment.onAddOrReplace(remoteDevice);
+            }
+          });
+        }
+      }
+    }
+
+    @Override
+    public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
+      Log.d(LOG_TAG,
+        "remoteDeviceRemoved: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
+      // Tell MainFragment
+      handler.post(() -> {
+        if (mainFragment != null) {
+          mainFragment.onRemove(remoteDevice);
+        }
+      });
+    }
+  };
   private AndroidUpnpService androidUpnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) {
       androidUpnpService = (AndroidUpnpService) service;
-      // Robustness, shall be defined here
+      Registry registry = androidUpnpService.getRegistry();
+      // Tell MainFragment to reset
       if (mainFragment != null) {
-        mainFragment.onUpnpServiceConnected(androidUpnpService.getRegistry());
+        mainFragment.onResetRemoteDevices();
       }
+      // Add all devices to the list we already know about
+      for (Device<?, ?, ?> device : registry.getDevices()) {
+        if (device instanceof RemoteDevice) {
+          browseRegistryListener.remoteDeviceAdded(registry, (RemoteDevice) device);
+        }
+      }
+      // Get ready for future device advertisements
+      registry.addListener(browseRegistryListener);
+      // Ask for devices
       upnpSearch();
     }
 
@@ -519,11 +576,12 @@ public class MainActivity
   private void onUpnpServiceDisconnected() {
     // Robustness, shall be defined here
     if (androidUpnpService != null) {
-      // Robustness, shall be defined here
-      if (mainFragment != null) {
-        mainFragment.onUpnpServiceDisConnected(androidUpnpService.getRegistry());
-      }
+      androidUpnpService.getRegistry().removeListener(browseRegistryListener);
       androidUpnpService = null;
+    }
+    // Tell MainFragment
+    if (mainFragment != null) {
+      mainFragment.onResetRemoteDevices();
     }
   }
 
