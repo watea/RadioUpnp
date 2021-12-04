@@ -191,23 +191,20 @@ public class MainActivity
   private MainFragment mainFragment;
   // UPnP service listener
   private final RegistryListener browseRegistryListener = new DefaultRegistryListener() {
+    // Add device if service AV_TRANSPORT_SERVICE_ID is found
     @Override
     public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
-      RemoteService[] remoteServices = remoteDevice.getServices();
-      Log.d(LOG_TAG,
-        "remoteDeviceAdded: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
-      Log.d(LOG_TAG, "> Found services: " + remoteServices.length);
-      for (Service<?, ?> service : remoteServices) {
-        ServiceId serviceId = service.getServiceId();
-        Log.d(LOG_TAG, ">> Service found: " + serviceId);
-        if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
-          Log.d(LOG_TAG, ">>> is UPnP reader");
-          // Tell MainFragment
-          handler.post(() -> {
-            if (mainFragment != null) {
-              mainFragment.onAddOrReplace(remoteDevice);
+      // This device?
+      if (!add(remoteDevice)) {
+        // Embedded devices?
+        RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
+        if ((remoteDevices != null) && (remoteDevices.length > 0)) {
+          Log.d(LOG_TAG, "EmbeddedRemoteDevices found: " + remoteDevices.length);
+          for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
+            if (add(embeddedRemoteDevice)) {
+              return;
             }
-          });
+          }
         }
       }
     }
@@ -215,13 +212,41 @@ public class MainActivity
     @Override
     public void remoteDeviceRemoved(Registry registry, final RemoteDevice remoteDevice) {
       Log.d(LOG_TAG,
-        "remoteDeviceRemoved: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
+        "RemoteDevice removed: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
       // Tell MainFragment
       handler.post(() -> {
         if (mainFragment != null) {
+          // This device?
           mainFragment.onRemove(remoteDevice);
+          // Embedded devices?
+          for (RemoteDevice embeddedRemoteDevice : remoteDevice.getEmbeddedDevices()) {
+            mainFragment.onRemove(embeddedRemoteDevice);
+          }
         }
       });
+    }
+
+    // Returns true if AV_TRANSPORT_SERVICE_ID is found
+    private boolean add(final RemoteDevice remoteDevice) {
+      RemoteService[] remoteServices = remoteDevice.getServices();
+      Log.d(LOG_TAG,
+        "RemoteDevice found: " + remoteDevice.getDisplayString() + " " + remoteDevice.toString());
+      Log.d(LOG_TAG, "> RemoteServices found: " + remoteServices.length);
+      for (Service<?, ?> service : remoteServices) {
+        ServiceId serviceId = service.getServiceId();
+        Log.d(LOG_TAG, ">> RemoteService: " + serviceId);
+        if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
+          Log.d(LOG_TAG, ">>> UPnP reader found!");
+          // Tell MainFragment
+          handler.post(() -> {
+            if (mainFragment != null) {
+              mainFragment.onAddOrReplace(remoteDevice);
+            }
+          });
+          return true;
+        }
+      }
+      return false;
     }
   };
   private AndroidUpnpService androidUpnpService = null;
