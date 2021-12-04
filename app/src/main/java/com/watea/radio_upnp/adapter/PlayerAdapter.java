@@ -35,6 +35,7 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
 
@@ -183,6 +184,12 @@ public abstract class PlayerAdapter {
 
   // Set the current capabilities available on this session
   public abstract long getAvailableActions();
+
+  // ContentType as seen by the player, if computed
+  @Nullable
+  public String getContentType() {
+    return null;
+  }
 
   protected abstract boolean isLocal();
 

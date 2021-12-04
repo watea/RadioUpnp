@@ -143,10 +143,19 @@ public class RadioHandler extends AbstractHandler {
           }
         }
       }
-      // DLNA header, as found in documentation, not sure it is useful (should not)
       if (listener.isUpnp()) {
+        // DLNA header, as found in documentation, not sure it is useful (should not)
         response.setHeader("contentFeatures.dlna.org", "*");
         response.setHeader("transferMode.dlna.org", "Streaming");
+        // Force ContentType as some devices require it
+        String contentType = listener.getContentType();
+        if (contentType == null) {
+          // Should not happen
+          Log.e(LOG_TAG, "Internal failure; ContentType is null");
+        } else {
+          Log.d(LOG_TAG, "UPnP connection; ContentType forced: " + contentType);
+          response.setContentType(contentType);
+        }
       }
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
@@ -277,5 +286,8 @@ public class RadioHandler extends AbstractHandler {
     boolean isUpnp();
 
     boolean isPaused();
+
+    @Nullable
+    String getContentType();
   }
 }

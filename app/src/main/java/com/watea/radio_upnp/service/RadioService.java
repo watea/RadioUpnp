@@ -293,6 +293,12 @@ public class RadioService
       (session.getController().getPlaybackState().getState() == PlaybackStateCompat.STATE_PAUSED);
   }
 
+  @Override
+  @Nullable
+  public String getContentType() {
+    return playerAdapter.getContentType();
+  }
+
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
@@ -436,30 +442,33 @@ public class RadioService
     private final Action<?> action;
 
     public UpnpAction(@Nullable Service<?, ?> service, @NonNull String actionName) {
+      String serviceName = "Unknown";
       if (service == null) {
         Log.d(LOG_TAG, "Service not available for: " + actionName);
         action = null;
       } else {
         action = service.getAction(actionName);
+        serviceName = service.getServiceId().toString();
       }
       if (action == null) {
-        Log.i(LOG_TAG, "Action not available: " + actionName);
+        Log.i(LOG_TAG, "Action not available: " + actionName + " on service: " + serviceName);
       }
     }
 
     public void execute(
       @NonNull UpnpActionController upnpActionController, boolean isScheduled) {
+      String actionName =  (action == null) ? "Null" : action.getName();
       AndroidUpnpService androidUpnpService = upnpActionController.getAndroidUpnpService();
       if (androidUpnpService == null) {
-        Log.d(LOG_TAG, "Try to execute UPnP action with no service");
+        Log.d(LOG_TAG, "Try to execute UPnP action with no service: " + actionName);
         if (isScheduled) {
           upnpActionController.release();
         }
       } else {
-        ActionCallback actionCallback =
-          new RadioService.UpnpActionCallback(this, getActionInvocation());
-        Log.d(LOG_TAG, "Execute: " + actionCallback);
-        androidUpnpService.getControlPoint().execute(actionCallback);
+        Log.d(LOG_TAG, "Execute: " + actionName + " on: " + getDevice().getDisplayString());
+        androidUpnpService
+          .getControlPoint()
+          .execute(new RadioService.UpnpActionCallback(this, getActionInvocation()));
       }
     }
 

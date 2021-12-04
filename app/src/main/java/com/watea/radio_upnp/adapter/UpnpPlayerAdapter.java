@@ -342,6 +342,37 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     return actions;
   }
 
+  // Special handling for MIME type
+  @Override
+  @NonNull
+  public String getContentType() {
+    final String HEAD_EXP = "[a-z]*/";
+    String contentType = upnpActionController.getContentType(radio);
+    // Default value
+    if (contentType == null) {
+      contentType = DEFAULT_CONTENT_TYPE;
+    }
+    // First choice: contentType
+    String result = searchContentType(contentType);
+    if (result != null) {
+      return result;
+    }
+    // Second choice: MIME subtype
+    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
+    if (result != null) {
+      return result;
+    }
+    // AAC special case
+    if (contentType.contains("aac")) {
+      result = searchContentType(AUDIO_CONTENT_TYPE + "mp4");
+      if (result != null) {
+        return result;
+      }
+    }
+    // Default case
+    return contentType;
+  }
+
   @Override
   protected boolean isLocal() {
     return false;
@@ -418,36 +449,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private void abort() {
     upnpActionController.releaseActions(device);
     changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-  }
-
-  // Special handling for MIME type
-  @NonNull
-  private String getContentType() {
-    final String HEAD_EXP = "[a-z]*/";
-    String contentType = upnpActionController.getContentType(radio);
-    // Default value
-    if (contentType == null) {
-      contentType = DEFAULT_CONTENT_TYPE;
-    }
-    // First choice: contentType
-    String result = searchContentType(contentType);
-    if (result != null) {
-      return result;
-    }
-    // Second choice: MIME subtype
-    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
-    if (result != null) {
-      return result;
-    }
-    // AAC special case
-    if (contentType.contains("aac")) {
-      result = searchContentType(AUDIO_CONTENT_TYPE + "mp4");
-      if (result != null) {
-        return result;
-      }
-    }
-    // Default case
-    return contentType;
   }
 
   @Nullable
