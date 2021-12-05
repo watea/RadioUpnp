@@ -75,7 +75,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="@dimen/app_margin"
+            android:layout_marginEnd="@dimen/app_margin"
+            android:layout_marginBottom="@dimen/app_bottom_margin"
             tools:ignore="ContentDescription" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
