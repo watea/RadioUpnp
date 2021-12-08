@@ -159,12 +159,7 @@ public class MainActivity
       "DAVIDE",
       R.drawable.logo_davide,
       "https://streaming01.zfast.co.uk/proxy/davideof",
-      "http://www.davideofmimic.com/"),
-    new DefaultRadio(
-      "BASSDRIVE",
-      R.drawable.logo_bassdrive,
-      "http://ice.bassdrive.net:80/stream",
-      "http://www.bassdrive.com/v2/")
+      "http://www.davideofmimic.com/")
   };
   private final NetworkProxy networkProxy = new NetworkProxy(this);
   // <HMI assets
