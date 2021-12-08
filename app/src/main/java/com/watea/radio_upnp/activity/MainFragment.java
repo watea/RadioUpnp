@@ -49,6 +49,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.DlnaDevicesAdapter;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
+import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
 import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.NetworkProxy;
@@ -57,7 +58,9 @@ import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
 
-public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
+public class MainFragment
+  extends MainActivityFragment
+  implements RadiosAdapter.Listener, UpnpRegistryAdapter.Listener {
   // <HMI assets
   private View dlnaView;
   private RecyclerView dlnaRecyclerView;
@@ -251,18 +254,21 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     return view;
   }
 
+  @Override
   public void onAddOrReplace(RemoteDevice remoteDevice) {
     if (dlnaDevicesAdapter != null) {
       dlnaDevicesAdapter.addOrReplace(remoteDevice);
     }
   }
 
+  @Override
   public void onRemove(RemoteDevice remoteDevice) {
     if (dlnaDevicesAdapter != null) {
       dlnaDevicesAdapter.remove(remoteDevice);
     }
   }
 
+  @Override
   public void onResetRemoteDevices() {
     if (dlnaDevicesAdapter != null) {
       dlnaDevicesAdapter.clear();

@@ -66,19 +66,10 @@ import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
-import org.fourthline.cling.controlpoint.ActionCallback;
-import org.fourthline.cling.model.action.ActionInvocation;
-import org.fourthline.cling.model.message.UpnpResponse;
-import org.fourthline.cling.model.meta.Action;
 import org.fourthline.cling.model.meta.Device;
-import org.fourthline.cling.model.meta.Service;
 
-import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.Vector;
 
 public class RadioService
   extends MediaBrowserServiceCompat
@@ -89,9 +80,9 @@ public class RadioService
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
-  private final UpnpActionController upnpActionController = new UpnpActionController();
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
+  private UpnpActionController upnpActionController = null;
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
   private MediaSessionCompat session;
@@ -235,7 +226,6 @@ public class RadioService
     if (playerAdapter != null) {
       playerAdapter.release();
     }
-    upnpActionController.release();
     httpServer.stopServer();
     upnpConnection.release();
     radioLibrary.close();
@@ -437,96 +427,13 @@ public class RadioService
     return mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
   }
 
-  public static abstract class UpnpAction {
-    @Nullable
-    private final Action<?> action;
-
-    public UpnpAction(@Nullable Service<?, ?> service, @NonNull String actionName) {
-      String serviceName = "Unknown";
-      if (service == null) {
-        Log.d(LOG_TAG, "Service not available for: " + actionName);
-        action = null;
-      } else {
-        action = service.getAction(actionName);
-        serviceName = service.getServiceId().toString();
-      }
-      if (action == null) {
-        Log.i(LOG_TAG, "Action not available: " + actionName + " on service: " + serviceName);
-      }
-    }
-
-    public void execute(
-      @NonNull UpnpActionController upnpActionController, boolean isScheduled) {
-      String actionName =  (action == null) ? "Null" : action.getName();
-      AndroidUpnpService androidUpnpService = upnpActionController.getAndroidUpnpService();
-      if (androidUpnpService == null) {
-        Log.d(LOG_TAG, "Try to execute UPnP action with no service: " + actionName);
-        if (isScheduled) {
-          upnpActionController.release();
-        }
-      } else {
-        Log.d(LOG_TAG, "Execute: " + actionName + " on: " + getDevice().getDisplayString());
-        androidUpnpService
-          .getControlPoint()
-          .execute(new RadioService.UpnpActionCallback(this, getActionInvocation()));
-      }
-    }
-
-    @NonNull
-    public Device<?, ?, ?> getDevice() {
-      assert action != null;
-      return action.getService().getDevice();
-    }
-
-    public boolean isAvailable() {
-      return (action != null);
-    }
-
-    @NonNull
-    protected ActionInvocation<?> getActionInvocation(@Nullable String instanceId) {
-      assert action != null;
-      ActionInvocation<?> actionInvocation = new ActionInvocation<>(action);
-      if (instanceId != null) {
-        actionInvocation.setInput("InstanceID", instanceId);
-      }
-      return actionInvocation;
-    }
-
-    protected abstract ActionInvocation<?> getActionInvocation();
-
-    protected abstract void success(@NonNull ActionInvocation<?> actionInvocation);
-
-    protected abstract void failure();
-  }
-
-  public static class UpnpActionCallback extends ActionCallback {
-    @NonNull
-    private final UpnpAction upnpAction;
-
-    public UpnpActionCallback(
-      @NonNull UpnpAction upnpAction, @NonNull ActionInvocation<?> actionInvocation) {
-      super(actionInvocation);
-      this.upnpAction = upnpAction;
-    }
-
-    @Override
-    public void success(ActionInvocation actionInvocation) {
-      Log.d(LOG_TAG, "Successfully called UPnP action: " + actionInvocation.getAction().getName());
-      upnpAction.success(actionInvocation);
-    }
-
-    @Override
-    public void failure(
-      ActionInvocation actionInvocation, UpnpResponse operation, String defaultMsg) {
-      Log.d(LOG_TAG, "UPnP error: " + actionInvocation.getAction().getName() + " => " + defaultMsg);
-      upnpAction.failure();
-    }
-  }
-
   private class UpnpServiceConnection implements ServiceConnection {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
       androidUpnpService = (AndroidUpnpService) iBinder;
+      if (androidUpnpService != null) {
+        upnpActionController = new UpnpActionController(androidUpnpService);
+      }
     }
 
     @Override
@@ -539,6 +446,9 @@ public class RadioService
         unbindService(upnpConnection);
         androidUpnpService = null;
       }
+      if (upnpActionController != null) {
+        upnpActionController.release(false);
+      }
     }
   }
 
@@ -547,7 +457,9 @@ public class RadioService
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Ensure robustness
-      upnpActionController.releaseActions(null);
+      if (upnpActionController != null) {
+        upnpActionController.release(true);
+      }
       // In any case, stop player if it exists
       if (playerAdapter != null) {
         playerAdapter.stop();
@@ -563,7 +475,8 @@ public class RadioService
       boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
       Device<?, ?, ?> chosenDevice = isDlna ?
         getChosenDevice(extras.getString(getString(R.string.key_dlna_device))) : null;
-      if (isDlna && (chosenDevice == null)) {
+      // Robustness again for UPnP mode
+      if (isDlna && ((chosenDevice == null) || (upnpActionController == null))) {
         Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
         return;
       }
@@ -648,95 +561,6 @@ public class RadioService
           mediaSessionCompatCallback.onPrepareFromMediaId(nextRadioId.toString(), extras);
         }
       }
-    }
-  }
-
-  // Helper class for UPnP actions scheduling
-  public class UpnpActionController {
-    private final Map<Radio, String> contentTypes = new Hashtable<>();
-    private final Map<Device<?, ?, ?>, List<String>> protocolInfos = new Hashtable<>();
-    private final List<UpnpAction> upnpActions = new Vector<>();
-    private boolean isRunning = false;
-
-    @Nullable
-    public String getContentType(@NonNull Radio radio) {
-      return contentTypes.get(radio);
-    }
-
-    public AndroidUpnpService getAndroidUpnpService() {
-      return androidUpnpService;
-    }
-
-    @Nullable
-    public List<String> getProtocolInfo(@NonNull Device<?, ?, ?> device) {
-      return protocolInfos.get(device);
-    }
-
-    public void putProtocolInfo(@NonNull Device<?, ?, ?> device, @NonNull List<String> list) {
-      protocolInfos.put(device, list);
-    }
-
-    public void fetchContentTypeAndRun(@NonNull Radio radio, @NonNull Runnable runnable) {
-      if (contentTypes.get(radio) == null) {
-        new Thread(() -> {
-          String contentType = new RadioURL(radio.getURL()).getStreamContentType();
-          if (contentType != null) {
-            contentTypes.put(radio, contentType);
-          }
-          // runnable is executed in thread-safe mode
-          handler.post(runnable);
-        }).start();
-      } else {
-        runnable.run();
-      }
-    }
-
-    public void runNextAction() {
-      handler.post(() -> {
-        if (upnpActions.isEmpty()) {
-          isRunning = false;
-        } else {
-          pullAction();
-        }
-      });
-    }
-
-    public void schedule(@NonNull final UpnpAction upnpAction) {
-      handler.post(() -> {
-        upnpActions.add(upnpAction);
-        if (!isRunning) {
-          pullAction();
-        }
-      });
-    }
-
-    // Remove remaining actions on device or all (device == null)
-    public void releaseActions(@Nullable final Device<?, ?, ?> device) {
-      handler.post(() -> {
-        if (device == null) {
-          upnpActions.clear();
-        } else {
-          Iterator<UpnpAction> iter = upnpActions.iterator();
-          while (iter.hasNext()) {
-            if (iter.next().getDevice().equals(device)) {
-              iter.remove();
-            }
-          }
-        }
-        isRunning = false;
-      });
-    }
-
-    private void release() {
-      contentTypes.clear();
-      protocolInfos.clear();
-      upnpActions.clear();
-      isRunning = false;
-    }
-
-    private void pullAction() {
-      isRunning = true;
-      upnpActions.remove(0).execute(this, true);
     }
   }
 }
