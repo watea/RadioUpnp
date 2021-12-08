@@ -150,8 +150,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
       @Override
       protected void failure() {
-        super.failure();
         changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+        super.failure();
       }
     };
     actionPause = new UpnpActionController.UpnpAction(
@@ -169,8 +169,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
       @Override
       protected void failure() {
-        super.failure();
         changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+        super.failure();
       }
     };
     actionStop = new UpnpActionController.UpnpAction(
