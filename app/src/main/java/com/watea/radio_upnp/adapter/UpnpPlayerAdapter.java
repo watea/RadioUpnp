@@ -432,8 +432,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private String getMetaData() {
     return "<DIDL-Lite " +
-      "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"" +
-      "xmlns:dc=\"http://purl.org/dc/elements/1.1/\"" +
+      "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +
+      "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
       "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
       "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +

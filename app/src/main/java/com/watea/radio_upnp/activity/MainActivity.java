@@ -286,7 +286,7 @@ public class MainActivity
     Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG).show();
   }
 
-  // Search for Render devices, 10s timeout
+  // Search for Renderer devices, 10s timeout
   public boolean upnpSearch() {
     if (androidUpnpService == null) {
       tell(R.string.device_no_device_yet);
