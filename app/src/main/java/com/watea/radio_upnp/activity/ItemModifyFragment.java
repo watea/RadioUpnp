@@ -28,6 +28,7 @@ import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -152,10 +153,25 @@ public class ItemModifyFragment extends MainActivityFragment {
     // Order matters
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
-    nameEditText.setText(radioName);
-    urlEditText.setText(radioUrl);
-    webPageEditText.setText(radioWebPage);
-    darFmRadioButton.setChecked(true);
+    // Restore saved state, if any
+    if (savedInstanceState == null) {
+      nameEditText.setText(radioName);
+      urlEditText.setText(radioUrl);
+      webPageEditText.setText(radioWebPage);
+      darFmRadioButton.setChecked(true);
+    } else {
+      // Robustness; it happens it fails
+      try {
+        radio =
+          getRadioLibrary().getFrom(savedInstanceState.getLong(getString(R.string.key_radio_id)));
+        radioIcon = BitmapFactory.decodeFile(
+          savedInstanceState.getString(getString(R.string.key_radio_icon_file)));
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "onActivityCreatedFiltered: internal failure restoring context");
+        radio = null;
+        radioIcon = null;
+      }
+    }
     // Icon init if necessary
     if (radioIcon == null) {
       radioIcon = DEFAULT_ICON;
@@ -204,6 +220,21 @@ public class ItemModifyFragment extends MainActivityFragment {
       }
     });
     return view;
+  }
+
+  @Override
+  public void onSaveInstanceState(@NonNull Bundle outState) {
+    super.onSaveInstanceState(outState);
+    // May fail
+    try {
+      // Order matters
+      outState.putString(
+        getString(R.string.key_radio_icon_file),
+        getRadioLibrary().bitmapToFile(radioIcon, Integer.toString(hashCode())).getPath());
+      outState.putLong(getString(R.string.key_radio_id), isAddMode() ? -1 : radio.getId());
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure");
+    }
   }
 
   @Override

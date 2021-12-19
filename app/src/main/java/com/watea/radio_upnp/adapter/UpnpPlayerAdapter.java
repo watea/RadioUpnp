@@ -83,26 +83,20 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Nullable
   private final Uri logo;
   @Nullable
-  private final Service<?, ?> connectionManager;
-  @Nullable
-  private final Service<?, ?> avTransportService;
-  @Nullable
-  private final Service<?, ?> renderingControl;
-  @NonNull
   private final UpnpActionController.UpnpAction actionPlay;
-  @NonNull
+  @Nullable
   private final UpnpActionController.UpnpAction actionPause;
-  @NonNull
+  @Nullable
   private final UpnpActionController.UpnpAction actionStop;
-  @NonNull
+  @Nullable
   private final UpnpActionController.UpnpAction actionPrepareForConnection;
-  @NonNull
+  @Nullable
   private final UpnpActionController.UpnpAction actionSetVolume;
-  @NonNull
+  @Nullable
   private final UpnpActionController.UpnpAction actionGetVolume;
-  @NonNull
+  @Nullable
   private final UpnpActionController.UpnpAction actionSetAvTransportUri;
-  @NonNull
+  @Nullable
   private final UpnpActionController.UpnpAction actionGetProtocolInfo;
   @NonNull
   private String radioUri = "";
@@ -130,199 +124,216 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       radioUri = RadioHandler.getHandledUri(uri, this.radio, this.lockKey).toString();
     }
     logo = httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE);
-    connectionManager = device.findService(CONNECTION_MANAGER_ID);
-    avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
-    renderingControl = device.findService(RENDERING_CONTROL_ID);
-    actionPlay = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(avTransportService, ACTION_PLAY)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-        actionInvocation.setInput("Speed", "1");
-        return actionInvocation;
-      }
-
-      @Override
-      protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-        changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
-        super.success(actionInvocation);
-      }
-
-      @Override
-      protected void failure() {
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        super.failure();
-      }
-    };
-    actionPause = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(avTransportService, ACTION_PAUSE)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        return getActionInvocation(instanceId);
-      }
-
-      @Override
-      protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-        changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
-        super.success(actionInvocation);
-      }
-
-      @Override
-      protected void failure() {
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        super.failure();
-      }
-    };
-    actionStop = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(avTransportService, ACTION_STOP)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        return getActionInvocation(instanceId);
-      }
-
-      @Override
-      protected void failure() {
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        super.failure();
-      }
-    };
-    actionPrepareForConnection = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(connectionManager, ACTION_PREPARE_FOR_CONNECTION)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        ActionInvocation<?> actionInvocation = getActionInvocation(null);
-        actionInvocation.setInput("RemoteProtocolInfo", DEFAULT_PROTOCOL_INFO);
-        actionInvocation.setInput("PeerConnectionManager", "");
-        actionInvocation.setInput("PeerConnectionID", "-1");
-        actionInvocation.setInput("Direction", "Input");
-        return actionInvocation;
-      }
-
-      @Override
-      protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-        ActionArgumentValue<?> instanceIdArgument = actionInvocation.getOutput("AVTransportID");
-        if (instanceIdArgument != null) {
-          instanceId = instanceIdArgument.getValue().toString();
+    Service<?, ?> connectionManager = device.findService(CONNECTION_MANAGER_ID);
+    Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
+    Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
+    Action<?> action = getAction(avTransportService, ACTION_PLAY);
+    actionPlay = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          actionInvocation.setInput("Speed", "1");
+          return actionInvocation;
         }
-        super.success(actionInvocation);
-      }
 
-      @Override
-      protected void failure() {
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        super.failure();
-      }
-    };
-    actionSetVolume = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(renderingControl, ACTION_SET_VOLUME)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-        actionInvocation.setInput(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume));
-        actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
-        Log.d(LOG_TAG, "Volume required: " + currentVolume);
-        return actionInvocation;
-      }
-
-      @Override
-      protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-        volumeDirection = AudioManager.ADJUST_SAME;
-        Log.d(LOG_TAG, "Volume set: " + actionInvocation.getInput(INPUT_DESIRED_VOLUME));
-      }
-
-      @Override
-      protected void failure() {
-        // No more action
-        volumeDirection = AudioManager.ADJUST_SAME;
-      }
-    };
-    actionGetVolume = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(renderingControl, ACTION_GET_VOLUME)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-        actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
-        return actionInvocation;
-      }
-
-      @Override
-      protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-        currentVolume =
-          Integer.parseInt(actionInvocation.getOutput("CurrentVolume").getValue().toString());
-        switch (volumeDirection) {
-          case AudioManager.ADJUST_LOWER:
-            currentVolume = Math.max(0, --currentVolume);
-            actionSetVolume.execute();
-            break;
-          case AudioManager.ADJUST_RAISE:
-            currentVolume++;
-            actionSetVolume.execute();
-            break;
-          default:
-            // Nothing to do
+        @Override
+        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
+          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
+          super.success(actionInvocation);
         }
-      }
 
-      @Override
-      protected void failure() {
-        // No more action
-        volumeDirection = AudioManager.ADJUST_SAME;
-      }
-    };
-    actionSetAvTransportUri = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(avTransportService, ACTION_SET_AV_TRANSPORT_URI)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-        String metadata = getMetaData();
-        actionInvocation.setInput("CurrentURI", radioUri);
-        actionInvocation.setInput(INPUT_CURRENT_URI_METADATA, metadata);
-        Log.d(LOG_TAG, "SetAVTransportURI=> InstanceID: " + instanceId);
-        Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURI: " + radioUri);
-        Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData: " + metadata);
-        return actionInvocation;
-      }
+        @Override
+        protected void failure() {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          super.failure();
+        }
+      };
+    action = getAction(avTransportService, ACTION_PAUSE);
+    actionPause = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          return getActionInvocation(instanceId);
+        }
 
-      @Override
-      protected void failure() {
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        super.failure();
-      }
-    };
-    actionGetProtocolInfo = new UpnpActionController.UpnpAction(
-      this.upnpActionController, getAction(connectionManager, ACTION_GET_PROTOCOL_INFO)) {
-      @Override
-      public ActionInvocation<?> getActionInvocation() {
-        return getActionInvocation(null);
-      }
+        @Override
+        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
+          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
+          super.success(actionInvocation);
+        }
 
-      @Override
-      public void success(@NonNull ActionInvocation<?> actionInvocation) {
-        List<String> protocolInfos = new Vector<>();
-        for (String protocolInfo : actionInvocation.getOutput("Sink").toString().split(",")) {
-          if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
-            Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
-            protocolInfos.add(protocolInfo);
+        @Override
+        protected void failure() {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          super.failure();
+        }
+      };
+    action = getAction(avTransportService, ACTION_STOP);
+    actionStop = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          return getActionInvocation(instanceId);
+        }
+
+        @Override
+        protected void failure() {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          super.failure();
+        }
+      };
+    action = getAction(connectionManager, ACTION_PREPARE_FOR_CONNECTION);
+    actionPrepareForConnection = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          ActionInvocation<?> actionInvocation = getActionInvocation(null);
+          actionInvocation.setInput("RemoteProtocolInfo", DEFAULT_PROTOCOL_INFO);
+          actionInvocation.setInput("PeerConnectionManager", "");
+          actionInvocation.setInput("PeerConnectionID", "-1");
+          actionInvocation.setInput("Direction", "Input");
+          return actionInvocation;
+        }
+
+        @Override
+        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
+          ActionArgumentValue<?> instanceIdArgument = actionInvocation.getOutput("AVTransportID");
+          if (instanceIdArgument != null) {
+            instanceId = instanceIdArgument.getValue().toString();
+          }
+          super.success(actionInvocation);
+        }
+
+        @Override
+        protected void failure() {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          super.failure();
+        }
+      };
+    action = getAction(renderingControl, ACTION_SET_VOLUME);
+    actionSetVolume = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          actionInvocation.setInput(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume));
+          actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
+          Log.d(LOG_TAG, "Volume required: " + currentVolume);
+          return actionInvocation;
+        }
+
+        @Override
+        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
+          volumeDirection = AudioManager.ADJUST_SAME;
+          Log.d(LOG_TAG, "Volume set: " + actionInvocation.getInput(INPUT_DESIRED_VOLUME));
+        }
+
+        @Override
+        protected void failure() {
+          // No more action
+          volumeDirection = AudioManager.ADJUST_SAME;
+        }
+      };
+    action = getAction(renderingControl, ACTION_GET_VOLUME);
+    actionGetVolume = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
+          return actionInvocation;
+        }
+
+        @Override
+        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
+          currentVolume =
+            Integer.parseInt(actionInvocation.getOutput("CurrentVolume").getValue().toString());
+          switch (volumeDirection) {
+            case AudioManager.ADJUST_LOWER:
+              currentVolume = Math.max(0, --currentVolume);
+              if (actionSetVolume != null) {
+                actionSetVolume.execute();
+              }
+              break;
+            case AudioManager.ADJUST_RAISE:
+              currentVolume++;
+              if (actionSetVolume != null) {
+                actionSetVolume.execute();
+              }
+              break;
+            default:
+              // Nothing to do
           }
         }
-        if (!protocolInfos.isEmpty()) {
-          putProtocolInfo(protocolInfos);
-        }
-        super.success(actionInvocation);
-      }
 
-      @Override
-      protected void failure() {
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        super.failure();
-      }
-    };
+        @Override
+        protected void failure() {
+          // No more action
+          volumeDirection = AudioManager.ADJUST_SAME;
+        }
+      };
+    action = getAction(avTransportService, ACTION_SET_AV_TRANSPORT_URI);
+    actionSetAvTransportUri = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          String metadata = getMetaData();
+          actionInvocation.setInput("CurrentURI", radioUri);
+          actionInvocation.setInput(INPUT_CURRENT_URI_METADATA, metadata);
+          Log.d(LOG_TAG, "SetAVTransportURI=> InstanceID: " + instanceId);
+          Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURI: " + radioUri);
+          Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData: " + metadata);
+          return actionInvocation;
+        }
+
+        @Override
+        protected void failure() {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          super.failure();
+        }
+      };
+    action = getAction(connectionManager, ACTION_GET_PROTOCOL_INFO);
+    actionGetProtocolInfo = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          return getActionInvocation(null);
+        }
+
+        @Override
+        public void success(@NonNull ActionInvocation<?> actionInvocation) {
+          List<String> protocolInfos = new Vector<>();
+          for (String protocolInfo : actionInvocation.getOutput("Sink").toString().split(",")) {
+            if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
+              Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
+              protocolInfos.add(protocolInfo);
+            }
+          }
+          if (!protocolInfos.isEmpty()) {
+            putProtocolInfo(protocolInfos);
+          }
+          super.success(actionInvocation);
+        }
+
+        @Override
+        protected void failure() {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          super.failure();
+        }
+      };
+    // Robustness
+    if ((connectionManager == null) || (avTransportService == null)) {
+      Log.e(LOG_TAG, "Needed services not available");
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+    }
   }
 
   @Override
   public void adjustVolume(int direction) {
     // Do only if nothing done currently
-    if (actionGetVolume.isAvailable() && (volumeDirection == AudioManager.ADJUST_SAME)) {
+    if ((actionGetVolume != null) && (volumeDirection == AudioManager.ADJUST_SAME)) {
       volumeDirection = direction;
       actionGetVolume.execute();
     }
@@ -381,11 +392,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPrepareFromMediaId() {
-    if ((connectionManager == null) || (avTransportService == null)) {
-      Log.e(LOG_TAG, "onPrepareFromMediaId: services not available");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-      return;
-    }
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
     upnpActionController.fetchContentTypeAndRun(
       radio,
@@ -398,18 +404,24 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   public void onPlay() {
-    actionPlay.schedule();
+    if (actionPlay != null) {
+      actionPlay.schedule();
+    }
   }
 
   // Nota: as tested, not supported by DLNA device
   @Override
   public void onPause() {
-    actionPause.schedule();
+    if (actionPause != null) {
+      actionPause.schedule();
+    }
   }
 
   @Override
   public void onStop() {
-    actionStop.schedule();
+    if (actionStop != null) {
+      actionStop.schedule();
+    }
   }
 
   @Override
@@ -418,14 +430,18 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   private void onPreparedPlay() {
     // Do prepare if available
-    if (actionPrepareForConnection.isAvailable()) {
+    if (actionPrepareForConnection != null) {
       actionPrepareForConnection.schedule();
     }
-    if (upnpActionController.getProtocolInfo(device) == null) {
+    if ((actionGetProtocolInfo != null) && (upnpActionController.getProtocolInfo(device) == null)) {
       actionGetProtocolInfo.schedule();
     }
-    actionSetAvTransportUri.schedule();
-    actionPlay.schedule();
+    if (actionSetAvTransportUri != null) {
+      actionSetAvTransportUri.schedule();
+    }
+    if (actionPlay != null) {
+      actionPlay.schedule();
+    }
   }
 
   // Create DIDL-Lite metadata
@@ -464,15 +480,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Nullable
   private Action<?> getAction(@Nullable Service<?, ?> service, @NonNull String actionName) {
-    Action<?> action = null;
     if (service == null) {
       Log.i(LOG_TAG, "Service not available for: " + actionName);
-    } else {
-      action = service.getAction(actionName);
-      if (action == null) {
-        Log.i(LOG_TAG, "Action not available: " + actionName + " on service: " +
-          service.getServiceId().toString());
-      }
+      return null;
+    }
+    Action<?> action = service.getAction(actionName);
+    if (action == null) {
+      Log.i(LOG_TAG,
+        "Action not available: " + actionName + " on service: " + service.getServiceId());
     }
     return action;
   }

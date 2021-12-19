@@ -139,20 +139,16 @@ public class UpnpActionController {
     private static final String LOG_TAG = UpnpAction.class.getName();
     @NonNull
     private final UpnpActionController upnpActionController;
-    @Nullable
+    @NonNull
     private final Action<?> action;
 
     public UpnpAction(
-      @NonNull UpnpActionController upnpActionController, @Nullable Action<?> action) {
+      @NonNull UpnpActionController upnpActionController, @NonNull Action<?> action) {
       this.upnpActionController = upnpActionController;
       this.action = action;
     }
 
     public void execute() {
-      if (action == null) {
-        Log.d(LOG_TAG, "Try to execute null action");
-        return;
-      }
       Log.d(LOG_TAG, "Execute: " + action.getName() + " on: " + getDevice().getDisplayString());
       upnpActionController.execute(new ActionCallback(getActionInvocation()) {
         @Override
@@ -174,12 +170,7 @@ public class UpnpActionController {
 
     @NonNull
     public Device<?, ?, ?> getDevice() {
-      assert action != null;
       return action.getService().getDevice();
-    }
-
-    public boolean isAvailable() {
-      return (action != null);
     }
 
     public void putProtocolInfo(@NonNull List<String> list) {
@@ -192,7 +183,6 @@ public class UpnpActionController {
 
     @NonNull
     protected ActionInvocation<?> getActionInvocation(@Nullable String instanceId) {
-      assert action != null;
       ActionInvocation<?> actionInvocation = new ActionInvocation<>(action);
       if (instanceId != null) {
         actionInvocation.setInput("InstanceID", instanceId);
