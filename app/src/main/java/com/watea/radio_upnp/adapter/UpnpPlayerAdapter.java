@@ -127,7 +127,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     Service<?, ?> connectionManager = device.findService(CONNECTION_MANAGER_ID);
     Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
     Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
-    Action<?> action = getAction(avTransportService, ACTION_PLAY);
+    Action<?> action = getAction(avTransportService, ACTION_PLAY, true);
     actionPlay = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -149,7 +149,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.failure();
         }
       };
-    action = getAction(avTransportService, ACTION_PAUSE);
+    action = getAction(avTransportService, ACTION_PAUSE, true);
     actionPause = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -169,7 +169,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.failure();
         }
       };
-    action = getAction(avTransportService, ACTION_STOP);
+    action = getAction(avTransportService, ACTION_STOP, true);
     actionStop = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -183,7 +183,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.failure();
         }
       };
-    action = getAction(connectionManager, ACTION_PREPARE_FOR_CONNECTION);
+    action = getAction(connectionManager, ACTION_PREPARE_FOR_CONNECTION, false);
     actionPrepareForConnection = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -211,7 +211,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.failure();
         }
       };
-    action = getAction(renderingControl, ACTION_SET_VOLUME);
+    action = getAction(renderingControl, ACTION_SET_VOLUME, false);
     actionSetVolume = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -235,7 +235,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           volumeDirection = AudioManager.ADJUST_SAME;
         }
       };
-    action = getAction(renderingControl, ACTION_GET_VOLUME);
+    action = getAction(renderingControl, ACTION_GET_VOLUME, false);
     actionGetVolume = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -273,7 +273,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           volumeDirection = AudioManager.ADJUST_SAME;
         }
       };
-    action = getAction(avTransportService, ACTION_SET_AV_TRANSPORT_URI);
+    action = getAction(avTransportService, ACTION_SET_AV_TRANSPORT_URI, true);
     actionSetAvTransportUri = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -294,7 +294,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.failure();
         }
       };
-    action = getAction(connectionManager, ACTION_GET_PROTOCOL_INFO);
+    action = getAction(connectionManager, ACTION_GET_PROTOCOL_INFO, true);
     actionGetProtocolInfo = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
@@ -323,11 +323,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.failure();
         }
       };
-    // Robustness
-    if ((connectionManager == null) || (avTransportService == null)) {
-      Log.e(LOG_TAG, "Needed services not available");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-    }
   }
 
   @Override
@@ -479,15 +474,19 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   @Nullable
-  private Action<?> getAction(@Nullable Service<?, ?> service, @NonNull String actionName) {
+  private Action<?> getAction(
+    @Nullable Service<?, ?> service, @NonNull String actionName, boolean shallExist) {
+    Action<?> action = null;
     if (service == null) {
       Log.i(LOG_TAG, "Service not available for: " + actionName);
-      return null;
+    } else {
+      action = service.getAction(actionName);
     }
-    Action<?> action = service.getAction(actionName);
     if (action == null) {
-      Log.i(LOG_TAG,
-        "Action not available: " + actionName + " on service: " + service.getServiceId());
+      Log.i(LOG_TAG, "Action not available: " + actionName);
+      if (shallExist) {
+        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+      }
     }
     return action;
   }

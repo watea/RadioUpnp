@@ -291,9 +291,8 @@ public class MainActivity
     if (androidUpnpService == null) {
       tell(R.string.device_no_device_yet);
       return false;
-    } else {
-      androidUpnpService.getControlPoint().search(new DeviceTypeHeader(RENDERER_DEVICE_TYPE), 10);
     }
+    androidUpnpService.getControlPoint().search(new DeviceTypeHeader(RENDERER_DEVICE_TYPE), 10);
     return true;
   }
 
@@ -301,9 +300,8 @@ public class MainActivity
     if (androidUpnpService == null) {
       tell(R.string.device_no_device_yet);
       return false;
-    } else {
-      androidUpnpService.getRegistry().removeAllRemoteDevices();
     }
+    androidUpnpService.getRegistry().removeAllRemoteDevices();
     return true;
   }
 
