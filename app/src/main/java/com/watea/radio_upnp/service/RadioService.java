@@ -67,6 +67,7 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
 import java.util.UUID;
@@ -538,10 +539,20 @@ public class RadioService
     }
 
     private Device<?, ?, ?> getChosenDevice(String identity) {
-      if (androidUpnpService != null) {
-        for (Device<?, ?, ?> device : androidUpnpService.getRegistry().getDevices()) {
-          if (DlnaDevice.getIdentity(device).equals(identity)) {
-            return device;
+      if (androidUpnpService == null) {
+        return null;
+      }
+      for (RemoteDevice remoteDevice : androidUpnpService.getRegistry().getRemoteDevices()) {
+        if (DlnaDevice.getIdentity(remoteDevice).equals(identity)) {
+          return remoteDevice;
+        }
+        // Embedded devices?
+        RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
+        if (remoteDevices != null) {
+          for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
+            if (DlnaDevice.getIdentity(embeddedRemoteDevice).equals(identity)) {
+              return embeddedRemoteDevice;
+            }
           }
         }
       }

@@ -54,15 +54,16 @@ public class UpnpRegistryAdapter extends DefaultRegistryListener {
   @Override
   public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
     // This device?
-    if (!add(remoteDevice)) {
-      // Embedded devices?
-      RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
-      if ((remoteDevices != null) && (remoteDevices.length > 0)) {
-        Log.d(LOG_TAG, "EmbeddedRemoteDevices found: " + remoteDevices.length);
-        for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
-          if (add(embeddedRemoteDevice)) {
-            return;
-          }
+    if (add(remoteDevice)) {
+      return;
+    }
+    // Embedded devices?
+    RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
+    if (remoteDevices != null) {
+      Log.d(LOG_TAG, "EmbeddedRemoteDevices found: " + remoteDevices.length);
+      for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
+        if (add(embeddedRemoteDevice)) {
+          return;
         }
       }
     }

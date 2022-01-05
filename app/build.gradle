@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
         targetSdkVersion 31
-        versionCode 2605
-        versionName "2.60.5"
+        versionCode 2606
+        versionName "2.60.6"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -58,7 +58,6 @@ repositories {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.core:core:1.7.0'
     implementation 'androidx.media:media:1.4.3'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
@@ -72,14 +71,14 @@ dependencies {
     // apache
     implementation 'org.apache.commons:commons-io:1.3.2'
     // https://mvnrepository.com/artifact/org.fourthline.cling/cling-core
-    implementation group: 'org.fourthline.cling', name: 'cling-core', version: '2.1.1'
-    implementation group: 'org.seamless', name: 'seamless-util', version: '1.1.1'
-    implementation group: 'org.seamless', name: 'seamless-http', version: '1.1.1'
-    implementation group: 'org.seamless', name: 'seamless-xml', version: '1.1.1'
+    implementation 'org.fourthline.cling:cling-core:2.1.1'
+    implementation 'org.seamless:seamless-util:1.1.1'
+    implementation 'org.seamless:seamless-http:1.1.1'
+    implementation 'org.seamless:seamless-xml:1.1.1'
     // jetty
-    implementation group: 'org.eclipse.jetty', name: 'jetty-server', version: '8.2.0.v20160908'
-    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '8.2.0.v20160908'
-    implementation group: 'org.eclipse.jetty', name: 'jetty-client', version: '8.2.0.v20160908'
+    implementation 'org.eclipse.jetty:jetty-server:8.2.0.v20160908'
+    implementation 'org.eclipse.jetty:jetty-servlet:8.2.0.v20160908'
+    implementation 'org.eclipse.jetty:jetty-client:8.2.0.v20160908'
     // Playstore
-    implementation "com.android.billingclient:billing:4.0.0"
+    implementation 'com.android.billingclient:billing:4.0.0'
 }

@@ -66,7 +66,6 @@ import com.watea.radio_upnp.service.NetworkProxy;
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
-import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.registry.Registry;
 
@@ -185,10 +184,8 @@ public class MainActivity
         Registry registry = androidUpnpService.getRegistry();
         upnpRegistryAdapter = new UpnpRegistryAdapter(mainFragment);
         // Add all devices to the list we already know about
-        for (Device<?, ?, ?> device : registry.getDevices()) {
-          if (device instanceof RemoteDevice) {
-            upnpRegistryAdapter.remoteDeviceAdded(registry, (RemoteDevice) device);
-          }
+        for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
+          upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
         }
         // Get ready for future device advertisements
         registry.addListener(upnpRegistryAdapter);
