@@ -74,12 +74,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class MainActivity
   extends AppCompatActivity
@@ -90,14 +89,15 @@ public class MainActivity
     new Hashtable<Class<? extends Fragment>, Integer>() {
       {
         put(MainFragment.class, R.id.action_home);
-        put(ItemModifyFragment.class, R.id.action_add_item);
+        put(ItemAddFragment.class, R.id.action_add_item);
         put(ModifyFragment.class, R.id.action_modify);
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  // Only one class at this time, may be extended
   private static final List<Class<? extends Fragment>> ALWAYS_NEW_FRAGMENTS =
-    Collections.singletonList(ItemModifyFragment.class);
+    Arrays.asList(
+      ItemAddFragment.class,
+      ItemModifyFragment.class);
   private static final DefaultRadio[] DEFAULT_RADIOS = {
     new DefaultRadio(
       "FRANCE INTER",
@@ -271,8 +271,11 @@ public class MainActivity
     if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
       floatingActionButton.setImageResource(resource);
     }
-    checkNavigationMenu(
-      Objects.requireNonNull(FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass())));
+    Integer menuId = FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass());
+    // Change checked menu if necessary
+    if (menuId != null) {
+      checkNavigationMenu(menuId);
+    }
   }
 
   public void tell(int message) {

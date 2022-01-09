@@ -86,6 +86,7 @@
     <string name="not_to_modify">Current radio cannot be edited</string>
     <string name="not_to_delete">Current radio cannot be deleted</string>
     <string name="report_error">Error, report could not be generated</string>
+    <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
