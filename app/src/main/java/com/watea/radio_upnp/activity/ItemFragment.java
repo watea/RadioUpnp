@@ -92,8 +92,10 @@ public abstract class ItemFragment extends MainActivityFragment {
   protected EditText nameEditText;
   protected EditText urlEditText;
   protected EditText webPageEditText;
+  protected EditText iconEditText;
   protected UrlWatcher urlWatcher;
   protected UrlWatcher webPageWatcher;
+  protected UrlWatcher iconWatcher;
   private NetworkProxy networkProxy;
   private EditText countryEditText;
   private RadioButton darFmRadioButton;
@@ -141,6 +143,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     // Order matters
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
+    iconWatcher = new UrlWatcher(iconEditText);
     // Default icon
     setRadioIcon(DEFAULT_ICON);
     // Restore icon; may fail
@@ -164,6 +167,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     countryEditText = view.findViewById(R.id.country_edit_text);
     progressBar = view.findViewById(R.id.progress_bar);
     urlEditText = view.findViewById(R.id.url_edit_text);
+    iconEditText = view.findViewById(R.id.icon_edit_text);
     webPageEditText = view.findViewById(R.id.web_page_edit_text);
     darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
     searchImageButton = view.findViewById(R.id.search_image_button);
@@ -176,6 +180,10 @@ public abstract class ItemFragment extends MainActivityFragment {
           isDarFmSelected ? R.drawable.ic_search_white_40dp : R.drawable.ic_image_white_40dp);
         webPageEditText.setEnabled(!isDarFmSelected);
         urlEditText.setEnabled(!isDarFmSelected);
+        iconEditText.setEnabled(!isDarFmSelected);
+        if (isDarFmSelected) {
+          iconEditText.setText("");
+        }
         countryEditLinearlayout.setVisibility(isDarFmSelected ? View.VISIBLE : View.INVISIBLE);
       });
     searchImageButton.setOnClickListener(v -> {
@@ -186,11 +194,17 @@ public abstract class ItemFragment extends MainActivityFragment {
         if (darFmRadioButton.isChecked()) {
           new DarFmSearcher();
         } else {
+          URL iconUrl = iconWatcher.url;
           URL webPageUrl = webPageWatcher.url;
-          if (webPageUrl == null) {
+          if ((iconUrl == null) && (webPageUrl == null)) {
             tell(R.string.no_icon_found);
           } else {
-            new IconSearcher(webPageUrl);
+            // Search in icon URL if available
+            if (iconUrl == null) {
+              new IconWebSearcher(webPageUrl);
+            } else {
+              new IconUrlSearcher(iconUrl);
+            }
           }
         }
       }
@@ -361,17 +375,34 @@ public abstract class ItemFragment extends MainActivityFragment {
     protected abstract void onPostSearch();
   }
 
-  private class IconSearcher extends Searcher {
+  private abstract class IconSearcher extends Searcher {
     @NonNull
-    private final URL url;
+    protected final URL url;
     @Nullable
-    private Bitmap foundIcon = null;
+    protected Bitmap foundIcon = null;
 
     private IconSearcher(@NonNull URL url) {
       super();
       this.url = url;
       tellSearch();
       start();
+    }
+
+    @Override
+    protected void onPostSearch() {
+      showSearchButton(true);
+      if (foundIcon == null) {
+        tell(R.string.no_icon_found);
+      } else {
+        setRadioIcon(foundIcon);
+        tell(R.string.icon_updated);
+      }
+    }
+  }
+
+  private class IconWebSearcher extends IconSearcher {
+    private IconWebSearcher(@NonNull URL url) {
+      super(url);
     }
 
     @Override
@@ -393,19 +424,19 @@ public abstract class ItemFragment extends MainActivityFragment {
           }
         }
       } catch (Exception exception) {
-        Log.i(LOG_TAG, "Error performing radio site search");
+        Log.i(LOG_TAG, "Error performing icon web site search", exception);
       }
+    }
+  }
+
+  private class IconUrlSearcher extends IconSearcher {
+    private IconUrlSearcher(@NonNull URL url) {
+      super(url);
     }
 
     @Override
-    protected void onPostSearch() {
-      showSearchButton(true);
-      if (foundIcon == null) {
-        tell(R.string.no_icon_found);
-      } else {
-        setRadioIcon(foundIcon);
-        tell(R.string.icon_updated);
-      }
+    protected void onSearch() {
+      foundIcon = new RadioURL(url).getBitmap();
     }
   }
 

@@ -130,6 +130,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="@dimen/app_horizontal_margin"
+            android:text="@string/icon_url" />
+
+        <EditText
+            android:id="@+id/icon_edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/icon_url_example"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:enabled="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/app_horizontal_margin"
             android:text="@string/legend_page_url" />
 
         <EditText
