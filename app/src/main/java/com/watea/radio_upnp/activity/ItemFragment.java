@@ -477,10 +477,10 @@ public abstract class ItemFragment extends MainActivityFragment {
           for (Element station : search.getElementsByTag("station")) {
             // As stated, may fail
             try {
-              Map<String, String> map = new Hashtable<>();
-              map.put(DAR_FM_ID, extractValue(station, "station_id"));
-              map.put(DAR_FM_NAME, extractValue(station, "callsign"));
-              radios.add(map);
+              Map<String, String> radioMap = new Hashtable<>();
+              radioMap.put(DAR_FM_ID, extractValue(station, "station_id"));
+              radioMap.put(DAR_FM_NAME, extractValue(station, "callsign"));
+              addToRadiosInOrder (radioMap);
             } catch (Exception exception) {
               Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST extraction", exception);
             }
@@ -549,6 +549,20 @@ public abstract class ItemFragment extends MainActivityFragment {
             .show();
       }
       showSearchButton(true);
+    }
+
+    private void addToRadiosInOrder(Map<String, String> radioMap) {
+      String newName = radioMap.get(DAR_FM_NAME);
+      if (newName != null) {
+        for (int index = 0; index < radios.size(); index++) {
+          String name = radios.get(index).get(DAR_FM_NAME);
+          if ((name == null) || (name.compareTo(newName) > 0)) {
+            radios.add(index, radioMap);
+            return;
+          }
+        }
+      }
+      radios.add(radioMap);
     }
   }
 
