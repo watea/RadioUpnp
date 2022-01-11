@@ -477,8 +477,10 @@ public class RadioService
       boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
       Device<?, ?, ?> chosenDevice = isDlna ?
         getChosenDevice(extras.getString(getString(R.string.key_dlna_device))) : null;
-      // Robustness for UPnP mode
-      if (isDlna && ((chosenDevice == null) || (upnpActionController == null))) {
+      Uri serverUri = httpServer.getUri();
+      // Robustness for UPnP mode; test if environment is still OK
+      if (isDlna &&
+        ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
         Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
         return;
       }
@@ -488,9 +490,6 @@ public class RadioService
       session.setExtras(extras);
       lockKey = UUID.randomUUID().toString();
       if (isDlna) {
-        Uri serverUri = httpServer.getUri();
-        // serverUri may be null if Wifi is lost, loopback address used as robustness value
-        serverUri = (serverUri == null) ? httpServer.getLoopbackUri() : serverUri;
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
