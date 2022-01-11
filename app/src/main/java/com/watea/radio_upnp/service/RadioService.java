@@ -34,6 +34,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -476,7 +477,7 @@ public class RadioService
       boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
       Device<?, ?, ?> chosenDevice = isDlna ?
         getChosenDevice(extras.getString(getString(R.string.key_dlna_device))) : null;
-      // Robustness again for UPnP mode
+      // Robustness for UPnP mode
       if (isDlna && ((chosenDevice == null) || (upnpActionController == null))) {
         Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
         return;
@@ -487,12 +488,16 @@ public class RadioService
       session.setExtras(extras);
       lockKey = UUID.randomUUID().toString();
       if (isDlna) {
+        Uri serverUri = httpServer.getUri();
+        // serverUri may be null if Wifi is lost, loopback address used as robustness value
+        serverUri = (serverUri == null) ? httpServer.getLoopbackUri() : serverUri;
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
           radio,
           lockKey,
-          httpServer,
+          RadioHandler.getHandledUri(serverUri, radio, lockKey),
+          httpServer.createLogoFile(radio),
           chosenDevice,
           upnpActionController);
         session.setPlaybackToRemote(volumeProviderCompat);
@@ -501,7 +506,8 @@ public class RadioService
           RadioService.this,
           RadioService.this,
           radio,
-          lockKey);
+          lockKey,
+          RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       }
       // Prepare radio streaming

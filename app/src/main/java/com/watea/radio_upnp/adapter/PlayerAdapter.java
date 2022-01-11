@@ -30,6 +30,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.SystemClock;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
@@ -65,6 +66,8 @@ public abstract class PlayerAdapter {
   protected final String lockKey;
   @NonNull
   protected final Radio radio;
+  @NonNull
+  protected final Uri radioUri;
   private final AudioFocusHelper audioFocusHelper = new AudioFocusHelper();
   @NonNull
   private final AudioManager audioManager;
@@ -88,11 +91,13 @@ public abstract class PlayerAdapter {
     @NonNull Context context,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey) {
+    @NonNull String lockKey,
+    @NonNull Uri radioUri) {
     this.context = context;
     this.listener = listener;
     this.radio = radio;
     this.lockKey = lockKey;
+    this.radioUri = radioUri;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     if (audioManager == null) {
       Log.e(LOG_TAG, "AudioManager is null");

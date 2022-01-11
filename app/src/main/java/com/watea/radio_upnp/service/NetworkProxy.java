@@ -43,7 +43,6 @@ import java.nio.ByteOrder;
 public class NetworkProxy {
   private static final String LOG_TAG = NetworkProxy.class.getName();
   private static final String SCHEME = "http";
-
   @NonNull
   private final Context context;
 
@@ -93,6 +92,7 @@ public class NetworkProxy {
     return (getIpAddress() != null);
   }
 
+  @Nullable
   public Uri getUri(int port) {
     String ipAddress = getIpAddress();
     return (ipAddress == null) ? null : getUri(ipAddress, port);

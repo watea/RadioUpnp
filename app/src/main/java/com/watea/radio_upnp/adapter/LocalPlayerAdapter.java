@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.adapter;
 
 import android.content.Context;
+import android.net.Uri;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
@@ -37,8 +38,6 @@ import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
 import com.google.android.exoplayer2.upstream.DefaultDataSource;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.HttpServer;
-import com.watea.radio_upnp.service.RadioHandler;
 
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
@@ -83,8 +82,9 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     @NonNull Context context,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey) {
-    super(context, listener, radio, lockKey);
+    @NonNull String lockKey,
+    @NonNull Uri radioUri) {
+    super(context, listener, radio, lockKey, radioUri);
   }
 
   @Override
@@ -134,8 +134,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
           .setReadTimeoutMs(READ_TIMEOUT)
           .setAllowCrossProtocolRedirects(true))))
       .build();
-    exoPlayer.setMediaItem(MediaItem.fromUri(
-      RadioHandler.getHandledUri(HttpServer.getLoopbackUri(), radio, lockKey)));
+    exoPlayer.setMediaItem(MediaItem.fromUri(radioUri));
     exoPlayer.setPlayWhenReady(true);
     exoPlayer.addListener(playerListener);
     exoPlayer.prepare();

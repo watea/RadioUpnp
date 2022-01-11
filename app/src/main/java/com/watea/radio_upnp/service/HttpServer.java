@@ -44,8 +44,8 @@ import java.io.FileOutputStream;
 public class HttpServer extends Thread {
   private static final String LOG_TAG = HttpServer.class.getName();
   private static final String LOGO_FILE = "logo";
-  private static final int PORT = 57648;
-  private final Server server = new Server(PORT);
+  private static final int REMOTE_LOGO_SIZE = 300;
+  private final Server server = new Server(0);
   @NonNull
   private final Context context;
   @NonNull
@@ -74,8 +74,8 @@ public class HttpServer extends Thread {
   }
 
   @NonNull
-  public static Uri getLoopbackUri() {
-    return NetworkProxy.getLoopbackUri(PORT);
+  public Uri getLoopbackUri() {
+    return NetworkProxy.getLoopbackUri(getPort());
   }
 
   @Override
@@ -86,7 +86,7 @@ public class HttpServer extends Thread {
       server.start();
       server.join();
     } catch (Exception exception) {
-      Log.d(LOG_TAG, "HTTP server start error");
+      Log.d(LOG_TAG, "HTTP server start error", exception);
       listener.onError();
     }
   }
@@ -96,20 +96,20 @@ public class HttpServer extends Thread {
       Log.d(LOG_TAG, "HTTP server stop");
       server.stop();
     } catch (Exception exception) {
-      Log.i(LOG_TAG, "HTTP server stop error");
+      Log.i(LOG_TAG, "HTTP server stop error", exception);
     }
   }
 
   // Return logo file Uri; a jpeg file
   @Nullable
-  public Uri createLogoFile(@NonNull Radio radio, int size) {
+  public Uri createLogoFile(@NonNull Radio radio) {
     String name = LOGO_FILE + radio.getId() + ".jpg";
     try (FileOutputStream fileOutputStream = context.openFileOutput(name, Context.MODE_PRIVATE)) {
       Bitmap
-        .createScaledBitmap(radio.getIcon(), size, size, false)
+        .createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, false)
         .compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
     } catch (Exception exception) {
-      Log.e(LOG_TAG, "createLogoFile: internal failure creating logo file");
+      Log.e(LOG_TAG, "createLogoFile: internal failure creating logo file", exception);
     }
     Uri uri = getUri();
     return (uri == null) ? null : uri.buildUpon().appendEncodedPath(name).build();
@@ -117,7 +117,11 @@ public class HttpServer extends Thread {
 
   @Nullable
   public Uri getUri() {
-    return networkProxy.getUri(PORT);
+    return networkProxy.getUri(getPort());
+  }
+
+  private int getPort() {
+    return server.getConnectors()[0].getLocalPort();
   }
 
   public interface Listener {

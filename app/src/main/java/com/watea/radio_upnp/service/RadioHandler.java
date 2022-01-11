@@ -77,8 +77,7 @@ public class RadioHandler extends AbstractHandler {
   // Add ID and lock key to given URI as query parameter
   // Don't use several query parameters to avoid encoding troubles
   @NonNull
-  public static Uri getHandledUri(
-    @NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
+  public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
       .buildUpon()
       .appendEncodedPath(RadioHandler.class.getSimpleName() + SEPARATOR + radio.getId())

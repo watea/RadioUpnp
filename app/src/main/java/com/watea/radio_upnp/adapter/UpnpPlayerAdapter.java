@@ -34,8 +34,6 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.HttpServer;
-import com.watea.radio_upnp.service.RadioHandler;
 import com.watea.radio_upnp.service.UpnpActionController;
 
 import org.fourthline.cling.model.action.ActionArgumentValue;
@@ -75,13 +73,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
-  private static final int REMOTE_LOGO_SIZE = 300;
   @NonNull
   private final Device<?, ?, ?> device;
   @NonNull
   private final UpnpActionController upnpActionController;
   @Nullable
-  private final Uri logo;
+  private final Uri logoUri;
   @Nullable
   private final UpnpActionController.UpnpAction actionPlay;
   @Nullable
@@ -98,8 +95,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private final UpnpActionController.UpnpAction actionSetAvTransportUri;
   @Nullable
   private final UpnpActionController.UpnpAction actionGetProtocolInfo;
-  @NonNull
-  private String radioUri = "";
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -110,20 +105,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
-    @NonNull HttpServer httpServer,
+    @NonNull Uri radioUri,
+    @Nullable Uri logoUri,
     @NonNull Device<?, ?, ?> device,
     @NonNull UpnpActionController upnpActionController) {
-    super(context, listener, radio, lockKey);
+    super(context, listener, radio, lockKey, radioUri);
     this.device = device;
     this.upnpActionController = upnpActionController;
-    // Shall not be null
-    Uri uri = httpServer.getUri();
-    if (uri == null) {
-      Log.e(LOG_TAG, "UpnpPlayerAdapter: service not available");
-    } else {
-      radioUri = RadioHandler.getHandledUri(uri, this.radio, this.lockKey).toString();
-    }
-    logo = httpServer.createLogoFile(radio, REMOTE_LOGO_SIZE);
+    this.logoUri = logoUri;
     Service<?, ?> connectionManager = device.findService(CONNECTION_MANAGER_ID);
     Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
     Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
@@ -280,7 +269,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         public ActionInvocation<?> getActionInvocation() {
           ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
           String metadata = getMetaData();
-          actionInvocation.setInput("CurrentURI", radioUri);
+          actionInvocation.setInput("CurrentURI", radioUri.toString());
           actionInvocation.setInput(INPUT_CURRENT_URI_METADATA, metadata);
           Log.d(LOG_TAG, "SetAVTransportURI=> InstanceID: " + instanceId);
           Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURI: " + radioUri);
@@ -453,7 +442,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<res duration=\"0:00:00\" protocolInfo=\"" +
       PROTOCOL_INFO_HEADER + getContentType() + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
-      "<upnp:albumArtURI>" + logo + "</upnp:albumArtURI>" +
+      "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "</item>" +
       "</DIDL-Lite>";
   }
