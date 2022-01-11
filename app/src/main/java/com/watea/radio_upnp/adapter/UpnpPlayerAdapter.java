@@ -377,14 +377,16 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Override
   protected void onPrepareFromMediaId() {
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
-    upnpActionController.fetchContentTypeAndRun(
-      radio,
-      () -> {
-        // We can call prepare, only if we are still waiting
-        if (state == PlaybackStateCompat.STATE_BUFFERING) {
-          onPreparedPlay();
-        }
-      });
+    // Fetch content in a new thread
+    new Thread(() -> {
+      if (upnpActionController.getContentType(radio) == null) {
+        upnpActionController.fetchContentType(radio);
+      }
+      // We can now call prepare, only if we are still waiting
+      if (state == PlaybackStateCompat.STATE_BUFFERING) {
+        onPreparedPlay();
+      }
+    }).start();
   }
 
   public void onPlay() {

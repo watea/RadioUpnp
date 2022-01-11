@@ -23,8 +23,6 @@
 
 package com.watea.radio_upnp.service;
 
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -46,7 +44,6 @@ import java.util.Map;
 import java.util.Vector;
 
 public class UpnpActionController {
-  private static final Handler handler = new Handler(Looper.getMainLooper());
   @NonNull
   private final AndroidUpnpService androidUpnpService;
   private final Map<Radio, String> contentTypes = new Hashtable<>();
@@ -67,22 +64,14 @@ public class UpnpActionController {
     return protocolInfos.get(device);
   }
 
-  public void fetchContentTypeAndRun(@NonNull Radio radio, @NonNull Runnable runnable) {
-    if (contentTypes.get(radio) == null) {
-      new Thread(() -> {
-        String contentType = new RadioURL(radio.getURL()).getStreamContentType();
-        if (contentType != null) {
-          contentTypes.put(radio, contentType);
-        }
-        // runnable is executed in thread-safe mode
-        handler.post(runnable);
-      }).start();
-    } else {
-      runnable.run();
+  public void fetchContentType(@NonNull Radio radio) {
+    String contentType = new RadioURL(radio.getURL()).getStreamContentType();
+    if (contentType != null) {
+      contentTypes.put(radio, contentType);
     }
   }
 
-  public void release(boolean actionsOnly) {
+  public synchronized void release(boolean actionsOnly) {
     if (!actionsOnly) {
       contentTypes.clear();
       protocolInfos.clear();
@@ -91,34 +80,28 @@ public class UpnpActionController {
   }
 
   // Remove remaining actions on device or all (device == null)
-  private void releaseActions(@NonNull final Device<?, ?, ?> device) {
-    handler.post(() -> {
-      Iterator<UpnpAction> iter = upnpActions.iterator();
-      while (iter.hasNext()) {
-        if (iter.next().getDevice().equals(device)) {
-          iter.remove();
-        }
+  private synchronized void releaseActions(@NonNull final Device<?, ?, ?> device) {
+    Iterator<UpnpAction> iter = upnpActions.iterator();
+    while (iter.hasNext()) {
+      if (iter.next().getDevice().equals(device)) {
+        iter.remove();
       }
-    });
+    }
   }
 
-  private void runNextAction() {
-    handler.post(() -> {
-      if (!upnpActions.isEmpty()) {
-        upnpActions.remove(0);
-        pullAction();
-      }
-    });
+  private synchronized void runNextAction() {
+    if (!upnpActions.isEmpty()) {
+      upnpActions.remove(0);
+      pullAction();
+    }
   }
 
-  private void schedule(@NonNull final UpnpAction upnpAction) {
-    handler.post(() -> {
-      upnpActions.add(upnpAction);
-      // First action?
-      if (upnpActions.size() == 1) {
-        pullAction();
-      }
-    });
+  private synchronized void schedule(@NonNull final UpnpAction upnpAction) {
+    upnpActions.add(upnpAction);
+    // First action?
+    if (upnpActions.size() == 1) {
+      pullAction();
+    }
   }
 
   private void putProtocolInfo(@NonNull Device<?, ?, ?> device, @NonNull List<String> list) {
