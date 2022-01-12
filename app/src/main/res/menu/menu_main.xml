@@ -30,7 +30,7 @@
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_preferred"
-        android:icon="@drawable/ic_star_white_30dp"
+        app:srcCompat="@drawable/ic_star_white_30dp"
         android:title="@string/title_preferred"
         app:showAsAction="ifRoom" />
 </menu>

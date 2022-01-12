@@ -47,7 +47,7 @@
             <ImageView
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/tile_size"
-                android:src="@drawable/ic_error_blue_24dp"
+                app:srcCompat="@drawable/ic_error_blue_24dp"
                 tools:ignore="ContentDescription" />
 
             <TextView

@@ -21,7 +21,8 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <group
         android:id="@+id/main"
@@ -29,15 +30,15 @@
 
         <item
             android:id="@+id/action_home"
-            android:icon="@drawable/ic_radio_white_24dp"
+            app:srcCompat="@drawable/ic_radio_white_24dp"
             android:title="@string/title_main" />
         <item
             android:id="@+id/action_add_item"
-            android:icon="@drawable/ic_playlist_add_white_24dp"
+            app:srcCompat="@drawable/ic_playlist_add_white_24dp"
             android:title="@string/title_item_add" />
         <item
             android:id="@+id/action_modify"
-            android:icon="@drawable/ic_edit_white_24dp"
+            app:srcCompat="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />
     </group>
     <group
@@ -46,15 +47,15 @@
 
         <item
             android:id="@+id/action_log"
-            android:icon="@drawable/ic_baseline_attach_email_white_24"
+            app:srcCompat="@drawable/ic_baseline_attach_email_white_24"
             android:title="@string/title_log" />
         <item
             android:id="@+id/action_donate"
-            android:icon="@drawable/ic_payment_white_24dp"
+            app:srcCompat="@drawable/ic_payment_white_24dp"
             android:title="@string/title_donate" />
         <item
             android:id="@+id/action_about"
-            android:icon="@drawable/ic_settings_white_24dp"
+            app:srcCompat="@drawable/ic_settings_white_24dp"
             android:title="@string/title_about" />
     </group>
 </menu>

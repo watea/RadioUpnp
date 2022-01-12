@@ -22,6 +22,7 @@
   -->
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
 
     android:layout_width="fill_parent"
     android:layout_height="140dp"
@@ -33,6 +34,6 @@
         android:layout_height="@dimen/tile_size"
         android:layout_centerInParent="true"
         android:contentDescription="@string/app_name"
-        android:src="@mipmap/ic_launcher_foreground" />
+        app:srcCompat="@mipmap/ic_launcher_foreground" />
 
 </RelativeLayout>

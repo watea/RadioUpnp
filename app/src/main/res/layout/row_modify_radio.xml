@@ -22,6 +22,7 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
 
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -49,7 +50,7 @@
             android:layout_toStartOf="@id/row_modify_radio_move_image_button"
             android:gravity="center"
             android:contentDescription="@string/preferred"
-            android:src="@drawable/ic_star_border_white_30dp"
+            app:srcCompat="@drawable/ic_star_border_white_30dp"
             android:tint="@color/dark_blue"  />
 
         <ImageButton
@@ -59,7 +60,7 @@
             android:layout_alignParentEnd="true"
             android:gravity="center"
             android:contentDescription="@string/action_move"
-            android:src="@drawable/ic_swap_vert_white_30dp"
+            app:srcCompat="@drawable/ic_swap_vert_white_30dp"
             android:tint="@color/dark_blue" />
 
     </RelativeLayout>
