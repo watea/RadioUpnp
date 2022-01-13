@@ -62,7 +62,6 @@ public class MainFragment
   extends MainActivityFragment
   implements RadiosAdapter.Listener, UpnpRegistryAdapter.Listener {
   // <HMI assets
-  private View dlnaView;
   private RecyclerView dlnaRecyclerView;
   private RecyclerView radiosRecyclerView;
   private FrameLayout defaultFrameLayout;
@@ -108,6 +107,9 @@ public class MainFragment
   @Override
   public void onResume() {
     super.onResume();
+    assert getActivity() != null;
+    // Force column count
+    onConfigurationChanged(getActivity().getResources().getConfiguration());
     setRadiosView();
   }
 
@@ -235,7 +237,7 @@ public class MainFragment
       .create();
     // Specific DLNA devices dialog
     dlnaAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
-      .setView(dlnaView)
+      .setView(dlnaRecyclerView)
       .create();
     dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
     dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
@@ -249,8 +251,8 @@ public class MainFragment
     final View view = inflater.inflate(R.layout.content_main, container, false);
     radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
-    dlnaView = inflater.inflate(R.layout.view_dlna_devices, container, false);
-    dlnaRecyclerView = dlnaView.findViewById(R.id.dlna_devices_recycler_view);
+    dlnaRecyclerView =
+      (RecyclerView) inflater.inflate(R.layout.view_dlna_devices, container, false);
     return view;
   }
 

@@ -40,36 +40,36 @@
             android:layout_margin="@dimen/app_margin"
             android:drawablePadding="@dimen/app_horizontal_margin"
             android:hint="@string/legend_name"
+            android:importantForAutofill="no"
             android:inputType="textCapCharacters"
             android:maxLength="30"
-            android:textAllCaps="true"
-            android:importantForAutofill="no" />
+            android:textAllCaps="true" />
 
-    <LinearLayout
-        android:id="@+id/country_edit_linearlayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/country_edit_text"
-            android:layout_width="30dp"
+        <LinearLayout
+            android:id="@+id/country_edit_linearlayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="@dimen/app_margin"
-            android:hint="@string/legend_country_example"
-            android:inputType="textCapCharacters"
-            android:maxLength="2"
-            android:textAllCaps="true"
-            android:importantForAutofill="no" />
+            android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:padding="@dimen/app_horizontal_margin"
-            android:text="@string/legend_country" />
+            <EditText
+                android:id="@+id/country_edit_text"
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/app_margin"
+                android:hint="@string/legend_country_example"
+                android:importantForAutofill="no"
+                android:inputType="textCapCharacters"
+                android:maxLength="2"
+                android:textAllCaps="true" />
 
-    </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:padding="@dimen/app_horizontal_margin"
+                android:text="@string/legend_country" />
+
+        </LinearLayout>
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -136,10 +136,10 @@
             android:id="@+id/icon_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:enabled="false"
             android:hint="@string/icon_url_example"
             android:importantForAutofill="no"
-            android:inputType="textUri"
-            android:enabled="false" />
+            android:inputType="textUri" />
 
         <TextView
             android:layout_width="match_parent"
@@ -151,10 +151,10 @@
             android:id="@+id/web_page_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:enabled="false"
             android:hint="@string/legend_page_url_example"
             android:importantForAutofill="no"
-            android:inputType="textUri"
-            android:enabled="false" />
+            android:inputType="textUri" />
 
         <TextView
             android:layout_width="match_parent"
@@ -166,10 +166,10 @@
             android:id="@+id/url_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:enabled="false"
             android:hint="@string/legend_streaming_url_example"
             android:importantForAutofill="no"
-            android:inputType="textUri"
-            android:enabled="false" />
+            android:inputType="textUri" />
 
     </LinearLayout>
 
