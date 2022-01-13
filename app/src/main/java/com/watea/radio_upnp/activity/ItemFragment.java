@@ -86,8 +86,9 @@ public abstract class ItemFragment extends MainActivityFragment {
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
-  private final Pattern PATTERN = Pattern.compile(".*(https?:/(/[-._A-Za-z0-9]+)+\\.(png|jpg)).*");
-  // <HMI assets
+  private final Pattern PATTERN =
+    Pattern.compile(".*(https?:/(/[-A-Za-z0-9+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
+  // 1<HMI assets
   protected EditText nameEditText;
   protected EditText urlEditText;
   protected EditText webPageEditText;
@@ -404,19 +405,20 @@ public abstract class ItemFragment extends MainActivityFragment {
         Element head = Jsoup.connect(url.toString()).get().head();
         // Parse site data, try to accelerate
         for (Element element : head.getAllElements()) {
-          String string;
-          Bitmap bitmap;
-          if ((element != head) &&
-            ((string = element.toString()).contains("http")) &&
-            (string.length() <= 4096)) {
-            Log.d(LOG_TAG, "Search icon in (" + string.length() + "): " + string);
-            Matcher matcher = PATTERN.matcher(string);
-            // Fetch largest icon
-            if (matcher.find() &&
-              ((bitmap = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null) &&
-              ((foundIcon == null) || (bitmap.getByteCount() > foundIcon.getByteCount()))) {
-              Log.d(LOG_TAG, "Icon found");
-              foundIcon = bitmap;
+          if (element != head) {
+            String string = element.toString();
+            // Don't parse too big string
+            if (string.length() <= 4096) {
+              Log.d(LOG_TAG, "Search icon in (length: " + string.length() + "): " + string);
+              Matcher matcher = PATTERN.matcher(string);
+              Bitmap bitmap;
+              // Fetch largest icon
+              if (matcher.find() &&
+                ((bitmap = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null) &&
+                ((foundIcon == null) || (bitmap.getByteCount() > foundIcon.getByteCount()))) {
+                Log.d(LOG_TAG, "Icon found");
+                foundIcon = bitmap;
+              }
             }
           }
         }
@@ -555,9 +557,11 @@ public abstract class ItemFragment extends MainActivityFragment {
     private void addToRadiosInOrder(Map<String, String> radioMap) {
       String newName = radioMap.get(DAR_FM_NAME);
       if (newName != null) {
+        newName = newName.toLowerCase();
         for (int index = 0; index < radios.size(); index++) {
           String name = radios.get(index).get(DAR_FM_NAME);
-          if ((name == null) || (name.compareTo(newName) > 0)) {
+          if ((name == null) || (name.toLowerCase().compareTo(newName) > 0)) {
+            //Log.d(LOG_TAG, "addToRadiosInOrder: '" + newName + " inserted before " + name);
             radios.add(index, radioMap);
             return;
           }
