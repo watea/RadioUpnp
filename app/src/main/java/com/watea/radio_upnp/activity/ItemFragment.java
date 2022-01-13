@@ -77,17 +77,16 @@ public abstract class ItemFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemFragment.class.getName();
   private static final String DAR_FM_API = "http://api.dar.fm/";
   private static final String DAR_FM_PLAYLIST_REQUEST = DAR_FM_API + "playlist.php?q=@callsign%20";
+  private static final String DAR_FM_PAGESIZE = "&pagesize=50";
   private static final String DAR_FM_STATIONS_REQUEST = DAR_FM_API + "darstations.php?station_id=";
-  private static final String WILDCARD = "*";
   private static final String SPACE_FOR_SEARCH = "%20";
-  private static final String COUNTRY_FOR_SEARCH = "@COUNTRY%20";
+  private static final String COUNTRY_FOR_SEARCH = "@country%20";
   private static final String DAR_FM_PARTNER_TOKEN = "&partner_token=6453742475";
   private static final String DAR_FM_BASE_URL = "http://stream.dar.fm/";
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
-  private final Pattern PATTERN =
-    Pattern.compile(".*(https?://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+\\.(png|jpg)).*");
+  private final Pattern PATTERN = Pattern.compile(".*(https?:/(/[-._A-Za-z0-9]+)+\\.(png|jpg)).*");
   // <HMI assets
   protected EditText nameEditText;
   protected EditText urlEditText;
@@ -287,12 +286,6 @@ public abstract class ItemFragment extends MainActivityFragment {
     nameEditText.setTag(icon);
   }
 
-  @NonNull
-  private String getCountrySearch() {
-    String countrySearch = countryEditText.getText().toString().toUpperCase().replace(" ", "");
-    return (countrySearch.length() > 0) ? COUNTRY_FOR_SEARCH + countrySearch : "";
-  }
-
   private void flushKeyboard() {
     assert getView() != null;
     assert getContext() != null;
@@ -413,12 +406,16 @@ public abstract class ItemFragment extends MainActivityFragment {
         for (Element element : head.getAllElements()) {
           String string;
           Bitmap bitmap;
-          if ((element != head) && ((string = element.toString()).contains("http"))) {
+          if ((element != head) &&
+            ((string = element.toString()).contains("http")) &&
+            (string.length() <= 4096)) {
+            Log.d(LOG_TAG, "Search icon in (" + string.length() + "): " + string);
             Matcher matcher = PATTERN.matcher(string);
             // Fetch largest icon
             if (matcher.find() &&
               ((bitmap = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null) &&
               ((foundIcon == null) || (bitmap.getByteCount() > foundIcon.getByteCount()))) {
+              Log.d(LOG_TAG, "Icon found");
               foundIcon = bitmap;
             }
           }
@@ -467,11 +464,9 @@ public abstract class ItemFragment extends MainActivityFragment {
       if (radios.isEmpty()) {
         try {
           Element search = Jsoup
-            .connect(
-              DAR_FM_PLAYLIST_REQUEST +
-                getRadioName().replace(" ", SPACE_FOR_SEARCH) + WILDCARD +
-                getCountrySearch() +
-                DAR_FM_PARTNER_TOKEN)
+            .connect(DAR_FM_PLAYLIST_REQUEST +
+              getRadioName().replace(" ", SPACE_FOR_SEARCH) + getCountrySearch() +
+              DAR_FM_PAGESIZE + DAR_FM_PARTNER_TOKEN)
             .get();
           // Parse data
           for (Element station : search.getElementsByTag("station")) {
@@ -480,7 +475,7 @@ public abstract class ItemFragment extends MainActivityFragment {
               Map<String, String> radioMap = new Hashtable<>();
               radioMap.put(DAR_FM_ID, extractValue(station, "station_id"));
               radioMap.put(DAR_FM_NAME, extractValue(station, "callsign"));
-              addToRadiosInOrder (radioMap);
+              addToRadiosInOrder(radioMap);
             } catch (Exception exception) {
               Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST extraction", exception);
             }
@@ -549,6 +544,12 @@ public abstract class ItemFragment extends MainActivityFragment {
             .show();
       }
       showSearchButton(true);
+    }
+
+    @NonNull
+    private String getCountrySearch() {
+      String countrySearch = countryEditText.getText().toString().toUpperCase().replace(" ", "");
+      return (countrySearch.length() > 0) ? COUNTRY_FOR_SEARCH + countrySearch : "";
     }
 
     private void addToRadiosInOrder(Map<String, String> radioMap) {
