@@ -561,7 +561,6 @@ public abstract class ItemFragment extends MainActivityFragment {
         for (int index = 0; index < radios.size(); index++) {
           String name = radios.get(index).get(DAR_FM_NAME);
           if ((name == null) || (name.toLowerCase().compareTo(newName) > 0)) {
-            //Log.d(LOG_TAG, "addToRadiosInOrder: '" + newName + " inserted before " + name);
             radios.add(index, radioMap);
             return;
           }
