@@ -28,4 +28,5 @@
     <color name="dark_gray">#303030</color>
     <color name="light_gray">#606060</color>
     <color name="dark_red">@android:color/holo_red_dark</color>
+    <color name="ic_launcher_background">@android:color/white</color>
 </resources>
