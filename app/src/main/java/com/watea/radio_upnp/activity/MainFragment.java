@@ -61,6 +61,7 @@ import java.util.List;
 public class MainFragment
   extends MainActivityFragment
   implements RadiosAdapter.Listener, UpnpRegistryAdapter.Listener {
+  private static final int DEFAULT_COLUMNS_COUNT = 3;
   // <HMI assets
   private RecyclerView dlnaRecyclerView;
   private RecyclerView radiosRecyclerView;
@@ -71,6 +72,7 @@ public class MainFragment
   private AlertDialog radioLongPressAlertDialog;
   private AlertDialog dlnaEnableAlertDialog;
   private AlertDialog preferredRadiosAlertDialog;
+  private GridLayoutManager gridLayoutManager;
   // />
   private boolean isPreferredRadios = false;
   private boolean gotItRadioLongPress;
@@ -80,10 +82,6 @@ public class MainFragment
   private NetworkProxy networkProxy = null;
   // DLNA devices management
   private DlnaDevicesAdapter dlnaDevicesAdapter = null;
-
-  private static int getRadiosColumnCount(@NonNull Configuration newConfig) {
-    return (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : 3;
-  }
 
   @Override
   public void onClick(@NonNull Radio radio) {
@@ -110,6 +108,7 @@ public class MainFragment
     assert getActivity() != null;
     // Force column count
     onConfigurationChanged(getActivity().getResources().getConfiguration());
+    // Set view
     setRadiosView();
   }
 
@@ -219,8 +218,8 @@ public class MainFragment
       },
       getContext());
     radiosAdapter = new RadiosAdapter(getContext(), this, RADIO_ICON_SIZE / 2);
-    radiosRecyclerView.setLayoutManager(new GridLayoutManager(
-      getContext(), getRadiosColumnCount(getActivity().getResources().getConfiguration())));
+    gridLayoutManager = new GridLayoutManager(getContext(), DEFAULT_COLUMNS_COUNT);
+    radiosRecyclerView.setLayoutManager(gridLayoutManager);
     radiosRecyclerView.setAdapter(radiosAdapter);
     // Build alert dialogs
     radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
@@ -292,10 +291,8 @@ public class MainFragment
   @Override
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
-    final GridLayoutManager gridLayoutManager =
-      (GridLayoutManager) radiosRecyclerView.getLayoutManager();
-    assert gridLayoutManager != null;
-    gridLayoutManager.setSpanCount(getRadiosColumnCount(newConfig));
+    gridLayoutManager.setSpanCount(
+      (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : DEFAULT_COLUMNS_COUNT);
   }
 
   @Override
