@@ -196,7 +196,18 @@ public class MainActivity
 
     @Override
     public void onServiceDisconnected(ComponentName className) {
-      onUpnpServiceDisconnected();
+      // Robustness, shall be defined here
+      if (androidUpnpService != null) {
+        if (upnpRegistryAdapter != null) {
+          androidUpnpService.getRegistry().removeListener(upnpRegistryAdapter);
+          upnpRegistryAdapter = null;
+        }
+        androidUpnpService = null;
+      }
+      // Tell MainFragment
+      if (mainFragment != null) {
+        mainFragment.onResetRemoteDevices();
+      }
     }
   };
 
@@ -394,8 +405,9 @@ public class MainActivity
   protected void onPause() {
     super.onPause();
     // Stop UPnP service
-    onUpnpServiceDisconnected();
     unbindService(upnpConnection);
+    // Forced disconnection
+    upnpConnection.onServiceDisconnected(null);
     // PlayerController call
     playerController.onActivityPause();
   }
@@ -494,8 +506,6 @@ public class MainActivity
     super.onDestroy();
     // Close radios database
     radioLibrary.close();
-    // PlayerController call
-    playerController.onActivityDestroy();
   }
 
   private boolean setDefaultRadios() {
@@ -520,20 +530,6 @@ public class MainActivity
   private void checkNavigationMenu(int id) {
     navigationMenuCheckedId = id;
     navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
-  }
-
-  private void onUpnpServiceDisconnected() {
-    // Robustness, shall be defined here
-    if (androidUpnpService != null) {
-      if (upnpRegistryAdapter != null) {
-        androidUpnpService.getRegistry().removeListener(upnpRegistryAdapter);
-      }
-      androidUpnpService = null;
-    }
-    // Tell MainFragment
-    if (mainFragment != null) {
-      mainFragment.onResetRemoteDevices();
-    }
   }
 
   private static class DefaultRadio {

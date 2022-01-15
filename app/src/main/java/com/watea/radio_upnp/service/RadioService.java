@@ -88,7 +88,7 @@ public class RadioService
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
   private MediaSessionCompat session;
-  private RadioLibrary radioLibrary;
+  private RadioLibrary radioLibrary = null;
   private NotificationManager notificationManager;
   private PlayerAdapter playerAdapter = null;
   private final VolumeProviderCompat volumeProviderCompat =
@@ -98,10 +98,9 @@ public class RadioService
         playerAdapter.adjustVolume(direction);
       }
     };
-  private HttpServer httpServer;
+  private HttpServer httpServer = null;
   private MediaMetadataCompat mediaMetadataCompat = null;
-  private boolean isStarted;
-  private boolean isAllowedToRewind;
+  private boolean isAllowedToRewind = false;
   private String lockKey;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
@@ -173,8 +172,6 @@ public class RadioService
       BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
-    isStarted = false;
-    isAllowedToRewind = false;
     // Prepare notification
     actionPause = new NotificationCompat.Action(
       R.drawable.ic_pause_white_24dp,
@@ -225,12 +222,19 @@ public class RadioService
   public void onDestroy() {
     super.onDestroy();
     Log.d(LOG_TAG, "onDestroy: requested...");
-    if (playerAdapter != null) {
-      playerAdapter.release();
+    // Stop UPnP service
+    unbindService(upnpConnection);
+    // Forced disconnection
+    upnpConnection.onServiceDisconnected(null);
+    // Stop HTTP server, if created
+    if (httpServer != null) {
+      httpServer.stopServer();
     }
-    httpServer.stopServer();
-    upnpConnection.release();
-    radioLibrary.close();
+    // Release radioLibrary, if opened
+    if (radioLibrary != null) {
+      radioLibrary.close();
+    }
+    // Finally session
     session.release();
     Log.d(LOG_TAG, "onDestroy: done!");
   }
@@ -306,21 +310,16 @@ public class RadioService
           case PlaybackStateCompat.STATE_BUFFERING:
             break;
           case PlaybackStateCompat.STATE_PLAYING:
-            // Start service if needed
-            if (!isStarted) {
-              ContextCompat.startForegroundService(
-                RadioService.this, new Intent(RadioService.this, RadioService.class));
-              isStarted = true;
-            }
+            // Start service
+            ContextCompat.startForegroundService(this, new Intent(this, getClass()));
             startForeground(NOTIFICATION_ID, getNotification());
+            // Relaunch now allowed
             isAllowedToRewind = true;
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            // Move service out started state
             stopForeground(false);
-            // Update notification
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
@@ -342,25 +341,19 @@ public class RadioService
                   },
                   4000);
               } else {
-                // Move service out started state
                 stopForeground(false);
-                // Update notification
                 notificationManager.notify(NOTIFICATION_ID, getNotification());
               }
               break;
             }
           default:
-            // Cancel session
+            // Cancel session and service
             isAllowedToRewind = false;
             playerAdapter.release();
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
-            // Move service out started state
-            if (isStarted) {
-              stopForeground(true);
-              stopSelf();
-              isStarted = false;
-            }
+            stopSelf();
+            stopForeground(true);
         }
       }
     });
@@ -441,15 +434,9 @@ public class RadioService
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
       androidUpnpService = null;
-    }
-
-    void release() {
-      if (androidUpnpService != null) {
-        unbindService(upnpConnection);
-        androidUpnpService = null;
-      }
       if (upnpActionController != null) {
         upnpActionController.release(false);
+        upnpActionController = null;
       }
     }
   }

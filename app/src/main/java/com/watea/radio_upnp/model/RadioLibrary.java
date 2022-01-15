@@ -124,8 +124,9 @@ public class RadioLibrary {
       null,
       // The sort order
       null);
-    int position = cursor.moveToNext() ?
-      cursor.getInt(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_POSITION)) : 0;
+    int columnIndex = cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_POSITION);
+    assert columnIndex >= 0;
+    int position = cursor.moveToNext() ? cursor.getInt(columnIndex) : 0;
     cursor.close();
     return position;
   }
@@ -249,6 +250,10 @@ public class RadioLibrary {
     listeners.add(listener);
   }
 
+  public void removeListeners() {
+    listeners.clear();
+  }
+
   // Utility for database update of radio position
   @NonNull
   private ContentValues positionContentValuesOf(@NonNull Long radioId) {
@@ -323,7 +328,9 @@ public class RadioLibrary {
       null,
       // The sort order
       null);
-    int position = cursor.moveToNext() ? cursor.getInt(cursor.getColumnIndex(maxPosition)) : 0;
+    int columnIndex = cursor.getColumnIndex(maxPosition);
+    assert columnIndex >= 0;
+    int position = cursor.moveToNext() ? cursor.getInt(columnIndex) : 0;
     cursor.close();
     return position;
   }
