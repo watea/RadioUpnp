@@ -54,10 +54,17 @@ public class RadioLibrary {
   private final SQLiteDatabase radioDataBase;
   @NonNull
   private final Context context;
+  // Current managed radio
+  @Nullable
+  private Long currentRadioId;
 
   public RadioLibrary(@NonNull Context context) {
     this.context = context;
     radioDataBase = new RadioDbSQLHelper(this.context).getWritableDatabase();
+  }
+
+  public boolean isCurrentRadio(@NonNull Radio radio) {
+    return radio.getId().equals(currentRadioId);
   }
 
   public void close() {
@@ -96,16 +103,6 @@ public class RadioLibrary {
     Radio radio = cursor.moveToNext() ? new Radio(cursor) : null;
     cursor.close();
     return radio;
-  }
-
-  @Nullable
-  public Radio getFrom(@Nullable MediaMetadataCompat metadata) {
-    if (metadata == null) {
-      return null;
-    } else {
-      String id = metadata.getDescription().getMediaId();
-      return (id == null) ? null : getFrom(Long.valueOf(id));
-    }
   }
 
   public int getPositionFrom(@NonNull Long radioId) {
@@ -233,8 +230,10 @@ public class RadioLibrary {
     values.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
     boolean result = (updateFrom(radioId, values) > 0);
     if (result) {
+      Radio radio = getFrom(radioId);
+      assert radio != null;
       for (Listener listener : listeners) {
-        listener.onPreferredChange(radioId, isPreferred);
+        listener.onPreferredChange(radio);
       }
     }
     return result;
@@ -250,8 +249,22 @@ public class RadioLibrary {
     listeners.add(listener);
   }
 
-  public void removeListeners() {
-    listeners.clear();
+  public void removeListener(@NonNull Listener listener) {
+    listeners.remove(listener);
+  }
+
+  @Nullable
+  public Radio getCurrentRadio() {
+    return (currentRadioId == null) ? null : getFrom(currentRadioId);
+  }
+
+  // Null if no radio
+  public void setCurrentRadio(@Nullable MediaMetadataCompat metadata) {
+    String id = (metadata == null) ? null : metadata.getDescription().getMediaId();
+    currentRadioId = (id == null) ? null : Long.valueOf(id);
+    for (Listener listener : listeners) {
+      listener.onNewCurrentRadio(getCurrentRadio());
+    }
   }
 
   // Utility for database update of radio position
@@ -343,7 +356,11 @@ public class RadioLibrary {
   }
 
   public interface Listener {
-    void onPreferredChange(@NonNull Long radioId, @NonNull Boolean isPreferred);
+    default void onPreferredChange(@NonNull Radio radio) {
+    }
+
+    default void onNewCurrentRadio(@Nullable Radio radio) {
+    }
   }
 
   private static class RadioDbSQLHelper extends SQLiteOpenHelper {

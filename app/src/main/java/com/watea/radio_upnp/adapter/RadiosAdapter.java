@@ -28,6 +28,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -62,10 +63,13 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
   }
 
   // Content setter, must be called
+  // null for refresh only
   @SuppressLint("NotifyDataSetChanged")
-  public void onRefresh(@NonNull List<Long> radioIds) {
-    this.radioIds.clear();
-    this.radioIds.addAll(radioIds);
+  public void onRefresh(@Nullable List<Long> radioIds) {
+    if (radioIds != null) {
+      this.radioIds.clear();
+      this.radioIds.addAll(radioIds);
+    }
     notifyDataSetChanged();
   }
 
@@ -92,17 +96,23 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
     @Nullable
     Radio getRadioFromId(@NonNull Long radioId);
+
+    boolean isCurrentRadio(@NonNull Radio radio);
   }
 
   protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
     private final TextView radioTextView;
     @NonNull
+    private final Drawable defaultBackground;
+    @NonNull
     private Radio radio = Radio.DUMMY_RADIO;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
       radioTextView = (TextView) itemView;
+      // Search color values
+      defaultBackground = radioTextView.getBackground();
       // Listener on radio
       radioTextView.setOnClickListener(v -> listener.onClick(radio));
       // Listener on web link
@@ -123,7 +133,11 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
     private void setView(@NonNull Radio radio) {
       this.radio = radio;
-      radioTextView.setBackgroundColor(getDominantColor(this.radio.getIcon()));
+      if (listener.isCurrentRadio(this.radio)) {
+        radioTextView.setBackground(defaultBackground);
+      } else {
+        radioTextView.setBackgroundColor(getDominantColor(this.radio.getIcon()));
+      }
       radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         null,
         new BitmapDrawable(

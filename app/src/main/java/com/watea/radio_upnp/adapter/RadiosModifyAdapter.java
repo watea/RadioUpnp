@@ -74,9 +74,8 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     recyclerView.setAdapter(this);
   }
 
-  // Shall be called on view resume (only)
   @SuppressLint("NotifyDataSetChanged")
-  public void onRefresh() {
+  public void onResume() {
     radioIds.clear();
     radioIds.addAll(radioLibrary.getAllRadioIds());
     notifyDataSetChanged();
@@ -98,6 +97,10 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   @Override
   public int getItemCount() {
     return radioIds.size();
+  }
+
+  public void onChange(@NonNull Radio radio) {
+    notifyItemChanged(radioIds.indexOf(radio.getId()));
   }
 
   private void databaseWarn() {
@@ -193,13 +196,6 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
           databaseWarn();
         }
       });
-      // Listener to detect Preferred change as it may be modified externally
-      radioLibrary.addListener((radioId, isPreferred) -> {
-        if (radio.getId().equals(radioId)) {
-          radio.togglePreferred();
-          setPreferredButton();
-        }
-      });
     }
 
     private void setView(@NonNull Radio radio) {
@@ -212,10 +208,6 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
         null,
         null);
       radioNameTextView.setText(this.radio.getName());
-      setPreferredButton();
-    }
-
-    private void setPreferredButton() {
       preferredImageButton.setImageResource(radio.isPreferred() ?
         R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
     }

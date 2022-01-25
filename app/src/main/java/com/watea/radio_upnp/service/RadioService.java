@@ -100,7 +100,7 @@ public class RadioService
     };
   private HttpServer httpServer = null;
   private MediaMetadataCompat mediaMetadataCompat = null;
-  private boolean isAllowedToRewind = false;
+  private boolean isAllowedToRewind, isStarted = false;
   private String lockKey;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
@@ -310,8 +310,11 @@ public class RadioService
           case PlaybackStateCompat.STATE_BUFFERING:
             break;
           case PlaybackStateCompat.STATE_PLAYING:
-            // Start service
-            ContextCompat.startForegroundService(this, new Intent(this, getClass()));
+            if (!isStarted) {
+              // Start service
+              ContextCompat.startForegroundService(this, new Intent(this, getClass()));
+              isStarted = true;
+            }
             startForeground(NOTIFICATION_ID, getNotification());
             // Relaunch now allowed
             isAllowedToRewind = true;
@@ -319,7 +322,9 @@ public class RadioService
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            stopForeground(false);
+            if (isStarted) {
+              stopForeground(false);
+            }
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
@@ -341,19 +346,23 @@ public class RadioService
                   },
                   4000);
               } else {
-                stopForeground(false);
+                if (isStarted) {
+                  stopForeground(false);
+                }
                 notificationManager.notify(NOTIFICATION_ID, getNotification());
               }
               break;
             }
           default:
             // Cancel session and service
-            isAllowedToRewind = false;
             playerAdapter.release();
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
+            if (isStarted) {
+              stopForeground(true);
+            }
             stopSelf();
-            stopForeground(true);
+            isAllowedToRewind = isStarted = false;
         }
       }
     });

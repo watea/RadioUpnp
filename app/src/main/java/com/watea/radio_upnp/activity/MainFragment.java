@@ -52,15 +52,14 @@ import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
 import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
 
-public class MainFragment
-  extends MainActivityFragment
-  implements RadiosAdapter.Listener, UpnpRegistryAdapter.Listener {
+public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
   private static final int DEFAULT_COLUMNS_COUNT = 3;
   // <HMI assets
   private RecyclerView dlnaRecyclerView;
@@ -79,9 +78,38 @@ public class MainFragment
   private boolean gotItDlnaEnable;
   private boolean gotItPreferredRadios;
   private RadiosAdapter radiosAdapter;
+  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+    @Override
+    public void onNewCurrentRadio(@Nullable Radio radio) {
+      radiosAdapter.onRefresh(null);
+    }
+  };
   private NetworkProxy networkProxy = null;
   // DLNA devices management
   private DlnaDevicesAdapter dlnaDevicesAdapter = null;
+  private final UpnpRegistryAdapter.Listener upnpRegistryAdapterListener =
+    new UpnpRegistryAdapter.Listener() {
+      @Override
+      public void onAddOrReplace(RemoteDevice remoteDevice) {
+        if (dlnaDevicesAdapter != null) {
+          dlnaDevicesAdapter.addOrReplace(remoteDevice);
+        }
+      }
+
+      @Override
+      public void onRemove(RemoteDevice remoteDevice) {
+        if (dlnaDevicesAdapter != null) {
+          dlnaDevicesAdapter.remove(remoteDevice);
+        }
+      }
+
+      @Override
+      public void onResetRemoteDevices() {
+        if (dlnaDevicesAdapter != null) {
+          dlnaDevicesAdapter.clear();
+        }
+      }
+    };
 
   @Override
   public void onClick(@NonNull Radio radio) {
@@ -103,6 +131,11 @@ public class MainFragment
   }
 
   @Override
+  public boolean isCurrentRadio(@NonNull Radio radio) {
+    return getRadioLibrary().isCurrentRadio(radio);
+  }
+
+  @Override
   public void onResume() {
     super.onResume();
     assert getActivity() != null;
@@ -110,6 +143,8 @@ public class MainFragment
     onConfigurationChanged(getActivity().getResources().getConfiguration());
     // Set view
     setRadiosView();
+    // radioLibrary changes
+    getRadioLibrary().addListener(radioLibraryListener);
   }
 
   @Override
@@ -255,25 +290,9 @@ public class MainFragment
     return view;
   }
 
-  @Override
-  public void onAddOrReplace(RemoteDevice remoteDevice) {
-    if (dlnaDevicesAdapter != null) {
-      dlnaDevicesAdapter.addOrReplace(remoteDevice);
-    }
-  }
-
-  @Override
-  public void onRemove(RemoteDevice remoteDevice) {
-    if (dlnaDevicesAdapter != null) {
-      dlnaDevicesAdapter.remove(remoteDevice);
-    }
-  }
-
-  @Override
-  public void onResetRemoteDevices() {
-    if (dlnaDevicesAdapter != null) {
-      dlnaDevicesAdapter.clear();
-    }
+  @NonNull
+  public UpnpRegistryAdapter.Listener getUpnpRegistryAdapterListener() {
+    return upnpRegistryAdapterListener;
   }
 
   @Override
@@ -308,6 +327,8 @@ public class MainFragment
       .putBoolean(getString(R.string.key_dlna_enable_got_it), gotItDlnaEnable)
       .putBoolean(getString(R.string.key_preferred_radios_got_it), gotItPreferredRadios)
       .apply();
+    // Clear resources
+    getRadioLibrary().removeListener(radioLibraryListener);
   }
 
   @SuppressLint("NonConstantResourceId")

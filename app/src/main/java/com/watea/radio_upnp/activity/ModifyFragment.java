@@ -39,6 +39,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 
 public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
   // <HMI assets
@@ -46,11 +47,18 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   private FrameLayout defaultFrameLayout;
   // />
   private RadiosModifyAdapter radiosModifyAdapter;
+  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+    @Override
+    public void onPreferredChange(@NonNull Radio radio) {
+      radiosModifyAdapter.onChange(radio);
+    }
+  };
 
   @Override
   public void onResume() {
     super.onResume();
-    radiosModifyAdapter.onRefresh();
+    radiosModifyAdapter.onResume();
+    getRadioLibrary().addListener(radioLibraryListener);
   }
 
   @NonNull
@@ -96,6 +104,13 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   }
 
   @Override
+  public void onPause() {
+    super.onPause();
+    // Clear resources
+    getRadioLibrary().removeListener(radioLibraryListener);
+  }
+
+  @Override
   public void onModifyClick(@NonNull Radio radio) {
     assert getMainActivity() != null;
     ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
@@ -104,9 +119,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   // Radio shall not be changed if currently played
   @Override
   public boolean onCheckChange(@NonNull Radio radio) {
-    assert getMainActivity() != null;
-    Radio currentRadio = getMainActivity().getCurrentRadio();
-    if ((currentRadio != null) && currentRadio.equals(radio)) {
+    if (getRadioLibrary().isCurrentRadio(radio)) {
       tell(R.string.not_to_delete);
       return false;
     }

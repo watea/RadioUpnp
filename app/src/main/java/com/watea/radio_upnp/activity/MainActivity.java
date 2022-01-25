@@ -182,7 +182,8 @@ public class MainActivity
       // Do nothing if we were disposed
       if (mainFragment != null) {
         Registry registry = androidUpnpService.getRegistry();
-        upnpRegistryAdapter = new UpnpRegistryAdapter(mainFragment);
+        upnpRegistryAdapter =
+          new UpnpRegistryAdapter(mainFragment.getUpnpRegistryAdapterListener());
         // Add all devices to the list we already know about
         for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
           upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
@@ -206,7 +207,7 @@ public class MainActivity
       }
       // Tell MainFragment
       if (mainFragment != null) {
-        mainFragment.onResetRemoteDevices();
+        mainFragment.getUpnpRegistryAdapterListener().onResetRemoteDevices();
       }
     }
   };
@@ -351,11 +352,6 @@ public class MainActivity
     return fragment;
   }
 
-  @Nullable
-  public Radio getCurrentRadio() {
-    return playerController.getCurrentRadio();
-  }
-
   public void sendLogcatMail() {
     // File is stored at root
     File logFile = new File(getFilesDir(), "logcat.txt");
@@ -453,7 +449,7 @@ public class MainActivity
     // ActionBar
     setSupportActionBar(findViewById(R.id.actionbar));
     actionBarLayout = findViewById(R.id.actionbar_layout);
-    playerController = new PlayerController(this);
+    playerController = new PlayerController(this, radioLibrary);
     playerController.onActivityCreated(actionBarLayout);
     ActionBar actionBar = getSupportActionBar();
     if (actionBar == null) {

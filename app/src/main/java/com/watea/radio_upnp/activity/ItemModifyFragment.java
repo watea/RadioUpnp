@@ -77,9 +77,8 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
-      assert getMainActivity() != null;
       assert urlWatcher.url != null;
-      if (radio.equals(getMainActivity().getCurrentRadio())) {
+      if (getRadioLibrary().isCurrentRadio(radio)) {
         tell(R.string.not_to_modify);
       } else {
         radio.setName(getRadioName());

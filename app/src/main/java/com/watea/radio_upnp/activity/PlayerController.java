@@ -64,6 +64,28 @@ public class PlayerController {
   private ImageView albumArtImageView;
   private LinearLayout playedRadioLinearLayout;
   private TextView playedRadioNameTextView;
+  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+    @Override
+    public void onPreferredChange(@NonNull Radio radio) {
+      if (radioLibrary.isCurrentRadio(radio)) {
+        setPreferredButton(radio.isPreferred());
+      }
+    }
+
+    // Manage radio description
+    @Override
+    public void onNewCurrentRadio(@Nullable Radio radio) {
+      boolean isVisible = (radio != null);
+      albumArtImageView.setVisibility(getVisibleFrom(isVisible));
+      playedRadioLinearLayout.setVisibility(getVisibleFrom(isVisible));
+      if (isVisible) {
+        playedRadioNameTextView.setText(radio.getName());
+        albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
+          radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, false));
+        setPreferredButton(radio.isPreferred());
+      }
+    }
+  };
   private TextView playedRadioInformationTextView;
   private TextView playedRadioRateTextView;
   private AlertDialog playLongPressAlertDialog;
@@ -83,15 +105,14 @@ public class PlayerController {
         Log.d(LOG_TAG, "onSessionDestroyed: RadioService is dead!!!");
       }
 
+      // Manage play button
       @SuppressLint("SwitchIntDef")
       @Override
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
         int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
-        boolean isDlna = (mediaController != null) &&
-          (mediaController.getExtras() != null) &&
-          mediaController
-            .getExtras()
-            .containsKey(mainActivity.getString(R.string.key_dlna_device));
+        Bundle bundle = mediaController.getExtras();
+        boolean isDlna =
+          (bundle != null) && bundle.containsKey(mainActivity.getString(R.string.key_dlna_device));
         Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
         // Default
         playImageButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
@@ -109,11 +130,12 @@ public class PlayerController {
             break;
           case PlaybackStateCompat.STATE_BUFFERING:
           case PlaybackStateCompat.STATE_CONNECTING:
-            setAlbumArtDisplay();
+            radioLibrary.setCurrentRadio(mediaController.getMetadata());
             setFrameVisibility(true, true);
             break;
           case PlaybackStateCompat.STATE_NONE:
           case PlaybackStateCompat.STATE_STOPPED:
+            radioLibrary.setCurrentRadio(null);
             setFrameVisibility(false, false);
             break;
           default:
@@ -122,7 +144,9 @@ public class PlayerController {
             // Display state is not saved if the context is disposed
             // (as it would require a Radio Service safe context,
             // too complex to implement).
-            if (!isDlna) {
+            if (isDlna) {
+              radioLibrary.setCurrentRadio(null);
+            } else {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
             }
@@ -131,9 +155,9 @@ public class PlayerController {
         }
       }
 
+      // Manage dynamic data
       @Override
       public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
-        // Do nothing if view not defined or nothing to change
         if (mediaMetadata != null) {
           playedRadioInformationTextView.setText(
             mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST));
@@ -145,15 +169,9 @@ public class PlayerController {
       }
 
       private void setFrameVisibility(boolean isOn, boolean isWaiting) {
-        albumArtImageView.setVisibility(getVisibleFrom(isOn));
-        playedRadioLinearLayout.setVisibility(getVisibleFrom(isOn));
         playImageButton.setEnabled(isOn);
         playImageButton.setVisibility(getVisibleFrom(!isWaiting));
         progressBar.setVisibility(getVisibleFrom(isWaiting));
-      }
-
-      private int getVisibleFrom(boolean isVisible) {
-        return isVisible ? View.VISIBLE : View.INVISIBLE;
       }
     };
   private MediaBrowserCompat mediaBrowser = null;
@@ -171,13 +189,16 @@ public class PlayerController {
         // Link to the callback controller
         mediaController.registerCallback(mediaControllerCallback);
         // Sync existing MediaSession state with UI
-        browserViewSync();
+        mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
+        mediaControllerCallback.onMetadataChanged(mediaController.getMetadata());
+        radioLibraryListener.onNewCurrentRadio(getCurrentRadio());
         // Nota: no mediaBrowser.subscribe here needed
       }
 
       @Override
       public void onConnectionSuspended() {
         if (mediaController != null) {
+          radioLibrary.setCurrentRadio(null);
           mediaController.unregisterCallback(mediaControllerCallback);
           mediaController = null;
         }
@@ -190,9 +211,9 @@ public class PlayerController {
       }
     };
 
-  public PlayerController(@NonNull MainActivity mainActivity) {
+  public PlayerController(@NonNull MainActivity mainActivity, @NonNull RadioLibrary radioLibrary) {
     this.mainActivity = mainActivity;
-    radioLibrary = this.mainActivity.getRadioLibrary();
+    this.radioLibrary = radioLibrary;
   }
 
   public void onActivityCreated(@NonNull View view) {
@@ -220,11 +241,6 @@ public class PlayerController {
       if (mediaController == null) {
         mainActivity.tell(R.string.radio_connection_waiting);
       } else {
-        // Do nothing if radio were deleted in another fragment
-        if (getCurrentRadio() == null) {
-          mainActivity.tell(R.string.radio_deleted);
-          return;
-        }
         // Tag on button has stored state to reach
         switch ((int) playImageButton.getTag()) {
           case PlaybackStateCompat.STATE_PLAYING:
@@ -282,13 +298,7 @@ public class PlayerController {
       mediaBrowser.connect();
     }
     // Preferred data may be modified externally
-    radioLibrary.addListener((radioId, isPreferred) -> {
-      Radio radio = getCurrentRadio();
-      if ((radio != null) && radio.getId().equals(radioId)) {
-        setPreferredButton(isPreferred);
-      }
-    });
-    browserViewSync();
+    radioLibrary.addListener(radioLibraryListener);
   }
 
   // Must be called on activity pause
@@ -301,7 +311,7 @@ public class PlayerController {
       .putBoolean(mainActivity.getString(R.string.key_play_long_press_got_it), gotItPlayLongPress)
       .apply();
     // Clear radioLibrary
-    radioLibrary.removeListeners();
+    radioLibrary.removeListener(radioLibraryListener);
     // Disconnect mediaBrowser, if necessary
     if (mediaBrowser != null) {
       mediaBrowser.disconnect();
@@ -312,15 +322,16 @@ public class PlayerController {
 
   // radio == null for current, do nothing if no current
   public void startReading(@Nullable Radio radio, @Nullable String dlnaDeviceIdentity) {
-    if (radio == null) {
-      radio = getCurrentRadio();
-    }
-    if (radio == null) {
-      return;
-    }
     if (mediaController == null) {
       mainActivity.tell(R.string.radio_connection_waiting);
       return;
+    }
+    if (radio == null) {
+      radio = getCurrentRadio();
+      // Robustness, shall not happen
+      if (radio == null) {
+        return;
+      }
     }
     Bundle bundle = new Bundle();
     if (dlnaDeviceIdentity != null) {
@@ -330,31 +341,16 @@ public class PlayerController {
   }
 
   @Nullable
-  public Radio getCurrentRadio() {
-    return (mediaController == null) ? null : radioLibrary.getFrom(mediaController.getMetadata());
-  }
-
-  private void setAlbumArtDisplay() {
-    Radio radio = getCurrentRadio();
-    if (radio != null) {
-      playedRadioNameTextView.setText(radio.getName());
-      albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
-        radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, false));
-      // Init Preferred
-      setPreferredButton(radio.isPreferred());
-    }
-  }
-
-  private void browserViewSync() {
-    if (mediaController != null) {
-      mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
-      mediaControllerCallback.onMetadataChanged(mediaController.getMetadata());
-      setAlbumArtDisplay();
-    }
+  private Radio getCurrentRadio() {
+    return (mediaController == null) ? null : radioLibrary.getCurrentRadio();
   }
 
   private void setPreferredButton(boolean isPreferred) {
     preferredImageButton.setImageResource(
       isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+  }
+
+  private int getVisibleFrom(boolean isVisible) {
+    return isVisible ? View.VISIBLE : View.INVISIBLE;
   }
 }
