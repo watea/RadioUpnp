@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
         targetSdkVersion 31
-        versionCode 26010
-        versionName "2.60.10"
+        versionCode 26011
+        versionName "2.60.11"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -63,8 +63,7 @@ dependencies {
     implementation 'androidx.media:media:1.4.3'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
-    implementation 'com.google.android.material:material:1.4.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.2'
+    implementation 'com.google.android.material:material:1.5.0'
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.13.1'
     // exoplayer
