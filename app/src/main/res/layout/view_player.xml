@@ -57,6 +57,7 @@
             android:layout_width="@dimen/tile_size"
             android:layout_height="@dimen/tile_size"
             android:layout_gravity="center"
+            android:visibility="gone"
             android:indeterminateTint="@android:color/darker_gray" />
 
     </FrameLayout>
@@ -96,6 +97,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:visibility="gone"
             android:contentDescription="@string/preferred"
             app:srcCompat="@drawable/ic_star_border_white_30dp" />
 
