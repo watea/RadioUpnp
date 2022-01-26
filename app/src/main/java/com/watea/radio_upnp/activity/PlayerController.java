@@ -189,9 +189,10 @@ public class PlayerController {
         // Link to the callback controller
         mediaController.registerCallback(mediaControllerCallback);
         // Sync existing MediaSession state with UI
+        MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
-        mediaControllerCallback.onMetadataChanged(mediaController.getMetadata());
-        radioLibraryListener.onNewCurrentRadio(getCurrentRadio());
+        mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
+        radioLibrary.setCurrentRadio(mediaMetadataCompat);
         // Nota: no mediaBrowser.subscribe here needed
       }
 
