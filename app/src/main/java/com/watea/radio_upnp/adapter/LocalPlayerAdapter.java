@@ -98,11 +98,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
 
   @Override
   public long getAvailableActions() {
-    long actions =
-      PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
-        PlaybackStateCompat.ACTION_STOP |
-        PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+    long actions = super.getAvailableActions();
     switch (state) {
       case PlaybackStateCompat.STATE_PLAYING:
         actions |= PlaybackStateCompat.ACTION_PAUSE;

@@ -188,7 +188,12 @@ public abstract class PlayerAdapter {
   }
 
   // Set the current capabilities available on this session
-  public abstract long getAvailableActions();
+  public long getAvailableActions() {
+    return PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
+        PlaybackStateCompat.ACTION_STOP |
+        PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+  }
 
   // ContentType as seen by the player, if computed
   @Nullable
