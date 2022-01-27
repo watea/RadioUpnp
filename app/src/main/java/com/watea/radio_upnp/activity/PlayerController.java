@@ -55,15 +55,19 @@ import com.watea.radio_upnp.service.RadioService;
 
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
-  private final RadioLibrary radioLibrary;
   private final MainActivity mainActivity;
   // <HMI assets
-  private ImageButton playImageButton;
-  private ImageButton preferredImageButton;
-  private ProgressBar progressBar;
-  private ImageView albumArtImageView;
-  private LinearLayout playedRadioLinearLayout;
-  private TextView playedRadioNameTextView;
+  private final ImageButton playImageButton;
+  private final ImageButton preferredImageButton;
+  private final ProgressBar progressBar;
+  private final ImageView albumArtImageView;
+  private final LinearLayout playedRadioLinearLayout;
+  private final TextView playedRadioNameTextView;
+  private final TextView playedRadioInformationTextView;
+  private final TextView playedRadioRateTextView;
+  private final AlertDialog playLongPressAlertDialog;
+  // />
+  private RadioLibrary radioLibrary;
   private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
     @Override
     public void onPreferredChange(@NonNull Radio radio) {
@@ -86,10 +90,6 @@ public class PlayerController {
       }
     }
   };
-  private TextView playedRadioInformationTextView;
-  private TextView playedRadioRateTextView;
-  private AlertDialog playLongPressAlertDialog;
-  // />
   private boolean gotItPlayLongPress;
   private MediaControllerCompat mediaController = null;
   // Callback from media control
@@ -212,12 +212,8 @@ public class PlayerController {
       }
     };
 
-  public PlayerController(@NonNull MainActivity mainActivity, @NonNull RadioLibrary radioLibrary) {
+  public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
     this.mainActivity = mainActivity;
-    this.radioLibrary = radioLibrary;
-  }
-
-  public void onActivityCreated(@NonNull View view) {
     // Shared preferences
     SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
     gotItPlayLongPress = sharedPreferences.getBoolean(
@@ -240,7 +236,7 @@ public class PlayerController {
     playImageButton.setOnClickListener(v -> {
       // Should not happen
       if (mediaController == null) {
-        mainActivity.tell(R.string.radio_connection_waiting);
+        this.mainActivity.tell(R.string.radio_connection_waiting);
       } else {
         // Tag on button has stored state to reach
         switch ((int) playImageButton.getTag()) {
@@ -268,7 +264,7 @@ public class PlayerController {
     playImageButton.setOnLongClickListener(playImageButtonView -> {
       // Should not happen
       if (mediaController == null) {
-        mainActivity.tell(R.string.radio_connection_waiting);
+        this.mainActivity.tell(R.string.radio_connection_waiting);
       } else {
         mediaController.getTransportControls().stop();
       }
@@ -288,7 +284,10 @@ public class PlayerController {
 
   // Must be called on activity resume
   // Handle services
-  public void onActivityResume() {
+  public void onActivityResume(@NonNull RadioLibrary radioLibrary) {
+    // Link to radioLibrary
+    this.radioLibrary = radioLibrary;
+    this.radioLibrary.addListener(radioLibraryListener);
     // MediaBrowser creation, launch RadioService
     if (mediaBrowser == null) {
       mediaBrowser = new MediaBrowserCompat(
@@ -298,21 +297,19 @@ public class PlayerController {
         null);
       mediaBrowser.connect();
     }
-    // Preferred data may be modified externally
-    radioLibrary.addListener(radioLibraryListener);
   }
 
   // Must be called on activity pause
   // Handle services
   public void onActivityPause() {
+    // Clear radioLibrary
+    radioLibrary.removeListener(radioLibraryListener);
     // Shared preferences
     mainActivity
       .getPreferences(Context.MODE_PRIVATE)
       .edit()
       .putBoolean(mainActivity.getString(R.string.key_play_long_press_got_it), gotItPlayLongPress)
       .apply();
-    // Clear radioLibrary
-    radioLibrary.removeListener(radioLibraryListener);
     // Disconnect mediaBrowser, if necessary
     if (mediaBrowser != null) {
       mediaBrowser.disconnect();

@@ -54,6 +54,7 @@ public abstract class MainActivityFragment extends Fragment {
     super();
   }
 
+  // Must be called
   public static void onActivityCreated(@NonNull MainActivity mainActivity) {
     MainActivityFragment.MAIN_ACTIVITY = mainActivity;
     // Fetch needed static values
@@ -87,7 +88,7 @@ public abstract class MainActivityFragment extends Fragment {
     MAIN_ACTIVITY.tell(message);
   }
 
-  @Nullable
+  @NonNull
   protected static MainActivity getMainActivity() {
     return MAIN_ACTIVITY;
   }

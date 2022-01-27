@@ -116,7 +116,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     if (networkProxy.isDeviceOffline()) {
       tell(R.string.no_internet);
     } else {
-      assert getMainActivity() != null;
       getMainActivity().startReading(radio);
       if (!gotItRadioLongPress) {
         radioLongPressAlertDialog.show();
@@ -160,7 +159,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
       if (networkProxy.hasWifiIpAddress()) {
-        assert getMainActivity() != null;
         if (getMainActivity().upnpSearch()) {
           dlnaAlertDialog.show();
           if (!gotItDlnaEnable) {
@@ -178,7 +176,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
       if (networkProxy.hasWifiIpAddress()) {
-        assert getMainActivity() != null;
         if (getMainActivity().upnpReset()) {
           dlnaDevicesAdapter.clear();
           tell(R.string.dlna_search_reset);
@@ -210,7 +207,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     // Context exists
     assert getContext() != null;
     assert getActivity() != null;
-    assert getMainActivity() != null;
     // Restore saved state, if any
     String chosenDlnaDeviceIdentity = null;
     if (savedInstanceState != null) {

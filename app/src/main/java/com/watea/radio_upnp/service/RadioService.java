@@ -322,9 +322,7 @@ public class RadioService
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            if (isStarted) {
-              stopForeground(false);
-            }
+            stopForeground(false);
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
@@ -346,10 +344,10 @@ public class RadioService
                   },
                   4000);
               } else {
+                stopForeground(true);
                 if (isStarted) {
-                  stopForeground(false);
+                  notificationManager.notify(NOTIFICATION_ID, getNotification());
                 }
-                notificationManager.notify(NOTIFICATION_ID, getNotification());
               }
               break;
             }
@@ -358,9 +356,7 @@ public class RadioService
             playerAdapter.release();
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
-            if (isStarted) {
-              stopForeground(true);
-            }
+            stopForeground(true);
             stopSelf();
             isAllowedToRewind = isStarted = false;
         }

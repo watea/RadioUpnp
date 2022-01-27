@@ -406,11 +406,15 @@ public class MainActivity
     upnpConnection.onServiceDisconnected(null);
     // PlayerController call
     playerController.onActivityPause();
+    // Close radios database
+    radioLibrary.close();
   }
 
   @Override
   protected void onResume() {
     super.onResume();
+    // Create radio database (order matters)
+    radioLibrary = new RadioLibrary(this);
     // Retrieve main fragment
     mainFragment = (MainFragment) ((getCurrentFragment() == null) ?
       setFragment(MainFragment.class) :
@@ -424,14 +428,12 @@ public class MainActivity
       Log.e(LOG_TAG, "onActivityResume: internal failure; AndroidUpnpService not bound");
     }
     // PlayerController call
-    playerController.onActivityResume();
+    playerController.onActivityResume(radioLibrary);
   }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    // Create radio database (order matters)
-    radioLibrary = new RadioLibrary(this);
     // Shared preferences
     SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Create default radios on first start
@@ -449,8 +451,7 @@ public class MainActivity
     // ActionBar
     setSupportActionBar(findViewById(R.id.actionbar));
     actionBarLayout = findViewById(R.id.actionbar_layout);
-    playerController = new PlayerController(this, radioLibrary);
-    playerController.onActivityCreated(actionBarLayout);
+    playerController = new PlayerController(this, actionBarLayout);
     ActionBar actionBar = getSupportActionBar();
     if (actionBar == null) {
       // Should not happen
@@ -495,13 +496,6 @@ public class MainActivity
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     drawerToggle.onConfigurationChanged(newConfig);
-  }
-
-  @Override
-  protected void onDestroy() {
-    super.onDestroy();
-    // Close radios database
-    radioLibrary.close();
   }
 
   private boolean setDefaultRadios() {
