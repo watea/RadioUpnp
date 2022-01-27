@@ -49,6 +49,7 @@
             android:layout_height="@dimen/tile_size"
             android:layout_gravity="center"
             android:tint="@color/play_selector"
+            android:visibility="gone"
             app:srcCompat="@drawable/ic_play_arrow_white_24dp"
             tools:ignore="ContentDescription" />
 
@@ -67,6 +68,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toEndOf="@id/play_frame_layout"
+        android:visibility="gone"
         android:orientation="vertical">
 
         <TextView
@@ -97,7 +99,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:visibility="gone"
             android:contentDescription="@string/preferred"
             app:srcCompat="@drawable/ic_star_border_white_30dp" />
 
