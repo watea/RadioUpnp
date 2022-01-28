@@ -70,8 +70,13 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    // Store radio
-    outState.putLong(getString(R.string.key_radio_id), radio.getId());
+    // Store radio; may fail
+    try {
+      outState.putLong(getString(R.string.key_radio_id), radio.getId());
+    } catch (Exception exception) {
+      outState.clear();
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", exception);
+    }
   }
 
   @Override
