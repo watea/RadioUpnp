@@ -47,18 +47,11 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   private FrameLayout defaultFrameLayout;
   // />
   private RadiosModifyAdapter radiosModifyAdapter;
-  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
-    @Override
-    public void onPreferredChange(@NonNull Radio radio) {
-      radiosModifyAdapter.onChange(radio);
-    }
-  };
 
   @Override
   public void onResume() {
     super.onResume();
     radiosModifyAdapter.onResume();
-    getRadioLibrary().addListener(radioLibraryListener);
   }
 
   @NonNull
@@ -86,7 +79,6 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     radiosModifyAdapter = new RadiosModifyAdapter(
       getContext(),
       this,
-      getRadioLibrary(),
       RADIO_ICON_SIZE / 2,
       radiosRecyclerView);
   }
@@ -105,8 +97,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Override
   public void onPause() {
     super.onPause();
-    // Clear resources
-    getRadioLibrary().removeListener(radioLibraryListener);
+    radiosModifyAdapter.onPause();
   }
 
   @Override
@@ -127,5 +118,11 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Override
   public void onEmpty(boolean isEmpty) {
     defaultFrameLayout.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
+  }
+
+  @NonNull
+  @Override
+  public RadioLibrary getRadioLibraryAccess() {
+    return getRadioLibrary();
   }
 }

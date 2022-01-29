@@ -46,27 +46,24 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
 
-public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder> {
+public class RadiosModifyAdapter
+  extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder>
+  implements RadioLibrary.Listener {
   private static final String LOG_TAG = RadiosModifyAdapter.class.getName();
   @NonNull
   private final Context context;
   @NonNull
   private final Listener listener;
   private final int iconSize;
-  @NonNull
-  private final RadioLibrary radioLibrary;
-  @NonNull
   private final List<Long> radioIds = new Vector<>();
 
   public RadiosModifyAdapter(
     @NonNull Context context,
     @NonNull Listener listener,
-    @NonNull RadioLibrary radioLibrary,
     int iconSize,
     @NonNull RecyclerView recyclerView) {
     this.context = context;
     this.listener = listener;
-    this.radioLibrary = radioLibrary;
     this.iconSize = iconSize;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
@@ -77,9 +74,14 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   @SuppressLint("NotifyDataSetChanged")
   public void onResume() {
     radioIds.clear();
-    radioIds.addAll(radioLibrary.getAllRadioIds());
+    radioIds.addAll(getRadioLibrary().getAllRadioIds());
     notifyDataSetChanged();
     notifyEmpty();
+    getRadioLibrary().addListener(this);
+  }
+
+  public void onPause() {
+    getRadioLibrary().removeListener(this);
   }
 
   @NonNull
@@ -91,7 +93,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    viewHolder.setView(Objects.requireNonNull(radioLibrary.getFrom(radioIds.get(position))));
+    viewHolder.setView(Objects.requireNonNull(getRadioLibrary().getFrom(radioIds.get(position))));
   }
 
   @Override
@@ -99,7 +101,8 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     return radioIds.size();
   }
 
-  public void onChange(@NonNull Radio radio) {
+  @Override
+  public void onPreferredChange(@NonNull Radio radio) {
     notifyItemChanged(radioIds.indexOf(radio.getId()));
   }
 
@@ -111,12 +114,20 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     listener.onEmpty(radioIds.isEmpty());
   }
 
+  @NonNull
+  private RadioLibrary getRadioLibrary() {
+    return listener.getRadioLibraryAccess();
+  }
+
   public interface Listener {
     void onModifyClick(@NonNull Radio radio);
 
     boolean onCheckChange(@NonNull Radio radio);
 
     void onEmpty(boolean isEmpty);
+
+    @NonNull
+    RadioLibrary getRadioLibraryAccess();
   }
 
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
@@ -139,7 +150,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       Long fromId = radioIds.get(from);
       int to = targetViewHolder.getAbsoluteAdapterPosition();
       Long toId = radioIds.get(to);
-      if (radioLibrary.move(fromId, toId)) {
+      if (getRadioLibrary().move(fromId, toId)) {
         // Database updated, update view
         radioIds.set(to, fromId);
         radioIds.set(from, toId);
@@ -163,7 +174,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
       final int position = viewHolder.getAbsoluteAdapterPosition();
-      if (radioLibrary.deleteFrom(radioIds.get(position)) > 0) {
+      if (getRadioLibrary().deleteFrom(radioIds.get(position)) > 0) {
         // Database updated, update view
         radioIds.remove(position);
         notifyItemRemoved(position);
@@ -192,7 +203,7 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
         .setOnClickListener(v -> listener.onModifyClick(radio));
       // Preferred action
       preferredImageButton.setOnClickListener(v -> {
-        if (!radioLibrary.setPreferred(radio.getId(), !radio.isPreferred())) {
+        if (!getRadioLibrary().setPreferred(radio.getId(), !radio.isPreferred())) {
           databaseWarn();
         }
       });
