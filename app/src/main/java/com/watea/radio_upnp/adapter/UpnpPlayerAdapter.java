@@ -339,8 +339,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   // Special handling for MIME type
-  @Override
   @NonNull
+  @Override
   public String getContentType() {
     final String HEAD_EXP = "[a-z]*/";
     String contentType = upnpActionController.getContentType(radio);

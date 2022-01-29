@@ -43,6 +43,7 @@ public class ItemAddFragment extends ItemFragment {
       assert urlWatcher.url != null;
       Radio radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url);
       try {
+        assert getIcon() != null;
         if (getRadioLibrary().insertAndSaveIcon(radio, getIcon()) <= 0) {
           throw new RuntimeException();
         }

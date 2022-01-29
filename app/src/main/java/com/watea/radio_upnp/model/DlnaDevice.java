@@ -81,8 +81,8 @@ public class DlnaDevice {
   }
 
   @SuppressWarnings("NullableProblems")
-  @Override
   @Nullable
+  @Override
   public String toString() {
     return
       (remoteDevice == null) ? null :

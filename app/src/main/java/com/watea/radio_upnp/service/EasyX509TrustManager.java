@@ -25,6 +25,8 @@ package com.watea.radio_upnp.service;
 
 import android.annotation.SuppressLint;
 
+import androidx.annotation.NonNull;
+
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -37,11 +39,10 @@ import javax.net.ssl.X509TrustManager;
 
 @SuppressLint("CustomX509TrustManager")
 public class EasyX509TrustManager implements X509TrustManager {
-
+  @NonNull
   private final X509TrustManager standardTrustManager;
 
-  public EasyX509TrustManager() throws
-    NoSuchAlgorithmException, KeyStoreException {
+  public EasyX509TrustManager() throws NoSuchAlgorithmException, KeyStoreException {
     super();
     TrustManagerFactory factory =
       TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -74,6 +75,7 @@ public class EasyX509TrustManager implements X509TrustManager {
     }
   }
 
+  @NonNull
   @Override
   public X509Certificate[] getAcceptedIssuers() {
     return standardTrustManager.getAcceptedIssuers();

@@ -203,6 +203,7 @@ public class RadioService
   }
 
   // Not used by app
+  @NonNull
   @Override
   public BrowserRoot onGetRoot(
     @NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
@@ -289,8 +290,8 @@ public class RadioService
       (session.getController().getPlaybackState().getState() == PlaybackStateCompat.STATE_PAUSED);
   }
 
-  @Override
   @Nullable
+  @Override
   public String getContentType() {
     return playerAdapter.getContentType();
   }

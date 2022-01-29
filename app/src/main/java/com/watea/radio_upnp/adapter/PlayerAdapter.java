@@ -56,7 +56,6 @@ public abstract class PlayerAdapter {
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-  @NonNull
   private static final List<String> AUDIO_CONTENT_PREFIXS =
     Arrays.asList(AUDIO_CONTENT_TYPE, APPLICATION_CONTENT_TYPE);
   @NonNull

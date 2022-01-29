@@ -77,6 +77,7 @@ public class Radio {
   private URL webPageUrl;
   @NonNull
   private Quality quality;
+  @NonNull
   private Boolean isPreferred = false;
 
   // Create Radio with no icon file

@@ -53,7 +53,6 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
   private final int iconSize;
   @NonNull
   private final Listener listener;
-  @NonNull
   private final List<Long> radioIds = new Vector<>();
 
   public RadiosAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {

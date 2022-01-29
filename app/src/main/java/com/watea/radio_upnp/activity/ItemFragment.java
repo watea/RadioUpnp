@@ -217,8 +217,11 @@ public abstract class ItemFragment extends MainActivityFragment {
     super.onSaveInstanceState(outState);
     // Save icon; may fail
     try {
-      File file = getRadioLibrary().bitmapToFile(getIcon(), Integer.toString(hashCode()));
-      outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
+      Bitmap icon = getIcon();
+      if (icon != null) {
+        File file = getRadioLibrary().bitmapToFile(icon, Integer.toString(hashCode()));
+        outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
+      }
     } catch (Exception exception) {
       Log.e(LOG_TAG, "onSaveInstanceState: internal failure", exception);
     }
@@ -259,6 +262,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     return nameEditText.getText().toString().toUpperCase();
   }
 
+  @Nullable
   protected Bitmap getIcon() {
     return (Bitmap) nameEditText.getTag();
   }
@@ -443,7 +447,6 @@ public abstract class ItemFragment extends MainActivityFragment {
   // Launch with one parameter: fill content.
   private class DarFmSearcher extends Searcher {
     // List of radio datas
-    @NonNull
     private final List<Map<String, String>> radios = new Vector<>();
     @Nullable
     private Bitmap foundIcon = null;
