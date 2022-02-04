@@ -44,7 +44,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Vector;
 
 public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder> {
@@ -82,7 +81,10 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    viewHolder.setView(Objects.requireNonNull(listener.getRadioFromId(radioIds.get(i))));
+    Radio radio = listener.getRadioFromId(radioIds.get(i));
+    if (radio != null) {
+      viewHolder.setView(radio);
+    }
   }
 
   @Override

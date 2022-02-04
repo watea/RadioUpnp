@@ -309,16 +309,17 @@ public class RadioService
         // Manage the started state of this service, and session activity
         switch (state.getState()) {
           case PlaybackStateCompat.STATE_BUFFERING:
-            break;
-          case PlaybackStateCompat.STATE_PLAYING:
+            // Start service
             if (!isStarted) {
-              // Start service
-              ContextCompat.startForegroundService(this, new Intent(this, getClass()));
+              ContextCompat.startForegroundService(this, new Intent(this, this.getClass()));
               isStarted = true;
             }
             startForeground(NOTIFICATION_ID, getNotification());
+            break;
+          case PlaybackStateCompat.STATE_PLAYING:
             // Relaunch now allowed
             isAllowedToRewind = true;
+            notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
@@ -411,10 +412,10 @@ public class RadioService
             .addAction(actionPlay)
             .setOngoing(false);
           break;
+        case PlaybackStateCompat.STATE_ERROR:
+          builder.addAction(actionRewind);
         default:
-          builder
-            .addAction(actionRewind)
-            .setOngoing(false);
+          builder.setOngoing(false);
       }
       builder
         .addAction(actionSkipToPrevious)

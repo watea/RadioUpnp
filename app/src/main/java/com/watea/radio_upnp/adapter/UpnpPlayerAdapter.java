@@ -278,6 +278,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         }
 
         @Override
+        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
+          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+          super.success(actionInvocation);
+        }
+
+        @Override
         protected void failure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
           super.failure();
