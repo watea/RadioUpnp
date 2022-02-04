@@ -33,6 +33,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -60,6 +61,7 @@ import org.fourthline.cling.model.meta.RemoteDevice;
 import java.util.List;
 
 public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
+  private static final String LOG_TAG = MainActivityFragment.class.getName();
   private static final int DEFAULT_COLUMNS_COUNT = 3;
   // <HMI assets
   private RecyclerView dlnaRecyclerView;
@@ -126,7 +128,13 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Nullable
   @Override
   public Radio getRadioFromId(@NonNull Long radioId) {
-    return getRadioLibrary().getFrom(radioId);
+    Radio radio = null;
+    try {
+      radio = getRadioLibrary().getFrom(radioId);
+    } catch (Exception exception) {
+      Log.i(LOG_TAG, "getRadioFromId: RadioLibrary is not available.", exception);
+    }
+    return radio;
   }
 
   @Override

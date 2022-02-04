@@ -119,7 +119,6 @@ public abstract class PlayerAdapter {
   // Must be called
   public final void prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
-    state = PlaybackStateCompat.STATE_NONE;
     // Audio focus management
     audioFocusHelper.abandonAudioFocus();
     unregisterAudioNoisyReceiver();
