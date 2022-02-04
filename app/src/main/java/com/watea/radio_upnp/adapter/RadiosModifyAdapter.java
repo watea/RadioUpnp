@@ -93,7 +93,11 @@ public class RadiosModifyAdapter
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    viewHolder.setView(Objects.requireNonNull(getRadioLibrary().getFrom(radioIds.get(position))));
+    if (getRadioLibrary().isOpen()) {
+      Radio radio = getRadioLibrary().getFrom(radioIds.get(position));
+      assert radio != null;
+      viewHolder.setView(radio);
+    }
   }
 
   @Override

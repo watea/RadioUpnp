@@ -71,6 +71,10 @@ public class RadioLibrary {
     radioDataBase.close();
   }
 
+  public boolean isOpen() {
+    return radioDataBase.isOpen();
+  }
+
   public int updateFrom(@NonNull Long radioId, @NonNull ContentValues values) {
     return radioDataBase.update(
       // The table to query
