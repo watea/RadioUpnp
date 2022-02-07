@@ -230,8 +230,8 @@ public abstract class PlayerAdapter {
   }
 
   private void registerAudioNoisyReceiver() {
-    if (!audioNoisyReceiverRegistered) {
-      context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER);
+    if (!audioNoisyReceiverRegistered &&
+      (context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER) != null)) {
       audioNoisyReceiverRegistered = true;
     }
   }
