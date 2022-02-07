@@ -25,14 +25,18 @@ package com.watea.radio_upnp.activity;
 
 import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.RENDERER_DEVICE_TYPE;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
@@ -46,6 +50,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -483,6 +488,14 @@ public class MainActivity
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Fragments
     MainActivityFragment.onActivityCreated(this);
+    // Request permission for icon fetch if necessary
+    if (((Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) &&
+      !Environment.isExternalStorageManager()) ||
+      (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+        != PackageManager.PERMISSION_GRANTED)) {
+      ActivityCompat.requestPermissions(
+        this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+    }
   }
 
   @Override

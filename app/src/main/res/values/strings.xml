@@ -53,7 +53,7 @@
     <string name="legend_page_url">Web page URL (optional)</string>
     <string name="legend_page_url_example">http://direct.myradio.fr</string>
     <string name="icon_url">Icon URL (optional)</string>
-    <string name="icon_url_example">https://direct.myradio.fr/logo-app.png</string>
+    <string name="icon_url_example">file:///storage/emulated/0/Download/MyIcon.png</string>
     <string name="malformed_url_error">Malformed URL</string>
     <string name="radio_definition_error">Radio definition not well formed</string>
     <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>

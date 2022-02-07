@@ -35,6 +35,7 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -118,7 +119,12 @@ public class RadioURL {
     Log.d(LOG_TAG, "Try connect to URL: " + uRL);
     do {
       // Set headers
-      httpURLConnection = (HttpURLConnection) uRL.openConnection();
+      URLConnection uRLConnection = uRL.openConnection();
+      if (uRLConnection instanceof HttpURLConnection) {
+        httpURLConnection = (HttpURLConnection) uRL.openConnection();
+      } else {
+        throw new IOException("getActualHttpURLConnection: URL is not HTTP");
+      }
       httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
       httpURLConnection.setReadTimeout(READ_TIMEOUT);
       httpURLConnection.setInstanceFollowRedirects(true);
@@ -140,21 +146,19 @@ public class RadioURL {
     return httpURLConnection;
   }
 
+  // Redirection will not be handheld here
   @Nullable
   public Bitmap getBitmap() {
-    HttpURLConnection httpURLConnection = null;
-    Bitmap bitmap = null;
-    try {
-      httpURLConnection = getActualHttpURLConnection();
-      bitmap = BitmapFactory.decodeStream(httpURLConnection.getInputStream());
-    } catch (IOException iOException) {
-      Log.i(LOG_TAG, "Error decoding image: " + uRL, iOException);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
+    if (uRL == null ) {
+      Log.i(LOG_TAG, "getBitmap: decoding image on null URL");
+      return null;
     }
-    return bitmap;
+    try {
+      return BitmapFactory.decodeStream(uRL.openConnection().getInputStream());
+    } catch (Exception exception) {
+      Log.i(LOG_TAG, "getBitmap: error decoding image on " + uRL, exception);
+      return null;
+    }
   }
 
   public interface HttpURLConnectionConsumer {
