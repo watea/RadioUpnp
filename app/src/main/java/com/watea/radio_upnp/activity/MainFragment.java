@@ -142,7 +142,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     onConfigurationChanged(getActivity().getResources().getConfiguration());
     // Set view
     setRadiosView();
-    // radioLibrary changes
+    // RadioLibrary changes
     getRadioLibrary().addListener(radioLibraryListener);
   }
 
