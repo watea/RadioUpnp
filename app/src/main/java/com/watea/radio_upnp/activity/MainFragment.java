@@ -360,7 +360,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     List<Long> radios = isPreferredRadios ?
       getRadioLibrary().getPreferredRadioIds() : getRadioLibrary().getAllRadioIds();
     radiosAdapter.onRefresh(radios);
-    defaultFrameLayout.setVisibility(radios.isEmpty() ? View.VISIBLE : View.INVISIBLE);
+    defaultFrameLayout.setVisibility(getVisibleFrom(radios.isEmpty()));
   }
 
   private void setDlnaMenuItem() {

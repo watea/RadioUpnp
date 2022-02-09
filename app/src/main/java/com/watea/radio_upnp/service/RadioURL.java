@@ -149,7 +149,7 @@ public class RadioURL {
   // Redirection will not be handheld here
   @Nullable
   public Bitmap getBitmap() {
-    if (uRL == null ) {
+    if (uRL == null) {
       Log.i(LOG_TAG, "getBitmap: decoding image on null URL");
       return null;
     }

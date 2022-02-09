@@ -53,12 +53,12 @@
     <string name="legend_page_url">Web page URL (optional)</string>
     <string name="legend_page_url_example">http://direct.myradio.fr</string>
     <string name="icon_url">Icon URL (optional)</string>
-    <string name="icon_url_example">file:///storage/emulated/0/Download/MyIcon.png</string>
-    <string name="malformed_url_error">Malformed URL</string>
+    <string name="icon_url_example">https://www.my_cloud.com/icons/my_icon.png</string>
     <string name="radio_definition_error">Radio definition not well formed</string>
     <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>
     <string name="live_streaming">Live streaming</string>
     <string name="no_icon_found">Icon search failed, check if Web page URL or Icon URL are valid</string>
+    <string name="no_local_icon">No valid local icon found</string>
     <string name="connection_test_failed">Connection test failed</string>
     <string name="mime_not_authorized">Warning! MIME type is not authorized.\nAudio content: </string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
@@ -112,6 +112,7 @@
     <string name="action_relaunch">Relaunch</string>
     <string name="action_skip_to_next">Skip to next</string>
     <string name="action_skip_to_previous">Skip to previous</string>
+    <string name="action_browse">Browse</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
 </resources>

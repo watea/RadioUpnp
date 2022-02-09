@@ -94,6 +94,10 @@ public abstract class MainActivityFragment extends Fragment {
     return MAIN_ACTIVITY;
   }
 
+  protected static int getVisibleFrom(boolean isVisible) {
+    return isVisible ? View.VISIBLE : View.INVISIBLE;
+  }
+
   @Nullable
   @Override
   public Context getContext() {

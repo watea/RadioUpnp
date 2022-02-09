@@ -23,13 +23,16 @@
 
 package com.watea.radio_upnp.activity;
 
+import static android.app.Activity.RESULT_OK;
 import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -43,6 +46,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -63,6 +67,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -86,6 +91,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
+  private static final int BROWSE_INTENT = 7;
   private final Pattern PATTERN =
     Pattern.compile(".*(https?:/(/[-A-Za-z0-9+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
   // 1<HMI assets
@@ -101,6 +107,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   private RadioButton darFmRadioButton;
   private ImageButton searchImageButton;
   private ProgressBar progressBar;
+  private LinearLayout iconLinearLayout;
   // />
 
   @NonNull
@@ -168,6 +175,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     progressBar = view.findViewById(R.id.progress_bar);
     urlEditText = view.findViewById(R.id.url_edit_text);
     iconEditText = view.findViewById(R.id.icon_edit_text);
+    iconLinearLayout = view.findViewById(R.id.icon_linear_layout);
     webPageEditText = view.findViewById(R.id.web_page_edit_text);
     darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
     searchImageButton = view.findViewById(R.id.search_image_button);
@@ -180,11 +188,11 @@ public abstract class ItemFragment extends MainActivityFragment {
           isDarFmSelected ? R.drawable.ic_search_white_40dp : R.drawable.ic_image_white_40dp);
         webPageEditText.setEnabled(!isDarFmSelected);
         urlEditText.setEnabled(!isDarFmSelected);
-        iconEditText.setEnabled(!isDarFmSelected);
         if (isDarFmSelected) {
           iconEditText.setText("");
         }
-        countryEditLinearlayout.setVisibility(isDarFmSelected ? View.VISIBLE : View.INVISIBLE);
+        iconLinearLayout.setVisibility(isDarFmSelected ? View.GONE : View.VISIBLE);
+        countryEditLinearlayout.setVisibility(getVisibleFrom(isDarFmSelected));
       });
     searchImageButton.setOnClickListener(v -> {
       flushKeyboard();
@@ -209,7 +217,34 @@ public abstract class ItemFragment extends MainActivityFragment {
         }
       }
     });
+    // Browse launcher
+    view.findViewById(R.id.browse_button).setOnClickListener(v ->
+      startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*"), BROWSE_INTENT));
     return view;
+  }
+
+  @Override
+  public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    Context context = getContext();
+    // Do nothing if we were disposed
+    if ((context != null) && (requestCode == BROWSE_INTENT)) {
+      Uri uri;
+      Bitmap bitmap = null;
+      if ((resultCode == RESULT_OK) && (data != null) && ((uri = data.getData()) != null)) {
+        try {
+          bitmap = BitmapFactory.decodeStream(context.getContentResolver().openInputStream(uri));
+          if (bitmap != null) {
+            setRadioIcon(bitmap);
+          }
+        } catch (FileNotFoundException fileNotFoundException) {
+          Log.i(LOG_TAG, "Error performing icon local search", fileNotFoundException);
+        }
+      }
+      if (bitmap == null) {
+        tell(R.string.no_local_icon);
+      }
+    }
   }
 
   @Override
@@ -299,8 +334,8 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   private void showSearchButton(boolean isShowing) {
-    searchImageButton.setVisibility(isShowing ? View.VISIBLE : View.INVISIBLE);
-    progressBar.setVisibility(isShowing ? View.INVISIBLE : View.VISIBLE);
+    searchImageButton.setVisibility(getVisibleFrom(isShowing));
+    progressBar.setVisibility(getVisibleFrom(!isShowing));
   }
 
   private void tellWait() {
@@ -319,13 +354,12 @@ public abstract class ItemFragment extends MainActivityFragment {
     @NonNull
     private final EditText editText;
     @Nullable
-    protected URL url;
+    protected URL url = null;
 
     private UrlWatcher(@NonNull EditText editText) {
       this.editText = editText;
       this.editText.addTextChangedListener(this);
       defaultColor = this.editText.getCurrentTextColor();
-      url = null;
     }
 
     @Override
@@ -338,20 +372,15 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     public void afterTextChanged(Editable s) {
+      try {
+        url = (s.length() > 0) ? new URL(s.toString()) : null;
+      } catch (MalformedURLException malformedURLException) {
+        url = null;
+      }
       // Context exists
       assert getContext() != null;
-      boolean isError = false;
-      try {
-        url = new URL(s.toString());
-      } catch (MalformedURLException malformedURLException) {
-        if (url != null) {
-          tell(R.string.malformed_url_error);
-        }
-        url = null;
-        isError = true;
-      }
       editText.setTextColor(
-        isError ? ContextCompat.getColor(getContext(), R.color.dark_red) : defaultColor);
+        (url == null) ? ContextCompat.getColor(getContext(), R.color.dark_red) : defaultColor);
     }
   }
 

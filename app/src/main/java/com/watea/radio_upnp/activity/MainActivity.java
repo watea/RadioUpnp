@@ -25,18 +25,14 @@ package com.watea.radio_upnp.activity;
 
 import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.RENDERER_DEVICE_TYPE;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
@@ -50,7 +46,6 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -395,7 +390,6 @@ public class MainActivity
   @Override
   protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
-    // Must be done for Donation
     Fragment fragment = getCurrentFragment();
     if (fragment != null) {
       fragment.onActivityResult(requestCode, resultCode, data);
@@ -418,8 +412,18 @@ public class MainActivity
   @Override
   protected void onResume() {
     super.onResume();
+    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Create radio database (order matters)
     radioLibrary = new RadioLibrary(this);
+    // Create default radios on first start
+    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
+      setDefaultRadios()) {
+      // To do just one time, store a flag
+      sharedPreferences
+        .edit()
+        .putBoolean(getString(R.string.key_first_start), false)
+        .apply();
+    }
     // Retrieve main fragment
     mainFragment = (MainFragment) ((getCurrentFragment() == null) ?
       setFragment(MainFragment.class) :
@@ -439,17 +443,6 @@ public class MainActivity
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    // Shared preferences
-    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    // Create default radios on first start
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
-      setDefaultRadios()) {
-      // To do just one time, store a flag
-      sharedPreferences
-        .edit()
-        .putBoolean(getString(R.string.key_first_start), false)
-        .apply();
-    }
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
@@ -488,14 +481,6 @@ public class MainActivity
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Fragments
     MainActivityFragment.onActivityCreated(this);
-    // Request permission for icon fetch if necessary
-    if (((Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) &&
-      !Environment.isExternalStorageManager()) ||
-      (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-        != PackageManager.PERMISSION_GRANTED)) {
-      ActivityCompat.requestPermissions(
-        this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
-    }
   }
 
   @Override

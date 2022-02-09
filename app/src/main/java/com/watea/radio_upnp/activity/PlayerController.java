@@ -80,8 +80,8 @@ public class PlayerController {
     @Override
     public void onNewCurrentRadio(@Nullable Radio radio) {
       boolean isVisible = (radio != null);
-      albumArtImageView.setVisibility(getVisibleFrom(isVisible));
-      playedRadioLinearLayout.setVisibility(getVisibleFrom(isVisible));
+      albumArtImageView.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
+      playedRadioLinearLayout.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
       if (isVisible) {
         playedRadioNameTextView.setText(radio.getName());
         albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
@@ -170,8 +170,8 @@ public class PlayerController {
 
       private void setFrameVisibility(boolean isOn, boolean isWaiting) {
         playImageButton.setEnabled(isOn);
-        playImageButton.setVisibility(getVisibleFrom(!isWaiting));
-        progressBar.setVisibility(getVisibleFrom(isWaiting));
+        playImageButton.setVisibility(MainActivityFragment.getVisibleFrom(!isWaiting));
+        progressBar.setVisibility(MainActivityFragment.getVisibleFrom(isWaiting));
       }
     };
   private MediaBrowserCompat mediaBrowser = null;
@@ -346,9 +346,5 @@ public class PlayerController {
   private void setPreferredButton(boolean isPreferred) {
     preferredImageButton.setImageResource(
       isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
-  }
-
-  private int getVisibleFrom(boolean isVisible) {
-    return isVisible ? View.VISIBLE : View.INVISIBLE;
   }
 }

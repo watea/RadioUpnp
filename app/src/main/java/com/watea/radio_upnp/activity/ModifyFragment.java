@@ -117,7 +117,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
 
   @Override
   public void onEmpty(boolean isEmpty) {
-    defaultFrameLayout.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
+    defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
   }
 
   @NonNull
