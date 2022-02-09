@@ -49,7 +49,7 @@
             android:layout_height="@dimen/tile_size"
             android:layout_gravity="center"
             android:tint="@color/play_selector"
-            android:visibility="gone"
+            android:visibility="invisible"
             app:srcCompat="@drawable/ic_play_arrow_white_24dp"
             tools:ignore="ContentDescription" />
 
@@ -58,7 +58,7 @@
             android:layout_width="@dimen/tile_size"
             android:layout_height="@dimen/tile_size"
             android:layout_gravity="center"
-            android:visibility="gone"
+            android:visibility="invisible"
             android:indeterminateTint="@android:color/darker_gray" />
 
     </FrameLayout>
@@ -68,7 +68,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toEndOf="@id/play_frame_layout"
-        android:visibility="gone"
+        android:visibility="invisible"
         android:orientation="vertical">
 
         <TextView
