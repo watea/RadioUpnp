@@ -44,7 +44,9 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,6 +65,7 @@ public class RadioHandler extends AbstractHandler {
   private final RadioLibrary radioLibrary;
   @NonNull
   private final Listener listener;
+  private final ConnectionCount connectionCount = new ConnectionCount();
 
   RadioHandler(
     @NonNull String userAgent,
@@ -120,6 +123,7 @@ public class RadioHandler extends AbstractHandler {
     final boolean isGet = (method != null) && method.equals("GET");
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
+    connectionCount.increase(lockKey);
     try (OutputStream outputStream = response.getOutputStream()) {
       // Accept M3U format
       httpURLConnection = new RadioURL(radio.getUrlFromM3u()).getActualHttpURLConnection(
@@ -190,12 +194,31 @@ public class RadioHandler extends AbstractHandler {
       }
     } catch (Exception exception) {
       Log.d(LOG_TAG, "handleConnection error", exception);
-      listener.onError(lockKey);
+      // Throw error only if stream is last requested.
+      // Used in case client request the stream several times before actually playing.
+      // As seen with BubbleUPnP.
+      new Thread() {
+        @Override
+        public void run() {
+          try {
+            sleep(500);
+          } catch (InterruptedException interruptedException) {
+            Log.e(LOG_TAG, "Sleep error, ignored...");
+          }
+          if (connectionCount.isError(lockKey)) {
+            Log.d(LOG_TAG, "=> error sent to listener");
+            listener.onError(lockKey);
+          } else {
+            Log.d(LOG_TAG, "=> error ignored");
+          }
+        }
+      }.start();
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
       }
     }
+    connectionCount.decrease(lockKey);
     Log.d(LOG_TAG, "handleConnection: leaving");
   }
 
@@ -288,5 +311,25 @@ public class RadioHandler extends AbstractHandler {
 
     @Nullable
     String getContentType();
+  }
+
+  @SuppressWarnings("ConstantConditions")
+  private static class ConnectionCount {
+    private final Map<String, Integer> counts = new Hashtable<>();
+
+    private synchronized void decrease(@NonNull String lockKey) {
+      if (counts.containsKey(lockKey)) {
+        counts.put(lockKey, counts.get(lockKey) - 1);
+      }
+    }
+
+    private synchronized boolean isError(@NonNull String lockKey) {
+      // Error if no more connection available
+      return counts.containsKey(lockKey) && (counts.get(lockKey) <= 0);
+    }
+
+    private synchronized void increase(@NonNull String lockKey) {
+      counts.put(lockKey, (counts.containsKey(lockKey) ? counts.get(lockKey) : 0) + 1);
+    }
   }
 }
