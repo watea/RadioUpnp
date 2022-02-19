@@ -197,22 +197,17 @@ public class RadioHandler extends AbstractHandler {
       // Throw error only if stream is last requested.
       // Used in case client request the stream several times before actually playing.
       // As seen with BubbleUPnP.
-      new Thread() {
-        @Override
-        public void run() {
-          try {
-            sleep(500);
-          } catch (InterruptedException interruptedException) {
-            Log.e(LOG_TAG, "Sleep error, ignored...");
-          }
-          if (connectionCount.isError(lockKey)) {
-            Log.d(LOG_TAG, "=> error sent to listener");
-            listener.onError(lockKey);
-          } else {
-            Log.d(LOG_TAG, "=> error ignored");
-          }
-        }
-      }.start();
+      try {
+        Thread.sleep(500);
+      } catch (InterruptedException interruptedException) {
+        Log.e(LOG_TAG, "Sleep error, ignored...");
+      }
+      if (connectionCount.isError(lockKey)) {
+        Log.d(LOG_TAG, "=> error sent to listener");
+        listener.onError(lockKey);
+      } else {
+        Log.d(LOG_TAG, "=> error ignored");
+      }
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
@@ -325,7 +320,7 @@ public class RadioHandler extends AbstractHandler {
 
     private synchronized boolean isError(@NonNull String lockKey) {
       // Error if no more connection available
-      return counts.containsKey(lockKey) && (counts.get(lockKey) <= 0);
+      return counts.containsKey(lockKey) && (counts.get(lockKey) <= 1);
     }
 
     private synchronized void increase(@NonNull String lockKey) {
