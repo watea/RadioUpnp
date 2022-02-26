@@ -134,7 +134,7 @@ public class RadioService
         if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
           NotificationChannel notificationChannel = new NotificationChannel(
             CHANNEL_ID,
-            RadioService.class.getSimpleName(),
+            getString(R.string.radio_service_notification_name),
             NotificationManager.IMPORTANCE_LOW);
           // Configure the notification channel
           notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
@@ -270,8 +270,11 @@ public class RadioService
   @Override
   public void onError(@NonNull String lockKey) {
     Log.d(LOG_TAG, "RadioHandler error received");
-    onPlaybackStateChange(
-      PlayerAdapter.getPlaybackStateCompat(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
+    // Error fired only in UPnP mode as not needed locally
+    if (isUpnp()) {
+      onPlaybackStateChange(
+        PlayerAdapter.getPlaybackStateCompat(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
+    }
   }
 
   @Override
@@ -560,7 +563,7 @@ public class RadioService
 
     // Do nothing if no active session or no radio fund
     private void skipTo(int direction) {
-      if (session.isActive()) {
+      if (mediaController != null) {
         Bundle extras = mediaController.getExtras();
         Long nextRadioId = radioLibrary.get(
           Long.valueOf(getMediaId()),
