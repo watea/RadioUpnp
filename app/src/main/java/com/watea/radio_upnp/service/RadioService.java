@@ -267,10 +267,6 @@ public class RadioService
     });
   }
 
-  public boolean hasLockKey(@NonNull String lockKey) {
-    return session.isActive() && lockKey.equals(this.lockKey);
-  }
-
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
@@ -339,6 +335,10 @@ public class RadioService
         }
       }
     });
+  }
+
+  private boolean hasLockKey(@NonNull String lockKey) {
+    return session.isActive() && lockKey.equals(this.lockKey);
   }
 
   @SuppressLint("SwitchIntDef")
