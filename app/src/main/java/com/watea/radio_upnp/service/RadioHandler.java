@@ -44,9 +44,7 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,9 +63,10 @@ public class RadioHandler extends AbstractHandler {
   private final RadioLibrary radioLibrary;
   @NonNull
   private final Listener listener;
-  private final ConnectionCount connectionCount = new ConnectionCount();
+  @Nullable
+  private Controller controller = null;
 
-  RadioHandler(
+  public RadioHandler(
     @NonNull String userAgent,
     @NonNull RadioLibrary radioLibrary,
     @NonNull Listener listener) {
@@ -88,6 +87,10 @@ public class RadioHandler extends AbstractHandler {
       .build();
   }
 
+  public void setController(@NonNull Controller controller) {
+    this.controller = controller;
+  }
+
   @Override
   public void handle(
     String target,
@@ -98,15 +101,15 @@ public class RadioHandler extends AbstractHandler {
     final String[] params = request.getParameter(PARAMS).split(SEPARATOR);
     final String radioId = (params.length > 0) ? params[0] : null;
     final String lockKey = (params.length > 1) ? params[1] : null;
-    if ((radioId == null) || (lockKey == null)) {
-      Log.i(LOG_TAG, "Unexpected request received. Radio/UUID: " + radioId + "/" + lockKey);
+    if ((radioId == null) || (lockKey == null) || (controller == null)) {
+      Log.i(LOG_TAG, "Unexpected request received. Radio || UUID || controller is null.");
     } else {
       final Radio radio = radioLibrary.getFrom(Long.decode(radioId));
       if (radio == null) {
         Log.i(LOG_TAG, "Unknown radio");
       } else {
         baseRequest.setHandled(true);
-        handleConnection(request, response, radio, lockKey);
+        handleConnection(request, response, radio, lockKey, controller);
       }
     }
   }
@@ -115,7 +118,8 @@ public class RadioHandler extends AbstractHandler {
     @NonNull final HttpServletRequest request,
     @NonNull final HttpServletResponse response,
     @NonNull final Radio radio,
-    @NonNull final String lockKey) {
+    @NonNull final String lockKey,
+    @NonNull final Controller controller) {
     final String method = request.getMethod();
     Log.d(LOG_TAG,
       "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
@@ -123,7 +127,6 @@ public class RadioHandler extends AbstractHandler {
     final boolean isGet = (method != null) && method.equals("GET");
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
-    connectionCount.increase(lockKey);
     try (OutputStream outputStream = response.getOutputStream()) {
       // Accept M3U format
       httpURLConnection = new RadioURL(radio.getUrlFromM3u()).getActualHttpURLConnection(
@@ -146,12 +149,12 @@ public class RadioHandler extends AbstractHandler {
           }
         }
       }
-      if (listener.isUpnp()) {
+      if (controller instanceof UpnpController) {
         // DLNA header, as found in documentation, not sure it is useful (should not)
         response.setHeader("contentFeatures.dlna.org", "*");
         response.setHeader("transferMode.dlna.org", "Streaming");
         // Force ContentType as some devices require it
-        String contentType = listener.getContentType();
+        String contentType = ((UpnpController) controller).getContentType();
         if (contentType == null) {
           // Should not happen
           Log.e(LOG_TAG, "Internal failure; ContentType is null");
@@ -190,30 +193,16 @@ public class RadioHandler extends AbstractHandler {
           metadataOffset,
           outputStream,
           httpURLConnection.getHeaderField("icy-br"),
-          lockKey);
+          lockKey,
+          controller);
       }
     } catch (Exception exception) {
       Log.d(LOG_TAG, "handleConnection error", exception);
-      // Throw error only if stream is last requested.
-      // Used in case client request the stream several times before actually playing.
-      // As seen with BubbleUPnP.
-      try {
-        Thread.sleep(500);
-      } catch (InterruptedException interruptedException) {
-        Log.e(LOG_TAG, "Sleep error, ignored...");
-      }
-      if (connectionCount.isError(lockKey)) {
-        Log.d(LOG_TAG, "=> error sent to listener");
-        listener.onError(lockKey);
-      } else {
-        Log.d(LOG_TAG, "=> error ignored");
-      }
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
       }
     }
-    connectionCount.decrease(lockKey);
     Log.d(LOG_TAG, "handleConnection: leaving");
   }
 
@@ -225,7 +214,8 @@ public class RadioHandler extends AbstractHandler {
     final int metadataOffset,
     @NonNull final OutputStream outputStream,
     @Nullable final String rate,
-    @NonNull final String lockKey) throws IOException {
+    @NonNull final String lockKey,
+    @NonNull final Controller controller) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
     // Send rate
     listener.onNewInformation("", rate, lockKey);
@@ -233,10 +223,10 @@ public class RadioHandler extends AbstractHandler {
     ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
     int metadataBlockBytesRead = 0;
     int metadataSize = 0;
-    // Stop if not current listener
-    while (listener.hasLockKey(lockKey)) {
+    // Stop if not current controller
+    while (controller == this.controller) {
       // Do not read if paused
-      if (!listener.isPaused()) {
+      if (!controller.isPaused()) {
         int readResult = inputStream.read(buffer);
         if (readResult < 0) {
           Log.d(LOG_TAG, "No more data to read");
@@ -295,36 +285,14 @@ public class RadioHandler extends AbstractHandler {
       @NonNull String information,
       @Nullable String rate,
       @NonNull String lockKey);
-
-    void onError(@NonNull String lockKey);
-
-    boolean hasLockKey(@NonNull String lockKey);
-
-    boolean isUpnp();
-
-    boolean isPaused();
-
-    @Nullable
-    String getContentType();
   }
 
-  @SuppressWarnings("ConstantConditions")
-  private static class ConnectionCount {
-    private final Map<String, Integer> counts = new Hashtable<>();
+  public interface Controller {
+    boolean isPaused();
+  }
 
-    private synchronized void decrease(@NonNull String lockKey) {
-      if (counts.containsKey(lockKey)) {
-        counts.put(lockKey, counts.get(lockKey) - 1);
-      }
-    }
-
-    private synchronized boolean isError(@NonNull String lockKey) {
-      // Error if no more connection available
-      return counts.containsKey(lockKey) && (counts.get(lockKey) <= 1);
-    }
-
-    private synchronized void increase(@NonNull String lockKey) {
-      counts.put(lockKey, (counts.containsKey(lockKey) ? counts.get(lockKey) : 0) + 1);
-    }
+  public interface UpnpController extends Controller {
+    @Nullable
+    String getContentType();
   }
 }

@@ -267,36 +267,8 @@ public class RadioService
     });
   }
 
-  @Override
-  public void onError(@NonNull String lockKey) {
-    Log.d(LOG_TAG, "RadioHandler error received");
-    // Error fired only in UPnP mode as not needed locally
-    if (isUpnp()) {
-      onPlaybackStateChange(
-        PlayerAdapter.getPlaybackStateCompat(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
-    }
-  }
-
-  @Override
   public boolean hasLockKey(@NonNull String lockKey) {
     return session.isActive() && lockKey.equals(this.lockKey);
-  }
-
-  @Override
-  public boolean isUpnp() {
-    return (playerAdapter != null) && (playerAdapter instanceof UpnpPlayerAdapter);
-  }
-
-  @Override
-  public boolean isPaused() {
-    return
-      (session.getController().getPlaybackState().getState() == PlaybackStateCompat.STATE_PAUSED);
-  }
-
-  @Nullable
-  @Override
-  public String getContentType() {
-    return playerAdapter.getContentType();
   }
 
   // Only if lockKey still valid
@@ -506,6 +478,8 @@ public class RadioService
           RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       }
+      // PlayerAdapter controls radio stream
+      httpServer.setRadioHandlerController(playerAdapter);
       // Prepare radio streaming
       playerAdapter.prepareFromMediaId();
     }

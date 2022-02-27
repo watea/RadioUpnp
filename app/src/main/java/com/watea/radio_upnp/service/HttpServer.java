@@ -52,6 +52,8 @@ public class HttpServer extends Thread {
   private final NetworkProxy networkProxy;
   @NonNull
   private final Listener listener;
+  @NonNull
+  private final RadioHandler radioHandler;
 
   public HttpServer(
     @NonNull Context context,
@@ -61,16 +63,19 @@ public class HttpServer extends Thread {
     @NonNull Listener listener) {
     this.context = context;
     this.listener = listener;
+    radioHandler = new RadioHandler(userAgent, radioLibrary, radioHandlerListener);
     networkProxy = new NetworkProxy(this.context);
     // Handler for local files
     ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setResourceBase(context.getFilesDir().getPath());
     // Add the ResourceHandler to the server
     HandlerList handlers = new HandlerList();
-    handlers.setHandlers(new Handler[]{
-      resourceHandler,
-      new RadioHandler(userAgent, radioLibrary, radioHandlerListener)});
+    handlers.setHandlers(new Handler[]{resourceHandler, radioHandler});
     server.setHandler(handlers);
+  }
+
+  public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
+    radioHandler.setController(radioHandlerController);
   }
 
   @NonNull

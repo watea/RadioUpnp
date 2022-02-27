@@ -34,7 +34,9 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.service.RadioHandler;
 import com.watea.radio_upnp.service.UpnpActionController;
+import com.watea.radio_upnp.service.UpnpWatchdog;
 
 import org.fourthline.cling.model.action.ActionArgumentValue;
 import org.fourthline.cling.model.action.ActionInvocation;
@@ -50,7 +52,7 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class UpnpPlayerAdapter extends PlayerAdapter {
+public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.UpnpController {
   public static final ServiceId AV_TRANSPORT_SERVICE_ID = new UDAServiceId("AVTransport");
   public static final DeviceType RENDERER_DEVICE_TYPE =
     new DeviceType("schemas-upnp-org", "MediaRenderer", 1);
@@ -95,6 +97,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private final UpnpActionController.UpnpAction actionSetAvTransportUri;
   @Nullable
   private final UpnpActionController.UpnpAction actionGetProtocolInfo;
+  @NonNull
+  private final UpnpWatchdog upnpWatchdog;
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -116,6 +120,21 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     Service<?, ?> connectionManager = device.findService(CONNECTION_MANAGER_ID);
     Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
     Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
+    upnpWatchdog = new UpnpWatchdog(
+        this.upnpActionController,
+        avTransportService,
+        new UpnpWatchdog.Listener() {
+          @NonNull
+          @Override
+          public String getInstanceId() {
+            return instanceId;
+          }
+
+          @Override
+          public void onError() {
+            changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          }
+        });
     Action<?> action = getAction(avTransportService, ACTION_PLAY, true);
     actionPlay = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
@@ -280,6 +299,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+          // Now we can launch watchdog
+          upnpWatchdog.start();
           super.success(actionInvocation);
         }
 
@@ -418,6 +439,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   public void onRelease() {
+    upnpWatchdog.kill();
   }
 
   private void onPreparedPlay() {

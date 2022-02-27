@@ -36,9 +36,9 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.service.RadioHandler;
 
 import java.util.Arrays;
 import java.util.List;
@@ -47,7 +47,7 @@ import java.util.List;
 // and audio focus
 // Warning: not threadsafe, execution shall be done in main UI thread
 @SuppressWarnings("WeakerAccess")
-public abstract class PlayerAdapter {
+public abstract class PlayerAdapter implements RadioHandler.Controller {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
   protected static final String DEFAULT_CONTENT_TYPE = AUDIO_CONTENT_TYPE + "mpeg";
   protected static final String APPLICATION_CONTENT_TYPE = "application/";
@@ -103,17 +103,17 @@ public abstract class PlayerAdapter {
     }
   }
 
-  public static PlaybackStateCompat.Builder getPlaybackStateCompat(int state) {
-    return new PlaybackStateCompat.Builder()
-      .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
-  }
-
   public static boolean isHandling(@NonNull String protocolInfo) {
     for (String audioContentPrefix : AUDIO_CONTENT_PREFIXS) {
       if (protocolInfo.contains(audioContentPrefix))
         return true;
     }
     return false;
+  }
+
+  @Override
+  public boolean isPaused() {
+    return (state == PlaybackStateCompat.STATE_PAUSED);
   }
 
   // Must be called
@@ -193,12 +193,6 @@ public abstract class PlayerAdapter {
       PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
   }
 
-  // ContentType as seen by the player, if computed
-  @Nullable
-  public String getContentType() {
-    return null;
-  }
-
   protected abstract boolean isLocal();
 
   protected abstract void onPrepareFromMediaId();
@@ -220,8 +214,9 @@ public abstract class PlayerAdapter {
       Log.i(LOG_TAG, "=> no change");
     } else {
       state = newState;
-      listener.onPlaybackStateChange(
-        getPlaybackStateCompat(state).setActions(getAvailableActions()).build(), lockKey);
+      listener.onPlaybackStateChange(new PlaybackStateCompat.Builder()
+        .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime())
+        .setActions(getAvailableActions()).build(), lockKey);
     }
   }
 
