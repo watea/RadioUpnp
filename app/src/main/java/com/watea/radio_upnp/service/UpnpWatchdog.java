@@ -34,9 +34,9 @@ import org.fourthline.cling.model.meta.Service;
 
 public class UpnpWatchdog {
   private static final String LOG_TAG = UpnpWatchdog.class.getName();
-  private static final int DELAY = 500; // ms
+  private static final int DELAY = 2000; // ms
   private static final int TOLERANCE = 2;
-  private static final String ACTION_GET_DEVICE_CAPABILITIES = "GetDeviceCapabilities";
+  private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   @Nullable
   private UpnpActionController.UpnpAction actionWatchdog = null;
   private boolean kill = false;
@@ -48,7 +48,7 @@ public class UpnpWatchdog {
     @NonNull Listener listener) {
     Action<?> action;
     if ((avTransportService == null) ||
-      ((action = avTransportService.getAction(ACTION_GET_DEVICE_CAPABILITIES)) == null)) {
+      ((action = avTransportService.getAction(ACTION_GET_TRANSPORT_INFO)) == null)) {
       listener.onError();
     } else {
       actionWatchdog = new UpnpActionController.UpnpAction(upnpActionController, action) {
@@ -59,18 +59,27 @@ public class UpnpWatchdog {
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          failureCount = 0;
-          try {
-            Thread.sleep(DELAY);
-          } catch (InterruptedException interruptedException) {
-            Log.d(LOG_TAG, "Sleep failed");
+          String currentTransportState =
+            actionInvocation.getOutput("CurrentTransportState").getValue().toString();
+          if (currentTransportState.equals("TRANSITIONING") ||
+            currentTransportState.equals("PLAYING")) {
+            failureCount = 0;
+            try {
+              Thread.sleep(DELAY);
+            } catch (InterruptedException interruptedException) {
+              Log.d(LOG_TAG, "Sleep failed");
+            }
+            start();
+          } else {
+            Log.d(LOG_TAG, "Watchdog failed; state not allowed: " + currentTransportState);
+            listener.onError();
           }
-          start();
         }
 
         @Override
         protected void failure() {
           if (failureCount++ > TOLERANCE) {
+            Log.d(LOG_TAG, "Watchdog failed; no answer");
             listener.onError();
           } else {
             start();
