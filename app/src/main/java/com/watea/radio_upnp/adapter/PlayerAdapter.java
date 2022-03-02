@@ -29,13 +29,19 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.RadioHandler;
@@ -46,8 +52,8 @@ import java.util.List;
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
 // Warning: not threadsafe, execution shall be done in main UI thread
-@SuppressWarnings("WeakerAccess")
-public abstract class PlayerAdapter implements RadioHandler.Controller {
+public abstract class PlayerAdapter
+  implements RadioHandler.Controller, AudioManager.OnAudioFocusChangeListener {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
   protected static final String DEFAULT_CONTENT_TYPE = AUDIO_CONTENT_TYPE + "mpeg";
   protected static final String APPLICATION_CONTENT_TYPE = "application/";
@@ -58,6 +64,10 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
   private static final List<String> AUDIO_CONTENT_PREFIXS =
     Arrays.asList(AUDIO_CONTENT_TYPE, APPLICATION_CONTENT_TYPE);
+  private static final AudioAttributes PLAYBACK_ATTRIBUTES = new AudioAttributes.Builder()
+    .setUsage(AudioAttributes.USAGE_MEDIA)
+    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+    .build();
   @NonNull
   protected final Context context;
   // Current tag, always set before playing
@@ -67,21 +77,20 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
   protected final Radio radio;
   @NonNull
   protected final Uri radioUri;
-  private final AudioFocusHelper audioFocusHelper = new AudioFocusHelper();
   @NonNull
   private final AudioManager audioManager;
   @NonNull
   private final Listener listener;
   protected int state = PlaybackStateCompat.STATE_NONE;
+  @Nullable
+  private AudioFocusRequest audioFocusRequest;
   private boolean playOnAudioFocus = false;
   private boolean audioNoisyReceiverRegistered = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
       if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
-        if (isPlaying()) {
-          pause();
-        }
+        pause();
       }
     }
   };
@@ -119,45 +128,21 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
   // Must be called
   public final void prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
-    // Audio focus management
-    audioFocusHelper.abandonAudioFocus();
-    unregisterAudioNoisyReceiver();
-    onPrepareFromMediaId();
-    // Watchdog
-    new Thread(() -> {
-      try {
-        Thread.sleep(8000);
-        if (state == PlaybackStateCompat.STATE_NONE) {
-          Log.d(LOG_TAG, "onPrepareFromMediaId: watchdog fired");
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        }
-      } catch (InterruptedException interruptedException) {
-        Log.e(LOG_TAG, "onPrepareFromMediaId: watchdog error");
-      }
-    }).start();
+    if (isLocal() && requestAudioFocus() || !isLocal()) {
+      onPrepareFromMediaId();
+    }
   }
 
   public final void play() {
-    // Audiofocus management only in AudioFocus mode
-    if (isLocal()) {
-      if (audioFocusHelper.requestAudioFocus()) {
-        registerAudioNoisyReceiver();
-      } else {
-        Log.d(LOG_TAG, "AudioFocusHelper error");
-        return;
-      }
-    }
-    if ((getAvailableActions() & PlaybackStateCompat.ACTION_PLAY) > 0) {
+    if ((isLocal() && requestAudioFocus() || !isLocal()) &&
+      ((getAvailableActions() & PlaybackStateCompat.ACTION_PLAY) > 0L)) {
       onPlay();
     }
   }
 
   public final void pause() {
-    if (!playOnAudioFocus) {
-      audioFocusHelper.abandonAudioFocus();
-    }
-    unregisterAudioNoisyReceiver();
-    if ((getAvailableActions() & PlaybackStateCompat.ACTION_PAUSE) > 0) {
+    releaseAudioFocus();
+    if ((getAvailableActions() & PlaybackStateCompat.ACTION_PAUSE) > 0L) {
       onPause();
     }
   }
@@ -165,8 +150,8 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
   public final void stop() {
     // Force playback state immediately
     changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED);
-    // Now we can release
-    releaseOwnResources();
+    // Now we can release audio focus
+    releaseAudioFocus();
     // Stop actual reader and release
     onStop();
     onRelease();
@@ -174,8 +159,7 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
 
   // Called when resources must be released, no impact on playback state
   public final void release() {
-    releaseOwnResources();
-    // Release actual reader
+    releaseAudioFocus();
     onRelease();
   }
 
@@ -191,6 +175,34 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
       PlaybackStateCompat.ACTION_STOP |
       PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
       PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+  }
+
+  @Override
+  public void onAudioFocusChange(int focusChange) {
+    switch (focusChange) {
+      case AudioManager.AUDIOFOCUS_GAIN:
+        if (isPlaying()) {
+          setVolume(MEDIA_VOLUME_DEFAULT);
+        } else if (playOnAudioFocus) {
+          play();
+        }
+        playOnAudioFocus = false;
+        break;
+      case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+        setVolume(MEDIA_VOLUME_DUCK);
+        break;
+      case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+        if (isPlaying()) {
+          playOnAudioFocus = true;
+          pause();
+        }
+        break;
+      case AudioManager.AUDIOFOCUS_LOSS:
+        abandonAudioFocus();
+        playOnAudioFocus = false;
+        stop();
+        break;
+    }
   }
 
   protected abstract boolean isLocal();
@@ -225,8 +237,8 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
   }
 
   private void registerAudioNoisyReceiver() {
-    if (!audioNoisyReceiverRegistered &&
-      (context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER) != null)) {
+    if (!audioNoisyReceiverRegistered) {
+      context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER);
       audioNoisyReceiverRegistered = true;
     }
   }
@@ -238,53 +250,46 @@ public abstract class PlayerAdapter implements RadioHandler.Controller {
     }
   }
 
-  private void releaseOwnResources() {
-    // Release audio focus
-    audioFocusHelper.abandonAudioFocus();
+  private void releaseAudioFocus() {
+    // Order matters
+    playOnAudioFocus = false;
     unregisterAudioNoisyReceiver();
+    abandonAudioFocus();
+  }
+
+  private boolean requestAudioFocus() {
+    boolean request;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+        .setAudioAttributes(PLAYBACK_ATTRIBUTES)
+        .setOnAudioFocusChangeListener(this, new Handler(Looper.getMainLooper()))
+        .build();
+      request = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
+        audioManager.requestAudioFocus(audioFocusRequest));
+    } else {
+      request = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
+        audioManager.requestAudioFocus(
+          this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN));
+    }
+    if (request) {
+      registerAudioNoisyReceiver();
+      return true;
+    }
+    Log.d(LOG_TAG, "Audio focus request failed");
+    return false;
+  }
+
+  private void abandonAudioFocus() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      if (audioFocusRequest != null) {
+        audioManager.abandonAudioFocusRequest(audioFocusRequest);
+      }
+    } else {
+      audioManager.abandonAudioFocus(this);
+    }
   }
 
   public interface Listener {
     void onPlaybackStateChange(@NonNull PlaybackStateCompat state, String lockKey);
-  }
-
-  // Helper class for managing audio focus related tasks
-  private final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeListener {
-    @Override
-    public void onAudioFocusChange(int focusChange) {
-      switch (focusChange) {
-        case AudioManager.AUDIOFOCUS_GAIN:
-          if (playOnAudioFocus && !isPlaying()) {
-            play();
-          } else if (isPlaying()) {
-            setVolume(MEDIA_VOLUME_DEFAULT);
-          }
-          playOnAudioFocus = false;
-          break;
-        case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-          setVolume(MEDIA_VOLUME_DUCK);
-          break;
-        case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-          if (isPlaying()) {
-            playOnAudioFocus = true;
-            pause();
-          }
-          break;
-        case AudioManager.AUDIOFOCUS_LOSS:
-          abandonAudioFocus();
-          playOnAudioFocus = false;
-          stop();
-          break;
-      }
-    }
-
-    private boolean requestAudioFocus() {
-      return (AudioManager.AUDIOFOCUS_REQUEST_GRANTED == audioManager.requestAudioFocus(
-        this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN));
-    }
-
-    private void abandonAudioFocus() {
-      audioManager.abandonAudioFocus(this);
-    }
   }
 }

@@ -280,11 +280,6 @@ public class RadioService
         // Manage the started state of this service, and session activity
         switch (state.getState()) {
           case PlaybackStateCompat.STATE_BUFFERING:
-            // Start service
-            if (!isStarted) {
-              ContextCompat.startForegroundService(this, new Intent(this, this.getClass()));
-              isStarted = true;
-            }
             startForeground(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_PLAYING:
@@ -317,6 +312,8 @@ public class RadioService
                   },
                   4000);
               } else {
+                httpServer.setRadioHandlerController(null);
+                playerAdapter.release();
                 stopForeground(true);
                 if (isStarted) {
                   notificationManager.notify(NOTIFICATION_ID, getNotification());
@@ -326,6 +323,7 @@ public class RadioService
             }
           default:
             // Cancel session and service
+            httpServer.setRadioHandlerController(null);
             playerAdapter.release();
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
@@ -480,6 +478,12 @@ public class RadioService
       }
       // PlayerAdapter controls radio stream
       httpServer.setRadioHandlerController(playerAdapter);
+      // Start service, must be done while activity has foreground
+      if (!isStarted) {
+        ContextCompat.startForegroundService(
+          RadioService.this, new Intent(RadioService.this, RadioService.this.getClass()));
+        isStarted = true;
+      }
       // Prepare radio streaming
       playerAdapter.prepareFromMediaId();
     }

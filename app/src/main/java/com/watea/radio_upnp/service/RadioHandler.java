@@ -87,7 +87,7 @@ public class RadioHandler extends AbstractHandler {
       .build();
   }
 
-  public void setController(@NonNull Controller controller) {
+  public void setController(@Nullable Controller controller) {
     this.controller = controller;
   }
 

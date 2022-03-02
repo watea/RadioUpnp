@@ -160,7 +160,7 @@ public class MainActivity
       "https://streaming01.zfast.co.uk/proxy/davideof",
       "http://www.davideofmimic.com/")
   };
-  private final NetworkProxy networkProxy = new NetworkProxy(this);
+  private NetworkProxy networkProxy;
   // <HMI assets
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
@@ -443,6 +443,7 @@ public class MainActivity
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    networkProxy = new NetworkProxy(this);
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);

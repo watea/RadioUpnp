@@ -19,7 +19,7 @@ allprojects {
         google()
     }
     tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+        options.compilerArgs << "-Xlint:deprecation"
     }
 }
 

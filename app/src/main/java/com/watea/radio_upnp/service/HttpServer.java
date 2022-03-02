@@ -74,7 +74,7 @@ public class HttpServer extends Thread {
     server.setHandler(handlers);
   }
 
-  public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
+  public void setRadioHandlerController(@Nullable RadioHandler.Controller radioHandlerController) {
     radioHandler.setController(radioHandlerController);
   }
 

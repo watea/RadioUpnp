@@ -23,43 +23,27 @@
 
 package com.watea.radio_upnp.service;
 
-import static android.content.Context.WIFI_SERVICE;
-
 import android.content.Context;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
-import android.net.wifi.WifiManager;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.ByteOrder;
 
 public class NetworkProxy {
-  private static final String LOG_TAG = NetworkProxy.class.getName();
   private static final String SCHEME = "http";
-  @NonNull
-  private final Context context;
-
-  public NetworkProxy(@NonNull Context context) {
-    this.context = context;
-  }
-
   @Nullable
-  private static String ipAddressToString(int ipAddress) {
-    try {
-      return InetAddress.getByAddress(
-        BigInteger.valueOf(ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN) ?
-          Integer.reverseBytes(ipAddress) : ipAddress).toByteArray()).getHostAddress();
-    } catch (UnknownHostException unknownHostException) {
-      Log.e(LOG_TAG, "Error decoding IP address", unknownHostException);
-    }
-    return null;
+  private final ConnectivityManager connectivityManager;
+
+  // Shall be called after onCreate
+  public NetworkProxy(@NonNull Context context) {
+    connectivityManager =
+      (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
   }
 
   @NonNull
@@ -75,17 +59,17 @@ public class NetworkProxy {
     return getUri("127.0.0.1", port);
   }
 
+  // Only Wifi and Cellular is supported
   public boolean isDeviceOffline() {
-    boolean result = true;
-    try {
-      ConnectivityManager connectivityManager
-        = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-      NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-      result = (activeNetworkInfo == null) || !activeNetworkInfo.isConnected();
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "Error testing ConnectivityManager", exception);
+    if (connectivityManager == null) {
+      return true;
+    } else {
+      NetworkCapabilities capabilities =
+        connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
+      return (capabilities == null) ||
+        !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+          capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
     }
-    return result;
   }
 
   public boolean hasWifiIpAddress() {
@@ -100,14 +84,18 @@ public class NetworkProxy {
 
   @Nullable
   private String getIpAddress() {
-    String result = null;
-    try {
-      WifiManager wifiManager =
-        (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
-      result = ipAddressToString(wifiManager.getConnectionInfo().getIpAddress());
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "Error getting IP address", exception);
+    if (connectivityManager != null) {
+      LinkProperties linkProperties =
+        connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
+      if (linkProperties != null) {
+        for (LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
+          InetAddress inetAddress = linkAddress.getAddress();
+          if (inetAddress instanceof java.net.Inet4Address) {
+            return inetAddress.getHostAddress();
+          }
+        }
+      }
     }
-    return result;
+    return null;
   }
 }
