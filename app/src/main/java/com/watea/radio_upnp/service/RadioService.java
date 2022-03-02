@@ -294,6 +294,7 @@ public class RadioService
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
+            playerAdapter.release();
             // For user convenience in local mode, session is kept alive.
             if (playerAdapter instanceof LocalPlayerAdapter) {
               // Try to relaunch just once
@@ -313,7 +314,6 @@ public class RadioService
                   4000);
               } else {
                 httpServer.setRadioHandlerController(null);
-                playerAdapter.release();
                 stopForeground(true);
                 if (isStarted) {
                   notificationManager.notify(NOTIFICATION_ID, getNotification());
@@ -324,7 +324,6 @@ public class RadioService
           default:
             // Cancel session and service
             httpServer.setRadioHandlerController(null);
-            playerAdapter.release();
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
             stopForeground(true);
