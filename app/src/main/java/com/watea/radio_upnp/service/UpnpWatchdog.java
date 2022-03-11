@@ -34,8 +34,8 @@ import org.fourthline.cling.model.meta.Service;
 
 public class UpnpWatchdog {
   private static final String LOG_TAG = UpnpWatchdog.class.getName();
-  private static final int DELAY = 2000; // ms
-  private static final int TOLERANCE = 2;
+  private static final int DELAY = 10000; // ms
+  private static final int TOLERANCE = 5;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   @Nullable
   private UpnpActionController.UpnpAction actionWatchdog = null;

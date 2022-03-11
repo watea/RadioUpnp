@@ -41,11 +41,10 @@ public class ItemAddFragment extends ItemFragment {
   public boolean onOptionsItemSelected(MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
       assert urlWatcher.url != null;
-      Radio radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url);
+      Radio radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url, false, getIcon());
       try {
-        assert getIcon() != null;
-        if (getRadioLibrary().insertAndSaveIcon(radio, getIcon()) <= 0) {
-          throw new RuntimeException();
+        if (!getRadioLibrary().add(radio)) {
+          tell(R.string.radio_database_update_failed);
         }
       } catch (Exception exception) {
         Log.e(LOG_TAG, "onOptionsItemSelected: internal failure", exception);

@@ -46,7 +46,6 @@ import com.watea.radio_upnp.model.DlnaDevice;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Vector;
 
 public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
@@ -56,7 +55,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   @NonNull
   private final Listener listener;
   private final int selectedColor;
-  @NonNull
+  @Nullable
   private final Drawable castIcon;
   @Nullable
   private String chosenDlnaDeviceIdentity;
@@ -68,8 +67,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
     this.listener = listener;
     this.selectedColor = ContextCompat.getColor(context, R.color.dark_blue);
-    this.castIcon = Objects.requireNonNull(
-      AppCompatResources.getDrawable(context, R.drawable.ic_cast_blue_24dp));
+    this.castIcon = AppCompatResources.getDrawable(context, R.drawable.ic_cast_blue_24dp);
     clear();
   }
 
@@ -129,16 +127,17 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     }
     dlnaDevices.add(dlnaDevice);
     notifyChange();
-    // Wait for icon
-    dlnaDevice.addListener(() -> {
-      if (dlnaDevices.contains(dlnaDevice)) {
-        notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
-        if (dlnaDevice == getChosenDlnaDevice()) {
-          listener.onChosenDeviceChange();
+    // Wait for icon (searched asynchronously)
+    if (dlnaDevice.isFullyHydrated()) {
+      dlnaDevice.searchIcon(() -> {
+        if (dlnaDevices.contains(dlnaDevice)) {
+          notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
+          if (dlnaDevice == getChosenDlnaDevice()) {
+            listener.onChosenDeviceChange();
+          }
         }
-      }
-    });
-    dlnaDevice.searchIcon();
+      });
+    }
   }
 
   public void remove(@NonNull RemoteDevice remoteDevice) {
@@ -218,6 +217,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
           selectedColor : defaultColor);
       // Icon
       Bitmap bitmap = dlnaDevice.getIcon();
+      assert castIcon != null;
       Drawable drawable =
         (bitmap == null) ? castIcon : new BitmapDrawable(view.getResources(), bitmap);
       drawable.setBounds(0, 0, ICON_SIZE, ICON_SIZE);

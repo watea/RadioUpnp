@@ -295,6 +295,7 @@ public class RadioService
             break;
           case PlaybackStateCompat.STATE_ERROR:
             playerAdapter.release();
+            httpServer.setRadioHandlerController(null);
             // For user convenience in local mode, session is kept alive.
             if (playerAdapter instanceof LocalPlayerAdapter) {
               // Try to relaunch just once
@@ -313,7 +314,6 @@ public class RadioService
                   },
                   4000);
               } else {
-                httpServer.setRadioHandlerController(null);
                 stopForeground(true);
                 if (isStarted) {
                   notificationManager.notify(NOTIFICATION_ID, getNotification());

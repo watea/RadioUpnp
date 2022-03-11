@@ -25,12 +25,14 @@ package com.watea.radio_upnp.model;
 
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.RatingCompat;
+import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -39,22 +41,25 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.service.RadioURL;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-@SuppressWarnings("unused")
 public class Radio {
   public static final Radio DUMMY_RADIO;
   private static final String LOG_TAG = Radio.class.getName();
+  private static final String SPACER = ";";
 
   static {
     Radio radio = null;
     try {
-      radio = new Radio("", new URL("http:"), null);
+      radio = new Radio("", new URL("http:"), null, false, null);
     } catch (MalformedURLException malformedURLException) {
       Log.e(LOG_TAG, "Bad static init");
     }
@@ -77,15 +82,31 @@ public class Radio {
   private URL webPageUrl;
   @NonNull
   private Quality quality;
+  @SuppressWarnings("FieldMayBeFinal")
   @NonNull
-  private Boolean isPreferred = false;
+  private Boolean isPreferred;
+  // Convenient member to temporary store icon,
+  // as icon is stored as file (which may be changed, actually)
+  @Nullable
+  private Bitmap icon;
 
   // Create Radio with no icon file
   public Radio(
     @NonNull String name,
     @NonNull URL uRL,
-    @Nullable URL webPageURL) {
-    this(name, new File(""), Type.MISC, Language.OTHER, uRL, webPageURL, Quality.MEDIUM);
+    @Nullable URL webPageURL,
+    @NonNull Boolean isPreferred,
+    @Nullable Bitmap icon) {
+    this(
+      name,
+      new File(""),
+      Type.MISC,
+      Language.OTHER,
+      uRL,
+      webPageURL,
+      Quality.MEDIUM,
+      isPreferred,
+      icon);
   }
 
   // Create Radio with no id
@@ -96,7 +117,9 @@ public class Radio {
     @NonNull Language language,
     @NonNull URL uRL,
     @Nullable URL webPageURL,
-    @NonNull Quality quality) {
+    @NonNull Quality quality,
+    @NonNull Boolean isPreferred,
+    @Nullable Bitmap icon) {
     id = -1L;
     this.name = name;
     this.iconFile = iconFile;
@@ -105,6 +128,8 @@ public class Radio {
     url = uRL;
     webPageUrl = webPageURL;
     this.quality = quality;
+    this.isPreferred = isPreferred;
+    this.icon = icon;
   }
 
   // SQL constructor
@@ -136,6 +161,20 @@ public class Radio {
       cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_IS_PREFERRED)));
   }
 
+  public Radio(@NonNull String string) throws MalformedURLException {
+    this(string.split(SPACER));
+  }
+
+  // Symmetrical to marshall(), no icon file created
+  private Radio(@NonNull String[] strings) throws MalformedURLException {
+    this(
+      strings[0],
+      new URL(strings[1]),
+      (strings[2].length() == 0) ? null : new URL(strings[2]),
+      Boolean.valueOf(strings[3]),
+      toBitmap(strings[4]));
+  }
+
   // First URL if m3u, else do nothing
   @Nullable
   public static URL getUrlFromM3u(@NonNull URL uRL) {
@@ -159,6 +198,31 @@ public class Radio {
       }
     }
     return null;
+  }
+
+  @NonNull
+  private static String marshall(@NonNull String string) {
+    return string + SPACER;
+  }
+
+  // Store bitmap as filename.png
+  @NonNull
+  public static File storeToFile(
+    @NonNull Context context, @NonNull Bitmap bitmap, @NonNull String fileName)
+    throws FileNotFoundException {
+    fileName = fileName + ".png";
+    FileOutputStream fileOutputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
+    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream)) {
+      Log.e(LOG_TAG, "bitmapToFile: internal failure");
+      throw new FileNotFoundException();
+    }
+    return new File(context.getFilesDir().getPath() + "/" + fileName);
+  }
+
+  @NonNull
+  private static Bitmap toBitmap(@NonNull String base64String) {
+    byte[] byteArray = Base64.decode(base64String, Base64.NO_WRAP);
+    return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
   }
 
   @Nullable
@@ -193,11 +257,13 @@ public class Radio {
     this.type = type;
   }
 
+  @SuppressWarnings("unused")
   @NonNull
   public Language getLanguage() {
     return language;
   }
 
+  @SuppressWarnings("unused")
   public void setLanguage(@NonNull Language language) {
     this.language = language;
   }
@@ -235,22 +301,23 @@ public class Radio {
     return iconFile;
   }
 
-  @NonNull
-  public File setIconFile(@NonNull File file) {
-    return iconFile = file;
-  }
-
   // Note: no defined size for icon
   @NonNull
   public Bitmap getIcon() {
     return BitmapFactory.decodeFile(iconFile.getPath());
   }
 
+  public void setIcon(@NonNull Bitmap icon) {
+    this.icon = icon;
+  }
+
+  @SuppressWarnings("unused")
   @NonNull
   public Quality getQuality() {
     return quality;
   }
 
+  @SuppressWarnings("unused")
   public void setQuality(@NonNull Quality quality) {
     this.quality = quality;
   }
@@ -258,10 +325,6 @@ public class Radio {
   @NonNull
   public Boolean isPreferred() {
     return isPreferred;
-  }
-
-  public void togglePreferred() {
-    isPreferred = !isPreferred;
   }
 
   // SQL access
@@ -321,11 +384,40 @@ public class Radio {
     //.putLong(MediaMetadataCompat.METADATA_KEY_YEAR, Long.valueOf(simpleDateFormat.format(Calendar.getInstance().getTime())))
   }
 
+  public boolean storeIcon(@NonNull Context context) {
+    assert icon != null;
+    try {
+      iconFile = storeToFile(context, icon, id.toString());
+    } catch (FileNotFoundException fileNotFoundException) {
+      Log.e(LOG_TAG, "storeIcon: internal failure", fileNotFoundException);
+      return false;
+    }
+    return true;
+  }
+
   @Override
   public boolean equals(@Nullable Object object) {
     return ((object instanceof Radio) && (id.longValue() == ((Radio) object).id.longValue()));
   }
 
+  // Only actually used field are exported
+  @NonNull
+  public String marshall() {
+    return marshall(name) +
+      marshall(url.toString()) +
+      marshall((webPageUrl == null) ? "" : webPageUrl.toString()) +
+      marshall(isPreferred.toString()) +
+      marshall(iconToBase64String());
+  }
+
+  @NonNull
+  private String iconToBase64String() {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    getIcon().compress(Bitmap.CompressFormat.PNG, 100, baos);
+    return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
+  }
+
+  @SuppressWarnings("unused")
   public enum Type {
     POPROCK,
     WORLD,
@@ -338,6 +430,7 @@ public class Radio {
     OTHER
   }
 
+  @SuppressWarnings("unused")
   public enum Language {
     ENGLISH,
     SPANISH,
@@ -346,6 +439,7 @@ public class Radio {
     OTHER
   }
 
+  @SuppressWarnings("unused")
   public enum Quality {
     LOW,
     MEDIUM,

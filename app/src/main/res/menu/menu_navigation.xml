@@ -39,14 +39,17 @@
             android:id="@+id/action_modify"
             android:icon="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />
+        <item
+            android:id="@+id/action_import"
+            android:icon="@drawable/ic_baseline_exit_to_app_white_24dp"
+            android:title="@string/title_import" />
     </group>
     <group
         android:id="@+id/sub"
         android:checkableBehavior="single">
-
         <item
             android:id="@+id/action_log"
-            android:icon="@drawable/ic_baseline_attach_email_white_24"
+            android:icon="@drawable/ic_baseline_attach_email_white_24dp"
             android:title="@string/title_log" />
         <item
             android:id="@+id/action_donate"

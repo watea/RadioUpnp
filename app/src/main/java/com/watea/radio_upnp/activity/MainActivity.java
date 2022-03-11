@@ -84,6 +84,7 @@ public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
   public static final int RADIO_ICON_SIZE = 300;
+  public static final int SEARCH_TIMEOUT = 10;
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new Hashtable<Class<? extends Fragment>, Integer>() {
@@ -160,6 +161,8 @@ public class MainActivity
       "https://streaming01.zfast.co.uk/proxy/davideof",
       "http://www.davideofmimic.com/")
   };
+  private static final DeviceTypeHeader RENDERER_DEVICE_TYPE_HEADER =
+    new DeviceTypeHeader(RENDERER_DEVICE_TYPE);
   private NetworkProxy networkProxy;
   // <HMI assets
   private DrawerLayout drawerLayout;
@@ -169,6 +172,7 @@ public class MainActivity
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
+  private ImportController importController;
   // />
   private RadioLibrary radioLibrary;
   private int navigationMenuCheckedId;
@@ -181,15 +185,20 @@ public class MainActivity
       androidUpnpService = (AndroidUpnpService) service;
       // Do nothing if we were disposed
       if (mainFragment != null) {
-        Registry registry = androidUpnpService.getRegistry();
+        assert getRegistry() != null;
+        // Add local export device
+        importController.addExportService(getRegistry());
+        // Define adapters
         upnpRegistryAdapter =
           new UpnpRegistryAdapter(mainFragment.getUpnpRegistryAdapterListener());
         // Add all devices to the list we already know about
-        for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
-          upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
+        for (RemoteDevice remoteDevice : getRegistry().getRemoteDevices()) {
+          upnpRegistryAdapter.remoteDeviceAdded(getRegistry(), remoteDevice);
+          importController.getListener().remoteDeviceAdded(getRegistry(), remoteDevice);
         }
         // Get ready for future device advertisements
-        registry.addListener(upnpRegistryAdapter);
+        getRegistry().addListener(upnpRegistryAdapter);
+        getRegistry().addListener(importController.getListener());
         // Ask for devices
         upnpSearch();
       }
@@ -199,10 +208,12 @@ public class MainActivity
     public void onServiceDisconnected(ComponentName className) {
       // Robustness, shall be defined here
       if (androidUpnpService != null) {
+        assert getRegistry() != null;
         if (upnpRegistryAdapter != null) {
-          androidUpnpService.getRegistry().removeListener(upnpRegistryAdapter);
+          getRegistry().removeListener(upnpRegistryAdapter);
           upnpRegistryAdapter = null;
         }
+        getRegistry().removeListener(importController.getListener());
         androidUpnpService = null;
       }
       // Tell MainFragment
@@ -243,12 +254,20 @@ public class MainActivity
         super.onOptionsItemSelected(item);
   }
 
+  @Nullable
+  public AndroidUpnpService getAndroidUpnpService() {
+    return androidUpnpService;
+  }
+
   @SuppressLint("NonConstantResourceId")
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
     Integer id = menuItem.getItemId();
     // Note: switch not to use as id not final
     switch (id) {
+      case R.id.action_import:
+        importController.showAlertDialog();
+        break;
       case R.id.action_about:
         aboutAlertDialog.show();
         break;
@@ -298,22 +317,26 @@ public class MainActivity
     Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG).show();
   }
 
-  // Search for Renderer devices, 10s timeout
   public boolean upnpSearch() {
+    return upnpSearch(RENDERER_DEVICE_TYPE_HEADER);
+  }
+
+  public boolean upnpSearch(@NonNull DeviceTypeHeader deviceTypeHeader) {
     if (androidUpnpService == null) {
-      tell(R.string.device_no_device_yet);
+      tell(R.string.service_not_available);
       return false;
     }
-    androidUpnpService.getControlPoint().search(new DeviceTypeHeader(RENDERER_DEVICE_TYPE), 10);
+    androidUpnpService.getControlPoint().search(deviceTypeHeader, SEARCH_TIMEOUT);
     return true;
   }
 
   public boolean upnpReset() {
     if (androidUpnpService == null) {
-      tell(R.string.device_no_device_yet);
+      tell(R.string.service_not_available);
       return false;
     }
-    androidUpnpService.getRegistry().removeAllRemoteDevices();
+    assert getRegistry() != null;
+    getRegistry().removeAllRemoteDevices();
     return true;
   }
 
@@ -387,6 +410,15 @@ public class MainActivity
     return networkProxy;
   }
 
+  public void checkNavigationMenu() {
+    checkNavigationMenu(navigationMenuCheckedId);
+  }
+
+  public void checkNavigationMenu(int id) {
+    navigationMenuCheckedId = id;
+    navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
+  }
+
   @Override
   protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
@@ -416,8 +448,7 @@ public class MainActivity
     // Create radio database (order matters)
     radioLibrary = new RadioLibrary(this);
     // Create default radios on first start
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
-      setDefaultRadios()) {
+    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) && setDefaultRadios()) {
       // To do just one time, store a flag
       sharedPreferences
         .edit()
@@ -459,6 +490,8 @@ public class MainActivity
       actionBar.setDisplayHomeAsUpEnabled(true);
       actionBar.setDisplayShowHomeEnabled(true);
     }
+    // Import function
+    importController = new ImportController(this);
     // Set navigation drawer toggle (according to documentation)
     drawerToggle = new ActionBarDrawerToggle(
       this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
@@ -476,7 +509,7 @@ public class MainActivity
     aboutAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
       .setView(aboutView)
       // Restore checked item
-      .setOnDismissListener(dialogInterface -> checkNavigationMenu(navigationMenuCheckedId))
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
@@ -497,13 +530,22 @@ public class MainActivity
     drawerToggle.onConfigurationChanged(newConfig);
   }
 
+  @Nullable
+  private Registry getRegistry() {
+    return (androidUpnpService == null) ? null : androidUpnpService.getRegistry();
+  }
+
   private boolean setDefaultRadios() {
     boolean result = false;
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
       try {
-        result = (radioLibrary.insertAndSaveIcon(
-          new Radio(defaultRadio.name, new URL(defaultRadio.uRL), new URL(defaultRadio.webPageURL)),
-          radioLibrary.resourceToBitmap(defaultRadio.drawable)) >= 0) || result;
+        Radio radio = new Radio(
+          defaultRadio.name,
+          new URL(defaultRadio.uRL),
+          new URL(defaultRadio.webPageURL),
+          false,
+          radioLibrary.resourceToBitmap(defaultRadio.drawable));
+        result = radioLibrary.add(radio) || result;
       } catch (Exception exception) {
         Log.e(LOG_TAG, "setDefaultRadios: internal failure", exception);
       }
@@ -514,11 +556,6 @@ public class MainActivity
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
-  }
-
-  private void checkNavigationMenu(int id) {
-    navigationMenuCheckedId = id;
-    navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
   }
 
   private static class DefaultRadio {

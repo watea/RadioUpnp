@@ -36,11 +36,8 @@ import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Icon;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
-import java.util.List;
-import java.util.Vector;
-
 public class DlnaDevice {
-  private final List<Runnable> listeners = new Vector<>();
+  private final Handler handler = new Handler(Looper.getMainLooper());
   @Nullable
   private final RemoteDevice remoteDevice;
   @Nullable
@@ -54,17 +51,9 @@ public class DlnaDevice {
     return device.getIdentity().getUdn().getIdentifierString();
   }
 
-  public void addListener(@NonNull Runnable listener) {
-    listeners.add(listener);
-  }
-
   @Nullable
   public Bitmap getIcon() {
     return icon;
-  }
-
-  public void setIcon(@NonNull Bitmap icon) {
-    this.icon = icon;
   }
 
   @Nullable
@@ -95,33 +84,26 @@ public class DlnaDevice {
     return (remoteDevice != null) && remoteDevice.isFullyHydrated();
   }
 
-  public void searchIcon() {
-    if (isFullyHydrated()) {
-      final Handler handler = new Handler(Looper.getMainLooper());
-      new Thread(() -> {
-        Icon largestIcon = null;
-        int maxWidth = 0;
-        assert remoteDevice != null;
-        for (Icon deviceIcon : remoteDevice.getIcons()) {
-          int width = deviceIcon.getWidth();
-          if (width > maxWidth) {
-            maxWidth = width;
-            largestIcon = deviceIcon;
-          }
+  // Search asynchronous in background
+  public void searchIcon(@NonNull Runnable listener) {
+    new Thread(() -> {
+      Icon largestIcon = null;
+      int maxWidth = 0;
+      assert remoteDevice != null;
+      for (Icon deviceIcon : remoteDevice.getIcons()) {
+        int width = deviceIcon.getWidth();
+        if (width > maxWidth) {
+          maxWidth = width;
+          largestIcon = deviceIcon;
         }
-        if (largestIcon != null) {
-          Bitmap searchedIcon =
-            new RadioURL(remoteDevice.normalizeURI(largestIcon.getUri())).getBitmap();
-          if (searchedIcon != null) {
-            icon = searchedIcon;
-            handler.post(() -> {
-              for (Runnable listener : listeners) {
-                listener.run();
-              }
-            });
-          }
-        }
-      }).start();
-    }
+      }
+      Bitmap searchedIcon;
+      if ((largestIcon != null) &&
+        ((searchedIcon = new RadioURL(remoteDevice.normalizeURI(largestIcon.getUri())).getBitmap())
+          != null)) {
+        icon = searchedIcon;
+        handler.post(listener);
+      }
+    }).start();
   }
 }

@@ -64,7 +64,8 @@
     <string name="mime_not_authorized">Warning! MIME type is not authorized.\nAudio content: </string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
     <string name="connection_test_successful">Connection test successful.\nAudio content: </string>
-    <string name="LAN_required">No LAN/Wifi connection found for DLNA function</string>
+    <string name="service_not_available">Service not available</string>
+    <string name="lan_required">No LAN/Wifi connection found for DLNA function</string>
     <string name="radio_long_press">Long press opens web site</string>
     <string name="play_long_press">Long press stops radio</string>
     <string name="dlna_enable">Short press: choose remote DLNA device.\nLong press: cancel choice.\nThe phone may need connection authorization.\nBad Wifi may hinder communication.</string>
@@ -73,7 +74,6 @@
     <string name="icon_updated">Icon updated!</string>
     <string name="dar_fm_went_wrong">Radio found!\nIcon or web page unavailable.</string>
     <string name="dar_fm_done">Radio found!</string>
-    <string name="got_it">Got it!</string>
     <string name="donation_button_close">Close</string>
     <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer.\nThanks a lot!</string>
     <string name="donation_google_android_market_description">(Google charges a fee of 15%)</string>
@@ -89,6 +89,11 @@
     <string name="not_to_delete">Current radio cannot be deleted</string>
     <string name="report_error">Error, report could not be generated</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
+    <string name="import_message">[GO!] searches a remote ACTIVE app on local network, and imports ALL radios. App must have been launched on remote device a few seconds before.\nPlease wait (about 5s) for result popup messages.\n[RESET SEARCH] cancels previous remote app search, may help in case of trouble.</string>
+    <string name="import_connection_failed">No ACTIVE remote app found. Please try again, or click [RESET SEARCH]!</string>
+    <string name="import_failed">Unable to store remote radios data</string>
+    <string name="import_action_failed">Unable to execute import action from remote app</string>
+    <string name="import_successful">Import successful!</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
@@ -104,6 +109,7 @@
     <string name="title_item_modify">Edit</string>
     <string name="title_dlna">DLNA</string>
     <string name="title_log">Report</string>
+    <string name="title_import">Import</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>
@@ -114,6 +120,9 @@
     <string name="action_skip_to_next">Skip to next</string>
     <string name="action_skip_to_previous">Skip to previous</string>
     <string name="action_browse">Browse</string>
+    <string name="action_import_reset">Reset search</string>
+    <string name="action_import_go">Go!</string>
+    <string name="action_got_it">Got it!</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
 </resources>

@@ -38,6 +38,7 @@ import org.fourthline.cling.model.types.ServiceId;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 
+// Handle device if service AV_TRANSPORT_SERVICE_ID is found
 public class UpnpRegistryAdapter extends DefaultRegistryListener {
   private static final String LOG_TAG = UpnpRegistryAdapter.class.getName();
   private final Handler handler = new Handler(Looper.getMainLooper());
@@ -50,7 +51,6 @@ public class UpnpRegistryAdapter extends DefaultRegistryListener {
     this.listener.onResetRemoteDevices();
   }
 
-  // Add device if service AV_TRANSPORT_SERVICE_ID is found
   @Override
   public void remoteDeviceAdded(Registry registry, final RemoteDevice remoteDevice) {
     // This device?

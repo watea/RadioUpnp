@@ -83,6 +83,14 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     public void onNewCurrentRadio(@Nullable Radio radio) {
       radiosAdapter.onRefresh(null);
     }
+
+    @Override
+    public void onRefresh() {
+      List<Long> radios = isPreferredRadios ?
+        getRadioLibrary().getPreferredRadioIds() : getRadioLibrary().getAllRadioIds();
+      radiosAdapter.onRefresh(radios);
+      defaultFrameLayout.setVisibility(getVisibleFrom(radios.isEmpty()));
+    }
   };
   private NetworkProxy networkProxy = null;
   // DLNA devices management
@@ -141,7 +149,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     // Force column count
     onConfigurationChanged(getActivity().getResources().getConfiguration());
     // Set view
-    setRadiosView();
+    radioLibraryListener.onRefresh();
     // RadioLibrary changes
     getRadioLibrary().addListener(radioLibraryListener);
   }
@@ -166,7 +174,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
           }
         }
       } else {
-        tell(R.string.LAN_required);
+        tell(R.string.lan_required);
       }
     };
   }
@@ -181,7 +189,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
           tell(R.string.dlna_search_reset);
         }
       } else {
-        tell(R.string.LAN_required);
+        tell(R.string.lan_required);
       }
       return true;
     };
@@ -255,15 +263,15 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     // Build alert dialogs
     radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setMessage(R.string.radio_long_press)
-      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItRadioLongPress = true)
+      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItRadioLongPress = true)
       .create();
     dlnaEnableAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setMessage(R.string.dlna_enable)
-      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
+      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
       .create();
     preferredRadiosAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setMessage(R.string.preferred_radios)
-      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
+      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
       .create();
     // Specific DLNA devices dialog
     dlnaAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
@@ -334,7 +342,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       case R.id.action_preferred:
         isPreferredRadios = !isPreferredRadios;
         setPreferredMenuItem();
-        setRadiosView();
+        radioLibraryListener.onRefresh();
         if (!gotItPreferredRadios) {
           preferredRadiosAlertDialog.show();
         }
@@ -353,14 +361,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   @Nullable
   public DlnaDevice getChosenDlnaDevice() {
     return dlnaDevicesAdapter.getChosenDlnaDevice();
-  }
-
-  // Utility to set radio list views
-  private void setRadiosView() {
-    List<Long> radios = isPreferredRadios ?
-      getRadioLibrary().getPreferredRadioIds() : getRadioLibrary().getAllRadioIds();
-    radiosAdapter.onRefresh(radios);
-    defaultFrameLayout.setVisibility(getVisibleFrom(radios.isEmpty()));
   }
 
   private void setDlnaMenuItem() {

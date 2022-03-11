@@ -9,10 +9,16 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_attach_email_white_24.xml" value="0.1" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_attach_email_white_24dp.xml" value="0.153" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_exit_to_app_24dp.xml" value="0.153" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_exit_to_app_black_24dp.xml" value="0.153" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_exit_to_app_white_24dp.xml" value="0.153" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_flaky_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_flaky_white_24dp.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_mic_white_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_replay_24dp.xml" value="0.1" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_skip_next_white_24dp.xml" value="0.153" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_baseline_skip_previous_white_24dp.xml" value="0.153" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_cast_black_24dp.xml" value="0.186328125" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_cast_blue_24dp.xml" value="0.168359375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_cast_white_24dp.xml" value="0.24027777777777778" />
@@ -22,6 +28,7 @@
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_edit_white_24dp.xml" value="0.1" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_24dp.xml" value="0.146484375" />
+        <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_blue_24dp.xml" value="0.153" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_gray_24dp.xml" value="0.11736111111111111" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_error_white_24dp.xml" value="0.146484375" />
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/drawable/ic_image_black_24dp.xml" value="0.221484375" />
@@ -65,6 +72,11 @@
         <entry key="..\:/Users/Stephane/AndroidStudioProjects/RadioUpnp/app/src/main/res/xml/filepaths.xml" value="0.181640625" />
       </map>
     </option>
+  </component>
+  <component name="EntryPointsManager">
+    <list size="1">
+      <item index="0" class="java.lang.String" itemvalue="org.fourthline.cling.binding.annotations.UpnpAction" />
+    </list>
   </component>
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="androidx.annotation.Nullable" />

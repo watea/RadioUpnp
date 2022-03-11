@@ -254,11 +254,12 @@ public abstract class ItemFragment extends MainActivityFragment {
     try {
       Bitmap icon = getIcon();
       if (icon != null) {
-        File file = getRadioLibrary().bitmapToFile(icon, Integer.toString(hashCode()));
+        assert getContext() != null;
+        File file = Radio.storeToFile(getContext(), icon, Integer.toString(hashCode()));
         outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
       }
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", exception);
+    } catch (FileNotFoundException fileNotFoundException) {
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", fileNotFoundException);
     }
   }
 

@@ -55,18 +55,29 @@ import com.watea.radio_upnp.service.RadioService;
 
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
+  @NonNull
   private final MainActivity mainActivity;
   // <HMI assets
+  @NonNull
   private final ImageButton playImageButton;
+  @NonNull
   private final ImageButton preferredImageButton;
+  @NonNull
   private final ProgressBar progressBar;
+  @NonNull
   private final ImageView albumArtImageView;
+  @NonNull
   private final LinearLayout playedRadioLinearLayout;
+  @NonNull
   private final TextView playedRadioNameTextView;
+  @NonNull
   private final TextView playedRadioInformationTextView;
+  @NonNull
   private final TextView playedRadioRateTextView;
+  @NonNull
   private final AlertDialog playLongPressAlertDialog;
   // />
+  @Nullable
   private RadioLibrary radioLibrary;
   private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
     @Override
@@ -91,6 +102,7 @@ public class PlayerController {
     }
   };
   private boolean gotItPlayLongPress;
+  @Nullable
   private MediaControllerCompat mediaController = null;
   // Callback from media control
   private final MediaControllerCompat.Callback mediaControllerCallback =
@@ -174,6 +186,7 @@ public class PlayerController {
         progressBar.setVisibility(MainActivityFragment.getVisibleFrom(isWaiting));
       }
     };
+  @Nullable
   private MediaBrowserCompat mediaBrowser = null;
   // MediaController from the MediaBrowser when it has successfully connected
   private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback =
@@ -221,7 +234,7 @@ public class PlayerController {
     // Build alert dialogs
     playLongPressAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
       .setMessage(R.string.play_long_press)
-      .setPositiveButton(R.string.got_it, (dialogInterface, i) -> gotItPlayLongPress = true)
+      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItPlayLongPress = true)
       .create();
     // Create view
     albumArtImageView = view.findViewById(R.id.album_art_image_view);
@@ -277,6 +290,7 @@ public class PlayerController {
         // Should not happen
         Log.i(LOG_TAG, "Internal failure, radio is null");
       } else {
+        assert radioLibrary != null;
         radioLibrary.setPreferred(radio.getId(), !radio.isPreferred());
       }
     });
@@ -303,6 +317,7 @@ public class PlayerController {
   // Handle services
   public void onActivityPause() {
     // Clear radioLibrary
+    assert radioLibrary != null;
     radioLibrary.removeListener(radioLibraryListener);
     // Shared preferences
     mainActivity
@@ -340,6 +355,7 @@ public class PlayerController {
 
   @Nullable
   private Radio getCurrentRadio() {
+    assert radioLibrary != null;
     return (mediaController == null) ? null : radioLibrary.getCurrentRadio();
   }
 

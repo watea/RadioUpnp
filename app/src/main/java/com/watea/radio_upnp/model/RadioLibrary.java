@@ -40,15 +40,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Vector;
 
 public class RadioLibrary {
   private static final String LOG_TAG = RadioLibrary.class.getName();
   private static final int ICON_SIZE = 300;
+  private static final String SPACER = "#";
   private final List<Listener> listeners = new Vector<>();
   @NonNull
   private final SQLiteDatabase radioDataBase;
@@ -75,8 +74,8 @@ public class RadioLibrary {
     return radioDataBase.isOpen();
   }
 
-  public int updateFrom(@NonNull Long radioId, @NonNull ContentValues values) {
-    return radioDataBase.update(
+  public boolean updateFrom(@NonNull Long radioId, @NonNull ContentValues values) {
+    return (radioDataBase.update(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // Values for columns
@@ -84,7 +83,7 @@ public class RadioLibrary {
       // The columns for the WHERE clause
       RadioSQLContract.Columns._ID + " = ?",
       // The values for the WHERE clause
-      new String[]{radioId.toString()});
+      new String[]{radioId.toString()}) > 0);
   }
 
   @Nullable
@@ -132,14 +131,14 @@ public class RadioLibrary {
     return position;
   }
 
-  public int deleteFrom(@NonNull Long radioId) {
-    return radioDataBase.delete(
+  public boolean deleteFrom(@NonNull Long radioId) {
+    return (radioDataBase.delete(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns for the WHERE clause
       RadioSQLContract.Columns._ID + " = ?",
       // The values for the WHERE clause
-      new String[]{radioId.toString()});
+      new String[]{radioId.toString()}) > 0);
   }
 
   @NonNull
@@ -158,43 +157,19 @@ public class RadioLibrary {
     return Bitmap.createScaledBitmap(b, ICON_SIZE, ICON_SIZE, false);
   }
 
-  // Store bitmap as filename.png
-  @NonNull
-  public File bitmapToFile(@NonNull Bitmap bitmap, @NonNull String fileName)
-    throws FileNotFoundException, RuntimeException {
-    fileName = fileName + ".png";
-    FileOutputStream fileOutputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
-    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream)) {
-      Log.e(LOG_TAG, "bitmapToFile: internal failure");
-      throw new RuntimeException();
+  // Add a radio and store according icon
+  public boolean add(@NonNull Radio radio) {
+    ContentValues contentValues = radio.toContentValues();
+    // Position = last
+    contentValues.put(RadioSQLContract.Columns.COLUMN_POSITION, getMaxPosition() + 1);
+    radio.setId(radioDataBase.insert(RadioSQLContract.Columns.TABLE_RADIO, null, contentValues));
+    // Success? => store icon file
+    if ((radio.getId() >= 0) && radio.storeIcon(context)) {
+      contentValues.clear();
+      contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, radio.getIconFile().getPath());
+      return updateFrom(radio.getId(), contentValues);
     }
-    return new File(context.getFilesDir().getPath() + "/" + fileName);
-  }
-
-  // Add a radio with id as icon file name
-  @NonNull
-  public Long insertAndSaveIcon(@NonNull Radio radio, @NonNull Bitmap icon)
-    throws FileNotFoundException, RuntimeException {
-    // Store radio in database
-    Long radioId = insert(radio);
-    if (radioId >= 0) {
-      ContentValues contentValues = new ContentValues();
-      // RadioId is used as file id for bitmap file
-      contentValues.put(
-        RadioSQLContract.Columns.COLUMN_ICON,
-        bitmapToFile(icon, radioId.toString()).getPath());
-      // Store file name in database
-      if (updateFrom(radioId, contentValues) <= 0) {
-        Log.e(LOG_TAG, "insertAndSaveIcon: internal failure");
-        throw new RuntimeException();
-      }
-    }
-    return radioId;
-  }
-
-  public void setRadioIconFile(@NonNull Radio radio, @NonNull Bitmap icon)
-    throws FileNotFoundException, RuntimeException {
-    bitmapToFile(icon, radio.getId().toString());
+    return false;
   }
 
   @NonNull
@@ -232,21 +207,19 @@ public class RadioLibrary {
   public boolean setPreferred(@NonNull Long radioId, @NonNull Boolean isPreferred) {
     ContentValues values = new ContentValues();
     values.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
-    boolean result = (updateFrom(radioId, values) > 0);
-    if (result) {
+    if (updateFrom(radioId, values)) {
       Radio radio = getFrom(radioId);
       assert radio != null;
-      for (Listener listener : listeners) {
-        listener.onPreferredChange(radio);
-      }
+      tellListeners(listener -> listener.onPreferredChange(radio));
+      return true;
     }
-    return result;
+    return false;
   }
 
   public boolean move(@NonNull Long fromRadioId, @NonNull Long toRadioId) {
     ContentValues fromPosition = positionContentValuesOf(fromRadioId);
     ContentValues toPosition = positionContentValuesOf(toRadioId);
-    return (updateFrom(fromRadioId, toPosition) > 0) && (updateFrom(toRadioId, fromPosition) > 0);
+    return updateFrom(fromRadioId, toPosition) && updateFrom(toRadioId, fromPosition);
   }
 
   public void addListener(@NonNull Listener listener) {
@@ -266,9 +239,37 @@ public class RadioLibrary {
   public void setCurrentRadio(@Nullable MediaMetadataCompat metadata) {
     String id = (metadata == null) ? null : metadata.getDescription().getMediaId();
     currentRadioId = (id == null) ? null : Long.valueOf(id);
-    for (Listener listener : listeners) {
-      listener.onNewCurrentRadio(getCurrentRadio());
+    tellListeners(listener -> listener.onNewCurrentRadio(getCurrentRadio()));
+  }
+
+  @NonNull
+  public String marshall() {
+    StringBuilder result = new StringBuilder();
+    for (Long id : getAllRadioIds()) {
+      Radio radio = getFrom(id);
+      assert radio != null;
+      result.append(radio.marshall()).append(SPACER);
     }
+    return result.toString();
+  }
+
+  // Symmetrical from export().
+  // Returns true if some radios have been imported.
+  public boolean importFrom(@NonNull String importString) {
+    boolean result = false;
+    if (!importString.isEmpty()) {
+      for (String radioString : importString.split(SPACER)) {
+        try {
+          result = add(new Radio(radioString)) || result;
+        } catch (MalformedURLException malformedURLException) {
+          Log.e(LOG_TAG, "importFrom: a radio failed to be imported");
+        }
+      }
+      if (result) {
+        tellListeners(Listener::onRefresh);
+      }
+    }
+    return result;
   }
 
   // Utility for database update of radio position
@@ -352,11 +353,10 @@ public class RadioLibrary {
     return position;
   }
 
-  private long insert(@NonNull Radio radio) {
-    ContentValues contentValues = radio.toContentValues();
-    // Position = last
-    contentValues.put(RadioSQLContract.Columns.COLUMN_POSITION, getMaxPosition() + 1);
-    return radioDataBase.insert(RadioSQLContract.Columns.TABLE_RADIO, null, contentValues);
+  private void tellListeners(@NonNull Consumer<Listener> consumer) {
+    for (Listener listener : listeners) {
+      consumer.accept(listener);
+    }
   }
 
   public interface Listener {
@@ -365,6 +365,13 @@ public class RadioLibrary {
 
     default void onNewCurrentRadio(@Nullable Radio radio) {
     }
+
+    default void onRefresh() {
+    }
+  }
+
+  private interface Consumer<T> {
+    void accept(T t);
   }
 
   private static class RadioDbSQLHelper extends SQLiteOpenHelper {

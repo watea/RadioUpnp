@@ -70,12 +70,8 @@ public class RadiosModifyAdapter
     recyclerView.setAdapter(this);
   }
 
-  @SuppressLint("NotifyDataSetChanged")
   public void onResume() {
-    radioIds.clear();
-    radioIds.addAll(getRadioLibrary().getAllRadioIds());
-    notifyDataSetChanged();
-    notifyEmpty();
+    onRefresh();
     getRadioLibrary().addListener(this);
   }
 
@@ -107,6 +103,15 @@ public class RadiosModifyAdapter
   @Override
   public void onPreferredChange(@NonNull Radio radio) {
     notifyItemChanged(radioIds.indexOf(radio.getId()));
+  }
+
+  @SuppressLint("NotifyDataSetChanged")
+  @Override
+  public void onRefresh() {
+    radioIds.clear();
+    radioIds.addAll(getRadioLibrary().getAllRadioIds());
+    notifyDataSetChanged();
+    notifyEmpty();
   }
 
   private void databaseWarn() {
@@ -177,7 +182,7 @@ public class RadiosModifyAdapter
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
       final int position = viewHolder.getAbsoluteAdapterPosition();
-      if (getRadioLibrary().deleteFrom(radioIds.get(position)) > 0) {
+      if (getRadioLibrary().deleteFrom(radioIds.get(position))) {
         // Database updated, update view
         radioIds.remove(position);
         notifyItemRemoved(position);

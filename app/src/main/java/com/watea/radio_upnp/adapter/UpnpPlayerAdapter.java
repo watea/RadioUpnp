@@ -45,6 +45,7 @@ import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Service;
 import org.fourthline.cling.model.types.DeviceType;
 import org.fourthline.cling.model.types.ServiceId;
+import org.fourthline.cling.model.types.UDADeviceType;
 import org.fourthline.cling.model.types.UDAServiceId;
 
 import java.util.List;
@@ -54,8 +55,7 @@ import java.util.regex.Pattern;
 
 public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.UpnpController {
   public static final ServiceId AV_TRANSPORT_SERVICE_ID = new UDAServiceId("AVTransport");
-  public static final DeviceType RENDERER_DEVICE_TYPE =
-    new DeviceType("schemas-upnp-org", "MediaRenderer", 1);
+  public static final DeviceType RENDERER_DEVICE_TYPE = new UDADeviceType("MediaRenderer");
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
   private static final ServiceId RENDERING_CONTROL_ID = new UDAServiceId("RenderingControl");
   private static final ServiceId CONNECTION_MANAGER_ID = new UDAServiceId("ConnectionManager");
@@ -121,20 +121,20 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
     Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
     Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
     upnpWatchdog = new UpnpWatchdog(
-        this.upnpActionController,
-        avTransportService,
-        new UpnpWatchdog.Listener() {
-          @NonNull
-          @Override
-          public String getInstanceId() {
-            return instanceId;
-          }
+      this.upnpActionController,
+      avTransportService,
+      new UpnpWatchdog.Listener() {
+        @NonNull
+        @Override
+        public String getInstanceId() {
+          return instanceId;
+        }
 
-          @Override
-          public void onError() {
-            changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          }
-        });
+        @Override
+        public void onError() {
+          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+        }
+      });
     Action<?> action = getAction(avTransportService, ACTION_PLAY, true);
     actionPlay = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
@@ -365,37 +365,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
     return actions;
   }
 
-  // Special handling for MIME type
-  @NonNull
-  @Override
-  public String getContentType() {
-    final String HEAD_EXP = "[a-z]*/";
-    String contentType = upnpActionController.getContentType(radio);
-    // Default value
-    if (contentType == null) {
-      contentType = DEFAULT_CONTENT_TYPE;
-    }
-    // First choice: contentType
-    String result = searchContentType(contentType);
-    if (result != null) {
-      return result;
-    }
-    // Second choice: MIME subtype
-    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
-    if (result != null) {
-      return result;
-    }
-    // AAC special case
-    if (contentType.contains("aac")) {
-      result = searchContentType(AUDIO_CONTENT_TYPE + "mp4");
-      if (result != null) {
-        return result;
-      }
-    }
-    // Default case
-    return contentType;
-  }
-
   @Override
   protected boolean isLocal() {
     return false;
@@ -440,6 +409,37 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
   @Override
   public void onRelease() {
     upnpWatchdog.kill();
+  }
+
+  // Special handling for MIME type
+  @NonNull
+  @Override
+  public String getContentType() {
+    final String HEAD_EXP = "[a-z]*/";
+    String contentType = upnpActionController.getContentType(radio);
+    // Default value
+    if (contentType == null) {
+      contentType = DEFAULT_CONTENT_TYPE;
+    }
+    // First choice: contentType
+    String result = searchContentType(contentType);
+    if (result != null) {
+      return result;
+    }
+    // Second choice: MIME subtype
+    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
+    if (result != null) {
+      return result;
+    }
+    // AAC special case
+    if (contentType.contains("aac")) {
+      result = searchContentType(AUDIO_CONTENT_TYPE + "mp4");
+      if (result != null) {
+        return result;
+      }
+    }
+    // Default case
+    return contentType;
   }
 
   private void onPreparedPlay() {

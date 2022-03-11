@@ -67,7 +67,7 @@ public class HttpServer extends Thread {
     networkProxy = new NetworkProxy(this.context);
     // Handler for local files
     ResourceHandler resourceHandler = new ResourceHandler();
-    resourceHandler.setResourceBase(context.getFilesDir().getPath());
+    resourceHandler.setResourceBase(this.context.getFilesDir().getPath());
     // Add the ResourceHandler to the server
     HandlerList handlers = new HandlerList();
     handlers.setHandlers(new Handler[]{resourceHandler, radioHandler});

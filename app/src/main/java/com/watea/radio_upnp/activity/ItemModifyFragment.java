@@ -82,21 +82,19 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
-      assert urlWatcher.url != null;
       if (getRadioLibrary().isCurrentRadio(radio)) {
         tell(R.string.not_to_modify);
       } else {
         radio.setName(getRadioName());
+        assert urlWatcher.url != null;
         radio.setURL(urlWatcher.url);
         radio.setWebPageURL(webPageWatcher.url);
+        assert getIcon() != null;
+        radio.setIcon(getIcon());
         // Same file name reused to store icon
-        try {
-          getRadioLibrary().setRadioIconFile(radio, getIcon());
-          if (getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues()) <= 0) {
-            throw new RuntimeException();
-          }
-        } catch (Exception exception) {
-          Log.e(LOG_TAG, "onOptionsItemSelected: internal failure", exception);
+        assert getContext() != null;
+        if (!(radio.storeIcon(getContext()) &&
+          getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues()))) {
           tell(R.string.radio_database_update_failed);
         }
         getBack();
