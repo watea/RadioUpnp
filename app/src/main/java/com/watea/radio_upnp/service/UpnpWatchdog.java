@@ -35,7 +35,7 @@ import org.fourthline.cling.model.meta.Service;
 public class UpnpWatchdog {
   private static final String LOG_TAG = UpnpWatchdog.class.getName();
   private static final int DELAY = 10000; // ms
-  private static final int TOLERANCE = 2;
+  private static final int TOLERANCE = 1;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   @Nullable
   private UpnpActionController.UpnpAction actionWatchdog = null;
@@ -74,7 +74,7 @@ public class UpnpWatchdog {
 
         @Override
         protected void failure() {
-          if (failureCount++ > TOLERANCE) {
+          if (failureCount++ >= TOLERANCE) {
             Log.d(LOG_TAG, "Watchdog failed; no answer");
             listener.run();
           } else {

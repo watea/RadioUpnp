@@ -43,6 +43,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -53,10 +54,23 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.service.RadioService;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Vector;
+
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
+  private static final String DATE = "date";
+  private static final String INFORMATION = "information";
   @NonNull
   private final MainActivity mainActivity;
+  private final List<Map<String, String>> playInformations = new Vector<>();
+  private final SimpleAdapter playlistAdapter;
   // <HMI assets
   @NonNull
   private final ImageButton playImageButton;
@@ -76,6 +90,10 @@ public class PlayerController {
   private final TextView playedRadioRateTextView;
   @NonNull
   private final AlertDialog playLongPressAlertDialog;
+  @NonNull
+  private final AlertDialog informationPressAlertDialog;
+  @NonNull
+  private final AlertDialog playlistAlertDialog;
   // />
   @Nullable
   private RadioLibrary radioLibrary;
@@ -102,6 +120,7 @@ public class PlayerController {
     }
   };
   private boolean gotItPlayLongPress;
+  private boolean gotItInformationPress;
   @Nullable
   private MediaControllerCompat mediaController = null;
   // Callback from media control
@@ -171,12 +190,17 @@ public class PlayerController {
       @Override
       public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
         if (mediaMetadata != null) {
-          playedRadioInformationTextView.setText(
-            mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST));
+          String information = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
+          playedRadioInformationTextView.setText(information);
           // Use WRITER for rate
           String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
           playedRadioRateTextView.setText(
             (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
+          // Fill playlist
+          if (information != null) {
+            DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+            addInformations(dateFormat.format(Calendar.getInstance().getTime()), information);
+          }
         }
       }
 
@@ -231,13 +255,30 @@ public class PlayerController {
     SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
     gotItPlayLongPress = sharedPreferences.getBoolean(
       mainActivity.getString(R.string.key_play_long_press_got_it), false);
+    gotItInformationPress = sharedPreferences.getBoolean(
+      mainActivity.getString(R.string.key_information_press_got_it), false);
     // Build alert dialogs
     playLongPressAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
       .setMessage(R.string.play_long_press)
       .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItPlayLongPress = true)
       .create();
+    informationPressAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
+      .setMessage(R.string.information_press)
+      .setPositiveButton(
+        R.string.action_got_it, (dialogInterface, i) -> gotItInformationPress = true)
+      .create();
+    playlistAdapter = new SimpleAdapter(
+      mainActivity,
+      playInformations,
+      R.layout.row_playlist,
+      new String[]{DATE, INFORMATION},
+      new int[]{R.id.row_playlist_date_text_view, R.id.row_playlist_information_text_view});
+    playlistAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
+      .setAdapter(playlistAdapter, null)
+      .create();
     // Create view
     albumArtImageView = view.findViewById(R.id.album_art_image_view);
+    albumArtImageView.setOnClickListener(v -> playlistAlertDialog.show());
     playedRadioLinearLayout = view.findViewById(R.id.played_radio_linear_layout);
     playedRadioNameTextView = view.findViewById(R.id.played_radio_name_text_view);
     playedRadioNameTextView.setSelected(true); // For scrolling
@@ -324,6 +365,8 @@ public class PlayerController {
       .getPreferences(Context.MODE_PRIVATE)
       .edit()
       .putBoolean(mainActivity.getString(R.string.key_play_long_press_got_it), gotItPlayLongPress)
+      .putBoolean(
+        mainActivity.getString(R.string.key_information_press_got_it), gotItInformationPress)
       .apply();
     // Disconnect mediaBrowser, if necessary
     if (mediaBrowser != null) {
@@ -351,12 +394,48 @@ public class PlayerController {
       bundle.putString(mainActivity.getString(R.string.key_dlna_device), dlnaDeviceIdentity);
     }
     mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
+    // Information
+    clearInformations();
+    if (!gotItInformationPress) {
+      informationPressAlertDialog.show();
+    }
   }
 
   @Nullable
   private Radio getCurrentRadio() {
     assert radioLibrary != null;
     return (mediaController == null) ? null : radioLibrary.getCurrentRadio();
+  }
+
+  private void clearInformations() {
+    playInformations.clear();
+    // Default
+    insertInformations("", mainActivity.getString(R.string.no_data));
+  }
+
+  private void addInformations(@NonNull String date, @NonNull String information) {
+    // No empty data
+    if (information.isEmpty()) {
+      return;
+    }
+    // Reset default if any
+    if ((playInformations.size() == 1) &&
+      mainActivity.getString(R.string.no_data).equals(playInformations.get(0).get(INFORMATION))) {
+      playInformations.clear();
+    }
+    // Insert if new
+    if (playInformations.isEmpty() ||
+      !information.equals(playInformations.get(playInformations.size() - 1).get(INFORMATION))) {
+      insertInformations(date, information);
+    }
+  }
+
+  private void insertInformations(@NonNull String date, @NonNull String information) {
+    Map<String, String> informationMap = new Hashtable<>();
+    informationMap.put(DATE, date);
+    informationMap.put(INFORMATION, information);
+    playInformations.add(informationMap);
+    playlistAdapter.notifyDataSetChanged();
   }
 
   private void setPreferredButton(boolean isPreferred) {

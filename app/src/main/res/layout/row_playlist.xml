@@ -21,18 +21,23 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<resources>
-    <!-- Preferences -->
-    <string name="key_first_start">key_first_start</string>
-    <string name="key_preferred_radios">key_preferred_radios</string>
-    <string name="key_selected_device">key_selected_device</string>
-    <string name="key_radio_long_press_got_it">key_radio_long_press_got_it</string>
-    <string name="key_play_long_press_got_it">key_play_long_press_got_it</string>
-    <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
-    <string name="key_preferred_radios_got_it">key_preferred_radios_got_it</string>
-    <string name="key_information_press_got_it">key_information_press_got_it</string>
-    <string name="key_radio_icon_file">key_radio_icon_file</string>
-    <string name="key_radio_id">key_radio_id</string>
-    <!-- Bundles -->
-    <string name="key_dlna_device">key_dlna_device</string>
-</resources>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/row_playlist_date_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/app_horizontal_margin"
+        android:textAllCaps="true" />
+
+    <TextView
+        android:id="@+id/row_playlist_information_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textStyle="bold" />
+
+</LinearLayout>

@@ -567,7 +567,7 @@ public abstract class ItemFragment extends MainActivityFragment {
           new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
             .setAdapter(
               new SimpleAdapter(
-                getActivity(),
+                getContext(),
                 radios,
                 R.layout.row_darfm_radio,
                 new String[]{DAR_FM_NAME},

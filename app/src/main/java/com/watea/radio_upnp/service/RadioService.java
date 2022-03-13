@@ -223,6 +223,10 @@ public class RadioService
   public void onDestroy() {
     super.onDestroy();
     Log.d(LOG_TAG, "onDestroy: requested...");
+    // Stop player to be clean on resources (if not, audio focus is not well handled)
+    if (playerAdapter != null) {
+      playerAdapter.stop();
+    }
     // Stop UPnP service
     unbindService(upnpConnection);
     // Forced disconnection
@@ -428,7 +432,7 @@ public class RadioService
       if (upnpActionController != null) {
         upnpActionController.release(true);
       }
-      // In any case, stop player if it exists
+      // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
         playerAdapter.stop();
       }

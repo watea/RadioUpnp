@@ -68,6 +68,7 @@
     <string name="lan_required">No LAN/Wifi connection found for DLNA function</string>
     <string name="radio_long_press">Long press opens web site</string>
     <string name="play_long_press">Long press stops radio</string>
+    <string name="information_press">Click on playing radio icon to display current playlist</string>
     <string name="dlna_enable">Short press: choose remote DLNA device.\nLong press: cancel choice.\nThe phone may need connection authorization.\nBad Wifi may hinder communication.</string>
     <string name="preferred_radios">Display only preferred radios.\nPreferred radios are set in Modify screen.</string>
     <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>
@@ -94,6 +95,7 @@
     <string name="import_failed">Unable to store remote radios data</string>
     <string name="import_action_failed">Unable to execute import action from remote app</string>
     <string name="import_successful">Import successful!</string>
+    <string name="no_data">No playlist data found</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
