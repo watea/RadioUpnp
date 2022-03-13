@@ -35,7 +35,7 @@ import org.fourthline.cling.model.meta.Service;
 public class UpnpWatchdog {
   private static final String LOG_TAG = UpnpWatchdog.class.getName();
   private static final int DELAY = 10000; // ms
-  private static final int TOLERANCE = 1;
+  private static final int TOLERANCE = 5;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   @Nullable
   private UpnpActionController.UpnpAction actionWatchdog = null;
@@ -45,17 +45,16 @@ public class UpnpWatchdog {
   public UpnpWatchdog(
     @NonNull UpnpActionController upnpActionController,
     @Nullable Service<?, ?> avTransportService,
-    @NonNull InstanceIdSupplier instanceIdSupplier,
-    @NonNull Runnable listener) {
+    @NonNull Listener listener) {
     Action<?> action;
     if ((avTransportService == null) ||
       ((action = avTransportService.getAction(ACTION_GET_TRANSPORT_INFO)) == null)) {
-      listener.run();
+      listener.onError();
     } else {
       actionWatchdog = new UpnpActionController.UpnpAction(upnpActionController, action) {
         @Override
         public ActionInvocation<?> getActionInvocation() {
-          return getActionInvocation(instanceIdSupplier.get());
+          return getActionInvocation(listener.getInstanceId());
         }
 
         @Override
@@ -65,18 +64,23 @@ public class UpnpWatchdog {
           if (currentTransportState.equals("TRANSITIONING") ||
             currentTransportState.equals("PLAYING")) {
             failureCount = 0;
+            try {
+              Thread.sleep(DELAY);
+            } catch (InterruptedException interruptedException) {
+              Log.d(LOG_TAG, "Sleep failed");
+            }
             start();
           } else {
             Log.d(LOG_TAG, "Watchdog failed; state not allowed: " + currentTransportState);
-            listener.run();
+            listener.onError();
           }
         }
 
         @Override
         protected void failure() {
-          if (failureCount++ >= TOLERANCE) {
+          if (failureCount++ > TOLERANCE) {
             Log.d(LOG_TAG, "Watchdog failed; no answer");
-            listener.run();
+            listener.onError();
           } else {
             start();
           }
@@ -87,11 +91,6 @@ public class UpnpWatchdog {
 
   public void start() {
     if ((actionWatchdog != null) && !kill) {
-      try {
-        Thread.sleep(DELAY);
-      } catch (InterruptedException interruptedException) {
-        Log.d(LOG_TAG, "start: Sleep failed");
-      }
       actionWatchdog.execute();
     }
   }
@@ -100,8 +99,10 @@ public class UpnpWatchdog {
     kill = true;
   }
 
-  public interface InstanceIdSupplier {
+  public interface Listener {
     @NonNull
-    String get();
+    String getInstanceId();
+
+    void onError();
   }
 }
