@@ -52,6 +52,7 @@ import org.fourthline.cling.registry.RegistryListener;
 
 class ImportController {
   private static final String LOG_TAG = ImportController.class.getName();
+  private static final int IMPORT_DELAY = 4000; // ms
   private static final DeviceTypeHeader EXPORTER_DEVICE_TYPE_HEADER =
     new DeviceTypeHeader(EXPORTER_DEVICE_TYPE);
   private final Handler handler = new Handler(Looper.getMainLooper());
@@ -100,7 +101,9 @@ class ImportController {
       .setIcon(R.drawable.ic_baseline_exit_to_app_black_24dp)
       .setMessage(R.string.import_message)
       .setNeutralButton(R.string.action_import_reset, (dialog, which) -> reset())
-      .setPositiveButton(R.string.action_import_go, (dialog, which) -> handler.postDelayed(this::upnpImport, 5000))
+      .setPositiveButton(
+        R.string.action_import_go,
+        (dialog, which) -> handler.postDelayed(this::upnpImport, IMPORT_DELAY))
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())
       .create();
