@@ -123,18 +123,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
     upnpWatchdog = new UpnpWatchdog(
       this.upnpActionController,
       avTransportService,
-      new UpnpWatchdog.Listener() {
-        @NonNull
-        @Override
-        public String getInstanceId() {
-          return instanceId;
-        }
-
-        @Override
-        public void onError() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-        }
-      });
+      () -> instanceId,
+      () -> changeAndNotifyState(PlaybackStateCompat.STATE_ERROR));
     Action<?> action = getAction(avTransportService, ACTION_PLAY, true);
     actionPlay = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {

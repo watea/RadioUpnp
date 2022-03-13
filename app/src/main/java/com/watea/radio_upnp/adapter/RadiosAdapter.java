@@ -52,11 +52,18 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
   private final int iconSize;
   @NonNull
   private final Listener listener;
+  @NonNull
+  private final Callback callback;
   private final List<Long> radioIds = new Vector<>();
 
-  public RadiosAdapter(@NonNull Context context, @NonNull Listener listener, int iconSize) {
+  public RadiosAdapter(
+    @NonNull Context context,
+    @NonNull Listener listener,
+    @NonNull Callback callback,
+    int iconSize) {
     this.context = context;
     this.listener = listener;
+    this.callback = callback;
     this.iconSize = iconSize;
   }
 
@@ -81,7 +88,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    Radio radio = listener.getRadioFromId(radioIds.get(i));
+    Radio radio = callback.getRadioFromId(radioIds.get(i));
     if (radio != null) {
       viewHolder.setView(radio);
     }
@@ -94,7 +101,9 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   public interface Listener {
     void onClick(@NonNull Radio radio);
+  }
 
+  public interface Callback {
     @Nullable
     Radio getRadioFromId(@NonNull Long radioId);
 
@@ -134,7 +143,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
     private void setView(@NonNull Radio radio) {
       this.radio = radio;
-      if (listener.isCurrentRadio(this.radio)) {
+      if (callback.isCurrentRadio(this.radio)) {
         radioTextView.setBackground(defaultBackground);
       } else {
         radioTextView.setBackgroundColor(getDominantColor(this.radio.getIcon()));
