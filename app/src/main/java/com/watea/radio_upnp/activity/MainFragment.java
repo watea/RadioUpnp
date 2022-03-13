@@ -55,8 +55,6 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.service.NetworkProxy;
 
-import org.fourthline.cling.model.meta.RemoteDevice;
-
 import java.util.List;
 
 public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
@@ -95,29 +93,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   private NetworkProxy networkProxy = null;
   // DLNA devices management
   private DlnaDevicesAdapter dlnaDevicesAdapter = null;
-  private final UpnpRegistryAdapter.Listener upnpRegistryAdapterListener =
-    new UpnpRegistryAdapter.Listener() {
-      @Override
-      public void onAddOrReplace(RemoteDevice remoteDevice) {
-        if (dlnaDevicesAdapter != null) {
-          dlnaDevicesAdapter.addOrReplace(remoteDevice);
-        }
-      }
-
-      @Override
-      public void onRemove(RemoteDevice remoteDevice) {
-        if (dlnaDevicesAdapter != null) {
-          dlnaDevicesAdapter.remove(remoteDevice);
-        }
-      }
-
-      @Override
-      public void onResetRemoteDevices() {
-        if (dlnaDevicesAdapter != null) {
-          dlnaDevicesAdapter.clear();
-        }
-      }
-    };
 
   @Override
   public void onClick(@NonNull Radio radio) {
@@ -129,17 +104,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         radioLongPressAlertDialog.show();
       }
     }
-  }
-
-  @Nullable
-  @Override
-  public Radio getRadioFromId(@NonNull Long radioId) {
-    return getRadioLibrary().isOpen() ? getRadioLibrary().getFrom(radioId) : null;
-  }
-
-  @Override
-  public boolean isCurrentRadio(@NonNull Radio radio) {
-    return getRadioLibrary().isCurrentRadio(radio);
   }
 
   @Override
@@ -185,7 +149,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     return v -> {
       if (networkProxy.hasWifiIpAddress()) {
         if (getMainActivity().upnpReset()) {
-          dlnaDevicesAdapter.clear();
+          dlnaDevicesAdapter.onResetRemoteDevices();
           tell(R.string.dlna_search_reset);
         }
       } else {
@@ -256,7 +220,22 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
         }
       },
       getContext());
-    radiosAdapter = new RadiosAdapter(getContext(), this, RADIO_ICON_SIZE / 2);
+    radiosAdapter = new RadiosAdapter(
+      getContext(),
+      this,
+      new RadiosAdapter.Callback() {
+        @Nullable
+        @Override
+        public Radio getRadioFromId(@NonNull Long radioId) {
+          return getRadioLibrary().isOpen() ? getRadioLibrary().getFrom(radioId) : null;
+        }
+
+        @Override
+        public boolean isCurrentRadio(@NonNull Radio radio) {
+          return getRadioLibrary().isCurrentRadio(radio);
+        }
+      },
+      RADIO_ICON_SIZE / 2);
     gridLayoutManager = new GridLayoutManager(getContext(), DEFAULT_COLUMNS_COUNT);
     radiosRecyclerView.setLayoutManager(gridLayoutManager);
     radiosRecyclerView.setAdapter(radiosAdapter);
@@ -296,7 +275,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
   @NonNull
   public UpnpRegistryAdapter.Listener getUpnpRegistryAdapterListener() {
-    return upnpRegistryAdapterListener;
+    return dlnaDevicesAdapter;
   }
 
   @Override

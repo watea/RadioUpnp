@@ -48,7 +48,9 @@ import org.fourthline.cling.model.meta.RemoteDevice;
 import java.util.List;
 import java.util.Vector;
 
-public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder> {
+public class DlnaDevicesAdapter
+  extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder>
+  implements UpnpRegistryAdapter.Listener {
   private static final int ICON_SIZE = 100;
   private static final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
   private final List<DlnaDevice> dlnaDevices = new Vector<>();
@@ -68,7 +70,7 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     this.listener = listener;
     this.selectedColor = ContextCompat.getColor(context, R.color.dark_blue);
     this.castIcon = AppCompatResources.getDrawable(context, R.drawable.ic_cast_blue_24dp);
-    clear();
+    onResetRemoteDevices();
   }
 
   @NonNull
@@ -117,7 +119,8 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
   }
 
   // Replace if already here
-  public void addOrReplace(@NonNull RemoteDevice remoteDevice) {
+  @Override
+  public void onAddOrReplace(@NonNull RemoteDevice remoteDevice) {
     final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
     if (dlnaDevices.contains(dlnaDevice))
       return;
@@ -140,7 +143,8 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     }
   }
 
-  public void remove(@NonNull RemoteDevice remoteDevice) {
+  @Override
+  public void onRemove(@NonNull RemoteDevice remoteDevice) {
     dlnaDevices.remove(new DlnaDevice(remoteDevice));
     if (dlnaDevices.isEmpty()) {
       setDummyDeviceForWaiting();
@@ -148,7 +152,8 @@ public class DlnaDevicesAdapter extends RecyclerView.Adapter<DlnaDevicesAdapter.
     notifyChange();
   }
 
-  public void clear() {
+  @Override
+  public void onResetRemoteDevices() {
     dlnaDevices.clear();
     setDummyDeviceForWaiting();
     notifyChange();

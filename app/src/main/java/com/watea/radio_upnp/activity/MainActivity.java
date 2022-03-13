@@ -194,11 +194,11 @@ public class MainActivity
         // Add all devices to the list we already know about
         for (RemoteDevice remoteDevice : getRegistry().getRemoteDevices()) {
           upnpRegistryAdapter.remoteDeviceAdded(getRegistry(), remoteDevice);
-          importController.getListener().remoteDeviceAdded(getRegistry(), remoteDevice);
+          importController.getRegistryListener().remoteDeviceAdded(getRegistry(), remoteDevice);
         }
         // Get ready for future device advertisements
         getRegistry().addListener(upnpRegistryAdapter);
-        getRegistry().addListener(importController.getListener());
+        getRegistry().addListener(importController.getRegistryListener());
         // Ask for devices
         upnpSearch();
       }
@@ -213,7 +213,7 @@ public class MainActivity
           getRegistry().removeListener(upnpRegistryAdapter);
           upnpRegistryAdapter = null;
         }
-        getRegistry().removeListener(importController.getListener());
+        getRegistry().removeListener(importController.getRegistryListener());
         androidUpnpService = null;
       }
       // Tell MainFragment

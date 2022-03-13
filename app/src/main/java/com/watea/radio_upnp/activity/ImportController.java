@@ -111,7 +111,7 @@ class ImportController {
   }
 
   @NonNull
-  public RegistryListener getListener() {
+  public RegistryListener getRegistryListener() {
     return exportRegistryListener;
   }
 

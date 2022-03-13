@@ -539,8 +539,6 @@ public abstract class ItemFragment extends MainActivityFragment {
     @SuppressLint("SetTextI18n")
     @Override
     protected void onPostSearch() {
-      // Context exists
-      assert getContext() != null;
       switch (radios.size()) {
         case 0:
           tell(R.string.dar_fm_failed);
@@ -564,6 +562,8 @@ public abstract class ItemFragment extends MainActivityFragment {
             R.string.dar_fm_done : R.string.dar_fm_went_wrong);
           break;
         default:
+          // Context exists
+          assert getContext() != null;
           new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
             .setAdapter(
               new SimpleAdapter(
@@ -574,7 +574,6 @@ public abstract class ItemFragment extends MainActivityFragment {
                 new int[]{R.id.row_darfm_radio_name_text_view}),
               // Call recursively for selected radio
               (dialogInterface, i) -> new DarFmSearcher(radios.get(i)))
-            .setCancelable(true)
             .create()
             .show();
       }

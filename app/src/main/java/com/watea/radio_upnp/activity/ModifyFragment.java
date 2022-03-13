@@ -39,7 +39,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
 
 public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
   // <HMI assets
@@ -79,6 +78,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     radiosModifyAdapter = new RadiosModifyAdapter(
       getContext(),
       this,
+      MainActivityFragment::getRadioLibrary,
       RADIO_ICON_SIZE / 2,
       radiosRecyclerView);
   }
@@ -118,11 +118,5 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Override
   public void onEmpty(boolean isEmpty) {
     defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
-  }
-
-  @NonNull
-  @Override
-  public RadioLibrary getRadioLibraryAccess() {
-    return getRadioLibrary();
   }
 }

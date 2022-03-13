@@ -53,16 +53,20 @@ public class RadiosModifyAdapter
   private final Context context;
   @NonNull
   private final Listener listener;
+  @NonNull
+  private final Callback callback;
   private final int iconSize;
   private final List<Long> radioIds = new Vector<>();
 
   public RadiosModifyAdapter(
     @NonNull Context context,
     @NonNull Listener listener,
+    @NonNull Callback callback,
     int iconSize,
     @NonNull RecyclerView recyclerView) {
     this.context = context;
     this.listener = listener;
+    this.callback = callback;
     this.iconSize = iconSize;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
@@ -124,7 +128,7 @@ public class RadiosModifyAdapter
 
   @NonNull
   private RadioLibrary getRadioLibrary() {
-    return listener.getRadioLibraryAccess();
+    return callback.getRadioLibrary();
   }
 
   public interface Listener {
@@ -133,9 +137,11 @@ public class RadiosModifyAdapter
     boolean onCheckChange(@NonNull Radio radio);
 
     void onEmpty(boolean isEmpty);
+  }
 
+  public interface Callback {
     @NonNull
-    RadioLibrary getRadioLibraryAccess();
+    RadioLibrary getRadioLibrary();
   }
 
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
