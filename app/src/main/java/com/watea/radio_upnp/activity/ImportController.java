@@ -99,7 +99,8 @@ class ImportController {
       .setMessage(R.string.import_message)
       .setPositiveButton(
         R.string.action_import_go,
-        (dialog, which) -> handler.postDelayed(this::upnpImport, IMPORT_DELAY))
+        (dialog, which) ->
+          handler.postDelayed(this::upnpImport, (remoteDevice == null) ? IMPORT_DELAY : 0))
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())
       .create();
