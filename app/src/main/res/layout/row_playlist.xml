@@ -38,6 +38,7 @@
         android:id="@+id/row_playlist_information_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:padding="@dimen/app_horizontal_margin"
         android:textStyle="bold" />
 
 </LinearLayout>
