@@ -69,10 +69,7 @@ import org.fourthline.cling.model.message.header.DeviceTypeHeader;
 import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.registry.Registry;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -376,19 +373,12 @@ public class MainActivity
   }
 
   public void sendLogcatMail() {
-    // File is stored at root
+    // File is stored at root place for app
     File logFile = new File(getFilesDir(), "logcat.txt");
-    // Write log filtered on PID
-    String pid = String.valueOf(android.os.Process.myPid());
-    try (FileWriter out = new FileWriter(logFile)) {
-      Process process = Runtime.getRuntime().exec("logcat -d");
-      BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-      String currentLine;
-      while ((currentLine = reader.readLine()) != null) {
-        if (currentLine.contains(pid)) {
-          out.write(currentLine + "\n");
-        }
-      }
+    String packageName = getPackageName();
+    String[] command = new String[]{"logcat", "-d", "-f", logFile.toString(), packageName + ":D"};
+    try {
+      Runtime.getRuntime().exec(command);
       // Prepare mail
       startActivity(new Intent(Intent.ACTION_SEND)
         .setType("message/rfc822")
@@ -398,7 +388,7 @@ public class MainActivity
           "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
         .putExtra(
           Intent.EXTRA_STREAM,
-          FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", logFile)));
+          FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile)));
     } catch (Exception exception) {
       Log.e(LOG_TAG, "SendLogcatMail: internal failure", exception);
       tell(R.string.report_error);
