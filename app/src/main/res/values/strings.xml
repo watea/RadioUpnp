@@ -90,9 +90,9 @@
     <string name="not_to_delete">Current radio cannot be deleted</string>
     <string name="report_error">Error, report could not be generated</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
-    <string name="import_message">[GO!] searches a remote ACTIVE app on local network, and imports ALL radios. App must have been launched on remote device a few seconds before.\nPlease wait (about 5s) for result popup messages.\n[RESET SEARCH] cancels previous remote app search, may help in case of trouble.</string>
-    <string name="import_connection_failed">No ACTIVE remote app found. Please try again, or click [RESET SEARCH]!</string>
-    <string name="import_failed">Unable to store remote radios data</string>
+    <string name="import_message">[GO!] searches a remote DISPLAYED app on local network, and imports ALL radios. App must have been launched on remote device a few seconds before.\nPlease wait (about 5s) for result popup messages.</string>
+    <string name="import_connection_failed">No remote app found. Please verify!</string>
+    <string name="import_failed">Error on received data; remote app may be inactive (not DISPLAYED). Please verify!</string>
     <string name="import_action_failed">Unable to execute import action from remote app</string>
     <string name="import_successful">Import successful!</string>
     <string name="no_data">No playlist data found</string>
@@ -122,7 +122,6 @@
     <string name="action_skip_to_next">Skip to next</string>
     <string name="action_skip_to_previous">Skip to previous</string>
     <string name="action_browse">Browse</string>
-    <string name="action_import_reset">Reset search</string>
     <string name="action_import_go">Go!</string>
     <string name="action_got_it">Got it!</string>
     <string name="drawer_open">Open navigation drawer</string>

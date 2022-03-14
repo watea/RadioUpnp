@@ -84,9 +84,6 @@ class ImportController {
       }
     }
   };
-  @Nullable
-  private Registry registry = null;
-
   public ImportController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
     ExportDevice localExportDevice = null;
@@ -100,7 +97,6 @@ class ImportController {
       .setTitle(R.string.title_import)
       .setIcon(R.drawable.ic_baseline_exit_to_app_black_24dp)
       .setMessage(R.string.import_message)
-      .setNeutralButton(R.string.action_import_reset, (dialog, which) -> reset())
       .setPositiveButton(
         R.string.action_import_go,
         (dialog, which) -> handler.postDelayed(this::upnpImport, IMPORT_DELAY))
@@ -126,26 +122,12 @@ class ImportController {
 
   // Must be called
   public void addExportService(@NonNull Registry registry) {
-    this.registry = registry;
-    // Robustness: define only once
-    if ((exportDevice != null) && registry.getLocalDevices().isEmpty()) {
-      exportDevice.setRadioLibrary(mainActivity.getRadioLibrary());
+    // Define only once
+    if (!registry.getLocalDevices().contains(exportDevice)) {
       registry.addDevice(exportDevice);
     }
-  }
-
-  // Remove all known devices an search again
-  private void reset() {
-    if (registry == null) {
-      mainActivity.tell(R.string.service_not_available);
-    } else {
-      for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
-        if (isExporter(remoteDevice)) {
-          registry.removeDevice(remoteDevice);
-        }
-      }
-      mainActivity.upnpSearch(EXPORTER_DEVICE_TYPE_HEADER);
-    }
+    assert exportDevice != null;
+    exportDevice.setRadioLibrary(mainActivity.getRadioLibrary());
   }
 
   private void upnpImport() {
