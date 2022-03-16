@@ -128,6 +128,7 @@ class ImportController {
       registry.addDevice(exportDevice);
     }
     assert exportDevice != null;
+    assert mainActivity.getRadioLibrary() != null;
     exportDevice.setRadioLibrary(mainActivity.getRadioLibrary());
   }
 
@@ -158,6 +159,7 @@ class ImportController {
           // Must be called on main thread for thread safety
           handler.post(() -> {
             RadioLibrary radioLibrary = mainActivity.getRadioLibrary();
+            assert radioLibrary != null;
             mainActivity.tell((radioLibrary.isOpen() && radioLibrary.importFrom(export)) ?
               R.string.import_successful : R.string.import_failed);
           });

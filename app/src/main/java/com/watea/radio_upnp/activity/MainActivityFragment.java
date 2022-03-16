@@ -76,7 +76,7 @@ public abstract class MainActivityFragment extends Fragment {
     drawable.draw(canvas);
   }
 
-  @NonNull
+  @Nullable
   protected static RadioLibrary getRadioLibrary() {
     return MAIN_ACTIVITY.getRadioLibrary();
   }

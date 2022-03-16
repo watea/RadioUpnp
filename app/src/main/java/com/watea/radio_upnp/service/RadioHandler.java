@@ -31,7 +31,6 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -60,7 +59,7 @@ public class RadioHandler extends AbstractHandler {
   @NonNull
   private final String userAgent;
   @NonNull
-  private final RadioLibrary radioLibrary;
+  private final Callback callback;
   @NonNull
   private final Listener listener;
   @Nullable
@@ -68,11 +67,11 @@ public class RadioHandler extends AbstractHandler {
 
   public RadioHandler(
     @NonNull String userAgent,
-    @NonNull RadioLibrary radioLibrary,
+    @NonNull Callback callback,
     @NonNull Listener listener) {
     super();
     this.userAgent = userAgent;
-    this.radioLibrary = radioLibrary;
+    this.callback = callback;
     this.listener = listener;
   }
 
@@ -104,7 +103,7 @@ public class RadioHandler extends AbstractHandler {
     if ((radioId == null) || (lockKey == null) || (controller == null)) {
       Log.i(LOG_TAG, "Unexpected request received. Radio || UUID || controller is null.");
     } else {
-      final Radio radio = radioLibrary.getFrom(Long.decode(radioId));
+      final Radio radio = callback.getFrom(Long.decode(radioId));
       if (radio == null) {
         Log.i(LOG_TAG, "Unknown radio");
       } else {
@@ -285,6 +284,11 @@ public class RadioHandler extends AbstractHandler {
       @NonNull String information,
       @Nullable String rate,
       @NonNull String lockKey);
+  }
+
+  public interface Callback {
+    @Nullable
+    Radio getFrom(@NonNull Long radioId);
   }
 
   public interface Controller {

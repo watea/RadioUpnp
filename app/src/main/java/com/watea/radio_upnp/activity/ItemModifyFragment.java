@@ -63,6 +63,7 @@ public class ItemModifyFragment extends ItemFragment {
     } else {
       // Restore radio
       Long radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
+      assert getRadioLibrary() != null;
       radio = getRadioLibrary().getFrom(radioId);
     }
   }
@@ -82,6 +83,7 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
+      assert getRadioLibrary() != null;
       if (getRadioLibrary().isCurrentRadio(radio)) {
         tell(R.string.not_to_modify);
       } else {

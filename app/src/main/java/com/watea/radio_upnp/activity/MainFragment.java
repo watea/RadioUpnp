@@ -57,7 +57,7 @@ import com.watea.radio_upnp.service.NetworkProxy;
 
 import java.util.List;
 
-public class MainFragment extends MainActivityFragment implements RadiosAdapter.Listener {
+public class MainFragment extends MainActivityFragment {
   private static final int DEFAULT_COLUMNS_COUNT = 3;
   // <HMI assets
   private RecyclerView dlnaRecyclerView;
@@ -84,6 +84,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
 
     @Override
     public void onRefresh() {
+      assert getRadioLibrary() != null;
       List<Long> radios = isPreferredRadios ?
         getRadioLibrary().getPreferredRadioIds() : getRadioLibrary().getAllRadioIds();
       radiosAdapter.onRefresh(radios);
@@ -95,18 +96,6 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
   private DlnaDevicesAdapter dlnaDevicesAdapter = null;
 
   @Override
-  public void onClick(@NonNull Radio radio) {
-    if (networkProxy.isDeviceOffline()) {
-      tell(R.string.no_internet);
-    } else {
-      getMainActivity().startReading(radio);
-      if (!gotItRadioLongPress) {
-        radioLongPressAlertDialog.show();
-      }
-    }
-  }
-
-  @Override
   public void onResume() {
     super.onResume();
     assert getActivity() != null;
@@ -115,6 +104,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
     // Set view
     radioLibraryListener.onRefresh();
     // RadioLibrary changes
+    assert getRadioLibrary() != null;
     getRadioLibrary().addListener(radioLibraryListener);
   }
 
@@ -222,16 +212,27 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       getContext());
     radiosAdapter = new RadiosAdapter(
       getContext(),
-      this,
+      (radio) -> {
+        if (networkProxy.isDeviceOffline()) {
+          tell(R.string.no_internet);
+        } else {
+          getMainActivity().startReading(radio);
+          if (!gotItRadioLongPress) {
+            radioLongPressAlertDialog.show();
+          }
+        }
+      },
       new RadiosAdapter.Callback() {
         @Nullable
         @Override
-        public Radio getRadioFromId(@NonNull Long radioId) {
+        public Radio getFrom(@NonNull Long radioId) {
+          assert getRadioLibrary() != null;
           return getRadioLibrary().isOpen() ? getRadioLibrary().getFrom(radioId) : null;
         }
 
         @Override
         public boolean isCurrentRadio(@NonNull Radio radio) {
+          assert getRadioLibrary() != null;
           return getRadioLibrary().isCurrentRadio(radio);
         }
       },
@@ -311,6 +312,7 @@ public class MainFragment extends MainActivityFragment implements RadiosAdapter.
       .putBoolean(getString(R.string.key_preferred_radios_got_it), gotItPreferredRadios)
       .apply();
     // Clear resources
+    assert getRadioLibrary() != null;
     getRadioLibrary().removeListener(radioLibraryListener);
   }
 

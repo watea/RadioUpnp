@@ -153,7 +153,7 @@ public class RadioService
     httpServer = new HttpServer(
       this,
       getString(R.string.app_name),
-      radioLibrary,
+      radioLibrary::getFrom,
       this,
       () -> {
         Log.d(LOG_TAG, "HTTP Server error");

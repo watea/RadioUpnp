@@ -35,6 +35,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -45,28 +46,41 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import java.util.List;
 import java.util.Vector;
 
-public class RadiosModifyAdapter
-  extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder>
-  implements RadioLibrary.Listener {
+public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder> {
   private static final String LOG_TAG = RadiosModifyAdapter.class.getName();
   @NonNull
   private final Context context;
   @NonNull
   private final Listener listener;
-  @NonNull
-  private final Callback callback;
   private final int iconSize;
   private final List<Long> radioIds = new Vector<>();
+  @Nullable
+  private RadioLibrary radioLibrary;
+  @NonNull
+  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+    @Override
+    public void onPreferredChange(@NonNull Radio radio) {
+      notifyItemChanged(radioIds.indexOf(radio.getId()));
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    @Override
+    public void onRefresh() {
+      radioIds.clear();
+      assert radioLibrary != null;
+      radioIds.addAll(radioLibrary.getAllRadioIds());
+      notifyDataSetChanged();
+      notifyEmpty();
+    }
+  };
 
   public RadiosModifyAdapter(
     @NonNull Context context,
     @NonNull Listener listener,
-    @NonNull Callback callback,
     int iconSize,
     @NonNull RecyclerView recyclerView) {
     this.context = context;
     this.listener = listener;
-    this.callback = callback;
     this.iconSize = iconSize;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
@@ -74,13 +88,17 @@ public class RadiosModifyAdapter
     recyclerView.setAdapter(this);
   }
 
-  public void onResume() {
-    onRefresh();
-    getRadioLibrary().addListener(this);
+  // Must be called
+  public void onResume(@NonNull RadioLibrary radioLibrary) {
+    this.radioLibrary = radioLibrary;
+    this.radioLibrary.addListener(radioLibraryListener);
+    radioLibraryListener.onRefresh();
   }
 
+  // Must be called
   public void onPause() {
-    getRadioLibrary().removeListener(this);
+    assert radioLibrary != null;
+    radioLibrary.removeListener(radioLibraryListener);
   }
 
   @NonNull
@@ -92,8 +110,9 @@ public class RadiosModifyAdapter
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
-    if (getRadioLibrary().isOpen()) {
-      Radio radio = getRadioLibrary().getFrom(radioIds.get(position));
+    assert radioLibrary != null;
+    if (radioLibrary.isOpen()) {
+      Radio radio = radioLibrary.getFrom(radioIds.get(position));
       assert radio != null;
       viewHolder.setView(radio);
     }
@@ -104,20 +123,6 @@ public class RadiosModifyAdapter
     return radioIds.size();
   }
 
-  @Override
-  public void onPreferredChange(@NonNull Radio radio) {
-    notifyItemChanged(radioIds.indexOf(radio.getId()));
-  }
-
-  @SuppressLint("NotifyDataSetChanged")
-  @Override
-  public void onRefresh() {
-    radioIds.clear();
-    radioIds.addAll(getRadioLibrary().getAllRadioIds());
-    notifyDataSetChanged();
-    notifyEmpty();
-  }
-
   private void databaseWarn() {
     Log.w(LOG_TAG, "Internal failure, radio database update failed");
   }
@@ -126,22 +131,12 @@ public class RadiosModifyAdapter
     listener.onEmpty(radioIds.isEmpty());
   }
 
-  @NonNull
-  private RadioLibrary getRadioLibrary() {
-    return callback.getRadioLibrary();
-  }
-
   public interface Listener {
     void onModifyClick(@NonNull Radio radio);
 
-    boolean onCheckChange(@NonNull Radio radio);
+    void onWarnChange();
 
     void onEmpty(boolean isEmpty);
-  }
-
-  public interface Callback {
-    @NonNull
-    RadioLibrary getRadioLibrary();
   }
 
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
@@ -151,8 +146,13 @@ public class RadiosModifyAdapter
     @Override
     public int getMovementFlags(
       @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-      return makeMovementFlags(
-        DRAG_FLAGS, listener.onCheckChange(((ViewHolder) viewHolder).radio) ? IDLE_FLAGS : 0);
+      assert radioLibrary != null;
+      boolean isCurrentRadio = radioLibrary.isCurrentRadio(((ViewHolder) viewHolder).radio);
+      if (isCurrentRadio) {
+        listener.onWarnChange();
+      }
+      return makeMovementFlags(DRAG_FLAGS, isCurrentRadio ? 0 : IDLE_FLAGS);
+
     }
 
     @Override
@@ -164,7 +164,8 @@ public class RadiosModifyAdapter
       Long fromId = radioIds.get(from);
       int to = targetViewHolder.getAbsoluteAdapterPosition();
       Long toId = radioIds.get(to);
-      if (getRadioLibrary().move(fromId, toId)) {
+      assert radioLibrary != null;
+      if (radioLibrary.move(fromId, toId)) {
         // Database updated, update view
         radioIds.set(to, fromId);
         radioIds.set(from, toId);
@@ -188,7 +189,8 @@ public class RadiosModifyAdapter
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
       final int position = viewHolder.getAbsoluteAdapterPosition();
-      if (getRadioLibrary().deleteFrom(radioIds.get(position))) {
+      assert radioLibrary != null;
+      if (radioLibrary.deleteFrom(radioIds.get(position))) {
         // Database updated, update view
         radioIds.remove(position);
         notifyItemRemoved(position);
@@ -217,7 +219,8 @@ public class RadiosModifyAdapter
         .setOnClickListener(v -> listener.onModifyClick(radio));
       // Preferred action
       preferredImageButton.setOnClickListener(v -> {
-        if (!getRadioLibrary().setPreferred(radio.getId(), !radio.isPreferred())) {
+        assert radioLibrary != null;
+        if (!radioLibrary.setPreferred(radio.getId(), !radio.isPreferred())) {
           databaseWarn();
         }
       });

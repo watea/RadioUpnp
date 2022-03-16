@@ -58,12 +58,12 @@ public class HttpServer extends Thread {
   public HttpServer(
     @NonNull Context context,
     @NonNull String userAgent,
-    @NonNull RadioLibrary radioLibrary,
+    @NonNull RadioHandler.Callback radioHandlerCallback,
     @NonNull RadioHandler.Listener radioHandlerListener,
     @NonNull Listener listener) {
     this.context = context;
     this.listener = listener;
-    radioHandler = new RadioHandler(userAgent, radioLibrary, radioHandlerListener);
+    radioHandler = new RadioHandler(userAgent, radioHandlerCallback, radioHandlerListener);
     networkProxy = new NetworkProxy(this.context);
     // Handler for local files
     ResourceHandler resourceHandler = new ResourceHandler();

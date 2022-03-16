@@ -88,7 +88,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    Radio radio = callback.getRadioFromId(radioIds.get(i));
+    Radio radio = callback.getFrom(radioIds.get(i));
     if (radio != null) {
       viewHolder.setView(radio);
     }
@@ -105,7 +105,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   public interface Callback {
     @Nullable
-    Radio getRadioFromId(@NonNull Long radioId);
+    Radio getFrom(@NonNull Long radioId);
 
     boolean isCurrentRadio(@NonNull Radio radio);
   }

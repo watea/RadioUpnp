@@ -394,23 +394,15 @@ public class PlayerController {
       bundle.putString(mainActivity.getString(R.string.key_dlna_device), dlnaDeviceIdentity);
     }
     mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
-    // Information
-    clearInformations();
-    if (!gotItInformationPress) {
-      informationPressAlertDialog.show();
-    }
+    // Information are cleared
+    playInformations.clear();
+    insertInformations("", mainActivity.getString(R.string.no_data));
   }
 
   @Nullable
   private Radio getCurrentRadio() {
     assert radioLibrary != null;
     return (mediaController == null) ? null : radioLibrary.getCurrentRadio();
-  }
-
-  private void clearInformations() {
-    playInformations.clear();
-    // Default
-    insertInformations("", mainActivity.getString(R.string.no_data));
   }
 
   private void addInformations(@NonNull String date, @NonNull String information) {
@@ -427,6 +419,10 @@ public class PlayerController {
     if (playInformations.isEmpty() ||
       !information.equals(playInformations.get(playInformations.size() - 1).get(INFORMATION))) {
       insertInformations(date, information);
+      // User help for fist valid information
+      if (!(informationPressAlertDialog.isShowing() || gotItInformationPress)) {
+        informationPressAlertDialog.show();
+      }
     }
   }
 

@@ -283,7 +283,7 @@ public class MainActivity
     return true;
   }
 
-  @NonNull
+  @Nullable
   public RadioLibrary getRadioLibrary() {
     return radioLibrary;
   }

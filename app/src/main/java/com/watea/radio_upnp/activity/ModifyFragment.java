@@ -40,7 +40,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
 
-public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
+public class ModifyFragment extends MainActivityFragment {
   // <HMI assets
   private RecyclerView radiosRecyclerView;
   private FrameLayout defaultFrameLayout;
@@ -50,7 +50,8 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Override
   public void onResume() {
     super.onResume();
-    radiosModifyAdapter.onResume();
+    assert getRadioLibrary() != null;
+    radiosModifyAdapter.onResume(getRadioLibrary());
   }
 
   @NonNull
@@ -77,8 +78,23 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     // Adapters
     radiosModifyAdapter = new RadiosModifyAdapter(
       getContext(),
-      this,
-      MainActivityFragment::getRadioLibrary,
+      new RadiosModifyAdapter.Listener() {
+        @Override
+        public void onModifyClick(@NonNull Radio radio) {
+          ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
+        }
+
+        @Override
+        public void onEmpty(boolean isEmpty) {
+          defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
+        }
+
+        // Radio shall not be changed if currently played
+        @Override
+        public void onWarnChange() {
+          tell(R.string.not_to_delete);
+        }
+      },
       RADIO_ICON_SIZE / 2,
       radiosRecyclerView);
   }
@@ -98,25 +114,5 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   public void onPause() {
     super.onPause();
     radiosModifyAdapter.onPause();
-  }
-
-  @Override
-  public void onModifyClick(@NonNull Radio radio) {
-    ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
-  }
-
-  // Radio shall not be changed if currently played
-  @Override
-  public boolean onCheckChange(@NonNull Radio radio) {
-    if (getRadioLibrary().isCurrentRadio(radio)) {
-      tell(R.string.not_to_delete);
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public void onEmpty(boolean isEmpty) {
-    defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
   }
 }
