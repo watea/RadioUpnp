@@ -32,6 +32,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
@@ -139,6 +140,7 @@ public class RadioService
         // channel, if the device supports this feature
         notificationChannel.setLightColor(Color.GREEN);
         notificationChannel.enableVibration(true);
+        notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         notificationChannel.setVibrationPattern(
           new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
         notificationManager.createNotificationChannel(notificationChannel);
