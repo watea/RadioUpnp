@@ -29,7 +29,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
@@ -51,6 +50,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.VolumeProviderCompat;
@@ -84,12 +84,12 @@ public class RadioService
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
+  private NotificationManagerCompat notificationManager;
   private UpnpActionController upnpActionController = null;
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
   private MediaSessionCompat session;
   private RadioLibrary radioLibrary = null;
-  private NotificationManager notificationManager;
   private PlayerAdapter playerAdapter = null;
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
@@ -121,35 +121,30 @@ public class RadioService
     setSessionToken(session.getSessionToken());
     // Notification
     CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
-    notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    notificationManager = NotificationManagerCompat.from(this);
     // Cancel all notifications to handle the case where the Service was killed and
     // restarted by the system
-    if (notificationManager == null) {
-      Log.e(LOG_TAG, "NotificationManager error");
-      stopSelf();
-    } else {
-      notificationManager.cancelAll();
-      // Create the (mandatory) notification channel when running on Android Oreo and more
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-          NotificationChannel notificationChannel = new NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.radio_service_notification_name),
-            NotificationManager.IMPORTANCE_LOW);
-          // Configure the notification channel
-          notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
-          notificationChannel.enableLights(true);
-          // Sets the notification light color for notifications posted to this
-          // channel, if the device supports this feature
-          notificationChannel.setLightColor(Color.GREEN);
-          notificationChannel.enableVibration(true);
-          notificationChannel.setVibrationPattern(
-            new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-          notificationManager.createNotificationChannel(notificationChannel);
-          Log.d(LOG_TAG, "New channel created");
-        } else {
-          Log.i(LOG_TAG, "Existing channel reused");
-        }
+    notificationManager.cancelAll();
+    // Create the (mandatory) notification channel when running on Android Oreo and more
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+        NotificationChannel notificationChannel = new NotificationChannel(
+          CHANNEL_ID,
+          getString(R.string.radio_service_notification_name),
+          NotificationManager.IMPORTANCE_HIGH);
+        // Configure the notification channel
+        notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
+        notificationChannel.enableLights(true);
+        // Sets the notification light color for notifications posted to this
+        // channel, if the device supports this feature
+        notificationChannel.setLightColor(Color.GREEN);
+        notificationChannel.enableVibration(true);
+        notificationChannel.setVibrationPattern(
+          new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+        notificationManager.createNotificationChannel(notificationChannel);
+        Log.d(LOG_TAG, "New channel created");
+      } else {
+        Log.i(LOG_TAG, "Existing channel reused");
       }
     }
     // Radio library access
@@ -220,37 +215,6 @@ public class RadioService
   }
 
   @Override
-  public void onDestroy() {
-    super.onDestroy();
-    Log.d(LOG_TAG, "onDestroy: requested...");
-    // Stop player to be clean on resources (if not, audio focus is not well handled)
-    if (playerAdapter != null) {
-      playerAdapter.stop();
-    }
-    // Stop UPnP service
-    unbindService(upnpConnection);
-    // Forced disconnection
-    upnpConnection.onServiceDisconnected(null);
-    // Stop HTTP server, if created
-    if (httpServer != null) {
-      httpServer.stopServer();
-    }
-    // Release radioLibrary, if opened
-    if (radioLibrary != null) {
-      radioLibrary.close();
-    }
-    // Finally session
-    session.release();
-    Log.d(LOG_TAG, "onDestroy: done!");
-  }
-
-  @Override
-  public void onTaskRemoved(@NonNull Intent rootIntent) {
-    super.onTaskRemoved(rootIntent);
-    stopSelf();
-  }
-
-  @Override
   public void onNewInformation(
     @NonNull final String information,
     @Nullable final String rate,
@@ -300,8 +264,8 @@ public class RadioService
           case PlaybackStateCompat.STATE_ERROR:
             playerAdapter.release();
             httpServer.setRadioHandlerController(null);
-            // For user convenience in local mode, session is kept alive.
-            if (playerAdapter instanceof LocalPlayerAdapter) {
+            // For user convenience in local mode, session is kept alive
+            if (isStarted && (playerAdapter instanceof LocalPlayerAdapter)) {
               // Try to relaunch just once
               if (isAllowedToRewind) {
                 isAllowedToRewind = false;
@@ -318,10 +282,7 @@ public class RadioService
                   },
                   4000);
               } else {
-                stopForeground(true);
-                if (isStarted) {
-                  notificationManager.notify(NOTIFICATION_ID, getNotification());
-                }
+                notificationManager.notify(NOTIFICATION_ID, getNotification());
               }
               break;
             }
@@ -332,10 +293,54 @@ public class RadioService
             session.setActive(false);
             stopForeground(true);
             stopSelf();
-            isAllowedToRewind = isStarted = false;
+            isAllowedToRewind = false;
         }
       }
     });
+  }
+
+  @Override
+  public int onStartCommand(Intent intent, int flags, int startId) {
+    isStarted = true;
+    return super.onStartCommand(intent, flags, startId);
+  }
+
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    Log.d(LOG_TAG, "onDestroy: requested...");
+    // Stop player to be clean on resources (if not, audio focus is not well handled)
+    if (playerAdapter != null) {
+      playerAdapter.stop();
+    }
+    // Stop UPnP service
+    unbindService(upnpConnection);
+    // Forced disconnection
+    upnpConnection.onServiceDisconnected(null);
+    // Stop HTTP server, if created
+    if (httpServer != null) {
+      httpServer.stopServer();
+    }
+    // Release radioLibrary, if opened
+    if (radioLibrary != null) {
+      radioLibrary.close();
+    }
+    // Finally session
+    session.release();
+    isStarted = false;
+    Log.d(LOG_TAG, "onDestroy: done!");
+  }
+
+  @Override
+  public void onTaskRemoved(@NonNull Intent rootIntent) {
+    super.onTaskRemoved(rootIntent);
+    stopSelf();
+  }
+
+  private void contextCompatStartForegroundService() {
+    if (!isStarted) {
+      ContextCompat.startForegroundService(this, new Intent(this, getClass()));
+    }
   }
 
   private boolean hasLockKey(@NonNull String lockKey) {
@@ -482,11 +487,7 @@ public class RadioService
       // PlayerAdapter controls radio stream
       httpServer.setRadioHandlerController(playerAdapter);
       // Start service, must be done while activity has foreground
-      if (!isStarted) {
-        ContextCompat.startForegroundService(
-          RadioService.this, new Intent(RadioService.this, RadioService.this.getClass()));
-        isStarted = true;
-      }
+      contextCompatStartForegroundService();
       // Prepare radio streaming
       playerAdapter.prepareFromMediaId();
     }
