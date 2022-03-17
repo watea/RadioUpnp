@@ -135,13 +135,11 @@ public class RadioService
         // Configure the notification channel
         notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
         notificationChannel.enableLights(true);
+        notificationChannel.enableVibration(false);
         // Sets the notification light color for notifications posted to this
         // channel, if the device supports this feature
         notificationChannel.setLightColor(Color.GREEN);
-        notificationChannel.enableVibration(true);
         notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-        notificationChannel.setVibrationPattern(
-          new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
         notificationManager.createNotificationChannel(notificationChannel);
         Log.d(LOG_TAG, "New channel created");
       } else {
@@ -355,6 +353,7 @@ public class RadioService
       .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
         .setMediaSession(getSessionToken())
         .setShowActionsInCompactView(0))
+      .setSilent(true)
       .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
       .setContentIntent(PendingIntent.getActivity(
