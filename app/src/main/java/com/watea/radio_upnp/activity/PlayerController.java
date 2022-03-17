@@ -95,6 +95,7 @@ public class PlayerController {
   @NonNull
   private final AlertDialog playlistAlertDialog;
   // />
+  private int informationCount = 0;
   @Nullable
   private RadioLibrary radioLibrary;
   private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
@@ -419,8 +420,9 @@ public class PlayerController {
     if (playInformations.isEmpty() ||
       !information.equals(playInformations.get(playInformations.size() - 1).get(INFORMATION))) {
       insertInformations(date, information);
-      // User help for fist valid information
-      if (!(informationPressAlertDialog.isShowing() || gotItInformationPress)) {
+      // User help for fist valid information after a few time
+      if (!(informationPressAlertDialog.isShowing() || gotItInformationPress) &&
+        (informationCount++ > 4)) {
         informationPressAlertDialog.show();
       }
     }

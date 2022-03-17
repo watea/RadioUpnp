@@ -71,6 +71,7 @@ public class MainFragment extends MainActivityFragment {
   private AlertDialog preferredRadiosAlertDialog;
   private GridLayoutManager gridLayoutManager;
   // />
+  private int radioClickCount = 0;
   private boolean isPreferredRadios = false;
   private boolean gotItRadioLongPress;
   private boolean gotItDlnaEnable;
@@ -217,7 +218,7 @@ public class MainFragment extends MainActivityFragment {
           tell(R.string.no_internet);
         } else {
           getMainActivity().startReading(radio);
-          if (!gotItRadioLongPress) {
+          if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
             radioLongPressAlertDialog.show();
           }
         }
