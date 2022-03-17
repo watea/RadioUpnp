@@ -90,6 +90,7 @@
     <string name="not_to_delete">Current radio cannot be deleted</string>
     <string name="report_error">Error, report could not be generated</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
+    <string name="notification_needed">This app works better with notifications enabled.</string>
     <string name="import_message">[GO!] searches a remote DISPLAYED app on local network, and imports ALL radios. App must have been launched on remote device a few seconds before.\nPlease wait (about 5s) for result popup messages.</string>
     <string name="import_connection_failed">No remote app found. Please verify!</string>
     <string name="import_failed">Error on received data; remote app may be inactive (not DISPLAYED). Please verify!</string>
@@ -122,7 +123,7 @@
     <string name="action_skip_to_next">Skip to next</string>
     <string name="action_skip_to_previous">Skip to previous</string>
     <string name="action_browse">Browse</string>
-    <string name="action_import_go">Go!</string>
+    <string name="action_go">Go!</string>
     <string name="action_got_it">Got it!</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>

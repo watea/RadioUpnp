@@ -98,7 +98,7 @@ class ImportController {
       .setIcon(R.drawable.ic_baseline_exit_to_app_black_24dp)
       .setMessage(R.string.import_message)
       .setPositiveButton(
-        R.string.action_import_go,
+        R.string.action_go,
         (dialog, which) ->
           handler.postDelayed(this::upnpImport, (remoteDevice == null) ? IMPORT_DELAY : 0))
       // Restore checked item

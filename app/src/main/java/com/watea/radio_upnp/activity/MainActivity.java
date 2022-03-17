@@ -32,8 +32,10 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -46,6 +48,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -501,6 +504,13 @@ public class MainActivity
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
+    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+      new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+        .setMessage(R.string.notification_needed)
+        .setPositiveButton(R.string.action_go, (dialogInterface, i) -> setNotification())
+        .create()
+        .show();
+    }
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Fragments
@@ -518,6 +528,16 @@ public class MainActivity
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     drawerToggle.onConfigurationChanged(newConfig);
+  }
+
+  private void setNotification() {
+    Intent intent = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ?
+      new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()) :
+      new Intent("android.settings.APP_NOTIFICATION_SETTINGS")
+        .putExtra("app_package", getPackageName())
+        .putExtra("app_uid", getApplicationInfo().uid);
+    startActivity(intent);
   }
 
   @Nullable
