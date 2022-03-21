@@ -246,19 +246,17 @@ public class RadioService
         session.setPlaybackState(state);
         // Manage the started state of this service, and session activity
         switch (state.getState()) {
-          case PlaybackStateCompat.STATE_BUFFERING:
-            startForeground(NOTIFICATION_ID, getNotification());
-            break;
           case PlaybackStateCompat.STATE_PLAYING:
             // Relaunch now allowed
             isAllowedToRewind = true;
-            notificationManager.notify(NOTIFICATION_ID, getNotification());
+          case PlaybackStateCompat.STATE_BUFFERING:
+            startForeground(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            stopForeground(false);
             notificationManager.notify(NOTIFICATION_ID, getNotification());
+            stopForeground(false);
             break;
           case PlaybackStateCompat.STATE_ERROR:
             playerAdapter.release();
