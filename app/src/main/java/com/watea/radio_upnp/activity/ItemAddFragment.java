@@ -43,6 +43,7 @@ public class ItemAddFragment extends ItemFragment {
       assert urlWatcher.url != null;
       Radio radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url, false, getIcon());
       try {
+        //noinspection ConstantConditions
         if (!getRadioLibrary().add(radio)) {
           tell(R.string.radio_database_update_failed);
         }

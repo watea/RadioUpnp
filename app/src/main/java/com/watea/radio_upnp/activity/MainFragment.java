@@ -275,7 +275,7 @@ public class MainFragment extends MainActivityFragment {
     return view;
   }
 
-  @NonNull
+  @Nullable
   public UpnpRegistryAdapter.Listener getUpnpRegistryAdapterListener() {
     return dlnaDevicesAdapter;
   }

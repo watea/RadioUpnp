@@ -298,9 +298,11 @@ public abstract class ItemFragment extends MainActivityFragment {
     return nameEditText.getText().toString().toUpperCase();
   }
 
+
   @Nullable
   protected Bitmap getIcon() {
-    return (Bitmap) nameEditText.getTag();
+    // nameEditText may be null if called before creation
+    return (nameEditText == null) ? null: (Bitmap) nameEditText.getTag();
   }
 
   protected void setRadioIcon(@NonNull Bitmap icon) {

@@ -186,6 +186,8 @@ public class MainActivity
       // Do nothing if we were disposed
       if (mainFragment != null) {
         assert getRegistry() != null;
+        // Shall not be null as fragment creation already done
+        assert mainFragment.getUpnpRegistryAdapterListener() != null;
         // Add local export device
         importController.addExportService(getRegistry());
         // Define adapters
@@ -216,8 +218,10 @@ public class MainActivity
         getRegistry().removeListener(importController.getRegistryListener());
         androidUpnpService = null;
       }
-      // Tell MainFragment
+      // Tell MainFragment if not disposed
       if (mainFragment != null) {
+        // Shall not be null as fragment creation already done
+        assert mainFragment.getUpnpRegistryAdapterListener() != null;
         mainFragment.getUpnpRegistryAdapterListener().onResetRemoteDevices();
       }
     }
@@ -448,11 +452,10 @@ public class MainActivity
         .putBoolean(getString(R.string.key_first_start), false)
         .apply();
     }
-    // Retrieve main fragment
-    mainFragment = (MainFragment) ((getCurrentFragment() == null) ?
-      setFragment(MainFragment.class) :
-      // Shall exists as MainFragment always created
-      getSupportFragmentManager().findFragmentByTag(MainFragment.class.getSimpleName()));
+    // Retrieve main fragment, shall exists as MainFragment always created
+    mainFragment = (MainFragment) getSupportFragmentManager()
+      .findFragmentByTag(MainFragment.class.getSimpleName());
+    assert mainFragment != null;
     // Start the UPnP service
     if (!bindService(
       new Intent(this, AndroidUpnpServiceImpl.class),
@@ -515,6 +518,7 @@ public class MainActivity
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Fragments
     MainActivityFragment.onActivityCreated(this);
+    mainFragment = (MainFragment) setFragment(MainFragment.class);
   }
 
   @Override
