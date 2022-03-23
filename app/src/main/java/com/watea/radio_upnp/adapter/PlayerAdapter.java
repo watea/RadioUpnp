@@ -50,8 +50,8 @@ import java.util.Arrays;
 import java.util.List;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
-// and audio focus
-// Warning: not threadsafe, execution shall be done in main UI thread
+// and audio focus.
+// Warning: not threadsafe, execution shall be done in main UI thread.
 public abstract class PlayerAdapter
   implements RadioHandler.Controller, AudioManager.OnAudioFocusChangeListener {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
@@ -142,8 +142,7 @@ public abstract class PlayerAdapter
   }
 
   public final void play() {
-    if ((isRemote() || requestAudioFocus()) &&
-      ((getAvailableActions() & PlaybackStateCompat.ACTION_PLAY) > 0L)) {
+    if ((isRemote() || requestAudioFocus()) && isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
       onPlay();
     }
   }
@@ -152,7 +151,7 @@ public abstract class PlayerAdapter
     if (!isRemote()) {
       releaseAudioFocus();
     }
-    if ((getAvailableActions() & PlaybackStateCompat.ACTION_PAUSE) > 0L) {
+    if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
       onPause();
     }
   }
@@ -196,8 +195,7 @@ public abstract class PlayerAdapter
       case AudioManager.AUDIOFOCUS_GAIN:
         if (isPlaying()) {
           setVolume(MEDIA_VOLUME_DEFAULT);
-        } else if (playOnAudioFocus &&
-          ((getAvailableActions() & PlaybackStateCompat.ACTION_PLAY) > 0L)) {
+        } else if (playOnAudioFocus && isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
           onPlay();
         }
         playOnAudioFocus = false;
@@ -206,8 +204,7 @@ public abstract class PlayerAdapter
         setVolume(MEDIA_VOLUME_DUCK);
         break;
       case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-        if (isPlaying() &&
-          ((getAvailableActions() & PlaybackStateCompat.ACTION_PAUSE) > 0L)) {
+        if (isPlaying() && isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
           playOnAudioFocus = true;
           onPause();
         }
@@ -295,6 +292,10 @@ public abstract class PlayerAdapter
     }
     Log.d(LOG_TAG, "Audio focus request failed");
     return false;
+  }
+
+  private boolean isAvailableAction(long action) {
+    return ((getAvailableActions() & action) > 0L);
   }
 
   public interface Listener {
