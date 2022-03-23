@@ -47,7 +47,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   private final Player.Listener playerListener = new Player.Listener() {
     @Override
     public void onPlaybackStateChanged(int playbackState) {
-      Log.d(LOG_TAG, "ExoPlayer: onPlayerStateChanged, State=" + playbackState);
+      Log.d(LOG_TAG, "onPlaybackStateChanged: State=" + playbackState);
       switch (playbackState) {
         case ExoPlayer.STATE_BUFFERING:
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
@@ -63,7 +63,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
           break;
         // Should not happen
         default:
-          Log.e(LOG_TAG, "onPlayerStateChanged: onPlayerStateChanged bad state " + playbackState);
+          Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
       }
     }
@@ -117,7 +117,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected boolean isLocal() {
+  protected boolean isRemote() {
     return true;
   }
 

@@ -356,8 +356,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
   }
 
   @Override
-  protected boolean isLocal() {
-    return false;
+  protected boolean isRemote() {
+    return true;
   }
 
   @Override

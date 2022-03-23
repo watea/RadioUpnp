@@ -262,7 +262,7 @@ public class RadioLibrary {
         try {
           result = add(new Radio(radioString)) || result;
         } catch (MalformedURLException malformedURLException) {
-          Log.e(LOG_TAG, "importFrom: a radio failed to be imported");
+          Log.e(LOG_TAG, "importFrom: a radio failed to be imported", malformedURLException);
         }
       }
       if (result) {

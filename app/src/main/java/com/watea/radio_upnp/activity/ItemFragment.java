@@ -531,7 +531,7 @@ public abstract class ItemFragment extends MainActivityFragment {
           foundRadio.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
           foundIcon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
         } catch (MalformedURLException malformedURLException) {
-          Log.i(LOG_TAG, "Error performing icon search");
+          Log.i(LOG_TAG, "Error performing icon search", malformedURLException);
         } catch (IOException iOexception) {
           Log.i(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOexception);
         }

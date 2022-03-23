@@ -126,15 +126,17 @@ public abstract class PlayerAdapter
   }
 
   // Must be called
-  public final void prepareFromMediaId() {
+  public final boolean prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
-    if (isLocal() && requestAudioFocus() || !isLocal()) {
+    if (isRemote() || requestAudioFocus()) {
       onPrepareFromMediaId();
+      return true;
     }
+    return false;
   }
 
   public final void play() {
-    if ((isLocal() && requestAudioFocus() || !isLocal()) &&
+    if ((isRemote() || requestAudioFocus()) &&
       ((getAvailableActions() & PlaybackStateCompat.ACTION_PLAY) > 0L)) {
       onPlay();
     }
@@ -205,7 +207,7 @@ public abstract class PlayerAdapter
     }
   }
 
-  protected abstract boolean isLocal();
+  protected abstract boolean isRemote();
 
   protected abstract void onPrepareFromMediaId();
 

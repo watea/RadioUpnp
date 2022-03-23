@@ -241,7 +241,7 @@ public class RadioService
     @NonNull final PlaybackStateCompat state, @NonNull final String lockKey) {
     handler.post(() -> {
       if (hasLockKey(lockKey)) {
-        Log.d(LOG_TAG, "New valid state/lock key received: " + state + "/" + lockKey);
+        Log.d(LOG_TAG, "New valid state/lock key received: " + state.getState() + "/" + lockKey);
         // Report the state to the MediaSession
         session.setPlaybackState(state);
         // Manage the started state of this service, and session activity
@@ -256,13 +256,12 @@ public class RadioService
             // No relaunch on pause
             isAllowedToRewind = false;
             notificationManager.notify(NOTIFICATION_ID, getNotification());
-            stopForeground(false);
             break;
           case PlaybackStateCompat.STATE_ERROR:
-            playerAdapter.release();
-            httpServer.setRadioHandlerController(null);
             // For user convenience in local mode, session is kept alive
             if (isStarted && (playerAdapter instanceof LocalPlayerAdapter)) {
+              playerAdapter.release();
+              httpServer.setRadioHandlerController(null);
               // Try to relaunch just once
               if (isAllowedToRewind) {
                 isAllowedToRewind = false;
@@ -284,13 +283,13 @@ public class RadioService
               break;
             }
           default:
-            // Cancel session and service
+            playerAdapter.release();
             httpServer.setRadioHandlerController(null);
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
+            isAllowedToRewind = false;
             stopForeground(true);
             stopSelf();
-            isAllowedToRewind = false;
         }
       }
     });
@@ -298,7 +297,12 @@ public class RadioService
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
+    Log.d(LOG_TAG, "onStartCommand");
     isStarted = true;
+    if (!playerAdapter.prepareFromMediaId()) {
+      Log.d(LOG_TAG, "onStartCommand failed to launch player");
+      stopSelf();
+    }
     return super.onStartCommand(intent, flags, startId);
   }
 
@@ -334,12 +338,6 @@ public class RadioService
     stopSelf();
   }
 
-  private void contextCompatStartForegroundService() {
-    if (!isStarted) {
-      ContextCompat.startForegroundService(this, new Intent(this, getClass()));
-    }
-  }
-
   private boolean hasLockKey(@NonNull String lockKey) {
     return session.isActive() && lockKey.equals(this.lockKey);
   }
@@ -350,7 +348,7 @@ public class RadioService
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
         .setMediaSession(getSessionToken())
-        .setShowActionsInCompactView(0))
+        .setShowActionsInCompactView(0, 1, 2))
       .setSilent(true)
       .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
@@ -379,6 +377,7 @@ public class RadioService
     if (mediaController == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no mediaController");
     } else {
+      builder.addAction(actionSkipToPrevious);
       switch (mediaController.getPlaybackState().getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
           // UPnP device doesn't support PAUSE action but STOP
@@ -396,9 +395,7 @@ public class RadioService
         default:
           builder.setOngoing(false);
       }
-      builder
-        .addAction(actionSkipToPrevious)
-        .addAction(actionSkipToNext);
+      builder.addAction(actionSkipToNext);
     }
     return builder.build();
   }
@@ -485,9 +482,8 @@ public class RadioService
       // PlayerAdapter controls radio stream
       httpServer.setRadioHandlerController(playerAdapter);
       // Start service, must be done while activity has foreground
-      contextCompatStartForegroundService();
-      // Prepare radio streaming
-      playerAdapter.prepareFromMediaId();
+      ContextCompat.startForegroundService(
+        RadioService.this, new Intent(RadioService.this, RadioService.class));
     }
 
     @Override

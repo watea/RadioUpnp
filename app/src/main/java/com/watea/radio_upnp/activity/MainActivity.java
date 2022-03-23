@@ -397,7 +397,7 @@ public class MainActivity
           Intent.EXTRA_STREAM,
           FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile)));
     } catch (Exception exception) {
-      Log.e(LOG_TAG, "SendLogcatMail: internal failure", exception);
+      Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
       tell(R.string.report_error);
     }
   }
@@ -461,7 +461,7 @@ public class MainActivity
       new Intent(this, AndroidUpnpServiceImpl.class),
       upnpConnection,
       BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "onActivityResume: internal failure; AndroidUpnpService not bound");
+      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     // PlayerController call
     playerController.onActivityResume(radioLibrary);
