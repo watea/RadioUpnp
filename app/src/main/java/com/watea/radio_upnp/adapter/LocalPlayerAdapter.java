@@ -118,7 +118,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected boolean isRemote() {
-    return true;
+    return false;
   }
 
   @Override
