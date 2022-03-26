@@ -299,7 +299,10 @@ public class RadioService
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d(LOG_TAG, "onStartCommand");
     isStarted = true;
-    if (!playerAdapter.prepareFromMediaId()) {
+    if (playerAdapter == null) {
+      Log.d(LOG_TAG, "onStartCommand: internal failure; playerAdapter is null!");
+      stopSelf();
+    } else if (!playerAdapter.prepareFromMediaId()) {
       Log.d(LOG_TAG, "onStartCommand failed to launch player");
       stopSelf();
     }
@@ -346,9 +349,6 @@ public class RadioService
   @NonNull
   private Notification getNotification() {
     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-      .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-        .setMediaSession(getSessionToken())
-        .setShowActionsInCompactView(0, 1, 2))
       .setSilent(true)
       .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
@@ -374,8 +374,12 @@ public class RadioService
         // Radio current track
         .setContentText(description.getSubtitle());
     }
+    final int[] actions01 = {0, 1};
+    final int[] actions012 = {0, 1, 2};
+    int[] actions = {};
     if (mediaController == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no mediaController");
+      builder.setOngoing(false);
     } else {
       builder.addAction(actionSkipToPrevious);
       switch (mediaController.getPlaybackState().getState()) {
@@ -384,19 +388,29 @@ public class RadioService
           builder
             .addAction(playerAdapter instanceof UpnpPlayerAdapter ? actionStop : actionPause)
             .setOngoing(true);
+          actions = actions012;
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           builder
             .addAction(actionPlay)
             .setOngoing(false);
+          actions = actions012;
           break;
         case PlaybackStateCompat.STATE_ERROR:
-          builder.addAction(actionRewind);
+          builder
+            .addAction(actionRewind)
+            .setOngoing(false);
+          actions = actions012;
+          break;
         default:
           builder.setOngoing(false);
+          actions = actions01;
       }
       builder.addAction(actionSkipToNext);
     }
+    builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+      .setMediaSession(getSessionToken())
+      .setShowActionsInCompactView(actions));
     return builder.build();
   }
 
