@@ -255,6 +255,7 @@ public class RadioService
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
+            stopForeground(false);
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
@@ -278,6 +279,7 @@ public class RadioService
                   },
                   4000);
               } else {
+                stopForeground(false);
                 notificationManager.notify(NOTIFICATION_ID, getNotification());
               }
               break;

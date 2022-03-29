@@ -29,7 +29,6 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
@@ -42,8 +41,8 @@ import com.watea.radio_upnp.model.Radio;
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
   private static final int READ_TIMEOUT = DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * 10;
-  @Nullable
-  private ExoPlayer exoPlayer = null;
+  @NonNull
+  private final ExoPlayer exoPlayer;
   private final Player.Listener playerListener = new Player.Listener() {
     @Override
     public void onPlaybackStateChanged(int playbackState) {
@@ -53,9 +52,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case ExoPlayer.STATE_READY:
-          changeAndNotifyState((exoPlayer == null) ?
-            PlaybackStateCompat.STATE_ERROR :
-            getPlayingPausedState(exoPlayer.getPlayWhenReady()));
+          changeAndNotifyState(getPlayingPausedState(exoPlayer.getPlayWhenReady()));
           break;
         case ExoPlayer.STATE_IDLE:
         case ExoPlayer.STATE_ENDED:
@@ -85,15 +82,18 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     @NonNull String lockKey,
     @NonNull Uri radioUri) {
     super(context, listener, radio, lockKey, radioUri);
+    exoPlayer = new ExoPlayer.Builder(this.context)
+      .setMediaSourceFactory(new DefaultMediaSourceFactory(new DefaultDataSource.Factory(
+        this.context,
+        new DefaultHttpDataSource.Factory()
+          .setReadTimeoutMs(READ_TIMEOUT)
+          .setAllowCrossProtocolRedirects(true))))
+      .build();
   }
 
   @Override
   public void setVolume(float volume) {
-    if (exoPlayer == null) {
-      Log.i(LOG_TAG, "setVolume on null ExoPlayer");
-    } else {
-      exoPlayer.setVolume(volume);
-    }
+    exoPlayer.setVolume(volume);
   }
 
   @Override
@@ -123,13 +123,6 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPrepareFromMediaId() {
-    exoPlayer = new ExoPlayer.Builder(context)
-      .setMediaSourceFactory(new DefaultMediaSourceFactory(new DefaultDataSource.Factory(
-        context,
-        new DefaultHttpDataSource.Factory()
-          .setReadTimeoutMs(READ_TIMEOUT)
-          .setAllowCrossProtocolRedirects(true))))
-      .build();
     exoPlayer.setMediaItem(MediaItem.fromUri(radioUri));
     exoPlayer.setPlayWhenReady(true);
     exoPlayer.addListener(playerListener);
@@ -138,39 +131,22 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPlay() {
-    if (exoPlayer == null) {
-      Log.i(LOG_TAG, "onPlay on null ExoPlayer");
-    } else {
-      exoPlayer.setPlayWhenReady(true);
-    }
+    exoPlayer.setPlayWhenReady(true);
   }
 
   @Override
   protected void onPause() {
-    if (exoPlayer == null) {
-      Log.i(LOG_TAG, "onPause on null ExoPlayer");
-    } else {
-      exoPlayer.setPlayWhenReady(false);
-    }
+    exoPlayer.setPlayWhenReady(false);
   }
 
   @Override
   protected void onStop() {
-    if (exoPlayer == null) {
-      Log.i(LOG_TAG, "onStop on null ExoPlayer");
-    } else {
-      exoPlayer.stop();
-    }
+    exoPlayer.stop();
   }
 
   @Override
   protected void onRelease() {
-    if (exoPlayer == null) {
-      Log.i(LOG_TAG, "onRelease on null ExoPlayer");
-    } else {
-      exoPlayer.removeListener(playerListener);
-      exoPlayer.release();
-      exoPlayer = null;
-    }
+    exoPlayer.removeListener(playerListener);
+    exoPlayer.release();
   }
 }
