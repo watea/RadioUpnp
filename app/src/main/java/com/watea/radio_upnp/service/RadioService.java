@@ -260,7 +260,7 @@ public class RadioService
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            // API 30 and above doesn't allow to restart from foreground
+            // API 31 and above don't allow to restart from foreground
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
               stopForeground(false);
               isForeground = false;
@@ -288,7 +288,7 @@ public class RadioService
                   },
                   4000);
               } else {
-                // API 30 and above doesn't allow to restart from foreground
+                // API 31 and above don't allow to restart from foreground
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                   stopForeground(false);
                   isForeground = false;
@@ -389,27 +389,30 @@ public class RadioService
         // Radio current track
         .setContentText(description.getSubtitle());
     }
-    final int[] actions01 = {0, 1};
     final int[] actions012 = {0, 1, 2};
+    final int[] actions0123 = {0, 1, 2, 3};
     int[] actions = {};
     if (mediaController == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no mediaController");
       builder.setOngoing(false);
     } else {
-      builder.addAction(actionSkipToPrevious);
+      builder
+        .addAction(actionSkipToPrevious)
+        .addAction(actionStop);
       switch (mediaController.getPlaybackState().getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
           // UPnP device doesn't support PAUSE action but STOP
-          builder
-            .addAction(playerAdapter instanceof UpnpPlayerAdapter ? actionStop : actionPause)
-            .setOngoing(true);
-          actions = actions012;
+          if (playerAdapter instanceof LocalPlayerAdapter) {
+            builder.addAction(actionPause);
+          }
+          builder.setOngoing(true);
+          actions = (playerAdapter instanceof LocalPlayerAdapter) ? actions0123 : actions012;
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           builder
             .addAction(actionPlay)
             .setOngoing(false);
-          actions = actions012;
+          actions = actions0123;
           break;
         case PlaybackStateCompat.STATE_ERROR:
           builder
@@ -419,7 +422,7 @@ public class RadioService
           break;
         default:
           builder.setOngoing(false);
-          actions = actions01;
+          actions = actions012;
       }
       builder.addAction(actionSkipToNext);
     }
