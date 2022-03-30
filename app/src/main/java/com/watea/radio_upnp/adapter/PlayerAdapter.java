@@ -51,7 +51,6 @@ import java.util.List;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus.
-// Warning: not threadsafe, execution shall be done in main UI thread.
 public abstract class PlayerAdapter
   implements RadioHandler.Controller, AudioManager.OnAudioFocusChangeListener {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
@@ -85,7 +84,6 @@ public abstract class PlayerAdapter
   private final AudioFocusRequest audioFocusRequest;
   protected int state = PlaybackStateCompat.STATE_NONE;
   private boolean playOnAudioFocus = false;
-  private boolean audioNoisyReceiverRegistered = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -94,6 +92,7 @@ public abstract class PlayerAdapter
       }
     }
   };
+  private boolean audioNoisyReceiverRegistered = false;
 
   public PlayerAdapter(
     @NonNull Context context,
@@ -132,7 +131,7 @@ public abstract class PlayerAdapter
   }
 
   // Must be called
-  public final boolean prepareFromMediaId() {
+  public synchronized final boolean prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
     if (isRemote() || requestAudioFocus()) {
       onPrepareFromMediaId();
@@ -141,14 +140,19 @@ public abstract class PlayerAdapter
     return false;
   }
 
-  public final void play() {
-    if ((isRemote() || requestAudioFocus()) && isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
-      onPlay();
+  public synchronized final void play() {
+    if (isRemote() || requestAudioFocus()) {
+      if (!isRemote()) {
+        registerAudioNoisyReceiver();
+      }
+      if (isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
+        onPlay();
+      }
     }
   }
 
-  public final void pause() {
-    if (!isRemote()) {
+  public synchronized final void pause() {
+    if (!isRemote() && !playOnAudioFocus) {
       releaseAudioFocus();
     }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
@@ -156,20 +160,22 @@ public abstract class PlayerAdapter
     }
   }
 
-  public final void stop() {
+  public synchronized final void stop() {
     // Stop immediately
     changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED);
     if (!isRemote()) {
       releaseAudioFocus();
+      unregisterAudioNoisyReceiver();
     }
     onStop();
     onRelease();
   }
 
   // Called when resources must be released, no impact on playback state
-  public final void release() {
+  public synchronized final void release() {
     if (!isRemote()) {
       releaseAudioFocus();
+      unregisterAudioNoisyReceiver();
     }
     onRelease();
   }
@@ -195,8 +201,8 @@ public abstract class PlayerAdapter
       case AudioManager.AUDIOFOCUS_GAIN:
         if (isPlaying()) {
           setVolume(MEDIA_VOLUME_DEFAULT);
-        } else if (playOnAudioFocus && isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
-          onPlay();
+        } else if (playOnAudioFocus) {
+          play();
         }
         playOnAudioFocus = false;
         break;
@@ -204,9 +210,9 @@ public abstract class PlayerAdapter
         setVolume(MEDIA_VOLUME_DUCK);
         break;
       case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-        if (isPlaying() && isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
+        if (isPlaying()) {
           playOnAudioFocus = true;
-          onPause();
+          pause();
         }
         break;
       case AudioManager.AUDIOFOCUS_LOSS:
@@ -262,7 +268,6 @@ public abstract class PlayerAdapter
   }
 
   private void releaseAudioFocus() {
-    unregisterAudioNoisyReceiver();
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       if (audioFocusRequest != null) {
         Log.d(LOG_TAG, "Audio focus released");
@@ -287,7 +292,6 @@ public abstract class PlayerAdapter
     }
     if (request) {
       Log.d(LOG_TAG, "Audio focus request succeeded");
-      registerAudioNoisyReceiver();
       return true;
     }
     Log.d(LOG_TAG, "Audio focus request failed");

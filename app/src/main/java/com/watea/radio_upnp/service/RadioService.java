@@ -100,7 +100,7 @@ public class RadioService
     };
   private HttpServer httpServer = null;
   private MediaMetadataCompat mediaMetadataCompat = null;
-  private boolean isAllowedToRewind, isStarted = false;
+  private boolean isAllowedToRewind, isForeground = false;
   private String lockKey;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
@@ -250,17 +250,26 @@ public class RadioService
             // Relaunch now allowed
             isAllowedToRewind = true;
           case PlaybackStateCompat.STATE_BUFFERING:
-            startForeground(NOTIFICATION_ID, getNotification());
+            if (isForeground) {
+              notificationManager.notify(NOTIFICATION_ID, getNotification());
+            } else {
+              startForeground(NOTIFICATION_ID, getNotification());
+              isForeground = true;
+            }
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            stopForeground(false);
+            // API 30 and above doesn't allow to restart from foreground
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+              stopForeground(false);
+              isForeground = false;
+            }
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
             // For user convenience in local mode, session is kept alive
-            if (isStarted && (playerAdapter instanceof LocalPlayerAdapter)) {
+            if (isForeground && (playerAdapter instanceof LocalPlayerAdapter)) {
               playerAdapter.release();
               httpServer.setRadioHandlerController(null);
               // Try to relaunch just once
@@ -279,7 +288,11 @@ public class RadioService
                   },
                   4000);
               } else {
-                stopForeground(false);
+                // API 30 and above doesn't allow to restart from foreground
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                  stopForeground(false);
+                  isForeground = false;
+                }
                 notificationManager.notify(NOTIFICATION_ID, getNotification());
               }
               break;
@@ -289,9 +302,9 @@ public class RadioService
             httpServer.setRadioHandlerController(null);
             session.setMetadata(mediaMetadataCompat = null);
             session.setActive(false);
-            isAllowedToRewind = false;
             stopForeground(true);
             stopSelf();
+            isForeground = isAllowedToRewind = false;
         }
       }
     });
@@ -300,7 +313,7 @@ public class RadioService
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d(LOG_TAG, "onStartCommand");
-    isStarted = true;
+    isForeground = false;
     if (playerAdapter == null) {
       Log.d(LOG_TAG, "onStartCommand: internal failure; playerAdapter is null!");
       stopSelf();
@@ -333,9 +346,9 @@ public class RadioService
     }
     // Finally session
     session.release();
-    isStarted = false;
     Log.d(LOG_TAG, "onDestroy: done!");
   }
+
 
   @Override
   public void onTaskRemoved(@NonNull Intent rootIntent) {
