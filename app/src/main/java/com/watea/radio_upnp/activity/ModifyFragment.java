@@ -84,15 +84,15 @@ public class ModifyFragment extends MainActivityFragment {
           ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
         }
 
-        @Override
-        public void onEmpty(boolean isEmpty) {
-          defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
-        }
-
         // Radio shall not be changed if currently played
         @Override
         public void onWarnChange() {
           tell(R.string.not_to_delete);
+        }
+
+        @Override
+        public void onEmpty(boolean isEmpty) {
+          defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
         }
       },
       RADIO_ICON_SIZE / 2,

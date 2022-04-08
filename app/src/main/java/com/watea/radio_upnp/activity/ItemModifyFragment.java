@@ -50,25 +50,6 @@ public class ItemModifyFragment extends ItemFragment {
   }
 
   @Override
-  protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreatedFiltered(savedInstanceState);
-    if (savedInstanceState == null) {
-      nameEditText.setText(radio.getName());
-      urlEditText.setText(radio.getURL().toString());
-      URL webPageURL = this.radio.getWebPageURL();
-      if (webPageURL != null) {
-        webPageEditText.setText(webPageURL.toString());
-      }
-      setRadioIcon(radio.getIcon());
-    } else {
-      // Restore radio
-      Long radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
-      assert getRadioLibrary() != null;
-      radio = getRadioLibrary().getFrom(radioId);
-    }
-  }
-
-  @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     // Store radio; may fail
@@ -81,7 +62,7 @@ public class ItemModifyFragment extends ItemFragment {
   }
 
   @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
       assert getRadioLibrary() != null;
       if (getRadioLibrary().isCurrentRadio(radio)) {
@@ -99,10 +80,29 @@ public class ItemModifyFragment extends ItemFragment {
           getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues()))) {
           tell(R.string.radio_database_update_failed);
         }
-        getBack();
+        onBackPressed();
       }
     }
     // Always true
     return true;
+  }
+
+  @Override
+  protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreatedFiltered(savedInstanceState);
+    if (savedInstanceState == null) {
+      nameEditText.setText(radio.getName());
+      urlEditText.setText(radio.getURL().toString());
+      URL webPageURL = this.radio.getWebPageURL();
+      if (webPageURL != null) {
+        webPageEditText.setText(webPageURL.toString());
+      }
+      setRadioIcon(radio.getIcon());
+    } else {
+      // Restore radio
+      Long radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
+      assert getRadioLibrary() != null;
+      radio = getRadioLibrary().getFrom(radioId);
+    }
   }
 }

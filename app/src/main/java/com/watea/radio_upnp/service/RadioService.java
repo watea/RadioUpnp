@@ -349,7 +349,6 @@ public class RadioService
     Log.d(LOG_TAG, "onDestroy: done!");
   }
 
-
   @Override
   public void onTaskRemoved(@NonNull Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
@@ -391,7 +390,8 @@ public class RadioService
     }
     final int[] actions012 = {0, 1, 2};
     final int[] actions0123 = {0, 1, 2, 3};
-    int[] actions = {};
+    androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
+      new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
     if (mediaController == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no mediaController");
       builder.setOngoing(false);
@@ -404,32 +404,33 @@ public class RadioService
           // UPnP device doesn't support PAUSE action but STOP
           if (playerAdapter instanceof LocalPlayerAdapter) {
             builder.addAction(actionPause);
+            mediaStyle.setShowActionsInCompactView(actions0123);
+          } else {
+            mediaStyle.setShowActionsInCompactView(actions012);
           }
           builder.setOngoing(true);
-          actions = (playerAdapter instanceof LocalPlayerAdapter) ? actions0123 : actions012;
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           builder
             .addAction(actionPlay)
             .setOngoing(false);
-          actions = actions0123;
+          mediaStyle.setShowActionsInCompactView(actions0123);
           break;
         case PlaybackStateCompat.STATE_ERROR:
           builder
             .addAction(actionRewind)
             .setOngoing(false);
-          actions = actions012;
+          mediaStyle.setShowActionsInCompactView(actions0123);
           break;
         default:
           builder.setOngoing(false);
-          actions = actions012;
+          mediaStyle.setShowActionsInCompactView(actions012);
       }
       builder.addAction(actionSkipToNext);
     }
-    builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-      .setMediaSession(getSessionToken())
-      .setShowActionsInCompactView(actions));
-    return builder.build();
+    return builder
+      .setStyle(mediaStyle)
+      .build();
   }
 
   @NonNull

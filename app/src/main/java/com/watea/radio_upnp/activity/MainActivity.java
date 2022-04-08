@@ -44,7 +44,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -52,6 +51,7 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.google.android.material.appbar.CollapsingToolbarLayout;
@@ -74,10 +74,8 @@ import org.fourthline.cling.registry.Registry;
 
 import java.io.File;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 
 public class MainActivity
@@ -95,10 +93,6 @@ public class MainActivity
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  private static final List<Class<? extends Fragment>> ALWAYS_NEW_FRAGMENTS =
-    Arrays.asList(
-      ItemAddFragment.class,
-      ItemModifyFragment.class);
   private static final DefaultRadio[] DEFAULT_RADIOS = {
     new DefaultRadio(
       "FRANCE INTER",
@@ -311,6 +305,11 @@ public class MainActivity
     if (menuId != null) {
       checkNavigationMenu(menuId);
     }
+    // Back button?
+    boolean isMainFragment = (getCurrentFragment() == mainFragment);
+    drawerToggle.setDrawerIndicatorEnabled(isMainFragment);
+    drawerLayout.setDrawerLockMode(
+      isMainFragment ? DrawerLayout.LOCK_MODE_UNLOCKED : DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
   }
 
   public void tell(int message) {
@@ -357,10 +356,10 @@ public class MainActivity
 
   @NonNull
   public Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
-    Fragment fragment;
+    FragmentManager fragmentManager = getSupportFragmentManager();
     String tag = fragmentClass.getSimpleName();
-    if (ALWAYS_NEW_FRAGMENTS.contains(fragmentClass) ||
-      ((fragment = getSupportFragmentManager().findFragmentByTag(tag)) == null)) {
+    Fragment fragment = fragmentManager.findFragmentByTag(tag);
+    if (fragment == null) {
       try {
         fragment = fragmentClass.getConstructor().newInstance();
       } catch (Exception exception) {
@@ -369,7 +368,7 @@ public class MainActivity
         throw new RuntimeException();
       }
     }
-    FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
     fragmentTransaction.replace(R.id.content_frame, fragment, tag);
     // First fragment transaction not saved to enable back leaving the app
     if (getCurrentFragment() != null) {
@@ -452,10 +451,6 @@ public class MainActivity
         .putBoolean(getString(R.string.key_first_start), false)
         .apply();
     }
-    // Retrieve main fragment, shall exists as MainFragment always created
-    mainFragment = (MainFragment) getSupportFragmentManager()
-      .findFragmentByTag(MainFragment.class.getSimpleName());
-    assert mainFragment != null;
     // Start the UPnP service
     if (!bindService(
       new Intent(this, AndroidUpnpServiceImpl.class),
@@ -478,14 +473,8 @@ public class MainActivity
     setSupportActionBar(findViewById(R.id.actionbar));
     actionBarLayout = findViewById(R.id.actionbar_layout);
     playerController = new PlayerController(this, actionBarLayout);
-    ActionBar actionBar = getSupportActionBar();
-    if (actionBar == null) {
-      // Should not happen
-      Log.e(LOG_TAG, "onCreate: ActionBar is null");
-    } else {
-      actionBar.setDisplayHomeAsUpEnabled(true);
-      actionBar.setDisplayShowHomeEnabled(true);
-    }
+    assert getSupportActionBar() != null;
+    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     // Import function
     importController = new ImportController(this);
     // Set navigation drawer toggle (according to documentation)

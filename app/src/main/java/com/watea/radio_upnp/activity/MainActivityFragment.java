@@ -30,6 +30,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -132,6 +133,15 @@ public abstract class MainActivityFragment extends Fragment {
     MAIN_ACTIVITY.onFragmentResume(this);
   }
 
+  @Override
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    if (item.getItemId() == android.R.id.home) {
+      onBackPressed();
+      return true;
+    }
+    return super.onOptionsItemSelected(item);
+  }
+
   public void onCreateOptionsMenu(@NonNull Menu menu) {
   }
 
@@ -161,6 +171,10 @@ public abstract class MainActivityFragment extends Fragment {
   @Nullable
   protected abstract View onCreateViewFiltered(
     @NonNull LayoutInflater inflater, @Nullable ViewGroup container);
+
+  protected void onBackPressed() {
+    MAIN_ACTIVITY.onBackPressed();
+  }
 
   protected boolean isActuallyAdded() {
     return ((getActivity() != null) && isAdded());

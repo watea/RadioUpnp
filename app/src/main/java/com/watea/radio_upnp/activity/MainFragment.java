@@ -109,6 +109,29 @@ public class MainFragment extends MainActivityFragment {
     getRadioLibrary().addListener(radioLibraryListener);
   }
 
+  @SuppressLint("NonConstantResourceId")
+  @Override
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    switch (item.getItemId()) {
+      case R.id.action_preferred:
+        isPreferredRadios = !isPreferredRadios;
+        setPreferredMenuItem();
+        radioLibraryListener.onRefresh();
+        if (!gotItPreferredRadios) {
+          preferredRadiosAlertDialog.show();
+        }
+        return true;
+      case R.id.action_dlna:
+        dlnaDevicesAdapter.removeChosenDlnaDevice();
+        dlnaMenuItem.setVisible(false);
+        tell(R.string.no_dlna_selection);
+        return true;
+      default:
+        // If we got here, the user's action was not recognized
+        return false;
+    }
+  }
+
   @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     dlnaMenuItem = menu.findItem(R.id.action_dlna);
@@ -315,29 +338,6 @@ public class MainFragment extends MainActivityFragment {
     // Clear resources
     assert getRadioLibrary() != null;
     getRadioLibrary().removeListener(radioLibraryListener);
-  }
-
-  @SuppressLint("NonConstantResourceId")
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    switch (item.getItemId()) {
-      case R.id.action_preferred:
-        isPreferredRadios = !isPreferredRadios;
-        setPreferredMenuItem();
-        radioLibraryListener.onRefresh();
-        if (!gotItPreferredRadios) {
-          preferredRadiosAlertDialog.show();
-        }
-        return true;
-      case R.id.action_dlna:
-        dlnaDevicesAdapter.removeChosenDlnaDevice();
-        dlnaMenuItem.setVisible(false);
-        tell(R.string.no_dlna_selection);
-        return true;
-      default:
-        // If we got here, the user's action was not recognized
-        return false;
-    }
   }
 
   @Nullable

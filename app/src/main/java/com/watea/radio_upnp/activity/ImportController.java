@@ -84,6 +84,7 @@ class ImportController {
       }
     }
   };
+
   public ImportController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
     ExportDevice localExportDevice = null;

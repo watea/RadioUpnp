@@ -115,6 +115,70 @@ public abstract class ItemFragment extends MainActivityFragment {
     return element.getElementsByTag(tag).first().ownText();
   }
 
+  @Override
+  public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    Context context = getContext();
+    // Do nothing if we were disposed
+    if ((context != null) && (requestCode == BROWSE_INTENT)) {
+      Uri uri;
+      Bitmap bitmap = null;
+      if ((resultCode == RESULT_OK) && (data != null) && ((uri = data.getData()) != null)) {
+        try {
+          bitmap = BitmapFactory.decodeStream(context.getContentResolver().openInputStream(uri));
+          if (bitmap != null) {
+            setRadioIcon(bitmap);
+          }
+        } catch (FileNotFoundException fileNotFoundException) {
+          Log.i(LOG_TAG, "Error performing icon local search", fileNotFoundException);
+        }
+      }
+      if (bitmap == null) {
+        tell(R.string.no_local_icon);
+      }
+    }
+  }
+
+  @Override
+  public void onSaveInstanceState(@NonNull Bundle outState) {
+    super.onSaveInstanceState(outState);
+    // Save icon; may fail
+    try {
+      Bitmap icon = getIcon();
+      if (icon != null) {
+        assert getContext() != null;
+        File file = Radio.storeToFile(getContext(), icon, Integer.toString(hashCode()));
+        outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
+      }
+    } catch (FileNotFoundException fileNotFoundException) {
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", fileNotFoundException);
+    }
+  }
+
+  @Override
+  public void onPause() {
+    flushKeyboard();
+    super.onPause();
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    flushKeyboard();
+    if (item.getItemId() == R.id.action_done)
+      if (urlWatcher.url == null) {
+        tell(R.string.radio_definition_error);
+      } else {
+        // Action shall be implemented by actual class
+        return false;
+      }
+    else {
+      // If we got here, the user's action was not recognized
+      // Invoke the superclass to handle it
+      return super.onOptionsItemSelected(item);
+    }
+    return true;
+  }
+
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
@@ -223,86 +287,15 @@ public abstract class ItemFragment extends MainActivityFragment {
     return view;
   }
 
-  @Override
-  public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-    super.onActivityResult(requestCode, resultCode, data);
-    Context context = getContext();
-    // Do nothing if we were disposed
-    if ((context != null) && (requestCode == BROWSE_INTENT)) {
-      Uri uri;
-      Bitmap bitmap = null;
-      if ((resultCode == RESULT_OK) && (data != null) && ((uri = data.getData()) != null)) {
-        try {
-          bitmap = BitmapFactory.decodeStream(context.getContentResolver().openInputStream(uri));
-          if (bitmap != null) {
-            setRadioIcon(bitmap);
-          }
-        } catch (FileNotFoundException fileNotFoundException) {
-          Log.i(LOG_TAG, "Error performing icon local search", fileNotFoundException);
-        }
-      }
-      if (bitmap == null) {
-        tell(R.string.no_local_icon);
-      }
-    }
-  }
-
-  @Override
-  public void onSaveInstanceState(@NonNull Bundle outState) {
-    super.onSaveInstanceState(outState);
-    // Save icon; may fail
-    try {
-      Bitmap icon = getIcon();
-      if (icon != null) {
-        assert getContext() != null;
-        File file = Radio.storeToFile(getContext(), icon, Integer.toString(hashCode()));
-        outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
-      }
-    } catch (FileNotFoundException fileNotFoundException) {
-      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", fileNotFoundException);
-    }
-  }
-
-  @Override
-  public void onPause() {
-    flushKeyboard();
-    super.onPause();
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    flushKeyboard();
-    if (item.getItemId() == R.id.action_done)
-      if (urlWatcher.url == null) {
-        tell(R.string.radio_definition_error);
-      } else {
-        // Action shall be implemented by actual class
-        return false;
-      }
-    else {
-      // If we got here, the user's action was not recognized
-      // Invoke the superclass to handle it
-      return super.onOptionsItemSelected(item);
-    }
-    return true;
-  }
-
-  // Back to previous fragment
-  protected void getBack() {
-    assert getFragmentManager() != null;
-    getFragmentManager().popBackStack();
-  }
-
   @NonNull
   protected String getRadioName() {
     return nameEditText.getText().toString().toUpperCase();
   }
 
-
   @Nullable
   protected Bitmap getIcon() {
     // nameEditText may be null if called before creation
-    return (nameEditText == null) ? null: (Bitmap) nameEditText.getTag();
+    return (nameEditText == null) ? null : (Bitmap) nameEditText.getTag();
   }
 
   protected void setRadioIcon(@NonNull Bitmap icon) {
