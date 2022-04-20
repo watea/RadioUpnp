@@ -39,11 +39,21 @@
             android:id="@+id/action_modify"
             android:icon="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />
+    </group>
+
+    <group
+        android:id="@+id/exchange"
+        android:checkableBehavior="single">
         <item
             android:id="@+id/action_import"
             android:icon="@drawable/ic_baseline_exit_to_app_white_24dp"
             android:title="@string/title_import" />
+        <item
+            android:id="@+id/action_export"
+            android:icon="@drawable/ic_baseline_code_white_24dp"
+            android:title="@string/title_export" />
     </group>
+
     <group
         android:id="@+id/sub"
         android:checkableBehavior="single">

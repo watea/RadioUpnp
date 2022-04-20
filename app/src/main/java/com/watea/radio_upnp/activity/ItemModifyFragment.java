@@ -37,12 +37,8 @@ import java.net.URL;
 
 public class ItemModifyFragment extends ItemFragment {
   private static final String LOG_TAG = ItemModifyFragment.class.getName();
+  private Long radioId = null;
   private Radio radio = null;
-
-  @Override
-  public int getTitle() {
-    return R.string.title_item_modify;
-  }
 
   // Must be called before creation
   public void set(@NonNull Radio radio) {
@@ -68,16 +64,20 @@ public class ItemModifyFragment extends ItemFragment {
       if (getRadioLibrary().isCurrentRadio(radio)) {
         tell(R.string.not_to_modify);
       } else {
-        radio.setName(getRadioName());
-        assert urlWatcher.url != null;
-        radio.setURL(urlWatcher.url);
-        radio.setWebPageURL(webPageWatcher.url);
-        assert getIcon() != null;
-        radio.setIcon(getIcon());
-        // Same file name reused to store icon
-        assert getContext() != null;
-        if (!(radio.storeIcon(getContext()) &&
-          getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues()))) {
+        boolean isOk = (radio != null);
+        if (isOk) {
+          radio.setName(getRadioName());
+          assert urlWatcher.url != null;
+          radio.setURL(urlWatcher.url);
+          radio.setWebPageURL(webPageWatcher.url);
+          assert getIcon() != null;
+          radio.setIcon(getIcon());
+          // Same file name reused to store icon
+          assert getContext() != null;
+          isOk = radio.storeIcon(getContext()) &&
+            getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues());
+        }
+        if (!isOk) {
           tell(R.string.radio_database_update_failed);
         }
         onBackPressed();
@@ -93,16 +93,32 @@ public class ItemModifyFragment extends ItemFragment {
     if (savedInstanceState == null) {
       nameEditText.setText(radio.getName());
       urlEditText.setText(radio.getURL().toString());
-      URL webPageURL = this.radio.getWebPageURL();
+      URL webPageURL = radio.getWebPageURL();
       if (webPageURL != null) {
         webPageEditText.setText(webPageURL.toString());
       }
       setRadioIcon(radio.getIcon());
     } else {
-      // Restore radio
-      Long radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
-      assert getRadioLibrary() != null;
-      radio = getRadioLibrary().getFrom(radioId);
+      radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
     }
+  }
+
+  @Override
+  public void onResume() {
+    super.onResume();
+    if (radio == null) {
+      // Restore radio from RadioLibrary, necessary in case of restoration from SavedInstanceState
+      if (radioId == null) {
+        Log.e(LOG_TAG, "onResume: radioId is null");
+      } else {
+        assert getRadioLibrary() != null;
+        radio = getRadioLibrary().getFrom(radioId);
+      }
+    }
+  }
+
+  @Override
+  public int getTitle() {
+    return R.string.title_item_modify;
   }
 }

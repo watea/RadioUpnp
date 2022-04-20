@@ -55,6 +55,8 @@ public class Radio {
   public static final Radio DUMMY_RADIO;
   private static final String LOG_TAG = Radio.class.getName();
   private static final String SPACER = ";";
+  public static final String MARSHALL_HEAD =
+    marshall("name") + marshall("url") + marshall("webPageUrl") + marshall("isPreferred");
 
   static {
     Radio radio = null;
@@ -402,12 +404,12 @@ public class Radio {
 
   // Only actually used field are exported
   @NonNull
-  public String marshall() {
+  public String marshall(boolean textOnly) {
     return marshall(name) +
       marshall(url.toString()) +
       marshall((webPageUrl == null) ? "" : webPageUrl.toString()) +
       marshall(isPreferred.toString()) +
-      marshall(iconToBase64String());
+      (textOnly ? "" : marshall(iconToBase64String()));
   }
 
   @NonNull

@@ -59,7 +59,7 @@ public class Exporter {
   @UpnpAction(out = @UpnpOutputArgument(name = EXPORT))
   public String getExport() {
     assert radioLibrary != null;
-    export = radioLibrary.isOpen() ? radioLibrary.marshall() : "";
+    export = radioLibrary.isOpen() ? radioLibrary.marshall(false) : "";
     Log.d(LOG_TAG, "getExport: " + export.length() + " characters");
     return export;
   }

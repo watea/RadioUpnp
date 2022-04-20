@@ -97,6 +97,8 @@
     <string name="import_action_failed">Unable to execute import action from remote app</string>
     <string name="import_successful">Import successful!</string>
     <string name="no_data">No playlist data found</string>
+    <string name="dump_error">Error: local export file could not be generated.</string>
+    <string name="export_done">Export file "radios.csv" created.\nInternal Storage: Android/data/com.watea.radio_upnp/files</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
@@ -113,6 +115,7 @@
     <string name="title_dlna">UPnP/DLNA</string>
     <string name="title_log">Report</string>
     <string name="title_import">Import</string>
+    <string name="title_export">Export</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>

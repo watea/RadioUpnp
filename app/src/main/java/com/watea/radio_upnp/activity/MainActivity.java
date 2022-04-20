@@ -73,6 +73,10 @@ import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.registry.Registry;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.URL;
 import java.util.Calendar;
 import java.util.Hashtable;
@@ -271,6 +275,9 @@ public class MainActivity
         break;
       case R.id.action_log:
         sendLogcatMail();
+        break;
+      case R.id.action_export:
+        dumpRadios();
         break;
       default:
         // Shall not fail to find!
@@ -521,6 +528,21 @@ public class MainActivity
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     drawerToggle.onConfigurationChanged(newConfig);
+  }
+
+  private void dumpRadios() {
+    File dumpFile = new File(getExternalFilesDir(null), "radios.csv");
+    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+      // Restore checked item
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu());
+    try (Writer writer = new OutputStreamWriter(new FileOutputStream(dumpFile))) {
+      writer.write(radioLibrary.marshall(true));
+      alertDialogBuilder.setMessage(R.string.export_done);
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "dumpRadios: internal failure", iOException);
+      alertDialogBuilder.setMessage(R.string.dump_error);
+    }
+    alertDialogBuilder.create().show();
   }
 
   private void setNotification() {

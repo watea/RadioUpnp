@@ -243,12 +243,12 @@ public class RadioLibrary {
   }
 
   @NonNull
-  public String marshall() {
-    StringBuilder result = new StringBuilder();
+  public String marshall(boolean textOnly) {
+    StringBuilder result = new StringBuilder().append(textOnly ? Radio.MARSHALL_HEAD + "\n" : "");
     for (Long id : getAllRadioIds()) {
       Radio radio = getFrom(id);
       assert radio != null;
-      result.append(radio.marshall()).append(SPACER);
+      result.append(radio.marshall(textOnly)).append(textOnly ? "\n" : SPACER);
     }
     return result.toString();
   }
