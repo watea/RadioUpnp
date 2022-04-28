@@ -53,6 +53,8 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -60,10 +62,11 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
-import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.UpnpDevice;
 import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.fourthline.cling.android.AndroidUpnpService;
@@ -167,6 +170,7 @@ public class MainActivity
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
+  private AlertDialog upnpAlertDialog;
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
@@ -174,34 +178,28 @@ public class MainActivity
   // />
   private RadioLibrary radioLibrary;
   private int navigationMenuCheckedId;
-  private MainFragment mainFragment;
   private AndroidUpnpService androidUpnpService = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
+  private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) {
       androidUpnpService = (AndroidUpnpService) service;
-      // Do nothing if we were disposed
-      if (mainFragment != null) {
-        assert getRegistry() != null;
-        // Shall not be null as fragment creation already done
-        assert mainFragment.getUpnpRegistryAdapterListener() != null;
-        // Add local export device
-        importController.addExportService(getRegistry());
-        // Define adapters
-        upnpRegistryAdapter =
-          new UpnpRegistryAdapter(mainFragment.getUpnpRegistryAdapterListener());
-        // Add all devices to the list we already know about
-        for (RemoteDevice remoteDevice : getRegistry().getRemoteDevices()) {
-          upnpRegistryAdapter.remoteDeviceAdded(getRegistry(), remoteDevice);
-          importController.getRegistryListener().remoteDeviceAdded(getRegistry(), remoteDevice);
-        }
-        // Get ready for future device advertisements
-        getRegistry().addListener(upnpRegistryAdapter);
-        getRegistry().addListener(importController.getRegistryListener());
-        // Ask for devices
-        upnpSearch();
+      assert getRegistry() != null;
+      // Add local export device
+      importController.addExportService(getRegistry());
+      // Define adapters
+      upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
+      // Add all devices to the list we already know about
+      for (RemoteDevice remoteDevice : getRegistry().getRemoteDevices()) {
+        upnpRegistryAdapter.remoteDeviceAdded(getRegistry(), remoteDevice);
+        importController.getRegistryListener().remoteDeviceAdded(getRegistry(), remoteDevice);
       }
+      // Get ready for future device advertisements
+      getRegistry().addListener(upnpRegistryAdapter);
+      getRegistry().addListener(importController.getRegistryListener());
+      // Ask for devices
+      upnpSearch();
     }
 
     @Override
@@ -216,12 +214,7 @@ public class MainActivity
         getRegistry().removeListener(importController.getRegistryListener());
         androidUpnpService = null;
       }
-      // Tell MainFragment if not disposed
-      if (mainFragment != null) {
-        // Shall not be null as fragment creation already done
-        assert mainFragment.getUpnpRegistryAdapterListener() != null;
-        mainFragment.getUpnpRegistryAdapterListener().onResetRemoteDevices();
-      }
+      upnpDevicesAdapter.onResetRemoteDevices();
     }
   };
 
@@ -313,7 +306,7 @@ public class MainActivity
       checkNavigationMenu(menuId);
     }
     // Back button?
-    boolean isMainFragment = (getCurrentFragment() == mainFragment);
+    boolean isMainFragment = getCurrentFragment() instanceof MainFragment;
     drawerToggle.setDrawerIndicatorEnabled(isMainFragment);
     drawerLayout.setDrawerLockMode(
       isMainFragment ? DrawerLayout.LOCK_MODE_UNLOCKED : DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
@@ -340,25 +333,26 @@ public class MainActivity
     return true;
   }
 
-  public boolean upnpReset() {
+  public void onUpnpReset() {
     if (androidUpnpService == null) {
       tell(R.string.service_not_available);
-      return false;
+    } else {
+      assert getRegistry() != null;
+      getRegistry().removeAllRemoteDevices();
+      upnpDevicesAdapter.onResetRemoteDevices();
+      tell(R.string.dlna_search_reset);
     }
-    assert getRegistry() != null;
-    getRegistry().removeAllRemoteDevices();
-    return true;
   }
 
   // radio is null for current
   public void startReading(@Nullable Radio radio) {
-    DlnaDevice chosenDlnaDevice = mainFragment.getChosenDlnaDevice();
+    UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
     playerController.startReading(
       radio,
       ((androidUpnpService != null) &&
-        (chosenDlnaDevice != null) &&
+        (chosenUpnpDevice != null) &&
         networkProxy.hasWifiIpAddress()) ?
-        chosenDlnaDevice.getIdentity() : null);
+        chosenUpnpDevice.getIdentity() : null);
   }
 
   @NonNull
@@ -422,6 +416,16 @@ public class MainActivity
     navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
   }
 
+  @NonNull
+  public UpnpDevicesAdapter getUpnpDevicesAdapter() {
+    assert upnpDevicesAdapter != null;
+    return upnpDevicesAdapter;
+  }
+
+  public void onUpnp() {
+    upnpAlertDialog.show();
+  }
+
   @Override
   protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
@@ -447,11 +451,12 @@ public class MainActivity
   @Override
   protected void onResume() {
     super.onResume();
-    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Create radio database (order matters)
     radioLibrary = new RadioLibrary(this);
     // Create default radios on first start
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) && setDefaultRadios()) {
+    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
+      setDefaultRadios()) {
       // To do just one time, store a flag
       sharedPreferences
         .edit()
@@ -472,7 +477,22 @@ public class MainActivity
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    // Init connexion
     networkProxy = new NetworkProxy(this);
+    // UPnP adapter
+    upnpDevicesAdapter = new UpnpDevicesAdapter(
+      (savedInstanceState == null) ?
+        null : savedInstanceState.getString(getString(R.string.key_selected_device)),
+      (upnpDevice, isChosen) -> {
+        if (isChosen) {
+          startReading(null);
+          tell(getResources().getString(R.string.dlna_selection) + upnpDevice);
+        } else {
+          tell(R.string.no_dlna_selection);
+        }
+        upnpAlertDialog.dismiss();
+      },
+      this);
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
@@ -510,11 +530,22 @@ public class MainActivity
         .create()
         .show();
     }
+    // Specific UPnP devices dialog
+    RecyclerView upnpRecyclerView =
+      (RecyclerView) getLayoutInflater().inflate(R.layout.view_upnp_devices, null);
+    upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+    upnpRecyclerView.setAdapter(upnpDevicesAdapter);
+    upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+      .setView(upnpRecyclerView)
+      .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Fragments
     MainActivityFragment.onActivityCreated(this);
-    mainFragment = (MainFragment) setFragment(MainFragment.class);
+    // Set fragment if context is not restored by Android
+    if (savedInstanceState == null) {
+      setFragment(MainFragment.class);
+    }
   }
 
   @Override
@@ -528,6 +559,24 @@ public class MainActivity
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     drawerToggle.onConfigurationChanged(newConfig);
+  }
+
+  @Override
+  protected void onSaveInstanceState(@NonNull Bundle outState) {
+    super.onSaveInstanceState(outState);
+    Fragment currentFragment = getCurrentFragment();
+    // Stored to tag activity has been disposed
+    if (currentFragment != null) {
+      outState.putString(
+        getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
+    }
+    // May not exist
+    if (upnpDevicesAdapter != null) {
+      UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
+      if (chosenUpnpDevice != null) {
+        outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
+      }
+    }
   }
 
   private void dumpRadios() {

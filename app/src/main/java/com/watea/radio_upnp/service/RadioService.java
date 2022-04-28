@@ -61,9 +61,9 @@ import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
-import com.watea.radio_upnp.model.DlnaDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.UpnpDevice;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
@@ -476,15 +476,15 @@ public class RadioService
         Log.d(LOG_TAG, "onPrepareFromMediaId: radio not found");
         return;
       }
-      // Set actual player DLNA? Extra shall contain DLNA device UDN.
-      boolean isDlna = extras.containsKey(getString(R.string.key_dlna_device));
-      Device<?, ?, ?> chosenDevice = isDlna ?
-        getChosenDevice(extras.getString(getString(R.string.key_dlna_device))) : null;
+      // Set actual player UPnP? Extra shall contain UPnP device UDN.
+      boolean isUpnp = extras.containsKey(getString(R.string.key_upnp_device));
+      Device<?, ?, ?> chosenDevice = isUpnp ?
+        getChosenDevice(extras.getString(getString(R.string.key_upnp_device))) : null;
       Uri serverUri = httpServer.getUri();
       // Robustness for UPnP mode; test if environment is still OK
-      if (isDlna &&
+      if (isUpnp &&
         ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
-        Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process DLNA device");
+        Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process UPnP device");
         return;
       }
       // Synchronize session data
@@ -492,7 +492,7 @@ public class RadioService
       session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
       session.setExtras(extras);
       lockKey = UUID.randomUUID().toString();
-      if (isDlna) {
+      if (isUpnp) {
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
@@ -554,14 +554,14 @@ public class RadioService
         return null;
       }
       for (RemoteDevice remoteDevice : androidUpnpService.getRegistry().getRemoteDevices()) {
-        if (DlnaDevice.getIdentity(remoteDevice).equals(identity)) {
+        if (UpnpDevice.getIdentity(remoteDevice).equals(identity)) {
           return remoteDevice;
         }
         // Embedded devices?
         RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
         if (remoteDevices != null) {
           for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
-            if (DlnaDevice.getIdentity(embeddedRemoteDevice).equals(identity)) {
+            if (UpnpDevice.getIdentity(embeddedRemoteDevice).equals(identity)) {
               return embeddedRemoteDevice;
             }
           }

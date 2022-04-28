@@ -143,8 +143,8 @@ public class PlayerController {
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
         int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
         Bundle bundle = mediaController.getExtras();
-        boolean isDlna =
-          (bundle != null) && bundle.containsKey(mainActivity.getString(R.string.key_dlna_device));
+        boolean isUpnp =
+          (bundle != null) && bundle.containsKey(mainActivity.getString(R.string.key_upnp_device));
         Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
         // Default
         playImageButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
@@ -152,11 +152,11 @@ public class PlayerController {
         // Play button stores state to reach
         switch (intState) {
           case PlaybackStateCompat.STATE_PLAYING:
-            // DLNA device doesn't support PAUSE but STOP
+            // UPnP device doesn't support PAUSE but STOP
             playImageButton.setImageResource(
-              isDlna ? R.drawable.ic_stop_white_24dp : R.drawable.ic_pause_white_24dp);
+              isUpnp ? R.drawable.ic_stop_white_24dp : R.drawable.ic_pause_white_24dp);
             playImageButton.setTag(
-              isDlna ? PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
+              isUpnp ? PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
           case PlaybackStateCompat.STATE_PAUSED:
             setFrameVisibility(true, false);
             break;
@@ -171,18 +171,18 @@ public class PlayerController {
             setFrameVisibility(false, false);
             break;
           default:
-            // On error, leave radio data visibility ON, if not DLNA streaming.
+            // On error, leave radio data visibility ON, if not UPnP streaming.
             // Important notice: this is for user convenience only.
             // Display state is not saved if the context is disposed
             // (as it would require a Radio Service safe context,
             // too complex to implement).
-            if (isDlna) {
+            if (isUpnp) {
               radioLibrary.setCurrentRadio(null);
             } else {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
             }
-            setFrameVisibility(!isDlna, false);
+            setFrameVisibility(!isUpnp, false);
             mainActivity.tell(R.string.radio_connection_error);
         }
       }
@@ -378,7 +378,7 @@ public class PlayerController {
   }
 
   // radio == null for current, do nothing if no current
-  public void startReading(@Nullable Radio radio, @Nullable String dlnaDeviceIdentity) {
+  public void startReading(@Nullable Radio radio, @Nullable String upnpDeviceIdentity) {
     if (mediaController == null) {
       mainActivity.tell(R.string.radio_connection_waiting);
       return;
@@ -391,8 +391,8 @@ public class PlayerController {
       }
     }
     Bundle bundle = new Bundle();
-    if (dlnaDeviceIdentity != null) {
-      bundle.putString(mainActivity.getString(R.string.key_dlna_device), dlnaDeviceIdentity);
+    if (upnpDeviceIdentity != null) {
+      bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
     }
     mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
     // Information are cleared

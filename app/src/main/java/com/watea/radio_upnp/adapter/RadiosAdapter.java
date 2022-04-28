@@ -24,8 +24,7 @@
 package com.watea.radio_upnp.adapter;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
-import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -39,7 +38,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
@@ -47,21 +45,21 @@ import java.util.List;
 import java.util.Vector;
 
 public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder> {
-  @NonNull
-  private final Context context;
   private final int iconSize;
   @NonNull
   private final Listener listener;
   @NonNull
   private final Callback callback;
+  @NonNull
+  private final Resources resources;
   private final List<Long> radioIds = new Vector<>();
 
   public RadiosAdapter(
-    @NonNull Context context,
+    @NonNull Resources resources,
     @NonNull Listener listener,
     @NonNull Callback callback,
     int iconSize) {
-    this.context = context;
+    this.resources = resources;
     this.listener = listener;
     this.callback = callback;
     this.iconSize = iconSize;
@@ -101,6 +99,8 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
 
   public interface Listener {
     void onClick(@NonNull Radio radio);
+
+    boolean onLongClick(@Nullable Uri webPageUri);
   }
 
   public interface Callback {
@@ -126,15 +126,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
       // Listener on radio
       radioTextView.setOnClickListener(v -> listener.onClick(radio));
       // Listener on web link
-      radioTextView.setOnLongClickListener(v -> {
-        Uri webPageUri = radio.getWebPageUri();
-        if (webPageUri == null) {
-          Snackbar.make(v, R.string.no_web_page, Snackbar.LENGTH_LONG).show();
-        } else {
-          context.startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
-        }
-        return true;
-      });
+      radioTextView.setOnLongClickListener(v -> listener.onLongClick(radio.getWebPageUri()));
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {
@@ -151,8 +143,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
       radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         null,
         new BitmapDrawable(
-          context.getResources(),
-          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
+          resources, Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
         null,
         null);
       radioTextView.setText(this.radio.getName());

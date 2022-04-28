@@ -28,7 +28,7 @@
     android:orientation="vertical">
 
     <TextView
-        android:id="@+id/row_dlna_device_name_text_view"
+        android:id="@+id/row_upnp_device_name_text_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="start|center_vertical"

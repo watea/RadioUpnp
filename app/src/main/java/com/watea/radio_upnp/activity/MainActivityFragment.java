@@ -28,6 +28,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -45,6 +46,7 @@ import com.watea.radio_upnp.model.RadioLibrary;
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
+  private static final String LOG_TAG = MainActivityFragment.class.getName();
   protected static Bitmap DEFAULT_ICON = null;
   private static MainActivity MAIN_ACTIVITY = null;
   private View view;
@@ -120,6 +122,7 @@ public abstract class MainActivityFragment extends Fragment {
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
+    Log.d(LOG_TAG, "onActivityCreated: entering, isCreationDone: " + isCreationDone);
     if (!isCreationDone) {
       onActivityCreatedFiltered(savedInstanceState);
       isCreationDone = true;

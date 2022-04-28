@@ -28,10 +28,11 @@ import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -43,14 +44,11 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.adapter.DlnaDevicesAdapter;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
-import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
-import com.watea.radio_upnp.model.DlnaDevice;
+import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.service.NetworkProxy;
@@ -60,12 +58,10 @@ import java.util.List;
 public class MainFragment extends MainActivityFragment {
   private static final int DEFAULT_COLUMNS_COUNT = 3;
   // <HMI assets
-  private RecyclerView dlnaRecyclerView;
   private RecyclerView radiosRecyclerView;
   private FrameLayout defaultFrameLayout;
   private MenuItem dlnaMenuItem;
   private MenuItem preferredMenuItem;
-  private AlertDialog dlnaAlertDialog;
   private AlertDialog radioLongPressAlertDialog;
   private AlertDialog dlnaEnableAlertDialog;
   private AlertDialog preferredRadiosAlertDialog;
@@ -92,9 +88,8 @@ public class MainFragment extends MainActivityFragment {
       defaultFrameLayout.setVisibility(getVisibleFrom(radios.isEmpty()));
     }
   };
+  private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private NetworkProxy networkProxy = null;
-  // DLNA devices management
-  private DlnaDevicesAdapter dlnaDevicesAdapter = null;
 
   @Override
   public void onResume() {
@@ -107,6 +102,15 @@ public class MainFragment extends MainActivityFragment {
     // RadioLibrary changes
     assert getRadioLibrary() != null;
     getRadioLibrary().addListener(radioLibraryListener);
+    // UPnP changes
+    upnpDevicesAdapter.setChosenDeviceListener(icon -> {
+      if (dlnaMenuItem != null) {
+        dlnaMenuItem.setVisible((icon != null));
+        if (icon != null) {
+          dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
+        }
+      }
+    });
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -122,7 +126,7 @@ public class MainFragment extends MainActivityFragment {
         }
         return true;
       case R.id.action_dlna:
-        dlnaDevicesAdapter.removeChosenDlnaDevice();
+        upnpDevicesAdapter.removeChosenUpnpDevice();
         dlnaMenuItem.setVisible(false);
         tell(R.string.no_dlna_selection);
         return true;
@@ -136,41 +140,27 @@ public class MainFragment extends MainActivityFragment {
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     dlnaMenuItem = menu.findItem(R.id.action_dlna);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
-    setDlnaMenuItem();
+    upnpDevicesAdapter.tellChosenDevice();
     setPreferredMenuItem();
   }
 
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> {
-      if (networkProxy.hasWifiIpAddress()) {
-        if (getMainActivity().upnpSearch()) {
-          dlnaAlertDialog.show();
-          if (!gotItDlnaEnable) {
-            dlnaEnableAlertDialog.show();
-          }
+    return v -> wifiTest(() -> {
+      if (getMainActivity().upnpSearch()) {
+        getMainActivity().onUpnp();
+        if (!gotItDlnaEnable) {
+          dlnaEnableAlertDialog.show();
         }
-      } else {
-        tell(R.string.lan_required);
       }
-    };
+    });
   }
 
   @NonNull
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return v -> {
-      if (networkProxy.hasWifiIpAddress()) {
-        if (getMainActivity().upnpReset()) {
-          dlnaDevicesAdapter.onResetRemoteDevices();
-          tell(R.string.dlna_search_reset);
-        }
-      } else {
-        tell(R.string.lan_required);
-      }
-      return true;
-    };
+    return v -> wifiTest(() -> getMainActivity().onUpnpReset());
   }
 
   @Override
@@ -194,11 +184,8 @@ public class MainFragment extends MainActivityFragment {
     assert getContext() != null;
     assert getActivity() != null;
     // Restore saved state, if any
-    String chosenDlnaDeviceIdentity = null;
     if (savedInstanceState != null) {
       isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
-      chosenDlnaDeviceIdentity =
-        savedInstanceState.getString(getString(R.string.key_selected_device));
     }
     // Shared preferences
     SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
@@ -211,39 +198,30 @@ public class MainFragment extends MainActivityFragment {
     // Network
     networkProxy = getMainActivity().getNetworkProxy();
     // Adapters
-    dlnaDevicesAdapter = new DlnaDevicesAdapter(
-      chosenDlnaDeviceIdentity,
-      new DlnaDevicesAdapter.Listener() {
+    radiosAdapter = new RadiosAdapter(
+      getContext().getResources(),
+      new RadiosAdapter.Listener() {
         @Override
-        public void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen) {
-          if (isChosen) {
-            getMainActivity().startReading(null);
-            tell(getResources().getString(R.string.dlna_selection) + dlnaDevice);
+        public void onClick(@NonNull Radio radio) {
+          if (networkProxy.isDeviceOffline()) {
+            tell(R.string.no_internet);
           } else {
-            tell(R.string.no_dlna_selection);
+            getMainActivity().startReading(radio);
+            if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
+              radioLongPressAlertDialog.show();
+            }
           }
-          dlnaAlertDialog.dismiss();
         }
 
         @Override
-        public void onChosenDeviceChange() {
-          // Do nothing if not yet created or if we were disposed
-          if ((dlnaMenuItem != null) && isActuallyAdded()) {
-            setDlnaMenuItem();
+        public boolean onLongClick(@Nullable Uri webPageUri) {
+          if (webPageUri == null) {
+            tell(R.string.no_web_page);
+          } else {
+            assert getContext() != null;
+            getContext().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
           }
-        }
-      },
-      getContext());
-    radiosAdapter = new RadiosAdapter(
-      getContext(),
-      (radio) -> {
-        if (networkProxy.isDeviceOffline()) {
-          tell(R.string.no_internet);
-        } else {
-          getMainActivity().startReading(radio);
-          if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
-            radioLongPressAlertDialog.show();
-          }
+          return true;
         }
       },
       new RadiosAdapter.Callback() {
@@ -264,6 +242,7 @@ public class MainFragment extends MainActivityFragment {
     gridLayoutManager = new GridLayoutManager(getContext(), DEFAULT_COLUMNS_COUNT);
     radiosRecyclerView.setLayoutManager(gridLayoutManager);
     radiosRecyclerView.setAdapter(radiosAdapter);
+    upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
     radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setMessage(R.string.radio_long_press)
@@ -277,12 +256,6 @@ public class MainFragment extends MainActivityFragment {
       .setMessage(R.string.preferred_radios)
       .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
       .create();
-    // Specific DLNA devices dialog
-    dlnaAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
-      .setView(dlnaRecyclerView)
-      .create();
-    dlnaRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-    dlnaRecyclerView.setAdapter(dlnaDevicesAdapter);
   }
 
   @Nullable
@@ -293,26 +266,13 @@ public class MainFragment extends MainActivityFragment {
     final View view = inflater.inflate(R.layout.content_main, container, false);
     radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
-    dlnaRecyclerView =
-      (RecyclerView) inflater.inflate(R.layout.view_dlna_devices, container, false);
     return view;
-  }
-
-  @Nullable
-  public UpnpRegistryAdapter.Listener getUpnpRegistryAdapterListener() {
-    return dlnaDevicesAdapter;
   }
 
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
-    // May not exists
-    DlnaDevice chosenDlnaDevice =
-      (dlnaDevicesAdapter == null) ? null : dlnaDevicesAdapter.getChosenDlnaDevice();
-    outState.putString(
-      getString(R.string.key_selected_device),
-      (chosenDlnaDevice == null) ? null : chosenDlnaDevice.getIdentity());
   }
 
   @Override
@@ -338,19 +298,16 @@ public class MainFragment extends MainActivityFragment {
     // Clear resources
     assert getRadioLibrary() != null;
     getRadioLibrary().removeListener(radioLibraryListener);
+    upnpDevicesAdapter.setChosenDeviceListener(null);
   }
 
-  @Nullable
-  public DlnaDevice getChosenDlnaDevice() {
-    return dlnaDevicesAdapter.getChosenDlnaDevice();
-  }
-
-  private void setDlnaMenuItem() {
-    Bitmap icon = dlnaDevicesAdapter.getChosenDlnaDeviceIcon();
-    dlnaMenuItem.setVisible((icon != null));
-    if (icon != null) {
-      dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
+  private boolean wifiTest(@NonNull Runnable runnable) {
+    if (networkProxy.hasWifiIpAddress()) {
+      runnable.run();
+    } else {
+      tell(R.string.lan_required);
     }
+    return true;
   }
 
   private void setPreferredMenuItem() {

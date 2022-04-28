@@ -41,36 +41,42 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.model.DlnaDevice;
+import com.watea.radio_upnp.model.UpnpDevice;
 
 import org.fourthline.cling.model.meta.RemoteDevice;
 
 import java.util.List;
 import java.util.Vector;
 
-public class DlnaDevicesAdapter
-  extends RecyclerView.Adapter<DlnaDevicesAdapter.ViewHolder>
+public class UpnpDevicesAdapter
+  extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
   implements UpnpRegistryAdapter.Listener {
   private static final int ICON_SIZE = 100;
-  private static final DlnaDevice DUMMY_DEVICE = new DlnaDevice(null);
-  private final List<DlnaDevice> dlnaDevices = new Vector<>();
-  @NonNull
-  private final Listener listener;
+  private static final UpnpDevice DUMMY_DEVICE = new UpnpDevice(null);
+  private final List<UpnpDevice> upnpDevices = new Vector<>();
   private final int selectedColor;
   @Nullable
   private final Drawable castIcon;
+  @NonNull
+  private final RowClickListener rowClickListener;
   @Nullable
-  private String chosenDlnaDeviceIdentity;
+  private ChosenDeviceListener chosenDeviceListener = null;
+  @Nullable
+  private String chosenUpnpDeviceIdentity;
 
-  public DlnaDevicesAdapter(
-    @Nullable String chosenDlnaDeviceIdentity,
-    @NonNull Listener listener,
+  public UpnpDevicesAdapter(
+    @Nullable String chosenUpnpDeviceIdentity,
+    @NonNull RowClickListener rowClickListener,
     @NonNull Context context) {
-    this.chosenDlnaDeviceIdentity = chosenDlnaDeviceIdentity;
-    this.listener = listener;
+    this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
+    this.rowClickListener = rowClickListener;
     this.selectedColor = ContextCompat.getColor(context, R.color.dark_blue);
     this.castIcon = AppCompatResources.getDrawable(context, R.drawable.ic_cast_blue_24dp);
     onResetRemoteDevices();
+  }
+
+  public void setChosenDeviceListener(@Nullable ChosenDeviceListener chosenDeviceListener) {
+    this.chosenDeviceListener = chosenDeviceListener;
   }
 
   @NonNull
@@ -78,65 +84,59 @@ public class DlnaDevicesAdapter
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
     return new ViewHolder(LayoutInflater
       .from(viewGroup.getContext())
-      .inflate(R.layout.row_dlna_device, viewGroup, false));
+      .inflate(R.layout.row_upnp_device, viewGroup, false));
   }
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    viewHolder.setView(dlnaDevices.get(i));
+    viewHolder.setView(upnpDevices.get(i));
   }
 
   @Override
   public int getItemCount() {
-    return dlnaDevices.size();
+    return upnpDevices.size();
   }
 
   // Null if device no longer online
   @Nullable
-  public DlnaDevice getChosenDlnaDevice() {
-    for (DlnaDevice dlnaDevice : dlnaDevices) {
-      String identity = dlnaDevice.getIdentity();
-      if ((identity != null) && identity.equals(chosenDlnaDeviceIdentity)) {
-        return dlnaDevice;
+  public UpnpDevice getChosenUpnpDevice() {
+    for (UpnpDevice upnpDevice : upnpDevices) {
+      String identity = upnpDevice.getIdentity();
+      if ((identity != null) && identity.equals(chosenUpnpDeviceIdentity)) {
+        return upnpDevice;
       }
     }
     return null;
   }
 
-  private void setChosenDlnaDevice(@Nullable DlnaDevice dlnaDevice) {
-    chosenDlnaDeviceIdentity = (dlnaDevice == null) ? null : dlnaDevice.getIdentity();
+  private void setChosenUpnpDevice(@Nullable UpnpDevice upnpDevice) {
+    chosenUpnpDeviceIdentity = (upnpDevice == null) ? null : upnpDevice.getIdentity();
     notifyChange();
   }
 
-  @Nullable
-  public Bitmap getChosenDlnaDeviceIcon() {
-    DlnaDevice dlnaDevice = getChosenDlnaDevice();
-    return (dlnaDevice == null) ? null : dlnaDevice.getIcon();
-  }
-
-  public void removeChosenDlnaDevice() {
-    setChosenDlnaDevice(null);
+  public void removeChosenUpnpDevice() {
+    setChosenUpnpDevice(null);
   }
 
   // Replace if already here
   @Override
   public void onAddOrReplace(@NonNull RemoteDevice remoteDevice) {
-    final DlnaDevice dlnaDevice = new DlnaDevice(remoteDevice);
-    if (dlnaDevices.contains(dlnaDevice))
+    final UpnpDevice upnpDevice = new UpnpDevice(remoteDevice);
+    if (upnpDevices.contains(upnpDevice))
       return;
     // Remove dummy device if any
     if (isWaiting()) {
-      dlnaDevices.clear();
+      upnpDevices.clear();
     }
-    dlnaDevices.add(dlnaDevice);
+    upnpDevices.add(upnpDevice);
     notifyChange();
     // Wait for icon (searched asynchronously)
-    if (dlnaDevice.isFullyHydrated()) {
-      dlnaDevice.searchIcon(() -> {
-        if (dlnaDevices.contains(dlnaDevice)) {
-          notifyItemChanged(dlnaDevices.indexOf(dlnaDevice));
-          if (dlnaDevice == getChosenDlnaDevice()) {
-            listener.onChosenDeviceChange();
+    if (upnpDevice.isFullyHydrated()) {
+      upnpDevice.searchIcon(() -> {
+        if (upnpDevices.contains(upnpDevice)) {
+          notifyItemChanged(upnpDevices.indexOf(upnpDevice));
+          if (upnpDevice == getChosenUpnpDevice()) {
+            tellChosenDevice();
           }
         }
       });
@@ -145,8 +145,8 @@ public class DlnaDevicesAdapter
 
   @Override
   public void onRemove(@NonNull RemoteDevice remoteDevice) {
-    dlnaDevices.remove(new DlnaDevice(remoteDevice));
-    if (dlnaDevices.isEmpty()) {
+    upnpDevices.remove(new UpnpDevice(remoteDevice));
+    if (upnpDevices.isEmpty()) {
       setDummyDeviceForWaiting();
     }
     notifyChange();
@@ -154,79 +154,93 @@ public class DlnaDevicesAdapter
 
   @Override
   public void onResetRemoteDevices() {
-    dlnaDevices.clear();
+    upnpDevices.clear();
     setDummyDeviceForWaiting();
     notifyChange();
   }
 
+  public void tellChosenDevice() {
+    if (chosenDeviceListener != null) {
+      chosenDeviceListener.onChosenDeviceChange(getChosenUpnpDeviceIcon());
+    }
+  }
+
+  @Nullable
+  private Bitmap getChosenUpnpDeviceIcon() {
+    UpnpDevice upnpDevice = getChosenUpnpDevice();
+    return (upnpDevice == null) ? null : upnpDevice.getIcon();
+  }
+
   @SuppressLint("NotifyDataSetChanged")
   private void notifyChange() {
-    listener.onChosenDeviceChange();
+    tellChosenDevice();
     notifyDataSetChanged();
   }
 
   private void setDummyDeviceForWaiting() {
-    dlnaDevices.add(DUMMY_DEVICE);
+    upnpDevices.add(DUMMY_DEVICE);
   }
 
   private boolean isWaiting() {
-    return dlnaDevices.contains(DUMMY_DEVICE);
+    return upnpDevices.contains(DUMMY_DEVICE);
   }
 
-  public interface Listener {
-    void onRowClick(@NonNull DlnaDevice dlnaDevice, boolean isChosen);
+  public interface RowClickListener {
+    void onRowClick(@NonNull UpnpDevice upnpDevice, boolean isChosen);
+  }
 
-    void onChosenDeviceChange();
+  public interface ChosenDeviceListener {
+    void onChosenDeviceChange(@Nullable Bitmap icon);
   }
 
   protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
-    private final TextView dlnaDeviceNameTextView;
+    private final TextView upnpDeviceNameTextView;
     @NonNull
     private final ProgressBar progressBar;
     @NonNull
     private final View view;
     private final int defaultColor;
     @NonNull
-    private DlnaDevice dlnaDevice = DUMMY_DEVICE;
+    private UpnpDevice upnpDevice = DUMMY_DEVICE;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
       view = itemView;
       view.setOnClickListener(v -> {
-        setChosenDlnaDevice(
-          ((chosenDlnaDeviceIdentity == null) ||
-            !chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity())) ?
-            dlnaDevice : null);
-        listener.onRowClick(dlnaDevice, (getChosenDlnaDevice() != null));
+        setChosenUpnpDevice(
+          ((chosenUpnpDeviceIdentity == null) ||
+            !chosenUpnpDeviceIdentity.equals(upnpDevice.getIdentity())) ?
+            upnpDevice : null);
+        rowClickListener.onRowClick(upnpDevice, (getChosenUpnpDevice() != null));
       });
-      dlnaDeviceNameTextView = view.findViewById(R.id.row_dlna_device_name_text_view);
+      upnpDeviceNameTextView = view.findViewById(R.id.row_upnp_device_name_text_view);
       progressBar = view.findViewById(R.id.progress_bar);
-      defaultColor = dlnaDeviceNameTextView.getCurrentTextColor();
+      defaultColor = upnpDeviceNameTextView.getCurrentTextColor();
     }
 
-    private void setView(@NonNull DlnaDevice dlnaDevice) {
-      this.dlnaDevice = dlnaDevice;
+    private void setView(@NonNull UpnpDevice upnpDevice) {
+      this.upnpDevice = upnpDevice;
       // Waiting message not accessible
-      view.setEnabled(!isWaiting() && dlnaDevice.isFullyHydrated());
+      view.setEnabled(!isWaiting() && upnpDevice.isFullyHydrated());
       // Dummy device for waiting message
       if (isWaiting()) {
-        dlnaDeviceNameTextView.setText(R.string.device_no_device_yet);
+        upnpDeviceNameTextView.setText(R.string.device_no_device_yet);
       } else {
-        dlnaDeviceNameTextView.setText(dlnaDevice.toString());
+        upnpDeviceNameTextView.setText(upnpDevice.toString());
       }
       // Selected item
-      dlnaDeviceNameTextView.setTextColor(
-        (chosenDlnaDeviceIdentity != null) &&
-          chosenDlnaDeviceIdentity.equals(dlnaDevice.getIdentity()) ?
+      upnpDeviceNameTextView.setTextColor(
+        (chosenUpnpDeviceIdentity != null) &&
+          chosenUpnpDeviceIdentity.equals(upnpDevice.getIdentity()) ?
           selectedColor : defaultColor);
       // Icon
-      Bitmap bitmap = dlnaDevice.getIcon();
+      Bitmap bitmap = upnpDevice.getIcon();
       assert castIcon != null;
       Drawable drawable =
         (bitmap == null) ? castIcon : new BitmapDrawable(view.getResources(), bitmap);
       drawable.setBounds(0, 0, ICON_SIZE, ICON_SIZE);
-      dlnaDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+      upnpDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         drawable, null, null, null);
       // Wait
       progressBar.setVisibility(view.isEnabled() ? View.INVISIBLE : View.VISIBLE);

@@ -370,10 +370,6 @@ public class RadioLibrary {
     }
   }
 
-  private interface Consumer<T> {
-    void accept(T t);
-  }
-
   private static class RadioDbSQLHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
     private static final String DATABASE_NAME = "Radio.db";

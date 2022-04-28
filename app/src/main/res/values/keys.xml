@@ -33,6 +33,7 @@
     <string name="key_information_press_got_it">key_information_press_got_it</string>
     <string name="key_radio_icon_file">key_radio_icon_file</string>
     <string name="key_radio_id">key_radio_id</string>
+    <string name="key_current_fragment">key_current_fragment</string>
     <!-- Bundles -->
-    <string name="key_dlna_device">key_dlna_device</string>
+    <string name="key_upnp_device">key_dlna_device</string>
 </resources>

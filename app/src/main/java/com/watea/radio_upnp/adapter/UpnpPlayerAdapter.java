@@ -381,7 +381,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
     }
   }
 
-  // Nota: as tested, not supported by DLNA device
+  // Nota: as tested, not supported by UPnP device
   @Override
   public void onPause() {
     if (actionPause != null) {

@@ -36,14 +36,14 @@ import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Icon;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
-public class DlnaDevice {
+public class UpnpDevice {
   private final Handler handler = new Handler(Looper.getMainLooper());
   @Nullable
   private final RemoteDevice remoteDevice;
   @Nullable
   private Bitmap icon = null;
 
-  public DlnaDevice(@Nullable RemoteDevice remoteDevice) {
+  public UpnpDevice(@Nullable RemoteDevice remoteDevice) {
     this.remoteDevice = remoteDevice;
   }
 
@@ -64,9 +64,9 @@ public class DlnaDevice {
   @Override
   public boolean equals(Object object) {
     return
-      object instanceof DlnaDevice &&
-        ((remoteDevice == null) && (((DlnaDevice) object).remoteDevice == null) ||
-          (remoteDevice != null) && remoteDevice.equals(((DlnaDevice) object).remoteDevice));
+      object instanceof UpnpDevice &&
+        ((remoteDevice == null) && (((UpnpDevice) object).remoteDevice == null) ||
+          (remoteDevice != null) && remoteDevice.equals(((UpnpDevice) object).remoteDevice));
   }
 
   @SuppressWarnings("NullableProblems")
