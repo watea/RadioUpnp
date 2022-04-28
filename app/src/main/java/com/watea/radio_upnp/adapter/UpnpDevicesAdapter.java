@@ -159,16 +159,16 @@ public class UpnpDevicesAdapter
     notifyChange();
   }
 
-  public void tellChosenDevice() {
+  @Nullable
+  public Bitmap getChosenUpnpDeviceIcon() {
+    UpnpDevice upnpDevice = getChosenUpnpDevice();
+    return (upnpDevice == null) ? null : upnpDevice.getIcon();
+  }
+
+  private void tellChosenDevice() {
     if (chosenDeviceListener != null) {
       chosenDeviceListener.onChosenDeviceChange(getChosenUpnpDeviceIcon());
     }
-  }
-
-  @Nullable
-  private Bitmap getChosenUpnpDeviceIcon() {
-    UpnpDevice upnpDevice = getChosenUpnpDevice();
-    return (upnpDevice == null) ? null : upnpDevice.getIcon();
   }
 
   @SuppressLint("NotifyDataSetChanged")

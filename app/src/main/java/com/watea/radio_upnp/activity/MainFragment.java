@@ -61,6 +61,14 @@ public class MainFragment extends MainActivityFragment {
   private RecyclerView radiosRecyclerView;
   private FrameLayout defaultFrameLayout;
   private MenuItem dlnaMenuItem;
+  private final UpnpDevicesAdapter.ChosenDeviceListener chosenDeviceListener = icon -> {
+    if (dlnaMenuItem != null) {
+      dlnaMenuItem.setVisible((icon != null));
+      if (icon != null) {
+        dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
+      }
+    }
+  };
   private MenuItem preferredMenuItem;
   private AlertDialog radioLongPressAlertDialog;
   private AlertDialog dlnaEnableAlertDialog;
@@ -103,14 +111,7 @@ public class MainFragment extends MainActivityFragment {
     assert getRadioLibrary() != null;
     getRadioLibrary().addListener(radioLibraryListener);
     // UPnP changes
-    upnpDevicesAdapter.setChosenDeviceListener(icon -> {
-      if (dlnaMenuItem != null) {
-        dlnaMenuItem.setVisible((icon != null));
-        if (icon != null) {
-          dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
-        }
-      }
-    });
+    upnpDevicesAdapter.setChosenDeviceListener(chosenDeviceListener);
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -140,7 +141,7 @@ public class MainFragment extends MainActivityFragment {
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     dlnaMenuItem = menu.findItem(R.id.action_dlna);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
-    upnpDevicesAdapter.tellChosenDevice();
+    chosenDeviceListener.onChosenDeviceChange(upnpDevicesAdapter.getChosenUpnpDeviceIcon());
     setPreferredMenuItem();
   }
 
