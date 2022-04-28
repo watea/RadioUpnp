@@ -128,7 +128,6 @@ public class MainFragment extends MainActivityFragment {
         return true;
       case R.id.action_dlna:
         upnpDevicesAdapter.removeChosenUpnpDevice();
-        dlnaMenuItem.setVisible(false);
         tell(R.string.no_dlna_selection);
         return true;
       default:
