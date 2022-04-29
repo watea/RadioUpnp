@@ -26,8 +26,8 @@ package com.watea.radio_upnp.adapter;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,7 +36,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -45,6 +44,7 @@ import com.watea.radio_upnp.model.UpnpDevice;
 
 import org.fourthline.cling.model.meta.RemoteDevice;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
@@ -52,11 +52,12 @@ public class UpnpDevicesAdapter
   extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
   implements UpnpRegistryAdapter.Listener {
   private static final int ICON_SIZE = 100;
+  private static final int ICON_DENSITY = 400;
   private static final UpnpDevice DUMMY_DEVICE = new UpnpDevice(null);
   private final List<UpnpDevice> upnpDevices = new Vector<>();
   private final int selectedColor;
-  @Nullable
-  private final Drawable castIcon;
+  @NonNull
+  private final Bitmap castIcon;
   @NonNull
   private final RowClickListener rowClickListener;
   @Nullable
@@ -71,7 +72,7 @@ public class UpnpDevicesAdapter
     this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
     this.rowClickListener = rowClickListener;
     this.selectedColor = ContextCompat.getColor(context, R.color.dark_blue);
-    this.castIcon = AppCompatResources.getDrawable(context, R.drawable.ic_cast_blue_24dp);
+    this.castIcon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cast_blue);
     onResetRemoteDevices();
   }
 
@@ -121,13 +122,12 @@ public class UpnpDevicesAdapter
   // Replace if already here
   @Override
   public void onAddOrReplace(@NonNull RemoteDevice remoteDevice) {
-    final UpnpDevice upnpDevice = new UpnpDevice(remoteDevice);
-    if (upnpDevices.contains(upnpDevice))
-      return;
+    remove(remoteDevice);
     // Remove dummy device if any
     if (isWaiting()) {
       upnpDevices.clear();
     }
+    final UpnpDevice upnpDevice = new UpnpDevice(remoteDevice);
     upnpDevices.add(upnpDevice);
     notifyChange();
     // Wait for icon (searched asynchronously)
@@ -145,7 +145,7 @@ public class UpnpDevicesAdapter
 
   @Override
   public void onRemove(@NonNull RemoteDevice remoteDevice) {
-    upnpDevices.remove(new UpnpDevice(remoteDevice));
+    remove(remoteDevice);
     if (upnpDevices.isEmpty()) {
       setDummyDeviceForWaiting();
     }
@@ -163,6 +163,16 @@ public class UpnpDevicesAdapter
   public Bitmap getChosenUpnpDeviceIcon() {
     UpnpDevice upnpDevice = getChosenUpnpDevice();
     return (upnpDevice == null) ? null : upnpDevice.getIcon();
+  }
+
+  private void remove(@NonNull RemoteDevice remoteDevice) {
+    Iterator<UpnpDevice> iter = upnpDevices.iterator();
+    while (iter.hasNext()) {
+      if (iter.next().hasRemoteDevice(remoteDevice)) {
+        iter.remove();
+        break;
+      }
+    }
   }
 
   private void tellChosenDevice() {
@@ -228,20 +238,19 @@ public class UpnpDevicesAdapter
         upnpDeviceNameTextView.setText(R.string.device_no_device_yet);
       } else {
         upnpDeviceNameTextView.setText(upnpDevice.toString());
+        // Icon
+        Bitmap bitmap = upnpDevice.getIcon();
+        bitmap = (bitmap == null) ? castIcon : bitmap;
+        bitmap = Bitmap.createScaledBitmap(bitmap, ICON_SIZE, ICON_SIZE, true);
+        bitmap.setDensity(ICON_DENSITY);
+        upnpDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+          new BitmapDrawable(view.getResources(), bitmap), null, null, null);
       }
       // Selected item
       upnpDeviceNameTextView.setTextColor(
         (chosenUpnpDeviceIdentity != null) &&
           chosenUpnpDeviceIdentity.equals(upnpDevice.getIdentity()) ?
           selectedColor : defaultColor);
-      // Icon
-      Bitmap bitmap = upnpDevice.getIcon();
-      assert castIcon != null;
-      Drawable drawable =
-        (bitmap == null) ? castIcon : new BitmapDrawable(view.getResources(), bitmap);
-      drawable.setBounds(0, 0, ICON_SIZE, ICON_SIZE);
-      upnpDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        drawable, null, null, null);
       // Wait
       progressBar.setVisibility(view.isEnabled() ? View.INVISIBLE : View.VISIBLE);
     }

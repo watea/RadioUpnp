@@ -115,7 +115,7 @@ public class PlayerController {
       if (isVisible) {
         playedRadioNameTextView.setText(radio.getName());
         albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
-          radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, false));
+          radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, true));
         setPreferredButton(radio.isPreferred());
       }
     }

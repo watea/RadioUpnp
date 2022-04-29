@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.adapter;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.util.Log;
@@ -48,8 +47,6 @@ import java.util.Vector;
 
 public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapter.ViewHolder> {
   private static final String LOG_TAG = RadiosModifyAdapter.class.getName();
-  @NonNull
-  private final Context context;
   @NonNull
   private final Listener listener;
   private final int iconSize;
@@ -75,11 +72,9 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
   };
 
   public RadiosModifyAdapter(
-    @NonNull Context context,
     @NonNull Listener listener,
     int iconSize,
     @NonNull RecyclerView recyclerView) {
-    this.context = context;
     this.listener = listener;
     this.iconSize = iconSize;
     // RecyclerView shall be defined for Adapter
@@ -230,8 +225,8 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
       this.radio = radio;
       radioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         new BitmapDrawable(
-          context.getResources(),
-          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, false)),
+          radioNameTextView.getResources(),
+          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, true)),
         null,
         null,
         null);

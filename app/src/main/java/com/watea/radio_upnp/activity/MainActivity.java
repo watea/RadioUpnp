@@ -32,6 +32,8 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -618,13 +620,19 @@ public class MainActivity
           new URL(defaultRadio.uRL),
           new URL(defaultRadio.webPageURL),
           false,
-          radioLibrary.resourceToBitmap(defaultRadio.drawable));
+          resourceToBitmap(defaultRadio.drawable));
         result = radioLibrary.add(radio) || result;
       } catch (Exception exception) {
         Log.e(LOG_TAG, "setDefaultRadios: internal failure", exception);
       }
     }
     return result;
+  }
+
+  @NonNull
+  private Bitmap resourceToBitmap(int resource) {
+    Bitmap bitmap = BitmapFactory.decodeResource(getResources(), resource);
+    return Bitmap.createScaledBitmap(bitmap, RADIO_ICON_SIZE, RADIO_ICON_SIZE, true);
   }
 
   @Nullable

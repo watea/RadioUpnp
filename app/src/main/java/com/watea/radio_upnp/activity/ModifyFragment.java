@@ -77,7 +77,6 @@ public class ModifyFragment extends MainActivityFragment {
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
     // Adapters
     radiosModifyAdapter = new RadiosModifyAdapter(
-      getContext(),
       new RadiosModifyAdapter.Listener() {
         @Override
         public void onModifyClick(@NonNull Radio radio) {

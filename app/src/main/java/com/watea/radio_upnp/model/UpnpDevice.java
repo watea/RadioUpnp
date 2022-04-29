@@ -61,14 +61,6 @@ public class UpnpDevice {
     return (remoteDevice == null) ? null : getIdentity(remoteDevice);
   }
 
-  @Override
-  public boolean equals(Object object) {
-    return
-      object instanceof UpnpDevice &&
-        ((remoteDevice == null) && (((UpnpDevice) object).remoteDevice == null) ||
-          (remoteDevice != null) && remoteDevice.equals(((UpnpDevice) object).remoteDevice));
-  }
-
   @SuppressWarnings("NullableProblems")
   @Nullable
   @Override
@@ -82,6 +74,10 @@ public class UpnpDevice {
 
   public boolean isFullyHydrated() {
     return (remoteDevice != null) && remoteDevice.isFullyHydrated();
+  }
+
+  public boolean hasRemoteDevice(@NonNull RemoteDevice remoteDevice) {
+    return remoteDevice.equals(this.remoteDevice);
   }
 
   // Search asynchronous in background

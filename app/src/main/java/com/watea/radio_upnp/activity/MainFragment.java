@@ -199,7 +199,6 @@ public class MainFragment extends MainActivityFragment {
     networkProxy = getMainActivity().getNetworkProxy();
     // Adapters
     radiosAdapter = new RadiosAdapter(
-      getContext().getResources(),
       new RadiosAdapter.Listener() {
         @Override
         public void onClick(@NonNull Radio radio) {

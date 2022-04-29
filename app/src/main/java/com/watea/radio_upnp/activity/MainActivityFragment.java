@@ -24,9 +24,6 @@
 package com.watea.radio_upnp.activity;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -37,17 +34,14 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.RadioLibrary;
 
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
   private static final String LOG_TAG = MainActivityFragment.class.getName();
-  protected static Bitmap DEFAULT_ICON = null;
   private static MainActivity MAIN_ACTIVITY = null;
   private View view;
   private boolean isCreationDone = false;
@@ -60,23 +54,6 @@ public abstract class MainActivityFragment extends Fragment {
   // Must be called
   public static void onActivityCreated(@NonNull MainActivity mainActivity) {
     MainActivityFragment.MAIN_ACTIVITY = mainActivity;
-    // Fetch needed static values
-    createDefaultIcon();
-  }
-
-  private static void createDefaultIcon() {
-    Drawable drawable = ContextCompat.getDrawable(MAIN_ACTIVITY, R.drawable.ic_radio_white_24dp);
-    // Deep copy
-    assert drawable != null;
-    Drawable.ConstantState constantState = drawable.mutate().getConstantState();
-    assert constantState != null;
-    drawable = constantState.newDrawable();
-    Canvas canvas = new Canvas();
-    DEFAULT_ICON = Bitmap.createBitmap(
-      drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-    canvas.setBitmap(DEFAULT_ICON);
-    drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-    drawable.draw(canvas);
   }
 
   @Nullable

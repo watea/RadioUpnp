@@ -216,7 +216,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     webPageWatcher = new UrlWatcher(webPageEditText);
     iconWatcher = new UrlWatcher(iconEditText);
     // Default icon
-    setRadioIcon(DEFAULT_ICON);
+    setRadioIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_radio_gray));
     // Restore icon; may fail
     if (savedInstanceState != null) {
       try {
@@ -315,7 +315,7 @@ public abstract class ItemFragment extends MainActivityFragment {
       null,
       new BitmapDrawable(
         getResources(),
-        Bitmap.createScaledBitmap(icon, RADIO_ICON_SIZE, RADIO_ICON_SIZE, false)),
+        Bitmap.createScaledBitmap(icon, RADIO_ICON_SIZE, RADIO_ICON_SIZE, true)),
       null,
       null);
     // radioIcon stored as tag

@@ -110,7 +110,7 @@ public class HttpServer extends Thread {
     String name = LOGO_FILE + radio.getId() + ".jpg";
     try (FileOutputStream fileOutputStream = context.openFileOutput(name, Context.MODE_PRIVATE)) {
       Bitmap
-        .createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, false)
+        .createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true)
         .compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
     } catch (Exception exception) {
       Log.e(LOG_TAG, "createLogoFile: internal failure creating logo file", exception);

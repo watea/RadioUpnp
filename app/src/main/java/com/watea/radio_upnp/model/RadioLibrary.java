@@ -31,8 +31,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.util.Log;
@@ -46,7 +44,6 @@ import java.util.Vector;
 
 public class RadioLibrary {
   private static final String LOG_TAG = RadioLibrary.class.getName();
-  private static final int ICON_SIZE = 300;
   private static final String SPACER = "#";
   private final List<Listener> listeners = new Vector<>();
   @NonNull
@@ -149,12 +146,6 @@ public class RadioLibrary {
   @NonNull
   public List<Long> getPreferredRadioIds() {
     return cursorToIdListAndClose(preferredIdsQuery());
-  }
-
-  @NonNull
-  public Bitmap resourceToBitmap(int resource) {
-    Bitmap b = BitmapFactory.decodeResource(context.getResources(), resource);
-    return Bitmap.createScaledBitmap(b, ICON_SIZE, ICON_SIZE, false);
   }
 
   // Add a radio and store according icon
