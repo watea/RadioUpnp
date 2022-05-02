@@ -106,12 +106,66 @@ public class DonationFragment
     }
   }
 
+  @NonNull
+  @Override
+  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return v -> {
+      if (skuDetailss.isEmpty() || !billingClient.isReady()) {
+        paymentAlertDialogBuilder.show();
+      } else {
+        String item = GOOGLE_CATALOG.get(googleSpinner.getSelectedItemPosition());
+        Log.d(LOG_TAG, "Selected item in spinner: " + item);
+        final SkuDetails skuDetails = skuDetailss.get(item);
+        assert skuDetails != null;
+        billingClient.launchBillingFlow(
+          getMainActivity(),
+          BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build());
+      }
+    };
+  }
+
+  @Override
+  public int getFloatingActionButtonResource() {
+    return R.drawable.ic_payment_white_24dp;
+  }
+
+  @Override
+  public int getTitle() {
+    return R.string.title_donate;
+  }
+
+  @Nullable
+  @Override
+  public View onCreateView(
+    @NonNull LayoutInflater inflater,
+    @Nullable ViewGroup container,
+    @Nullable Bundle savedInstanceState) {
+    final View view = inflater.inflate(R.layout.content_donation, container, false);
+    // Choose donation amount
+    googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
+    // Alert dialog
+    paymentAlertDialogBuilder = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
+      .setIcon(android.R.drawable.ic_dialog_alert)
+      .setTitle(R.string.donation_alert_dialog_title)
+      .setMessage(R.string.donation_alert_dialog_try_again)
+      .setCancelable(true)
+      .setNeutralButton(R.string.donation_button_close, (dialog, which) -> dialog.dismiss());
+    // Adapters
+    assert getContext() != null;
+    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
+      getContext(),
+      android.R.layout.simple_spinner_item,
+      getResources().getStringArray(R.array.donation_google_catalog_values));
+    donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+    googleSpinner.setAdapter(donationAdapter);
+    return view;
+  }
+
   @Override
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
-    // Context exists
-    assert getContext() != null;
     // BillingClient, new each time
+    assert getContext() != null;
     billingClient = BillingClient.newBuilder(getContext())
       .enablePendingPurchases()
       .setListener(this)
@@ -171,66 +225,6 @@ public class DonationFragment
           Math.min(reconnectMilliseconds * 2, RECONNECT_TIMER_MAX_TIME_MILLISECONDS);
       }
     });
-  }
-
-  @NonNull
-  @Override
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    // Context exists
-    assert getActivity() != null;
-    return v -> {
-      if (skuDetailss.isEmpty() || !billingClient.isReady()) {
-        paymentAlertDialogBuilder.show();
-      } else {
-        String item = GOOGLE_CATALOG.get(googleSpinner.getSelectedItemPosition());
-        Log.d(LOG_TAG, "Selected item in spinner: " + item);
-        final SkuDetails skuDetails = skuDetailss.get(item);
-        assert skuDetails != null;
-        billingClient.launchBillingFlow(
-          getActivity(),
-          BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build());
-      }
-    };
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_payment_white_24dp;
-  }
-
-  @Override
-  public int getTitle() {
-    return R.string.title_donate;
-  }
-
-  @Override
-  public void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
-    // Context exists
-    assert getContext() != null;
-    // Adapters
-    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
-      getContext(),
-      android.R.layout.simple_spinner_item,
-      getResources().getStringArray(R.array.donation_google_catalog_values));
-    donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-    googleSpinner.setAdapter(donationAdapter);
-  }
-
-  @Nullable
-  @Override
-  protected View onCreateViewFiltered(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
-    final View view = inflater.inflate(R.layout.content_donation, container, false);
-    // Choose donation amount
-    googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
-    // Alert dialog
-    paymentAlertDialogBuilder = new AlertDialog.Builder(getContext())
-      .setIcon(android.R.drawable.ic_dialog_alert)
-      .setTitle(R.string.donation_alert_dialog_title)
-      .setMessage(R.string.donation_alert_dialog_try_again)
-      .setCancelable(true)
-      .setNeutralButton(R.string.donation_button_close, (dialog, which) -> dialog.dismiss());
-    return view;
   }
 
   private void logBillingResult(@NonNull String location, @NonNull BillingResult billingResult) {

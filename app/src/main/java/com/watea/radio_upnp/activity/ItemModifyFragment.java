@@ -46,6 +46,22 @@ public class ItemModifyFragment extends ItemFragment {
   }
 
   @Override
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
+    if (savedInstanceState == null) {
+      nameEditText.setText(radio.getName());
+      urlEditText.setText(radio.getURL().toString());
+      URL webPageURL = radio.getWebPageURL();
+      if (webPageURL != null) {
+        webPageEditText.setText(webPageURL.toString());
+      }
+      setRadioIcon(radio.getIcon());
+    } else {
+      radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
+    }
+  }
+
+  @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     // Store radio; may fail
@@ -73,8 +89,7 @@ public class ItemModifyFragment extends ItemFragment {
           assert getIcon() != null;
           radio.setIcon(getIcon());
           // Same file name reused to store icon
-          assert getContext() != null;
-          isOk = radio.storeIcon(getContext()) &&
+          isOk = radio.storeIcon(getMainActivity()) &&
             getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues());
         }
         if (!isOk) {
@@ -85,22 +100,6 @@ public class ItemModifyFragment extends ItemFragment {
     }
     // Always true
     return true;
-  }
-
-  @Override
-  protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreatedFiltered(savedInstanceState);
-    if (savedInstanceState == null) {
-      nameEditText.setText(radio.getName());
-      urlEditText.setText(radio.getURL().toString());
-      URL webPageURL = radio.getWebPageURL();
-      if (webPageURL != null) {
-        webPageEditText.setText(webPageURL.toString());
-      }
-      setRadioIcon(radio.getIcon());
-    } else {
-      radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
-    }
   }
 
   @Override

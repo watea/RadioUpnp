@@ -42,7 +42,6 @@ import com.watea.radio_upnp.model.Radio;
 
 public class ModifyFragment extends MainActivityFragment {
   // <HMI assets
-  private RecyclerView radiosRecyclerView;
   private FrameLayout defaultFrameLayout;
   // />
   private RadiosModifyAdapter radiosModifyAdapter;
@@ -70,12 +69,18 @@ public class ModifyFragment extends MainActivityFragment {
     return R.string.title_modify;
   }
 
+  @Nullable
   @Override
-  protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
-    // Context exists
-    assert getContext() != null;
-    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-    // Adapters
+  public View onCreateView(
+    @NonNull LayoutInflater inflater,
+    @Nullable ViewGroup container,
+    @Nullable Bundle savedInstanceState) {
+    // Inflate the view so that graphical objects exists
+    final View view = inflater.inflate(R.layout.content_main, container, false);
+    RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
+    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
+    // Adapters (order matters!)
     radiosModifyAdapter = new RadiosModifyAdapter(
       new RadiosModifyAdapter.Listener() {
         @Override
@@ -96,16 +101,6 @@ public class ModifyFragment extends MainActivityFragment {
       },
       RADIO_ICON_SIZE / 2,
       radiosRecyclerView);
-  }
-
-  @Nullable
-  @Override
-  protected View onCreateViewFiltered(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
-    // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_main, container, false);
-    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     return view;
   }
 

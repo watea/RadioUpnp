@@ -51,14 +51,12 @@ import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
-import com.watea.radio_upnp.service.NetworkProxy;
 
 import java.util.List;
 
 public class MainFragment extends MainActivityFragment {
   private static final int DEFAULT_COLUMNS_COUNT = 3;
   // <HMI assets
-  private RecyclerView radiosRecyclerView;
   private FrameLayout defaultFrameLayout;
   private MenuItem dlnaMenuItem;
   private final UpnpDevicesAdapter.ChosenDeviceListener chosenDeviceListener = icon -> {
@@ -97,14 +95,12 @@ public class MainFragment extends MainActivityFragment {
     }
   };
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
-  private NetworkProxy networkProxy = null;
 
   @Override
   public void onResume() {
     super.onResume();
-    assert getActivity() != null;
     // Force column count
-    onConfigurationChanged(getActivity().getResources().getConfiguration());
+    onConfigurationChanged(getMainActivity().getResources().getConfiguration());
     // Set view
     radioLibraryListener.onRefresh();
     // RadioLibrary changes
@@ -178,31 +174,24 @@ public class MainFragment extends MainActivityFragment {
     return R.string.title_main;
   }
 
+  @Nullable
   @Override
-  protected void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState) {
-    // Context exists
-    assert getContext() != null;
-    assert getActivity() != null;
-    // Restore saved state, if any
-    if (savedInstanceState != null) {
-      isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
-    }
-    // Shared preferences
-    SharedPreferences sharedPreferences = getActivity().getPreferences(Context.MODE_PRIVATE);
-    gotItRadioLongPress =
-      sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
-    gotItDlnaEnable =
-      sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
-    gotItPreferredRadios =
-      sharedPreferences.getBoolean(getString(R.string.key_preferred_radios_got_it), false);
-    // Network
-    networkProxy = getMainActivity().getNetworkProxy();
-    // Adapters
+  public View onCreateView(
+    @NonNull LayoutInflater inflater,
+    @Nullable ViewGroup container,
+    @Nullable Bundle savedInstanceState) {
+    // Inflate the view so that graphical objects exists
+    final View view = inflater.inflate(R.layout.content_main, container, false);
+    RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    gridLayoutManager = new GridLayoutManager(getContext(), DEFAULT_COLUMNS_COUNT);
+    radiosRecyclerView.setLayoutManager(gridLayoutManager);
+    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
+    // Adapters (order matters!)
     radiosAdapter = new RadiosAdapter(
       new RadiosAdapter.Listener() {
         @Override
         public void onClick(@NonNull Radio radio) {
-          if (networkProxy.isDeviceOffline()) {
+          if (getNetworkProxy().isDeviceOffline()) {
             tell(R.string.no_internet);
           } else {
             getMainActivity().startReading(radio);
@@ -217,8 +206,7 @@ public class MainFragment extends MainActivityFragment {
           if (webPageUri == null) {
             tell(R.string.no_web_page);
           } else {
-            assert getContext() != null;
-            getContext().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
+            getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
           }
           return true;
         }
@@ -238,8 +226,6 @@ public class MainFragment extends MainActivityFragment {
         }
       },
       RADIO_ICON_SIZE / 2);
-    gridLayoutManager = new GridLayoutManager(getContext(), DEFAULT_COLUMNS_COUNT);
-    radiosRecyclerView.setLayoutManager(gridLayoutManager);
     radiosRecyclerView.setAdapter(radiosAdapter);
     upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
@@ -253,19 +239,26 @@ public class MainFragment extends MainActivityFragment {
       .create();
     preferredRadiosAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setMessage(R.string.preferred_radios)
-      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
+      .setPositiveButton(
+        R.string.action_got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
       .create();
+    return view;
   }
 
-  @Nullable
   @Override
-  protected View onCreateViewFiltered(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
-    // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_main, container, false);
-    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
-    return view;
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
+    if (savedInstanceState != null) {
+      isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
+    }
+    // Shared preferences
+    SharedPreferences sharedPreferences = getMainActivity().getPreferences(Context.MODE_PRIVATE);
+    gotItRadioLongPress =
+      sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
+    gotItDlnaEnable =
+      sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
+    gotItPreferredRadios =
+      sharedPreferences.getBoolean(getString(R.string.key_preferred_radios_got_it), false);
   }
 
   @Override
@@ -301,7 +294,7 @@ public class MainFragment extends MainActivityFragment {
   }
 
   private boolean wifiTest(@NonNull Runnable runnable) {
-    if (networkProxy.hasWifiIpAddress()) {
+    if (getNetworkProxy().hasWifiIpAddress()) {
       runnable.run();
     } else {
       tell(R.string.lan_required);

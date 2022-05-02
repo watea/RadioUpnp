@@ -23,94 +23,35 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.content.Context;
-import android.os.Bundle;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.service.NetworkProxy;
 
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
-  private static final String LOG_TAG = MainActivityFragment.class.getName();
-  private static MainActivity MAIN_ACTIVITY = null;
-  private View view;
-  private boolean isCreationDone = false;
 
   // Required empty constructor
   public MainActivityFragment() {
     super();
   }
 
-  // Must be called
-  public static void onActivityCreated(@NonNull MainActivity mainActivity) {
-    MainActivityFragment.MAIN_ACTIVITY = mainActivity;
-  }
-
-  @Nullable
-  protected static RadioLibrary getRadioLibrary() {
-    return MAIN_ACTIVITY.getRadioLibrary();
-  }
-
-  protected static void tell(int message) {
-    MAIN_ACTIVITY.tell(message);
-  }
-
-  protected static void tell(@NonNull String message) {
-    MAIN_ACTIVITY.tell(message);
-  }
-
-  @NonNull
-  protected static MainActivity getMainActivity() {
-    return MAIN_ACTIVITY;
-  }
-
   protected static int getVisibleFrom(boolean isVisible) {
     return isVisible ? View.VISIBLE : View.INVISIBLE;
-  }
-
-  @Nullable
-  @Override
-  public Context getContext() {
-    Context context = super.getContext();
-    return (context == null) ? MAIN_ACTIVITY : context;
-  }
-
-  @Nullable
-  @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-    super.onCreateView(inflater, container, savedInstanceState);
-    if (!isCreationDone) {
-      view = onCreateViewFiltered(inflater, container);
-    }
-    return view;
-  }
-
-  @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
-    Log.d(LOG_TAG, "onActivityCreated: entering, isCreationDone: " + isCreationDone);
-    if (!isCreationDone) {
-      onActivityCreatedFiltered(savedInstanceState);
-      isCreationDone = true;
-    }
   }
 
   @Override
   public void onResume() {
     super.onResume();
     // Decorate
-    MAIN_ACTIVITY.onFragmentResume(this);
+    getMainActivity().onFragmentResume(this);
   }
 
   @Override
@@ -146,14 +87,32 @@ public abstract class MainActivityFragment extends Fragment {
 
   public abstract int getTitle();
 
-  protected abstract void onActivityCreatedFiltered(@Nullable Bundle savedInstanceState);
-
   @Nullable
-  protected abstract View onCreateViewFiltered(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container);
+  protected RadioLibrary getRadioLibrary() {
+    return getMainActivity().getRadioLibrary();
+  }
+
+  protected void tell(int message) {
+    getMainActivity().tell(message);
+  }
+
+  protected void tell(@NonNull String message) {
+    getMainActivity().tell(message);
+  }
+
+  @NonNull
+  protected NetworkProxy getNetworkProxy() {
+    return getMainActivity().getNetworkProxy();
+  }
+
+  @NonNull
+  protected MainActivity getMainActivity() {
+    assert getActivity() != null;
+    return (MainActivity) getActivity();
+  }
 
   protected void onBackPressed() {
-    MAIN_ACTIVITY.onBackPressed();
+    getMainActivity().onBackPressed();
   }
 
   protected boolean isActuallyAdded() {

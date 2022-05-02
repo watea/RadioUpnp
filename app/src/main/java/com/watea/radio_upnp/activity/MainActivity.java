@@ -166,7 +166,7 @@ public class MainActivity
   };
   private static final DeviceTypeHeader RENDERER_DEVICE_TYPE_HEADER =
     new DeviceTypeHeader(RENDERER_DEVICE_TYPE);
-  private NetworkProxy networkProxy;
+  private NetworkProxy networkProxy = null;
   // <HMI assets
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
@@ -178,7 +178,7 @@ public class MainActivity
   private PlayerController playerController;
   private ImportController importController;
   // />
-  private RadioLibrary radioLibrary;
+  private RadioLibrary radioLibrary = null;
   private int navigationMenuCheckedId;
   private AndroidUpnpService androidUpnpService = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
@@ -406,6 +406,7 @@ public class MainActivity
 
   @NonNull
   public NetworkProxy getNetworkProxy() {
+    assert networkProxy != null;
     return networkProxy;
   }
 
@@ -481,7 +482,7 @@ public class MainActivity
     super.onCreate(savedInstanceState);
     // Init connexion
     networkProxy = new NetworkProxy(this);
-    // UPnP adapter
+    // UPnP adapter (order matters)
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       (savedInstanceState == null) ?
         null : savedInstanceState.getString(getString(R.string.key_selected_device)),
@@ -493,8 +494,7 @@ public class MainActivity
           tell(R.string.no_dlna_selection);
         }
         upnpAlertDialog.dismiss();
-      },
-      this);
+      });
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
@@ -533,8 +533,7 @@ public class MainActivity
         .show();
     }
     // Specific UPnP devices dialog
-    RecyclerView upnpRecyclerView =
-      (RecyclerView) getLayoutInflater().inflate(R.layout.view_upnp_devices, null);
+    RecyclerView upnpRecyclerView = new RecyclerView(this);
     upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
@@ -542,8 +541,6 @@ public class MainActivity
       .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
-    // Fragments
-    MainActivityFragment.onActivityCreated(this);
     // Set fragment if context is not restored by Android
     if (savedInstanceState == null) {
       setFragment(MainFragment.class);

@@ -223,13 +223,9 @@ public class RadiosModifyAdapter extends RecyclerView.Adapter<RadiosModifyAdapte
 
     private void setView(@NonNull Radio radio) {
       this.radio = radio;
+      Bitmap bitmap = Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, true);
       radioNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        new BitmapDrawable(
-          radioNameTextView.getResources(),
-          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, true)),
-        null,
-        null,
-        null);
+        new BitmapDrawable(radioNameTextView.getResources(), bitmap), null, null, null);
       radioNameTextView.setText(this.radio.getName());
       preferredImageButton.setImageResource(radio.isPreferred() ?
         R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
