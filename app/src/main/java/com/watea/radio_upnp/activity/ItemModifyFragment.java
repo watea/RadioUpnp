@@ -57,6 +57,7 @@ public class ItemModifyFragment extends ItemFragment {
       }
       setRadioIcon(radio.getIcon());
     } else {
+      // Restore radioId, radio will be restored in onResume
       radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
     }
   }
@@ -109,6 +110,8 @@ public class ItemModifyFragment extends ItemFragment {
       // Restore radio from RadioLibrary, necessary in case of restoration from SavedInstanceState
       if (radioId == null) {
         Log.e(LOG_TAG, "onResume: radioId is null");
+        tell(R.string.radio_database_update_failed);
+        onBackPressed();
       } else {
         assert getRadioLibrary() != null;
         radio = getRadioLibrary().getFrom(radioId);

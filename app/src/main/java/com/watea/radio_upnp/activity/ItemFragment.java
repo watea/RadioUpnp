@@ -32,6 +32,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -201,6 +202,22 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   @Override
+  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
+    // Default icon
+    setRadioIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_radio_gray));
+    // Restore icon
+    if (savedInstanceState != null) {
+      try {
+        String file = savedInstanceState.getString(getString(R.string.key_radio_icon_file));
+        setRadioIcon(BitmapFactory.decodeFile(file));
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "onActivityCreated: internal failure restoring context", exception);
+      }
+    }
+  }
+
+  @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     // Save icon; may fail
@@ -281,21 +298,10 @@ public abstract class ItemFragment extends MainActivityFragment {
     int height = icon.getHeight();
     int width = icon.getWidth();
     int min = Math.min(height, width);
-    icon = Bitmap.createBitmap(
-      icon,
-      (width - min) / 2,
-      (height - min) / 2,
-      min,
-      min,
-      null,
-      false);
-    nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
-      null,
-      new BitmapDrawable(
-        getResources(),
-        Bitmap.createScaledBitmap(icon, RADIO_ICON_SIZE, RADIO_ICON_SIZE, true)),
-      null,
-      null);
+    icon = Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
+    Drawable drawable = new BitmapDrawable(
+      getResources(), Bitmap.createScaledBitmap(icon, RADIO_ICON_SIZE, RADIO_ICON_SIZE, true));
+    nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(null, drawable, null, null);
     // radioIcon stored as tag
     nameEditText.setTag(icon);
   }
