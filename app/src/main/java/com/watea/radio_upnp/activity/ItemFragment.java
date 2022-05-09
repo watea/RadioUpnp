@@ -65,6 +65,7 @@ import com.watea.radio_upnp.service.RadioURL;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -111,7 +112,8 @@ public abstract class ItemFragment extends MainActivityFragment {
 
   @NonNull
   private static String extractValue(@NonNull Element element, @NonNull String tag) {
-    return element.getElementsByTag(tag).first().ownText();
+    Elements elements = element.getElementsByTag(tag);
+    return elements.isEmpty() ? "" : elements.first().ownText();
   }
 
   @Override
@@ -504,11 +506,13 @@ public abstract class ItemFragment extends MainActivityFragment {
             .connect(DAR_FM_STATIONS_REQUEST + foundRadio.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
             .get();
           foundRadio.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
+          // Order matters
           foundIcon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
         } catch (MalformedURLException malformedURLException) {
           Log.i(LOG_TAG, "Error performing icon search", malformedURLException);
         } catch (IOException iOexception) {
           Log.i(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOexception);
+          radios.clear();
         }
       }
     }

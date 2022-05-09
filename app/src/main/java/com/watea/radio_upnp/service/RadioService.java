@@ -316,10 +316,10 @@ public class RadioService
     isForeground = false;
     if (playerAdapter == null) {
       Log.d(LOG_TAG, "onStartCommand: internal failure; playerAdapter is null!");
-      stopSelf();
+      failStop();
     } else if (!playerAdapter.prepareFromMediaId()) {
       Log.d(LOG_TAG, "onStartCommand failed to launch player");
-      stopSelf();
+      failStop();
     }
     return super.onStartCommand(intent, flags, startId);
   }
@@ -352,6 +352,13 @@ public class RadioService
   @Override
   public void onTaskRemoved(@NonNull Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
+    stopSelf();
+  }
+
+  private void failStop() {
+    // startForeground must be called, avoid ANR
+    startForeground(NOTIFICATION_ID, getNotification());
+    stopForeground(true);
     stopSelf();
   }
 

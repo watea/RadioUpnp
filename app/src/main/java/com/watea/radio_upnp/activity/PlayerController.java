@@ -63,7 +63,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Vector;
 
-public class PlayerController {
+class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
   private static final String DATE = "date";
   private static final String INFORMATION = "information";
