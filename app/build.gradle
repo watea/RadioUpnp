@@ -24,13 +24,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 32
     defaultConfig {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
-        targetSdkVersion 31
-        versionCode 26109
-        versionName "2.61.09"
+        targetSdkVersion 32
+        versionCode 26110
+        versionName "2.61.10"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -50,6 +50,7 @@ android {
     compileOptions {
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    namespace 'com.watea.radio_upnp'
 }
 
 repositories {
@@ -65,7 +66,7 @@ dependencies {
     implementation 'androidx.media:media:1.6.0'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
-    implementation 'com.google.android.material:material:1.5.0'
+    implementation 'com.google.android.material:material:1.6.0'
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.13.1'
     // exoplayer
@@ -86,5 +87,5 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-servlet:8.2.0.v20160908'
     implementation 'org.eclipse.jetty:jetty-client:8.2.0.v20160908'
     // Playstore
-    implementation 'com.android.billingclient:billing:4.1.0'
+    implementation 'com.android.billingclient:billing:5.0.0'
 }
