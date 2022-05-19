@@ -399,14 +399,15 @@ public class RadioService
     final int[] actions0123 = {0, 1, 2, 3};
     androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
-    if (mediaController == null) {
-      Log.e(LOG_TAG, "getNotification: internal failure; no mediaController");
+    PlaybackStateCompat playbackStateCompat;
+    if ((mediaController == null) ||
+      ((playbackStateCompat = mediaController.getPlaybackState()) == null)) {
       builder.setOngoing(false);
     } else {
       builder
         .addAction(actionSkipToPrevious)
         .addAction(actionStop);
-      switch (mediaController.getPlaybackState().getState()) {
+      switch (playbackStateCompat.getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
           // UPnP device doesn't support PAUSE action but STOP
           if (playerAdapter instanceof LocalPlayerAdapter) {
