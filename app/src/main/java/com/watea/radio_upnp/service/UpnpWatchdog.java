@@ -32,14 +32,22 @@ import org.fourthline.cling.model.action.ActionInvocation;
 import org.fourthline.cling.model.meta.Action;
 import org.fourthline.cling.model.meta.Service;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 public class UpnpWatchdog {
   private static final String LOG_TAG = UpnpWatchdog.class.getName();
   private static final int DELAY = 10000; // ms
   private static final int TOLERANCE = 1;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
+  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   @Nullable
   private UpnpActionController.UpnpAction actionWatchdog = null;
-  private boolean kill = false;
+  private final Runnable loop = () -> {
+    assert actionWatchdog != null;
+    actionWatchdog.execute();
+  };
   private int failureCount = 0;
 
   public UpnpWatchdog(
@@ -65,20 +73,20 @@ public class UpnpWatchdog {
           if (currentTransportState.equals("TRANSITIONING") ||
             currentTransportState.equals("PLAYING")) {
             failureCount = 0;
-            start();
           } else {
-            Log.d(LOG_TAG, "Watchdog failed; state not allowed: " + currentTransportState);
-            listener.run();
+            tellListener("Watchdog; state not allowed: " + currentTransportState);
           }
         }
 
         @Override
         protected void failure() {
+          tellListener("Watchdog: no answer");
+        }
+
+        private void tellListener(@NonNull String message) {
+          Log.d(LOG_TAG, message);
           if (failureCount++ >= TOLERANCE) {
-            Log.d(LOG_TAG, "Watchdog failed; no answer");
             listener.run();
-          } else {
-            start();
           }
         }
       };
@@ -86,18 +94,15 @@ public class UpnpWatchdog {
   }
 
   public void start() {
-    if ((actionWatchdog != null) && !kill) {
-      try {
-        Thread.sleep(DELAY);
-      } catch (InterruptedException interruptedException) {
-        Log.d(LOG_TAG, "start: Sleep failed");
-      }
-      actionWatchdog.execute();
+    if (actionWatchdog == null) {
+      Log.d(LOG_TAG, "Watchdog start failed: actionWatchdog is null");
+    } else {
+      executor.scheduleAtFixedRate(loop, 0, DELAY, TimeUnit.MILLISECONDS);
     }
   }
 
   public void kill() {
-    kill = true;
+    executor.shutdown();
   }
 
   public interface InstanceIdSupplier {
