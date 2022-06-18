@@ -43,9 +43,10 @@ import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.ConsumeParams;
 import com.android.billingclient.api.ConsumeResponseListener;
+import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.PurchasesUpdatedListener;
-import com.android.billingclient.api.SkuDetails;
-import com.android.billingclient.api.SkuDetailsParams;
+import com.android.billingclient.api.QueryProductDetailsParams;
+import com.google.common.collect.ImmutableList;
 import com.watea.radio_upnp.R;
 
 import java.util.Arrays;
@@ -59,17 +60,25 @@ public class DonationFragment
   private static final String LOG_TAG = DonationFragment.class.getName();
   private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L; // 1s
   private static final long RECONNECT_TIMER_MAX_TIME_MILLISECONDS = 1000L * 60L * 15L; // 15 mins
-  private static final List<String> GOOGLE_CATALOG = Arrays.asList(
-    "radio_upnp.donation.1",
-    "radio_upnp.donation.2",
-    "radio_upnp.donation.3");
+  private static final List<QueryProductDetailsParams.Product> GOOGLE_PRODUCTS = Arrays.asList(
+    getProduct("radio_upnp.donation.1"),
+    getProduct("radio_upnp.donation.2"),
+    getProduct("radio_upnp.donation.3"));
   private static final Handler handler = new Handler(Looper.getMainLooper());
-  private final Map<String, SkuDetails> skuDetailss = new Hashtable<>();
+  private final Map<String, ProductDetails> ownProductDetailss = new Hashtable<>();
   private BillingClient billingClient;
   // <HMI assets
   private Spinner googleSpinner;
   private AlertDialog.Builder paymentAlertDialogBuilder;
   // />
+
+  @NonNull
+  private static QueryProductDetailsParams.Product getProduct(@NonNull String name) {
+    return QueryProductDetailsParams.Product.newBuilder()
+      .setProductId(name)
+      .setProductType(BillingClient.ProductType.INAPP)
+      .build();
+  }
 
   @Override
   public void onConsumeResponse(@NonNull BillingResult billingResult, @NonNull String s) {
@@ -80,20 +89,18 @@ public class DonationFragment
   @Override
   public void onPurchasesUpdated(
     @NonNull BillingResult billingResult,
-    @Nullable List<com.android.billingclient.api.Purchase> list) {
+    @Nullable List<com.android.billingclient.api.Purchase> purchases) {
     logBillingResult("onPurchasesUpdated", billingResult);
     switch (billingResult.getResponseCode()) {
       case BillingClient.BillingResponseCode.OK:
         // Consume purchase
-        if (list == null) {
+        if (purchases == null) {
           Log.e(LOG_TAG, "onPurchasesUpdated: purchase list is null");
         } else {
-          for (com.android.billingclient.api.Purchase purchase : list) {
+          for (com.android.billingclient.api.Purchase purchase : purchases) {
             Log.d(LOG_TAG, "onPurchasesUpdated: " + purchase);
             billingClient.consumeAsync(
-              ConsumeParams.newBuilder()
-                .setPurchaseToken(purchase.getPurchaseToken())
-                .build(),
+              ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build(),
               this);
           }
         }
@@ -110,16 +117,21 @@ public class DonationFragment
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (skuDetailss.isEmpty() || !billingClient.isReady()) {
+      if (ownProductDetailss.isEmpty() || !billingClient.isReady()) {
         paymentAlertDialogBuilder.show();
       } else {
-        String item = GOOGLE_CATALOG.get(googleSpinner.getSelectedItemPosition());
-        Log.d(LOG_TAG, "Selected item in spinner: " + item);
-        final SkuDetails skuDetails = skuDetailss.get(item);
-        assert skuDetails != null;
+        String productName = GOOGLE_PRODUCTS.get(googleSpinner.getSelectedItemPosition()).zza();
+        Log.d(LOG_TAG, "Selected item in spinner: " + productName);
+        final ProductDetails productDetails = ownProductDetailss.get(productName);
+        assert productDetails != null;
         billingClient.launchBillingFlow(
           getMainActivity(),
-          BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build());
+          BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(ImmutableList.of(
+              BillingFlowParams.ProductDetailsParams.newBuilder()
+                .setProductDetails(productDetails)
+                .build()))
+            .build());
       }
     };
   }
@@ -175,7 +187,7 @@ public class DonationFragment
 
       @Override
       public void onBillingServiceDisconnected() {
-        skuDetailss.clear();
+        ownProductDetailss.clear();
         retryBillingServiceConnectionWithExponentialBackoff();
       }
 
@@ -187,29 +199,19 @@ public class DonationFragment
           // This doesn't mean that your app is set up correctly in the console -- it just
           // means that you have a connection to the Billing service.
           reconnectMilliseconds = RECONNECT_TIMER_START_MILLISECONDS;
-          // Query SKU details asynchronously
-          billingClient.querySkuDetailsAsync(
-            SkuDetailsParams.newBuilder()
-              .setType(BillingClient.SkuType.INAPP)
-              .setSkusList(GOOGLE_CATALOG)
-              .build(),
-            (skuDetailsBillingResult, skuDetailsAnss) -> {
-              logBillingResult("onSkuDetailsResponse", skuDetailsBillingResult);
-              if (skuDetailsBillingResult.getResponseCode() ==
-                BillingClient.BillingResponseCode.OK) {
-                if (skuDetailsAnss == null || skuDetailsAnss.isEmpty()) {
-                  Log.e(LOG_TAG, "onSkuDetailsResponse: " +
-                    "Found null or empty SkuDetails. " +
-                    "Check to see if the SKUs you requested are correctly published " +
+          // Query product details asynchronously
+          billingClient.queryProductDetailsAsync(
+            QueryProductDetailsParams.newBuilder().setProductList(GOOGLE_PRODUCTS).build(),
+            (billingClientResult, productDetailss) -> {
+              logBillingResult("productDetailsResponseListener", billingClientResult);
+              if (billingClientResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                if (productDetailss.isEmpty()) {
+                  Log.e(LOG_TAG, "productDetailsResponseListener: null or empty response." +
+                    "Check to see if the billing you requested are correctly published " +
                     "in the Google Play Console.");
                 } else {
-                  for (SkuDetails skuDetails : skuDetailsAnss) {
-                    String sku = skuDetails.getSku();
-                    if (GOOGLE_CATALOG.contains(sku)) {
-                      skuDetailss.put(skuDetails.getSku(), skuDetails);
-                    } else {
-                      Log.e(LOG_TAG, "Unknown SKU: " + sku);
-                    }
+                  for (ProductDetails productDetails : productDetailss) {
+                    ownProductDetailss.put(productDetails.getProductId(), productDetails);
                   }
                 }
               } else {

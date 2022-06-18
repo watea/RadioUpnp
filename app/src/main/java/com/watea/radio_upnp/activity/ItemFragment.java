@@ -452,8 +452,8 @@ public abstract class ItemFragment extends MainActivityFragment {
     }
   }
 
-  // Launch with no parameter: display the list result or fill content if only one result.
-  // Launch with one parameter: fill content.
+  // Launch with no parameter: display the list result or fill content if only one result
+  // Launch with one parameter: fill content
   private class DarFmSearcher extends Searcher {
     // List of radio datas
     private final List<Map<String, String>> radios = new Vector<>();
