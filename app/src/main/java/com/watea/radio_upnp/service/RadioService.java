@@ -268,8 +268,8 @@ public class RadioService
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
-            // For user convenience in local mode, session is kept alive
-            if (isForeground && (playerAdapter instanceof LocalPlayerAdapter)) {
+            // For user convenience, session is kept alive
+            if (isForeground) {
               playerAdapter.release();
               httpServer.setRadioHandlerController(null);
               // Try to relaunch just once
@@ -479,7 +479,8 @@ public class RadioService
       }
       // Radio retrieved in database
       radio = radioLibrary.getFrom(Long.valueOf(mediaId));
-      // If radio is not found, abort (may happen if radio were deleted by user)
+      // Robustness: if radio is not found, abort (should not happen as current radio
+      // not allowed to be deleted)
       if (radio == null) {
         Log.d(LOG_TAG, "onPrepareFromMediaId: radio not found");
         return;
@@ -489,11 +490,11 @@ public class RadioService
       Device<?, ?, ?> chosenDevice = isUpnp ?
         getChosenDevice(extras.getString(getString(R.string.key_upnp_device))) : null;
       Uri serverUri = httpServer.getUri();
-      // Robustness for UPnP mode; test if environment is still OK
+      // UPnP not accepted if environment not OK => force local
       if (isUpnp &&
         ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
-        Log.e(LOG_TAG, "onPrepareFromMediaId: internal failure; can't process UPnP device");
-        return;
+        Log.d(LOG_TAG, "onPrepareFromMediaId: can't process UPnP device");
+        isUpnp = false;
       }
       // Synchronize session data
       session.setActive(true);
