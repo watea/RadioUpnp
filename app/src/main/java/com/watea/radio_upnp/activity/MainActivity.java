@@ -64,6 +64,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
 import com.watea.radio_upnp.model.Radio;
@@ -90,8 +91,8 @@ import java.util.Map;
 public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
-  public static final int RADIO_ICON_SIZE = 300;
-  public static final int SEARCH_TIMEOUT = 10;
+  private static final int SEARCH_TIMEOUT = 10;
+  private static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new Hashtable<Class<? extends Fragment>, Integer>() {
@@ -219,6 +220,15 @@ public class MainActivity
       upnpDevicesAdapter.onResetRemoteDevices();
     }
   };
+
+  @NonNull
+  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap) {
+    return RadiosAdapter.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
+  }
+
+  public static int getSmallIconSize() {
+    return RADIO_ICON_SIZE / 2;
+  }
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
@@ -628,8 +638,7 @@ public class MainActivity
 
   @NonNull
   private Bitmap resourceToBitmap(int resource) {
-    Bitmap bitmap = BitmapFactory.decodeResource(getResources(), resource);
-    return Bitmap.createScaledBitmap(bitmap, RADIO_ICON_SIZE, RADIO_ICON_SIZE, true);
+    return createScaledBitmap(BitmapFactory.decodeResource(getResources(), resource));
   }
 
   @Nullable

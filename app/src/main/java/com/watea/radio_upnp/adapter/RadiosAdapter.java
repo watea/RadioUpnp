@@ -57,6 +57,11 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     this.iconSize = iconSize;
   }
 
+  @NonNull
+  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
+    return Bitmap.createScaledBitmap(bitmap, size, size, true);
+  }
+
   // Content setter, must be called
   // null for refresh only
   @SuppressLint("NotifyDataSetChanged")
@@ -122,7 +127,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {
-      return Bitmap.createScaledBitmap(bitmap, 1, 1, true).getPixel(0, 0);
+      return createScaledBitmap(bitmap, 1).getPixel(0, 0);
     }
 
     private void setView(@NonNull Radio radio) {
@@ -136,7 +141,7 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
         null,
         new BitmapDrawable(
           radioTextView.getResources(),
-          Bitmap.createScaledBitmap(this.radio.getIcon(), iconSize, iconSize, true)),
+          createScaledBitmap(this.radio.getIcon(), iconSize)),
         null,
         null);
       radioTextView.setText(this.radio.getName());

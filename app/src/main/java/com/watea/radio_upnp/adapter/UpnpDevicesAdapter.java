@@ -239,7 +239,7 @@ public class UpnpDevicesAdapter
       // Icon
       Bitmap bitmap = upnpDevice.getIcon();
       bitmap = (bitmap == null) ? castIcon : bitmap;
-      bitmap = Bitmap.createScaledBitmap(bitmap, ICON_SIZE, ICON_SIZE, true);
+      bitmap = RadiosAdapter.createScaledBitmap(bitmap, ICON_SIZE);
       upnpDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         new BitmapDrawable(view.getResources(), bitmap), null, null, null);
       // Selected item

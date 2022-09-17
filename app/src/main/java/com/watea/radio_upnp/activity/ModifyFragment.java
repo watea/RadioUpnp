@@ -23,8 +23,6 @@
 
 package com.watea.radio_upnp.activity;
 
-import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
-
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -99,7 +97,7 @@ public class ModifyFragment extends MainActivityFragment {
           defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
         }
       },
-      RADIO_ICON_SIZE / 2,
+      MainActivity.getSmallIconSize(),
       radiosRecyclerView);
     return view;
   }

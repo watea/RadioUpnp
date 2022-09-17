@@ -23,14 +23,11 @@
 
 package com.watea.radio_upnp.activity;
 
-import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
-
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v4.media.MediaBrowserCompat;
@@ -114,8 +111,7 @@ class PlayerController {
       playedRadioLinearLayout.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
       if (isVisible) {
         playedRadioNameTextView.setText(radio.getName());
-        albumArtImageView.setImageBitmap(Bitmap.createScaledBitmap(
-          radio.getIcon(), RADIO_ICON_SIZE, RADIO_ICON_SIZE, true));
+        albumArtImageView.setImageBitmap(MainActivity.createScaledBitmap(radio.getIcon()));
         setPreferredButton(radio.isPreferred());
       }
     }

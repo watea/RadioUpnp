@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.activity;
 
 import static android.app.Activity.RESULT_OK;
-import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -301,8 +300,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     int width = icon.getWidth();
     int min = Math.min(height, width);
     icon = Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
-    Drawable drawable = new BitmapDrawable(
-      getResources(), Bitmap.createScaledBitmap(icon, RADIO_ICON_SIZE, RADIO_ICON_SIZE, true));
+    Drawable drawable = new BitmapDrawable(getResources(), MainActivity.createScaledBitmap(icon));
     nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(null, drawable, null, null);
     // radioIcon stored as tag
     nameEditText.setTag(icon);

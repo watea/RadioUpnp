@@ -23,14 +23,11 @@
 
 package com.watea.radio_upnp.activity;
 
-import static com.watea.radio_upnp.activity.MainActivity.RADIO_ICON_SIZE;
-
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -55,7 +52,6 @@ import com.watea.radio_upnp.model.RadioLibrary;
 import java.util.List;
 
 public class MainFragment extends MainActivityFragment {
-  private static final int DEFAULT_COLUMNS_COUNT = 3;
   // <HMI assets
   private FrameLayout defaultFrameLayout;
   private MenuItem dlnaMenuItem;
@@ -71,7 +67,6 @@ public class MainFragment extends MainActivityFragment {
   private AlertDialog radioLongPressAlertDialog;
   private AlertDialog dlnaEnableAlertDialog;
   private AlertDialog preferredRadiosAlertDialog;
-  private GridLayoutManager gridLayoutManager;
   // />
   private int radioClickCount = 0;
   private boolean isPreferredRadios = false;
@@ -183,8 +178,8 @@ public class MainFragment extends MainActivityFragment {
     // Inflate the view so that graphical objects exists
     final View view = inflater.inflate(R.layout.content_main, container, false);
     RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    gridLayoutManager = new GridLayoutManager(getContext(), DEFAULT_COLUMNS_COUNT);
-    radiosRecyclerView.setLayoutManager(gridLayoutManager);
+    final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
+    radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     // Adapters (order matters!)
     radiosAdapter = new RadiosAdapter(
@@ -225,7 +220,7 @@ public class MainFragment extends MainActivityFragment {
           return getRadioLibrary().isCurrentRadio(radio);
         }
       },
-      RADIO_ICON_SIZE / 2);
+      MainActivity.getSmallIconSize());
     radiosRecyclerView.setAdapter(radiosAdapter);
     upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
@@ -268,13 +263,6 @@ public class MainFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onConfigurationChanged(@NonNull Configuration newConfig) {
-    super.onConfigurationChanged(newConfig);
-    gridLayoutManager.setSpanCount(
-      (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) ? 5 : DEFAULT_COLUMNS_COUNT);
-  }
-
-  @Override
   public void onPause() {
     super.onPause();
     // Context exists
@@ -305,5 +293,21 @@ public class MainFragment extends MainActivityFragment {
   private void setPreferredMenuItem() {
     preferredMenuItem.setIcon(
       isPreferredRadios ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+  }
+
+  private static class VarColumnGridLayoutManager extends GridLayoutManager {
+    private final int itemWidth;
+
+    public VarColumnGridLayoutManager(Context context, int itemWidth) {
+      // Dummy size
+      super(context, 1);
+      this.itemWidth = itemWidth;
+    }
+
+    @Override
+    public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
+      setSpanCount(Math.max(1, getWidth() / itemWidth));
+      super.onLayoutChildren(recycler, state);
+    }
   }
 }
