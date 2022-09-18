@@ -33,41 +33,15 @@
         android:id="@+id/album_art_image_view"
         android:layout_width="@dimen/tile_size"
         android:layout_height="@dimen/tile_size"
+        android:layout_margin="@dimen/app_horizontal_margin"
         android:layout_alignParentStart="true"
         tools:ignore="ContentDescription" />
-
-    <FrameLayout
-        android:id="@+id/play_frame_layout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_margin="@dimen/app_margin">
-
-        <ImageButton
-            android:id="@+id/play_image_button"
-            android:layout_width="@dimen/tile_size"
-            android:layout_height="@dimen/tile_size"
-            android:layout_gravity="center"
-            android:tint="@color/play_selector"
-            android:visibility="invisible"
-            app:srcCompat="@drawable/ic_play_arrow_white_24dp"
-            tools:ignore="ContentDescription" />
-
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            android:layout_width="@dimen/tile_size"
-            android:layout_height="@dimen/tile_size"
-            android:layout_gravity="center"
-            android:visibility="invisible"
-            android:indeterminateTint="@android:color/darker_gray" />
-
-    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/played_radio_linear_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toEndOf="@id/play_frame_layout"
+        android:layout_toEndOf="@id/album_art_image_view"
         android:visibility="invisible"
         android:orientation="vertical">
 
@@ -98,10 +72,36 @@
             android:id="@+id/preferred_image_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
+            android:layout_gravity="start"
             android:contentDescription="@string/preferred"
             app:srcCompat="@drawable/ic_star_border_white_30dp" />
 
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/play_frame_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/app_horizontal_margin"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true">
+
+        <ImageButton
+            android:id="@+id/play_image_button"
+            android:layout_width="@dimen/tile_size"
+            android:layout_height="@dimen/tile_size"
+            android:tint="@color/play_selector"
+            android:visibility="invisible"
+            app:srcCompat="@drawable/ic_play_arrow_white_24dp"
+            tools:ignore="ContentDescription" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="@dimen/tile_size"
+            android:layout_height="@dimen/tile_size"
+            android:visibility="invisible"
+            android:indeterminateTint="@android:color/darker_gray" />
+
+    </FrameLayout>
 
 </RelativeLayout>
