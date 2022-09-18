@@ -33,8 +33,8 @@
         android:id="@+id/album_art_image_view"
         android:layout_width="@dimen/tile_size"
         android:layout_height="@dimen/tile_size"
-        android:layout_margin="@dimen/app_horizontal_margin"
         android:layout_alignParentStart="true"
+        android:layout_margin="@dimen/app_horizontal_margin"
         tools:ignore="ContentDescription" />
 
     <LinearLayout
@@ -42,8 +42,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toEndOf="@id/album_art_image_view"
-        android:visibility="invisible"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="invisible">
 
         <TextView
             android:id="@+id/played_radio_name_text_view"
@@ -82,9 +82,9 @@
         android:id="@+id/play_frame_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/app_horizontal_margin"
+        android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true">
+        android:layout_margin="@dimen/app_horizontal_margin">
 
         <ImageButton
             android:id="@+id/play_image_button"
@@ -99,8 +99,8 @@
             android:id="@+id/progress_bar"
             android:layout_width="@dimen/tile_size"
             android:layout_height="@dimen/tile_size"
-            android:visibility="invisible"
-            android:indeterminateTint="@android:color/darker_gray" />
+            android:indeterminateTint="@android:color/darker_gray"
+            android:visibility="invisible" />
 
     </FrameLayout>
 
