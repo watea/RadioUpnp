@@ -44,21 +44,17 @@ public class UpnpWatchdog {
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   @Nullable
   private UpnpActionController.UpnpAction actionWatchdog = null;
-  private final Runnable loop = () -> {
-    assert actionWatchdog != null;
-    actionWatchdog.execute();
-  };
   private int failureCount = 0;
 
   public UpnpWatchdog(
     @NonNull UpnpActionController upnpActionController,
     @Nullable Service<?, ?> avTransportService,
     @NonNull InstanceIdSupplier instanceIdSupplier,
-    @NonNull Runnable listener) {
+    @NonNull Runnable callback) {
     Action<?> action;
     if ((avTransportService == null) ||
       ((action = avTransportService.getAction(ACTION_GET_TRANSPORT_INFO)) == null)) {
-      listener.run();
+      callback.run();
     } else {
       actionWatchdog = new UpnpActionController.UpnpAction(upnpActionController, action) {
         @Override
@@ -68,25 +64,15 @@ public class UpnpWatchdog {
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          String currentTransportState =
-            actionInvocation.getOutput("CurrentTransportState").getValue().toString();
-          if (currentTransportState.equals("TRANSITIONING") ||
-            currentTransportState.equals("PLAYING")) {
-            failureCount = 0;
-          } else {
-            tellListener("Watchdog; state not allowed: " + currentTransportState);
-          }
+          failureCount = 0;
         }
 
         @Override
         protected void failure() {
-          tellListener("Watchdog: no answer");
-        }
-
-        private void tellListener(@NonNull String message) {
-          Log.d(LOG_TAG, message);
+          Log.d(LOG_TAG, "Watchdog: no answer");
           if (failureCount++ >= TOLERANCE) {
-            listener.run();
+            Log.d(LOG_TAG, "Watchdog: fired");
+            callback.run();
           }
         }
       };
@@ -97,7 +83,7 @@ public class UpnpWatchdog {
     if (actionWatchdog == null) {
       Log.d(LOG_TAG, "Watchdog start failed: actionWatchdog is null");
     } else {
-      executor.scheduleAtFixedRate(loop, 0, DELAY, TimeUnit.MILLISECONDS);
+      executor.scheduleAtFixedRate(actionWatchdog::execute, 0, DELAY, TimeUnit.MILLISECONDS);
     }
   }
 

@@ -96,8 +96,18 @@ public class RadioHandler extends AbstractHandler {
     Request baseRequest,
     HttpServletRequest request,
     HttpServletResponse response) {
+    // Valid request
+    if ((baseRequest == null) || (request == null)) {
+      Log.d(LOG_TAG, "Unexpected request received: request || baseRequest is null.");
+      return;
+    }
+    final String param = request.getParameter(PARAMS);
+    if (param == null) {
+      Log.d(LOG_TAG, "Unexpected request received: param is null.");
+      return;
+    }
     // Request must contain a query with radio ID and lock key
-    final String[] params = request.getParameter(PARAMS).split(SEPARATOR);
+    final String[] params = param.split(SEPARATOR);
     final String radioId = (params.length > 0) ? params[0] : null;
     final String lockKey = (params.length > 1) ? params[1] : null;
     if ((radioId == null) || (lockKey == null) || (controller == null)) {
