@@ -24,11 +24,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 33
     defaultConfig {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 23
-        targetSdkVersion 32
+        targetSdkVersion 33
         versionCode 26117
         versionName "2.61.17"
         vectorDrawables.useSupportLibrary = true

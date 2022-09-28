@@ -64,14 +64,24 @@ public class UpnpWatchdog {
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          failureCount = 0;
+          String currentTransportState =
+            actionInvocation.getOutput("CurrentTransportState").getValue().toString();
+          if (currentTransportState.equals("TRANSITIONING") ||
+            currentTransportState.equals("PLAYING")) {
+            failureCount = 0;
+          } else {
+            logfailure("Watchdog; state not allowed: " + currentTransportState);
+          }
         }
 
         @Override
         protected void failure() {
-          Log.d(LOG_TAG, "Watchdog: no answer");
+          logfailure("Watchdog: no answer");
+        }
+
+        private void logfailure(@NonNull String message) {
+          Log.d(LOG_TAG, message);
           if (failureCount++ >= TOLERANCE) {
-            Log.d(LOG_TAG, "Watchdog: fired");
             callback.run();
           }
         }
