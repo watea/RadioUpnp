@@ -186,7 +186,10 @@ class PlayerController {
       // Manage dynamic data
       @Override
       public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
-        if (mediaMetadata != null) {
+        // Check if media data are actually coming from this session
+        if ((mediaMetadata != null) &&
+          (mediaController != null) &&
+          (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_PLAYING)) {
           String information = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
           playedRadioInformationTextView.setText(information);
           // Use WRITER for rate

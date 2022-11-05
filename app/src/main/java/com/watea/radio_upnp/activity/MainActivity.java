@@ -230,37 +230,6 @@ public class MainActivity
     return RADIO_ICON_SIZE / 2;
   }
 
-  @Override
-  public boolean onCreateOptionsMenu(Menu menu) {
-    MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
-    if (currentFragment == null) {
-      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
-    } else {
-      int menuId = currentFragment.getMenuId();
-      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
-        getMenuInflater().inflate(menuId, menu);
-        currentFragment.onCreateOptionsMenu(menu);
-      }
-    }
-    return true;
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    // Pass the event to ActionBarDrawerToggle, if it returns
-    // true, then it has handled the app icon touch event
-    assert getCurrentFragment() != null;
-    return
-      drawerToggle.onOptionsItemSelected(item) ||
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        getCurrentFragment().onOptionsItemSelected(item) ||
-        // If we got here, the user's action was not recognized
-        // Invoke the superclass to handle it
-        super.onOptionsItemSelected(item);
-  }
-
   @Nullable
   public AndroidUpnpService getAndroidUpnpService() {
     return androidUpnpService;
@@ -449,45 +418,6 @@ public class MainActivity
   }
 
   @Override
-  protected void onPause() {
-    super.onPause();
-    // Stop UPnP service
-    unbindService(upnpConnection);
-    // Forced disconnection
-    upnpConnection.onServiceDisconnected(null);
-    // PlayerController call
-    playerController.onActivityPause();
-    // Close radios database
-    radioLibrary.close();
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-    // Create radio database (order matters)
-    radioLibrary = new RadioLibrary(this);
-    // Create default radios on first start
-    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
-      setDefaultRadios()) {
-      // To do just one time, store a flag
-      sharedPreferences
-        .edit()
-        .putBoolean(getString(R.string.key_first_start), false)
-        .apply();
-    }
-    // Start the UPnP service
-    if (!bindService(
-      new Intent(this, AndroidUpnpServiceImpl.class),
-      upnpConnection,
-      BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
-    }
-    // PlayerController call
-    playerController.onActivityResume(radioLibrary);
-  }
-
-  @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // Init connexion
@@ -558,6 +488,45 @@ public class MainActivity
   }
 
   @Override
+  protected void onPause() {
+    super.onPause();
+    // Stop UPnP service
+    unbindService(upnpConnection);
+    // Forced disconnection
+    upnpConnection.onServiceDisconnected(null);
+    // PlayerController call
+    playerController.onActivityPause();
+    // Close radios database
+    radioLibrary.close();
+  }
+
+  @Override
+  protected void onResume() {
+    super.onResume();
+    // Create radio database (order matters)
+    radioLibrary = new RadioLibrary(this);
+    // Create default radios on first start
+    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
+      setDefaultRadios()) {
+      // To do just one time, store a flag
+      sharedPreferences
+        .edit()
+        .putBoolean(getString(R.string.key_first_start), false)
+        .apply();
+    }
+    // Start the UPnP service
+    if (!bindService(
+      new Intent(this, AndroidUpnpServiceImpl.class),
+      upnpConnection,
+      BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
+    }
+    // PlayerController call
+    playerController.onActivityResume(radioLibrary);
+  }
+
+  @Override
   protected void onPostCreate(Bundle savedInstanceState) {
     super.onPostCreate(savedInstanceState);
     // Sync the toggle state after onRestoreInstanceState has occurred
@@ -586,6 +555,37 @@ public class MainActivity
         outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
       }
     }
+  }
+
+  @Override
+  public boolean onCreateOptionsMenu(@NonNull Menu menu) {
+    MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
+    if (currentFragment == null) {
+      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
+    } else {
+      int menuId = currentFragment.getMenuId();
+      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
+        getMenuInflater().inflate(menuId, menu);
+        currentFragment.onCreateOptionsMenu(menu);
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    // Pass the event to ActionBarDrawerToggle, if it returns
+    // true, then it has handled the app icon touch event
+    assert getCurrentFragment() != null;
+    return
+      drawerToggle.onOptionsItemSelected(item) ||
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        getCurrentFragment().onOptionsItemSelected(item) ||
+        // If we got here, the user's action was not recognized
+        // Invoke the superclass to handle it
+        super.onOptionsItemSelected(item);
   }
 
   private void dumpRadios() {
