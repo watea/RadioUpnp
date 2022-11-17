@@ -30,9 +30,6 @@ import androidx.annotation.NonNull;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
-
-import java.net.MalformedURLException;
 
 public class ItemAddFragment extends ItemFragment {
   private static final String LOG_TAG = ItemAddFragment.class.getName();
