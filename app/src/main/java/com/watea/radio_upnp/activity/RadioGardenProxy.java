@@ -77,6 +77,8 @@ public class RadioGardenProxy {
       .setNeutralButton(
         R.string.title_radio_garden,
         (dialogInterface, i) -> launchRadioGarden(true))
+      // Restore checked item
+      .setOnDismissListener(dialogInterface -> mainActivity.checkNavigationMenu())
       .create();
   }
 
