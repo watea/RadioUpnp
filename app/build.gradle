@@ -87,5 +87,5 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-servlet:8.2.0.v20160908'
     implementation 'org.eclipse.jetty:jetty-client:8.2.0.v20160908'
     // Playstore
-    implementation 'com.android.billingclient:billing:5.0.0'
+    implementation 'com.android.billingclient:billing:5.1.0'
 }
