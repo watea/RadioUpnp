@@ -50,9 +50,10 @@ import java.util.regex.Pattern;
 //  }
 // Channel: http://radio.garden/api/ara/content/listen/{channelId}/channel.mp3
 public class RadioGardenProxy {
-  private static final String RADIO_GARDEN_PACKAGE = "com.jonathanpuckey.radiogarden";
   private static final String LOG_TAG = RadioGardenProxy.class.getName();
   private static final Handler handler = new Handler(Looper.getMainLooper());
+  private static final String MARKET = "market://details?id=";
+  private static final String RADIO_GARDEN_PACKAGE = "com.jonathanpuckey.radiogarden";
   private static final String RADIO_GARDEN = "http://radio.garden/api/ara/content/";
   private static final String CHANNEL = "channel/";
   private static final String LISTEN = "listen/";
@@ -73,6 +74,9 @@ public class RadioGardenProxy {
       .setPositiveButton(
         R.string.action_got_it,
         (dialogInterface, i) -> launchRadioGarden(mainActivity.setRadioGardenGotIt()))
+      .setNeutralButton(
+        R.string.title_radio_garden,
+        (dialogInterface, i) -> launchRadioGarden(true))
       .create();
   }
 
@@ -122,10 +126,10 @@ public class RadioGardenProxy {
       // Launch Radio Garden or bring user to the market if Radio Garden not installed
       final Intent intent = mainActivity
         .getPackageManager()
-        .getLaunchIntentForPackage(RadioGardenProxy.RADIO_GARDEN_PACKAGE);
+        .getLaunchIntentForPackage(RADIO_GARDEN_PACKAGE);
       mainActivity.startActivity(((intent == null) ? new Intent(Intent.ACTION_VIEW) : intent)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        .setData(Uri.parse("market://details?id=" + RadioGardenProxy.RADIO_GARDEN_PACKAGE)));
+        .setData(Uri.parse(MARKET + RADIO_GARDEN_PACKAGE)));
     } else {
       radioGardenAlertDialog.show();
     }
