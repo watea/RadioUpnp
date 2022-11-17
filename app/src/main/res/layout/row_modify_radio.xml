@@ -63,7 +63,7 @@
             android:contentDescription="@string/action_move"
             android:gravity="center"
             android:tint="@color/dark_blue"
-            app:srcCompat="@drawable/ic_swap_vert_white_30dp" />
+            app:srcCompat="@drawable/ic_baseline_drag_indicator_30dp" />
 
     </RelativeLayout>
 

@@ -42,7 +42,6 @@
             android:hint="@string/legend_name"
             android:importantForAutofill="no"
             android:inputType="textCapCharacters"
-            android:maxLength="30"
             android:textAllCaps="true" />
 
         <LinearLayout
@@ -109,9 +108,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:tint="@color/dark_blue"
                     android:visibility="visible"
                     app:srcCompat="@drawable/ic_search_white_40dp"
+                    app:tint="@color/dark_blue"
                     tools:ignore="ContentDescription" />
 
                 <ProgressBar

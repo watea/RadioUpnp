@@ -36,6 +36,10 @@
             android:icon="@drawable/ic_playlist_add_white_24dp"
             android:title="@string/title_item_add" />
         <item
+            android:id="@+id/action_radio_garden"
+            android:icon="@drawable/ic_search_white_40dp"
+            android:title="@string/title_radio_garden" />
+        <item
             android:id="@+id/action_modify"
             android:icon="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />

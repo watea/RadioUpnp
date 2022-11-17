@@ -30,6 +30,9 @@ import androidx.annotation.NonNull;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
+
+import java.net.MalformedURLException;
 
 public class ItemAddFragment extends ItemFragment {
   private static final String LOG_TAG = ItemAddFragment.class.getName();
@@ -42,15 +45,15 @@ public class ItemAddFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
-      assert urlWatcher.url != null;
-      Radio radio = new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url, false, getIcon());
+      boolean result = (urlWatcher.url == null);
       try {
-        //noinspection ConstantConditions
-        if (!getRadioLibrary().add(radio)) {
-          tell(R.string.radio_database_update_failed);
-        }
+        assert getRadioLibrary() != null;
+        result = !result && getRadioLibrary().add(
+          new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url, false, getIcon()));
       } catch (Exception exception) {
         Log.e(LOG_TAG, "onOptionsItemSelected: internal failure", exception);
+      }
+      if (!result) {
         tell(R.string.radio_database_update_failed);
       }
       onBackPressed();

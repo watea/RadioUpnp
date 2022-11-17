@@ -75,8 +75,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public abstract class ItemFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemFragment.class.getName();
@@ -92,9 +90,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
   private static final int BROWSE_INTENT = 7;
-  private final Pattern PATTERN =
-    Pattern.compile(".*(https?:/(/[-A-Za-z0-9+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
-  // 1<HMI assets
+  // <HMI assets
   protected EditText nameEditText;
   protected EditText urlEditText;
   protected EditText webPageEditText;
@@ -161,8 +157,8 @@ public abstract class ItemFragment extends MainActivityFragment {
     ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
       (group, checkedId) -> {
         boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
-        searchImageButton.setImageResource(
-          isDarFmSelected ? R.drawable.ic_search_white_40dp : R.drawable.ic_image_white_40dp);
+        searchImageButton.setImageResource(isDarFmSelected ?
+          R.drawable.ic_search_white_40dp : R.drawable.ic_baseline_image_search_white_40dp);
         webPageEditText.setEnabled(!isDarFmSelected);
         urlEditText.setEnabled(!isDarFmSelected);
         if (isDarFmSelected) {
@@ -175,21 +171,19 @@ public abstract class ItemFragment extends MainActivityFragment {
       flushKeyboard();
       if (getNetworkProxy().isDeviceOffline()) {
         tell(R.string.no_internet);
+      } else if (darFmRadioButton.isChecked()) {
+        new DarFmSearcher();
       } else {
-        if (darFmRadioButton.isChecked()) {
-          new DarFmSearcher();
+        URL iconUrl = iconWatcher.url;
+        URL webPageUrl = webPageWatcher.url;
+        if ((iconUrl == null) && (webPageUrl == null)) {
+          tell(R.string.no_icon_found);
         } else {
-          URL iconUrl = iconWatcher.url;
-          URL webPageUrl = webPageWatcher.url;
-          if ((iconUrl == null) && (webPageUrl == null)) {
-            tell(R.string.no_icon_found);
+          // Search in icon URL if available
+          if (iconUrl == null) {
+            new IconWebSearcher(webPageUrl);
           } else {
-            // Search in icon URL if available
-            if (iconUrl == null) {
-              new IconWebSearcher(webPageUrl);
-            } else {
-              new IconUrlSearcher(iconUrl);
-            }
+            new IconUrlSearcher(iconUrl);
           }
         }
       }
@@ -206,7 +200,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   public void onActivityCreated(@Nullable Bundle savedInstanceState) {
     super.onActivityCreated(savedInstanceState);
     // Default icon
-    setRadioIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_radio_gray));
+    setRadioIcon(getMainActivity().getDefaultIcon());
     // Restore icon
     if (savedInstanceState != null) {
       try {
@@ -263,12 +257,10 @@ public abstract class ItemFragment extends MainActivityFragment {
     return v -> {
       if (getNetworkProxy().isDeviceOffline()) {
         tell(R.string.no_internet);
+      } else if (urlWatcher.url == null) {
+        tell(R.string.connection_test_aborted);
       } else {
-        if (urlWatcher.url == null) {
-          tell(R.string.connection_test_aborted);
-        } else {
-          new UrlTester(urlWatcher.url);
-        }
+        new UrlTester(urlWatcher.url);
       }
     };
   }
@@ -412,30 +404,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     protected void onSearch() {
-      try {
-        Element head = Jsoup.connect(url.toString()).get().head();
-        // Parse site data, try to accelerate
-        for (Element element : head.getAllElements()) {
-          if (element != head) {
-            String string = element.toString();
-            // Don't parse too big string
-            if (string.length() <= 4096) {
-              Log.d(LOG_TAG, "Search icon in (length: " + string.length() + "): " + string);
-              Matcher matcher = PATTERN.matcher(string);
-              Bitmap bitmap;
-              // Fetch largest icon
-              if (matcher.find() &&
-                ((bitmap = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null) &&
-                ((foundIcon == null) || (bitmap.getByteCount() > foundIcon.getByteCount()))) {
-                Log.d(LOG_TAG, "Icon found");
-                foundIcon = bitmap;
-              }
-            }
-          }
-        }
-      } catch (Exception exception) {
-        Log.i(LOG_TAG, "Error performing icon web site search", exception);
-      }
+      foundIcon = RadioURL.iconSearch(url);
     }
   }
 

@@ -123,7 +123,8 @@ public class MainFragment extends MainActivityFragment {
         return true;
       default:
         // If we got here, the user's action was not recognized
-        return false;
+        // Invoke the superclass to handle it
+        return super.onOptionsItemSelected(item);
     }
   }
 

@@ -21,20 +21,24 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<resources>
-    <!-- Preferences -->
-    <string name="key_first_start">key_first_start</string>
-    <string name="key_preferred_radios">key_preferred_radios</string>
-    <string name="key_selected_device">key_selected_device</string>
-    <string name="key_radio_long_press_got_it">key_radio_long_press_got_it</string>
-    <string name="key_play_long_press_got_it">key_play_long_press_got_it</string>
-    <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
-    <string name="key_preferred_radios_got_it">key_preferred_radios_got_it</string>
-    <string name="key_information_press_got_it">key_information_press_got_it</string>
-    <string name="key_radio_icon_file">key_radio_icon_file</string>
-    <string name="key_radio_id">key_radio_id</string>
-    <string name="key_current_fragment">key_current_fragment</string>
-    <string name="key_radio_garden">key_radio_garden</string>
-    <!-- Bundles -->
-    <string name="key_upnp_device">key_dlna_device</string>
-</resources>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="@dimen/app_margin"
+    tools:ignore="UseCompoundDrawables">
+
+    <TextView
+        style="@style/TextAppearance.AppCompat.Subhead"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/radio_garden_share" />
+
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/radio_garden"
+        tools:ignore="ContentDescription" />
+
+</LinearLayout>

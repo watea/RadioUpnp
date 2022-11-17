@@ -81,7 +81,7 @@ public class Radio {
   @NonNull
   private URL url;
   @Nullable
-  private URL webPageUrl;
+  private URL webPageUrl = null;
   @NonNull
   private Quality quality;
   @SuppressWarnings("FieldMayBeFinal")
@@ -98,7 +98,7 @@ public class Radio {
     @NonNull URL uRL,
     @Nullable URL webPageURL,
     @NonNull Boolean isPreferred,
-    @Nullable Bitmap icon) {
+    @Nullable Bitmap icon) throws MalformedURLException {
     this(
       name,
       new File(""),
@@ -121,7 +121,7 @@ public class Radio {
     @Nullable URL webPageURL,
     @NonNull Quality quality,
     @NonNull Boolean isPreferred,
-    @Nullable Bitmap icon) {
+    @Nullable Bitmap icon) throws MalformedURLException {
     id = -1L;
     this.name = name;
     this.iconFile = iconFile;
@@ -136,7 +136,7 @@ public class Radio {
 
   // SQL constructor
   @SuppressLint("Range")
-  public Radio(@NonNull Cursor cursor) {
+  public Radio(@NonNull Cursor cursor) throws MalformedURLException {
     id = cursor.getLong(cursor.getColumnIndex(RadioSQLContract.Columns._ID));
     name = cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_NAME));
     iconFile = new File(
@@ -145,12 +145,7 @@ public class Radio {
       Type.valueOf(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_TYPE)));
     language = Language.valueOf(
       cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_LANGUAGE)));
-    try {
-      url = new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_URL)));
-    } catch (MalformedURLException malformedURLException) {
-      Log.e(LOG_TAG, "Internal error, bad URL definition");
-      throw new RuntimeException();
-    }
+    url = new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_URL)));
     try {
       webPageUrl =
         new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_WEB_PAGE)));

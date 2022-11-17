@@ -65,6 +65,7 @@ public class RadioLibrary {
 
   public void close() {
     radioDataBase.close();
+    listeners.clear();
   }
 
   public boolean isOpen() {
@@ -100,7 +101,14 @@ public class RadioLibrary {
       null,
       // The sort order
       null);
-    Radio radio = cursor.moveToNext() ? new Radio(cursor) : null;
+    Radio radio = null;
+    try {
+      if (cursor.moveToNext()) {
+        radio = new Radio(cursor);
+      }
+    } catch (MalformedURLException malformedURLException) {
+      Log.e(LOG_TAG, "getFrom: internal failure", malformedURLException);
+    }
     cursor.close();
     return radio;
   }
@@ -257,10 +265,14 @@ public class RadioLibrary {
         }
       }
       if (result) {
-        tellListeners(Listener::onRefresh);
+        refreshListeners();
       }
     }
     return result;
+  }
+
+  public void refreshListeners() {
+    tellListeners(Listener::onRefresh);
   }
 
   // Utility for database update of radio position

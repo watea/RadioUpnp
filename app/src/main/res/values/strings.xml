@@ -25,7 +25,7 @@
     <string name="app_name">RadioUpnp</string>
     <string name="radio_service_description">Streams radio for RadioUpnp app.</string>
     <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app.</string>
-    <string name="copyright">Copyright &#169; 2018 Stephane Treuchot.</string>
+    <string name="copyright">Copyright &#169; 2018 Stephane Treuchot</string>
     <string name="credit">Credit:</string>
     <string name="credit_0">- Icon by shareicon.net</string>
     <string name="credit_1">- Cling [CDDL]</string>
@@ -53,7 +53,7 @@
     <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
     <string name="legend_page_url">Web page URL (optional)</string>
     <string name="legend_page_url_example">http://direct.myradio.fr</string>
-    <string name="icon_url">Icon URL (optional)</string>
+    <string name="icon_url">Icon URL (optional), or click <b>BROWSE</b></string>
     <string name="icon_url_example">https://www.my_cloud.com/icons/my_icon.png</string>
     <string name="radio_definition_error">Radio definition not well formed</string>
     <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>
@@ -81,9 +81,9 @@
     <string name="donation_google_android_market_text">How much?</string>
     <string name="donation_alert_dialog_title">Error occurred</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
-    <string name="dar_fm_radio_button">Search with <b>OnRad.io</b></string>
+    <string name="dar_fm_radio_button">Search with <b>OnRad.io</b> server</string>
     <string name="dar_fm_failed">OnRad.io search failed</string>
-    <string name="image_from_url_radio_button">Manual fill in (icon fetch)</string>
+    <string name="image_from_url_radio_button">Manual fill in</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>
     <string name="not_to_modify">Current radio cannot be edited</string>
@@ -92,6 +92,7 @@
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
     <string name="notification_needed">This app is intended to be used with notifications enabled.</string>
     <string name="import_message">[GO!] searches a remote DISPLAYED RadioUpnp app on local network, and imports ALL radios. App must have been launched on remote device a few seconds before.\nPlease wait (about 5s) for result popup messages.</string>
+    <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically!\n</string>
     <string name="import_connection_failed">No remote app found. Please verify!</string>
     <string name="import_failed">Error on received data; remote app may be inactive (not DISPLAYED). Please verify!</string>
     <string name="import_action_failed">Unable to execute import action from remote app</string>
@@ -99,6 +100,9 @@
     <string name="no_data">No playlist data found</string>
     <string name="dump_error">Error: local export file could not be generated.</string>
     <string name="export_done">Export file "radios.csv" created.\nInternal Storage: Android/data/com.watea.radio_upnp/files</string>
+    <string name="install_radio_garden">Radio Garden app not found. Please install.</string>
+    <string name="radio_garden_radio_added">Radio Garden radio added!</string>
+    <string name="try_to_add_from_radio_garden">Add from Radio Garden, please wait&#8230;</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
@@ -116,6 +120,7 @@
     <string name="title_log">Report</string>
     <string name="title_import">Import</string>
     <string name="title_export">Export</string>
+    <string name="title_radio_garden">Radio Garden</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>

@@ -32,6 +32,9 @@ import androidx.annotation.Nullable;
 
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -39,6 +42,8 @@ import java.net.URLConnection;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -47,6 +52,8 @@ import javax.net.ssl.TrustManager;
 
 public class RadioURL {
   private static final String LOG_TAG = RadioURL.class.getName();
+  private static final Pattern ICON_PATTERN =
+    Pattern.compile(".*(https?:/(/[-A-Za-z0-9+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
   private static final int CONNECTION_TRY = 3;
   private static final int CONNECT_TIMEOUT =
     DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS * 2;
@@ -71,6 +78,36 @@ public class RadioURL {
 
   public RadioURL(@Nullable URL uRL) {
     this.uRL = uRL;
+  }
+
+  @Nullable
+  public static Bitmap iconSearch(@NonNull URL url) {
+    Bitmap result = null;
+    try {
+      Element head = Jsoup.connect(url.toString()).get().head();
+      // Parse site data, try to accelerate
+      for (Element element : head.getAllElements()) {
+        if (element != head) {
+          final String string = element.toString();
+          // Don't parse too big string
+          if (string.length() <= 4096) {
+            Log.d(LOG_TAG, "Search icon in (length: " + string.length() + "): " + string);
+            Matcher matcher = ICON_PATTERN.matcher(string);
+            final Bitmap bitmap;
+            // Fetch largest icon
+            if (matcher.find() &&
+              ((bitmap = new RadioURL(new URL(matcher.group(1))).getBitmap()) != null) &&
+              ((result == null) || (bitmap.getByteCount() > result.getByteCount()))) {
+              Log.d(LOG_TAG, "Icon found");
+              result = bitmap;
+            }
+          }
+        }
+      }
+    } catch (Exception exception) {
+      Log.i(LOG_TAG, "Error performing icon web site search", exception);
+    }
+    return result;
   }
 
   // MIME type

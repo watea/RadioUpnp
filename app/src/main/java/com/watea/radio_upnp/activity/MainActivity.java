@@ -178,8 +178,10 @@ public class MainActivity
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
   private ImportController importController;
+  private RadioGardenProxy radioGardenProxy;
   // />
   private RadioLibrary radioLibrary = null;
+  private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
   private AndroidUpnpService androidUpnpService = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
@@ -220,6 +222,7 @@ public class MainActivity
       upnpDevicesAdapter.onResetRemoteDevices();
     }
   };
+  private Intent newIntent = null;
 
   @NonNull
   public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap) {
@@ -235,12 +238,20 @@ public class MainActivity
     return androidUpnpService;
   }
 
+  @NonNull
+  public Bitmap getDefaultIcon() {
+    return BitmapFactory.decodeResource(getResources(), R.drawable.ic_radio_gray);
+  }
+
   @SuppressLint("NonConstantResourceId")
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
     Integer id = menuItem.getItemId();
     // Note: switch not to use as id not final
     switch (id) {
+      case R.id.action_radio_garden:
+        radioGardenProxy.launchRadioGarden(gotItRadioGarden);
+        break;
       case R.id.action_import:
         importController.showAlertDialog();
         break;
@@ -360,29 +371,6 @@ public class MainActivity
     return fragment;
   }
 
-  public void sendLogcatMail() {
-    // File is stored at root place for app
-    File logFile = new File(getFilesDir(), "logcat.txt");
-    String packageName = getPackageName();
-    String[] command = new String[]{"logcat", "-d", "-f", logFile.toString(), packageName + ":D"};
-    try {
-      Runtime.getRuntime().exec(command);
-      // Prepare mail
-      startActivity(new Intent(Intent.ACTION_SEND)
-        .setType("message/rfc822")
-        .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"})
-        .putExtra(
-          Intent.EXTRA_SUBJECT,
-          "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
-        .putExtra(
-          Intent.EXTRA_STREAM,
-          FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile)));
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
-      tell(R.string.report_error);
-    }
-  }
-
   @NonNull
   public NetworkProxy getNetworkProxy() {
     assert networkProxy != null;
@@ -393,11 +381,6 @@ public class MainActivity
     checkNavigationMenu(navigationMenuCheckedId);
   }
 
-  public void checkNavigationMenu(int id) {
-    navigationMenuCheckedId = id;
-    navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
-  }
-
   @NonNull
   public UpnpDevicesAdapter getUpnpDevicesAdapter() {
     assert upnpDevicesAdapter != null;
@@ -406,155 +389,6 @@ public class MainActivity
 
   public void onUpnp() {
     upnpAlertDialog.show();
-  }
-
-  @Override
-  protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-    super.onActivityResult(requestCode, resultCode, data);
-    Fragment fragment = getCurrentFragment();
-    if (fragment != null) {
-      fragment.onActivityResult(requestCode, resultCode, data);
-    }
-  }
-
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    // Init connexion
-    networkProxy = new NetworkProxy(this);
-    // UPnP adapter (order matters)
-    upnpDevicesAdapter = new UpnpDevicesAdapter(
-      (savedInstanceState == null) ?
-        null : savedInstanceState.getString(getString(R.string.key_selected_device)),
-      (upnpDevice, isChosen) -> {
-        if (isChosen) {
-          startReading(null);
-          tell(getResources().getString(R.string.dlna_selection) + upnpDevice);
-        } else {
-          tell(R.string.no_dlna_selection);
-        }
-        upnpAlertDialog.dismiss();
-      });
-    // Inflate view
-    setContentView(R.layout.activity_main);
-    drawerLayout = findViewById(R.id.main_activity);
-    // ActionBar
-    setSupportActionBar(findViewById(R.id.actionbar));
-    actionBarLayout = findViewById(R.id.actionbar_layout);
-    playerController = new PlayerController(this, actionBarLayout);
-    assert getSupportActionBar() != null;
-    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-    // Import function
-    importController = new ImportController(this);
-    // Set navigation drawer toggle (according to documentation)
-    drawerToggle = new ActionBarDrawerToggle(
-      this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
-    // Set the drawer toggle as the DrawerListener
-    drawerLayout.addDrawerListener(drawerToggle);
-    // Navigation drawer
-    NavigationView navigationView = findViewById(R.id.navigation_view);
-    navigationView.setNavigationItemSelectedListener(this);
-    navigationMenu = navigationView.getMenu();
-    // Build alert about dialog
-    @SuppressLint("InflateParams")
-    View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
-    ((TextView) aboutView.findViewById(R.id.version_name_text_view))
-      .setText(BuildConfig.VERSION_NAME);
-    aboutAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
-      .setView(aboutView)
-      // Restore checked item
-      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
-      .create();
-    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-      new AlertDialog.Builder(this, R.style.AlertDialogStyle)
-        .setMessage(R.string.notification_needed)
-        .setPositiveButton(R.string.action_go, (dialogInterface, i) -> setNotification())
-        .create()
-        .show();
-    }
-    // Specific UPnP devices dialog
-    RecyclerView upnpRecyclerView = new RecyclerView(this);
-    upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-    upnpRecyclerView.setAdapter(upnpDevicesAdapter);
-    upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
-      .setView(upnpRecyclerView)
-      .create();
-    // FAB
-    floatingActionButton = findViewById(R.id.floating_action_button);
-    // Set fragment if context is not restored by Android
-    if (savedInstanceState == null) {
-      setFragment(MainFragment.class);
-    }
-  }
-
-  @Override
-  protected void onPause() {
-    super.onPause();
-    // Stop UPnP service
-    unbindService(upnpConnection);
-    // Forced disconnection
-    upnpConnection.onServiceDisconnected(null);
-    // PlayerController call
-    playerController.onActivityPause();
-    // Close radios database
-    radioLibrary.close();
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-    // Create radio database (order matters)
-    radioLibrary = new RadioLibrary(this);
-    // Create default radios on first start
-    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true) &&
-      setDefaultRadios()) {
-      // To do just one time, store a flag
-      sharedPreferences
-        .edit()
-        .putBoolean(getString(R.string.key_first_start), false)
-        .apply();
-    }
-    // Start the UPnP service
-    if (!bindService(
-      new Intent(this, AndroidUpnpServiceImpl.class),
-      upnpConnection,
-      BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
-    }
-    // PlayerController call
-    playerController.onActivityResume(radioLibrary);
-  }
-
-  @Override
-  protected void onPostCreate(Bundle savedInstanceState) {
-    super.onPostCreate(savedInstanceState);
-    // Sync the toggle state after onRestoreInstanceState has occurred
-    drawerToggle.syncState();
-  }
-
-  @Override
-  public void onConfigurationChanged(@NonNull Configuration newConfig) {
-    super.onConfigurationChanged(newConfig);
-    drawerToggle.onConfigurationChanged(newConfig);
-  }
-
-  @Override
-  protected void onSaveInstanceState(@NonNull Bundle outState) {
-    super.onSaveInstanceState(outState);
-    Fragment currentFragment = getCurrentFragment();
-    // Stored to tag activity has been disposed
-    if (currentFragment != null) {
-      outState.putString(
-        getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
-    }
-    // May not exist
-    if (upnpDevicesAdapter != null) {
-      UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
-      if (chosenUpnpDevice != null) {
-        outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
-      }
-    }
   }
 
   @Override
@@ -588,6 +422,205 @@ public class MainActivity
         super.onOptionsItemSelected(item);
   }
 
+  public boolean setRadioGardenGotIt() {
+    return gotItRadioGarden = true;
+  }
+
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    Fragment fragment = getCurrentFragment();
+    if (fragment != null) {
+      fragment.onActivityResult(requestCode, resultCode, data);
+    }
+  }
+
+  @Override
+  protected void onPause() {
+    super.onPause();
+    // Shared preferences
+    getPreferences(Context.MODE_PRIVATE)
+      .edit()
+      .putBoolean(getString(R.string.key_first_start), false) // Just one time at start
+      .putBoolean(getString(R.string.key_radio_garden), gotItRadioGarden)
+      .apply();
+    // Stop UPnP service
+    unbindService(upnpConnection);
+    // Forced disconnection
+    upnpConnection.onServiceDisconnected(null);
+    // PlayerController call
+    playerController.onActivityPause();
+    // Close radios database
+    radioLibrary.close();
+  }
+
+  @Override
+  protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    newIntent = intent;
+  }
+
+  @Override
+  protected void onResume() {
+    super.onResume();
+    // Create radio database (order matters)
+    radioLibrary = new RadioLibrary(this);
+    // Create default radios on first start
+    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden), false);
+    // Init database
+    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
+      setDefaultRadios();
+    }
+    // Start the UPnP service
+    if (!bindService(
+      new Intent(this, AndroidUpnpServiceImpl.class),
+      upnpConnection,
+      BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
+    }
+    // PlayerController call
+    playerController.onActivityResume(radioLibrary);
+    // Radio Garden share?
+    if (newIntent != null) {
+      radioGardenProxy.onNewIntent(newIntent);
+      newIntent = null;
+    }
+  }
+
+  @Override
+  @SuppressLint("InflateParams")
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    // Init connexion
+    networkProxy = new NetworkProxy(this);
+    // UPnP adapter (order matters)
+    upnpDevicesAdapter = new UpnpDevicesAdapter(
+      (savedInstanceState == null) ?
+        null : savedInstanceState.getString(getString(R.string.key_selected_device)),
+      (upnpDevice, isChosen) -> {
+        if (isChosen) {
+          startReading(null);
+          tell(getResources().getString(R.string.dlna_selection) + upnpDevice);
+        } else {
+          tell(R.string.no_dlna_selection);
+        }
+        upnpAlertDialog.dismiss();
+      });
+    // Inflate view
+    setContentView(R.layout.activity_main);
+    drawerLayout = findViewById(R.id.main_activity);
+    // ActionBar
+    setSupportActionBar(findViewById(R.id.actionbar));
+    actionBarLayout = findViewById(R.id.actionbar_layout);
+    playerController = new PlayerController(this, actionBarLayout);
+    assert getSupportActionBar() != null;
+    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    // Radio Garden
+    radioGardenProxy = new RadioGardenProxy(this);
+    // Import function
+    importController = new ImportController(this);
+    // Set navigation drawer toggle (according to documentation)
+    drawerToggle = new ActionBarDrawerToggle(
+      this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
+    // Set the drawer toggle as the DrawerListener
+    drawerLayout.addDrawerListener(drawerToggle);
+    // Navigation drawer
+    NavigationView navigationView = findViewById(R.id.navigation_view);
+    navigationView.setNavigationItemSelectedListener(this);
+    navigationMenu = navigationView.getMenu();
+    // Build alert about dialog
+    View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
+    ((TextView) aboutView.findViewById(R.id.version_name_text_view))
+      .setText(BuildConfig.VERSION_NAME);
+    aboutAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+      .setView(aboutView)
+      // Restore checked item
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
+      .create();
+    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+      new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+        .setMessage(R.string.notification_needed)
+        .setPositiveButton(R.string.action_go, (dialogInterface, i) -> setNotification())
+        .create()
+        .show();
+    }
+    // Specific UPnP devices dialog
+    RecyclerView upnpRecyclerView = new RecyclerView(this);
+    upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+    upnpRecyclerView.setAdapter(upnpDevicesAdapter);
+    upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+      .setView(upnpRecyclerView)
+      .create();
+    // FAB
+    floatingActionButton = findViewById(R.id.floating_action_button);
+    // Set fragment if context is not restored by Android
+    if (savedInstanceState == null) {
+      setFragment(MainFragment.class);
+    }
+    // Store intent
+    newIntent = getIntent();
+  }
+
+  @Override
+  protected void onPostCreate(Bundle savedInstanceState) {
+    super.onPostCreate(savedInstanceState);
+    // Sync the toggle state after onRestoreInstanceState has occurred
+    drawerToggle.syncState();
+  }
+
+  @Override
+  public void onConfigurationChanged(@NonNull Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    drawerToggle.onConfigurationChanged(newConfig);
+  }
+
+  @Override
+  protected void onSaveInstanceState(@NonNull Bundle outState) {
+    super.onSaveInstanceState(outState);
+    Fragment currentFragment = getCurrentFragment();
+    // Stored to tag activity has been disposed
+    if (currentFragment != null) {
+      outState.putString(
+        getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
+    }
+    // May not exist
+    if (upnpDevicesAdapter != null) {
+      UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
+      if (chosenUpnpDevice != null) {
+        outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
+      }
+    }
+  }
+
+  private void sendLogcatMail() {
+    // File is stored at root place for app
+    File logFile = new File(getFilesDir(), "logcat.txt");
+    String packageName = getPackageName();
+    String[] command = new String[]{"logcat", "-d", "-f", logFile.toString(), packageName + ":D"};
+    try {
+      Runtime.getRuntime().exec(command);
+      // Prepare mail
+      startActivity(new Intent(Intent.ACTION_SEND)
+        .setType("message/rfc822")
+        .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"})
+        .putExtra(
+          Intent.EXTRA_SUBJECT,
+          "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
+        .putExtra(
+          Intent.EXTRA_STREAM,
+          FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile)));
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
+      tell(R.string.report_error);
+    }
+  }
+
+  private void checkNavigationMenu(int id) {
+    navigationMenuCheckedId = id;
+    navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
+  }
+
   private void dumpRadios() {
     File dumpFile = new File(getExternalFilesDir(null), "radios.csv");
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
@@ -618,8 +651,7 @@ public class MainActivity
     return (androidUpnpService == null) ? null : androidUpnpService.getRegistry();
   }
 
-  private boolean setDefaultRadios() {
-    boolean result = false;
+  private void setDefaultRadios() {
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
       try {
         Radio radio = new Radio(
@@ -628,12 +660,13 @@ public class MainActivity
           new URL(defaultRadio.webPageURL),
           false,
           resourceToBitmap(defaultRadio.drawable));
-        result = radioLibrary.add(radio) || result;
+        if (!radioLibrary.add(radio)) {
+          Log.e(LOG_TAG, "setDefaultRadios: internal failure on: " + radio.getName());
+        }
       } catch (Exception exception) {
         Log.e(LOG_TAG, "setDefaultRadios: internal failure", exception);
       }
     }
-    return result;
   }
 
   @NonNull
