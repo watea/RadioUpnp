@@ -104,4 +104,8 @@
 
     </application>
 
+    <queries>
+        <package android:name="com.jonathanpuckey.radiogarden" />
+    </queries>
+
 </manifest>
