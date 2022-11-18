@@ -44,12 +44,9 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.adapter.RadiosAdapter;
+import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
-
-import java.util.List;
 
 public class MainFragment extends MainActivityFragment {
   // <HMI assets
@@ -71,24 +68,37 @@ public class MainFragment extends MainActivityFragment {
   private int radioClickCount = 0;
   private boolean isPreferredRadios = false;
   private boolean gotItRadioLongPress;
-  private boolean gotItDlnaEnable;
-  private boolean gotItPreferredRadios;
-  private RadiosAdapter radiosAdapter;
-  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+  private final RadiosMainAdapter.Listener radiosAdapterListener = new RadiosMainAdapter.Listener() {
     @Override
-    public void onNewCurrentRadio(@Nullable Radio radio) {
-      radiosAdapter.onRefresh(null);
+    public void onClick(@NonNull Radio radio) {
+      if (getNetworkProxy().isDeviceOffline()) {
+        tell(R.string.no_internet);
+      } else {
+        getMainActivity().startReading(radio);
+        if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
+          radioLongPressAlertDialog.show();
+        }
+      }
     }
 
     @Override
-    public void onRefresh() {
-      assert getRadioLibrary() != null;
-      List<Long> radios = isPreferredRadios ?
-        getRadioLibrary().getPreferredRadioIds() : getRadioLibrary().getAllRadioIds();
-      radiosAdapter.onRefresh(radios);
-      defaultFrameLayout.setVisibility(getVisibleFrom(radios.isEmpty()));
+    public boolean onLongClick(@Nullable Uri webPageUri) {
+      if (webPageUri == null) {
+        tell(R.string.no_web_page);
+      } else {
+        getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
+      }
+      return true;
+    }
+
+    @Override
+    public void onCountChange(boolean isEmpty) {
+      defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
     }
   };
+  private boolean gotItDlnaEnable;
+  private boolean gotItPreferredRadios;
+  private RadiosMainAdapter radiosMainAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
 
   @Override
@@ -97,10 +107,8 @@ public class MainFragment extends MainActivityFragment {
     // Force column count
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
     // Set view
-    radioLibraryListener.onRefresh();
-    // RadioLibrary changes
     assert getRadioLibrary() != null;
-    getRadioLibrary().addListener(radioLibraryListener);
+    radiosMainAdapter.set(getRadioLibrary(), isPreferredRadios);
     // UPnP changes
     upnpDevicesAdapter.setChosenDeviceListener(chosenDeviceListener);
   }
@@ -110,9 +118,8 @@ public class MainFragment extends MainActivityFragment {
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     switch (item.getItemId()) {
       case R.id.action_preferred:
-        isPreferredRadios = !isPreferredRadios;
+        radiosMainAdapter.refresh(isPreferredRadios = !isPreferredRadios);
         setPreferredMenuItem();
-        radioLibraryListener.onRefresh();
         if (!gotItPreferredRadios) {
           preferredRadiosAlertDialog.show();
         }
@@ -170,59 +177,18 @@ public class MainFragment extends MainActivityFragment {
     return R.string.title_main;
   }
 
-  @Nullable
+  @NonNull
   @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater,
-    @Nullable ViewGroup container,
-    @Nullable Bundle savedInstanceState) {
+  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
     // Inflate the view so that graphical objects exists
     final View view = inflater.inflate(R.layout.content_main, container, false);
-    RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
     radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     // Adapters (order matters!)
-    radiosAdapter = new RadiosAdapter(
-      new RadiosAdapter.Listener() {
-        @Override
-        public void onClick(@NonNull Radio radio) {
-          if (getNetworkProxy().isDeviceOffline()) {
-            tell(R.string.no_internet);
-          } else {
-            getMainActivity().startReading(radio);
-            if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
-              radioLongPressAlertDialog.show();
-            }
-          }
-        }
-
-        @Override
-        public boolean onLongClick(@Nullable Uri webPageUri) {
-          if (webPageUri == null) {
-            tell(R.string.no_web_page);
-          } else {
-            getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
-          }
-          return true;
-        }
-      },
-      new RadiosAdapter.Callback() {
-        @Nullable
-        @Override
-        public Radio getFrom(@NonNull Long radioId) {
-          assert getRadioLibrary() != null;
-          return getRadioLibrary().isOpen() ? getRadioLibrary().getFrom(radioId) : null;
-        }
-
-        @Override
-        public boolean isCurrentRadio(@NonNull Radio radio) {
-          assert getRadioLibrary() != null;
-          return getRadioLibrary().isCurrentRadio(radio);
-        }
-      },
-      MainActivity.getSmallIconSize());
-    radiosRecyclerView.setAdapter(radiosAdapter);
+    radiosMainAdapter = new RadiosMainAdapter(radiosAdapterListener, MainActivity.getSmallIconSize());
+    radiosRecyclerView.setAdapter(radiosMainAdapter);
     upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
     radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
@@ -277,9 +243,8 @@ public class MainFragment extends MainActivityFragment {
       .putBoolean(getString(R.string.key_preferred_radios_got_it), gotItPreferredRadios)
       .apply();
     // Clear resources
-    assert getRadioLibrary() != null;
-    getRadioLibrary().removeListener(radioLibraryListener);
     upnpDevicesAdapter.setChosenDeviceListener(null);
+    radiosMainAdapter.unset();
   }
 
   private boolean wifiTest(@NonNull Runnable runnable) {

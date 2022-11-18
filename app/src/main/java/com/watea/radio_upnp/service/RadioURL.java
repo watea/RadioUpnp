@@ -84,7 +84,7 @@ public class RadioURL {
   public static Bitmap iconSearch(@NonNull URL url) {
     Bitmap result = null;
     try {
-      Element head = Jsoup.connect(url.toString()).get().head();
+      final Element head = Jsoup.connect(url.toString()).get().head();
       // Parse site data, try to accelerate
       for (Element element : head.getAllElements()) {
         if (element != head) {
@@ -92,7 +92,7 @@ public class RadioURL {
           // Don't parse too big string
           if (string.length() <= 4096) {
             Log.d(LOG_TAG, "Search icon in (length: " + string.length() + "): " + string);
-            Matcher matcher = ICON_PATTERN.matcher(string);
+            final Matcher matcher = ICON_PATTERN.matcher(string);
             final Bitmap bitmap;
             // Fetch largest icon
             if (matcher.find() &&
@@ -156,7 +156,7 @@ public class RadioURL {
     Log.d(LOG_TAG, "Try connect to URL: " + uRL);
     do {
       // Set headers
-      URLConnection uRLConnection = uRL.openConnection();
+      final URLConnection uRLConnection = uRL.openConnection();
       if (uRLConnection instanceof HttpURLConnection) {
         httpURLConnection = (HttpURLConnection) uRL.openConnection();
       } else {

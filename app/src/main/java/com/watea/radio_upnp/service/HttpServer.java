@@ -65,10 +65,10 @@ public class HttpServer extends Thread {
     radioHandler = new RadioHandler(userAgent, radioHandlerCallback, radioHandlerListener);
     networkProxy = new NetworkProxy(this.context);
     // Handler for local files
-    ResourceHandler resourceHandler = new ResourceHandler();
+    final ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setResourceBase(this.context.getFilesDir().getPath());
     // Add the ResourceHandler to the server
-    HandlerList handlers = new HandlerList();
+    final HandlerList handlers = new HandlerList();
     handlers.setHandlers(new Handler[]{resourceHandler, radioHandler});
     server.setHandler(handlers);
   }
@@ -107,7 +107,7 @@ public class HttpServer extends Thread {
   // Return logo file Uri; a jpeg file
   @Nullable
   public Uri createLogoFile(@NonNull Radio radio) {
-    String name = LOGO_FILE + radio.getId() + ".jpg";
+    final String name = LOGO_FILE + radio.getId() + ".jpg";
     try (FileOutputStream fileOutputStream = context.openFileOutput(name, Context.MODE_PRIVATE)) {
       Bitmap
         .createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true)
@@ -115,7 +115,7 @@ public class HttpServer extends Thread {
     } catch (Exception exception) {
       Log.e(LOG_TAG, "createLogoFile: internal failure creating logo file", exception);
     }
-    Uri uri = getUri();
+    final Uri uri = getUri();
     return (uri == null) ? null : uri.buildUpon().appendEncodedPath(name).build();
   }
 

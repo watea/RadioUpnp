@@ -369,7 +369,7 @@ public class RadioService
   @SuppressLint("SwitchIntDef")
   @NonNull
   private Notification getNotification() {
-    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+    final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSilent(true)
       .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
@@ -387,7 +387,7 @@ public class RadioService
     if (mediaMetadataCompat == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
     } else {
-      MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
+      final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
       builder
         .setLargeIcon(description.getIconBitmap())
         // Title, radio name
@@ -397,7 +397,7 @@ public class RadioService
     }
     final int[] actions012 = {0, 1, 2};
     final int[] actions0123 = {0, 1, 2, 3};
-    androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
+    final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
     PlaybackStateCompat playbackStateCompat;
     if ((mediaController == null) ||
@@ -487,9 +487,9 @@ public class RadioService
       }
       // Set actual player UPnP? Extra shall contain UPnP device UDN.
       boolean isUpnp = extras.containsKey(getString(R.string.key_upnp_device));
-      Device<?, ?, ?> chosenDevice = isUpnp ?
+      final Device<?, ?, ?> chosenDevice = isUpnp ?
         getChosenDevice(extras.getString(getString(R.string.key_upnp_device))) : null;
-      Uri serverUri = httpServer.getUri();
+      final Uri serverUri = httpServer.getUri();
       // UPnP not accepted if environment not OK => force local
       if (isUpnp &&
         ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {

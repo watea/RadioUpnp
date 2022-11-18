@@ -64,7 +64,7 @@ public class NetworkProxy {
     if (connectivityManager == null) {
       return true;
     } else {
-      NetworkCapabilities capabilities =
+      final NetworkCapabilities capabilities =
         connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
       return (capabilities == null) ||
         !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
@@ -78,18 +78,18 @@ public class NetworkProxy {
 
   @Nullable
   public Uri getUri(int port) {
-    String ipAddress = getIpAddress();
+    final String ipAddress = getIpAddress();
     return (ipAddress == null) ? null : getUri(ipAddress, port);
   }
 
   @Nullable
   private String getIpAddress() {
     if (connectivityManager != null) {
-      LinkProperties linkProperties =
+      final LinkProperties linkProperties =
         connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
       if (linkProperties != null) {
         for (LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
-          InetAddress inetAddress = linkAddress.getAddress();
+          final InetAddress inetAddress = linkAddress.getAddress();
           if (inetAddress instanceof java.net.Inet4Address) {
             return inetAddress.getHostAddress();
           }

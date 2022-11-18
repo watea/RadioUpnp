@@ -137,9 +137,9 @@ class PlayerController {
       @SuppressLint("SwitchIntDef")
       @Override
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
-        int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
-        Bundle bundle = mediaController.getExtras();
-        boolean isUpnp =
+        final int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
+        final Bundle bundle = mediaController.getExtras();
+        final boolean isUpnp =
           (bundle != null) && bundle.containsKey(mainActivity.getString(R.string.key_upnp_device));
         Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
         // Default
@@ -195,7 +195,7 @@ class PlayerController {
           String information = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
           playedRadioInformationTextView.setText(information);
           // Use WRITER for rate
-          String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
+          final String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
           playedRadioRateTextView.setText(
             (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
           // Fill playlist
@@ -254,7 +254,7 @@ class PlayerController {
   public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
     this.mainActivity = mainActivity;
     // Shared preferences
-    SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
+    final SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
     gotItPlayLongPress = sharedPreferences.getBoolean(
       mainActivity.getString(R.string.key_play_long_press_got_it), false);
     gotItInformationPress = sharedPreferences.getBoolean(
@@ -328,7 +328,7 @@ class PlayerController {
     });
     preferredImageButton = view.findViewById(R.id.preferred_image_button);
     preferredImageButton.setOnClickListener(v -> {
-      Radio radio = getCurrentRadio();
+      final Radio radio = getCurrentRadio();
       if (radio == null) {
         // Should not happen
         Log.i(LOG_TAG, "Internal failure, radio is null");
@@ -391,7 +391,7 @@ class PlayerController {
         return;
       }
     }
-    Bundle bundle = new Bundle();
+    final Bundle bundle = new Bundle();
     if (upnpDeviceIdentity != null) {
       bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
     }
@@ -430,7 +430,7 @@ class PlayerController {
   }
 
   private void insertInformations(@NonNull String date, @NonNull String information) {
-    Map<String, String> informationMap = new Hashtable<>();
+    final Map<String, String> informationMap = new Hashtable<>();
     informationMap.put(DATE, date);
     informationMap.put(INFORMATION, information);
     playInformations.add(informationMap);

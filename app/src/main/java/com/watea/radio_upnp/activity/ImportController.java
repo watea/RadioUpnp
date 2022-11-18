@@ -140,13 +140,13 @@ class ImportController {
       mainActivity.tell(R.string.import_connection_failed);
       return;
     }
-    AndroidUpnpService androidUpnpService = mainActivity.getAndroidUpnpService();
+    final AndroidUpnpService androidUpnpService = mainActivity.getAndroidUpnpService();
     if (androidUpnpService == null) {
       mainActivity.tell(R.string.service_not_available);
       return;
     }
     // Build call
-    ActionInvocation<?> actionInvocation = new ActionInvocation<>(
+    final ActionInvocation<?> actionInvocation = new ActionInvocation<>(
       remoteDevice
         .findService(new UDAServiceId(Exporter.EXPORTER_SERVICE))
         .getAction(ACTION_GET_EXPORT));

@@ -65,7 +65,6 @@ public class RadioLibrary {
 
   public void close() {
     radioDataBase.close();
-    listeners.clear();
   }
 
   public boolean isOpen() {
@@ -86,7 +85,7 @@ public class RadioLibrary {
 
   @Nullable
   public Radio getFrom(@NonNull Long radioId) {
-    Cursor cursor = radioDataBase.query(
+    final Cursor cursor = radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns to return
@@ -114,7 +113,7 @@ public class RadioLibrary {
   }
 
   public int getPositionFrom(@NonNull Long radioId) {
-    Cursor cursor = radioDataBase.query(
+    final Cursor cursor = radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns to return
@@ -129,21 +128,25 @@ public class RadioLibrary {
       null,
       // The sort order
       null);
-    int columnIndex = cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_POSITION);
+    final int columnIndex = cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_POSITION);
     assert columnIndex >= 0;
-    int position = cursor.moveToNext() ? cursor.getInt(columnIndex) : 0;
+    final int position = cursor.moveToNext() ? cursor.getInt(columnIndex) : 0;
     cursor.close();
     return position;
   }
 
   public boolean deleteFrom(@NonNull Long radioId) {
-    return (radioDataBase.delete(
+    final boolean result = (radioDataBase.delete(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
       // The columns for the WHERE clause
       RadioSQLContract.Columns._ID + " = ?",
       // The values for the WHERE clause
       new String[]{radioId.toString()}) > 0);
+    if (result) {
+      tellListeners(listener -> listener.onRemove(radioId));
+    }
+    return result;
   }
 
   @NonNull
@@ -158,15 +161,22 @@ public class RadioLibrary {
 
   // Add a radio and store according icon
   public boolean add(@NonNull Radio radio) {
-    ContentValues contentValues = radio.toContentValues();
+    final ContentValues contentValues = radio.toContentValues();
     // Position = last
     contentValues.put(RadioSQLContract.Columns.COLUMN_POSITION, getMaxPosition() + 1);
     radio.setId(radioDataBase.insert(RadioSQLContract.Columns.TABLE_RADIO, null, contentValues));
     // Success? => store icon file
-    if ((radio.getId() >= 0) && radio.storeIcon(context)) {
-      contentValues.clear();
-      contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, radio.getIconFile().getPath());
-      return updateFrom(radio.getId(), contentValues);
+    final Long radioId = radio.getId();
+    if (radioId >= 0) {
+      tellListeners(listener -> listener.onAdd(radioId));
+      if (radio.storeIcon(context)) {
+        contentValues.clear();
+        contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, radio.getIconFile().getPath());
+        if (!updateFrom(radioId, contentValues)) {
+          Log.e(LOG_TAG, "add: internal failure storing icon path");
+        }
+      }
+      return true;
     }
     return false;
   }
@@ -178,11 +188,11 @@ public class RadioLibrary {
 
   @NonNull
   public List<MediaBrowserCompat.MediaItem> getMediaItems() throws RuntimeException {
-    List<MediaBrowserCompat.MediaItem> result = new Vector<>();
-    Cursor cursor = allIdsQuery();
+    final List<MediaBrowserCompat.MediaItem> result = new Vector<>();
+    final Cursor cursor = allIdsQuery();
     int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);
     while (cursor.moveToNext()) {
-      Radio radio = getFrom(cursor.getLong(idColumnIndex));
+      final Radio radio = getFrom(cursor.getLong(idColumnIndex));
       if (radio == null) {
         Log.e(LOG_TAG, "getMediaItems: internal failure");
         throw new RuntimeException();
@@ -197,14 +207,14 @@ public class RadioLibrary {
 
   @Nullable
   public Long get(@NonNull Long radioId, boolean isPreferred, int direction) {
-    List<Long> ids = isPreferred ? getPreferredRadioIds() : getAllRadioIds();
+    final List<Long> ids = isPreferred ? getPreferredRadioIds() : getAllRadioIds();
     return ids.contains(radioId) ?
       ids.get((ids.size() + ids.indexOf(radioId) + direction) % ids.size()) :
       null;
   }
 
   public boolean setPreferred(@NonNull Long radioId, @NonNull Boolean isPreferred) {
-    ContentValues values = new ContentValues();
+    final ContentValues values = new ContentValues();
     values.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
     if (updateFrom(radioId, values)) {
       Radio radio = getFrom(radioId);
@@ -216,11 +226,17 @@ public class RadioLibrary {
   }
 
   public boolean move(@NonNull Long fromRadioId, @NonNull Long toRadioId) {
-    ContentValues fromPosition = positionContentValuesOf(fromRadioId);
-    ContentValues toPosition = positionContentValuesOf(toRadioId);
-    return updateFrom(fromRadioId, toPosition) && updateFrom(toRadioId, fromPosition);
+    final ContentValues fromPosition = positionContentValuesOf(fromRadioId);
+    final ContentValues toPosition = positionContentValuesOf(toRadioId);
+    final boolean result =
+      updateFrom(fromRadioId, toPosition) && updateFrom(toRadioId, fromPosition);
+    if (result) {
+      tellListeners(listener -> listener.onMove(fromRadioId, toRadioId));
+    }
+    return result;
   }
 
+  // Add if not already there
   public void addListener(@NonNull Listener listener) {
     listeners.add(listener);
   }
@@ -236,16 +252,17 @@ public class RadioLibrary {
 
   // Null if no radio
   public void setCurrentRadio(@Nullable MediaMetadataCompat metadata) {
-    String id = (metadata == null) ? null : metadata.getDescription().getMediaId();
+    final String id = (metadata == null) ? null : metadata.getDescription().getMediaId();
     currentRadioId = (id == null) ? null : Long.valueOf(id);
     tellListeners(listener -> listener.onNewCurrentRadio(getCurrentRadio()));
   }
 
   @NonNull
   public String marshall(boolean textOnly) {
-    StringBuilder result = new StringBuilder().append(textOnly ? Radio.MARSHALL_HEAD + "\n" : "");
+    final StringBuilder result =
+      new StringBuilder().append(textOnly ? Radio.MARSHALL_HEAD + "\n" : "");
     for (Long id : getAllRadioIds()) {
-      Radio radio = getFrom(id);
+      final Radio radio = getFrom(id);
       assert radio != null;
       result.append(radio.marshall(textOnly)).append(textOnly ? "\n" : SPACER);
     }
@@ -264,29 +281,22 @@ public class RadioLibrary {
           Log.e(LOG_TAG, "importFrom: a radio failed to be imported", malformedURLException);
         }
       }
-      if (result) {
-        refreshListeners();
-      }
     }
     return result;
-  }
-
-  public void refreshListeners() {
-    tellListeners(Listener::onRefresh);
   }
 
   // Utility for database update of radio position
   @NonNull
   private ContentValues positionContentValuesOf(@NonNull Long radioId) {
-    ContentValues contentValues = new ContentValues();
+    final ContentValues contentValues = new ContentValues();
     contentValues.put(RadioSQLContract.Columns.COLUMN_POSITION, getPositionFrom(radioId));
     return contentValues;
   }
 
   @NonNull
   private List<Long> cursorToIdListAndClose(@NonNull Cursor cursor) {
-    int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);
-    List<Long> radioIds = new Vector<>();
+    final int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);
+    final List<Long> radioIds = new Vector<>();
     while (cursor.moveToNext()) {
       radioIds.add(cursor.getLong(idColumnIndex));
     }
@@ -333,7 +343,7 @@ public class RadioLibrary {
   }
 
   private int getMaxPosition() {
-    String maxPosition = "MAX(" + RadioSQLContract.Columns.COLUMN_POSITION + ")";
+    final String maxPosition = "MAX(" + RadioSQLContract.Columns.COLUMN_POSITION + ")";
     Cursor cursor = radioDataBase.query(
       // The table to query
       RadioSQLContract.Columns.TABLE_RADIO,
@@ -349,9 +359,9 @@ public class RadioLibrary {
       null,
       // The sort order
       null);
-    int columnIndex = cursor.getColumnIndex(maxPosition);
+    final int columnIndex = cursor.getColumnIndex(maxPosition);
     assert columnIndex >= 0;
-    int position = cursor.moveToNext() ? cursor.getInt(columnIndex) : 0;
+    final int position = cursor.moveToNext() ? cursor.getInt(columnIndex) : 0;
     cursor.close();
     return position;
   }
@@ -369,7 +379,13 @@ public class RadioLibrary {
     default void onNewCurrentRadio(@Nullable Radio radio) {
     }
 
-    default void onRefresh() {
+    default void onAdd(@NonNull Long radioId) {
+    }
+
+    default void onRemove(@NonNull Long radioId) {
+    }
+
+    default void onMove(@NonNull Long fromId, @NonNull Long toId) {
     }
   }
 

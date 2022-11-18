@@ -26,8 +26,6 @@ package com.watea.radio_upnp.adapter;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,21 +37,25 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 
 import java.util.List;
 import java.util.Vector;
 
-public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder> {
-  private final int iconSize;
+public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
+  extends RecyclerView.Adapter<V> {
+  protected final int iconSize;
   @NonNull
-  private final Listener listener;
+  protected final Listener listener;
+  protected final List<Long> radioIds = new Vector<>();
+  @Nullable
+  protected RadioLibrary radioLibrary = null;
   @NonNull
-  private final Callback callback;
-  private final List<Long> radioIds = new Vector<>();
+  private RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+  };
 
-  public RadiosAdapter(@NonNull Listener listener, @NonNull Callback callback, int iconSize) {
+  public RadiosAdapter(@NonNull Listener listener, int iconSize) {
     this.listener = listener;
-    this.callback = callback;
     this.iconSize = iconSize;
   }
 
@@ -62,30 +64,28 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     return Bitmap.createScaledBitmap(bitmap, size, size, true);
   }
 
-  // Content setter, must be called
-  // null for refresh only
-  @SuppressLint("NotifyDataSetChanged")
-  public void onRefresh(@Nullable List<Long> radioIds) {
-    if (radioIds != null) {
-      this.radioIds.clear();
-      this.radioIds.addAll(radioIds);
+  public void unset() {
+    if (radioLibrary != null) {
+      radioLibrary.removeListener(radioLibraryListener);
     }
-    notifyDataSetChanged();
   }
 
+  @SuppressWarnings("unchecked")
   @NonNull
   @Override
-  public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-    return new ViewHolder(LayoutInflater
+  public V onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    return (V) new ViewHolder(LayoutInflater
       .from(viewGroup.getContext())
       .inflate(R.layout.row_radio, viewGroup, false));
   }
 
   @Override
-  public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    Radio radio = callback.getFrom(radioIds.get(i));
-    if (radio != null) {
-      viewHolder.setView(radio);
+  public void onBindViewHolder(@NonNull V v, int i) {
+    assert radioLibrary != null;
+    if (radioLibrary.isOpen()) {
+      final Radio radio = radioLibrary.getFrom(radioIds.get(i));
+      assert radio != null;
+      v.setView(radio);
     }
   }
 
@@ -94,56 +94,72 @@ public class RadiosAdapter extends RecyclerView.Adapter<RadiosAdapter.ViewHolder
     return radioIds.size();
   }
 
+  @SuppressLint("NotifyDataSetChanged")
+  public void refresh(boolean isPreferred) {
+    radioIds.clear();
+    assert radioLibrary != null;
+    radioIds.addAll(
+      isPreferred ? radioLibrary.getPreferredRadioIds() : radioLibrary.getAllRadioIds());
+    notifyDataSetChanged();
+    onCountChange(radioIds.isEmpty());
+  }
+
+  // Must be called
+  protected void set(
+    @NonNull RadioLibrary radioLibrary,
+    @NonNull RadioLibrary.Listener radioLibraryListener,
+    boolean isPreferred) {
+    this.radioLibrary = radioLibrary;
+    this.radioLibraryListener = radioLibraryListener;
+    this.radioLibrary.addListener(radioLibraryListener);
+    refresh(isPreferred);
+  }
+
+  protected int getIndexOf(@NonNull Long radioId) {
+    return radioIds.indexOf(radioId);
+  }
+
+  protected int getIndexOf(@NonNull Radio radio) {
+    return getIndexOf(radio.getId());
+  }
+
+  protected void onCountChange(boolean isEmpty) {
+    listener.onCountChange(isEmpty);
+  }
+
   public interface Listener {
     void onClick(@NonNull Radio radio);
 
-    boolean onLongClick(@Nullable Uri webPageUri);
-  }
-
-  public interface Callback {
-    @Nullable
-    Radio getFrom(@NonNull Long radioId);
-
-    boolean isCurrentRadio(@NonNull Radio radio);
+    void onCountChange(boolean isEmpty);
   }
 
   protected class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
-    private final TextView radioTextView;
+    protected final TextView radioTextView;
     @NonNull
-    private final Drawable defaultBackground;
-    @NonNull
-    private Radio radio = Radio.DUMMY_RADIO;
+    protected Radio radio = Radio.DUMMY_RADIO;
 
-    ViewHolder(@NonNull View itemView) {
+    protected ViewHolder(@NonNull View itemView) {
       super(itemView);
-      radioTextView = (TextView) itemView;
-      // Search color values
-      defaultBackground = radioTextView.getBackground();
-      // Listener on radio
+      radioTextView = getRadioTextView(itemView);
       radioTextView.setOnClickListener(v -> listener.onClick(radio));
-      // Listener on web link
-      radioTextView.setOnLongClickListener(v -> listener.onLongClick(radio.getWebPageUri()));
     }
 
-    private int getDominantColor(@NonNull Bitmap bitmap) {
-      return createScaledBitmap(bitmap, 1).getPixel(0, 0);
+    @NonNull
+    protected TextView getRadioTextView(@NonNull View itemView) {
+      return (TextView) itemView;
     }
 
-    private void setView(@NonNull Radio radio) {
+    protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
+      radioTextView
+        .setCompoundDrawablesRelativeWithIntrinsicBounds(null, bitmapDrawable, null, null);
+    }
+
+    protected void setView(@NonNull Radio radio) {
       this.radio = radio;
-      if (callback.isCurrentRadio(this.radio)) {
-        radioTextView.setBackground(defaultBackground);
-      } else {
-        radioTextView.setBackgroundColor(getDominantColor(this.radio.getIcon()));
-      }
-      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        null,
-        new BitmapDrawable(
-          radioTextView.getResources(),
-          createScaledBitmap(this.radio.getIcon(), iconSize)),
-        null,
-        null);
+      setImage(new BitmapDrawable(
+        radioTextView.getResources(),
+        RadiosMainAdapter.createScaledBitmap(this.radio.getIcon(), iconSize)));
       radioTextView.setText(this.radio.getName());
     }
   }

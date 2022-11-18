@@ -327,7 +327,7 @@ public class Radio {
   // SQL access
   @NonNull
   public ContentValues toContentValues() {
-    ContentValues contentValues = new ContentValues();
+    final ContentValues contentValues = new ContentValues();
     contentValues.put(RadioSQLContract.Columns.COLUMN_NAME, name);
     // Null allowed on transition
     contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, iconFile.getPath());
@@ -344,7 +344,7 @@ public class Radio {
   @NonNull
   public MediaMetadataCompat.Builder getMediaMetadataBuilder() {
     //SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy");
-    Bitmap icon = getIcon();
+    final Bitmap icon = getIcon();
     return new MediaMetadataCompat.Builder()
       //.putLong(MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT, 0)
       //.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Album")
@@ -409,7 +409,7 @@ public class Radio {
 
   @NonNull
   private String iconToBase64String() {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     getIcon().compress(Bitmap.CompressFormat.PNG, 100, baos);
     return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
   }

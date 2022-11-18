@@ -107,14 +107,14 @@ public abstract class ItemFragment extends MainActivityFragment {
 
   @NonNull
   private static String extractValue(@NonNull Element element, @NonNull String tag) {
-    Elements elements = element.getElementsByTag(tag);
+    final Elements elements = element.getElementsByTag(tag);
     return elements.isEmpty() ? "" : elements.first().ownText();
   }
 
   @Override
   public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
-    Context context = getContext();
+    final Context context = getContext();
     // Do nothing if we were disposed
     if ((context != null) && (requestCode == BROWSE_INTENT)) {
       Uri uri;
@@ -133,67 +133,6 @@ public abstract class ItemFragment extends MainActivityFragment {
         tell(R.string.no_local_icon);
       }
     }
-  }
-
-  @Nullable
-  @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater,
-    @Nullable ViewGroup container,
-    @Nullable Bundle savedInstanceState) {
-    // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_item_modify, container, false);
-    nameEditText = view.findViewById(R.id.name_edit_text);
-    countryEditText = view.findViewById(R.id.country_edit_text);
-    progressBar = view.findViewById(R.id.progress_bar);
-    urlEditText = view.findViewById(R.id.url_edit_text);
-    iconEditText = view.findViewById(R.id.icon_edit_text);
-    iconLinearLayout = view.findViewById(R.id.icon_linear_layout);
-    webPageEditText = view.findViewById(R.id.web_page_edit_text);
-    darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
-    searchImageButton = view.findViewById(R.id.search_image_button);
-    final View countryEditLinearlayout = view.findViewById(R.id.country_edit_linearlayout);
-    // Order matters!
-    ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
-      (group, checkedId) -> {
-        boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
-        searchImageButton.setImageResource(isDarFmSelected ?
-          R.drawable.ic_search_white_40dp : R.drawable.ic_baseline_image_search_white_40dp);
-        webPageEditText.setEnabled(!isDarFmSelected);
-        urlEditText.setEnabled(!isDarFmSelected);
-        if (isDarFmSelected) {
-          iconEditText.setText("");
-        }
-        iconLinearLayout.setVisibility(isDarFmSelected ? View.GONE : View.VISIBLE);
-        countryEditLinearlayout.setVisibility(getVisibleFrom(isDarFmSelected));
-      });
-    searchImageButton.setOnClickListener(v -> {
-      flushKeyboard();
-      if (getNetworkProxy().isDeviceOffline()) {
-        tell(R.string.no_internet);
-      } else if (darFmRadioButton.isChecked()) {
-        new DarFmSearcher();
-      } else {
-        URL iconUrl = iconWatcher.url;
-        URL webPageUrl = webPageWatcher.url;
-        if ((iconUrl == null) && (webPageUrl == null)) {
-          tell(R.string.no_icon_found);
-        } else {
-          // Search in icon URL if available
-          if (iconUrl == null) {
-            new IconWebSearcher(webPageUrl);
-          } else {
-            new IconUrlSearcher(iconUrl);
-          }
-        }
-      }
-    });
-    view.findViewById(R.id.browse_button).setOnClickListener(v ->
-      startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*"), BROWSE_INTENT));
-    urlWatcher = new UrlWatcher(urlEditText);
-    webPageWatcher = new UrlWatcher(webPageEditText);
-    iconWatcher = new UrlWatcher(iconEditText);
-    return view;
   }
 
   @Override
@@ -217,9 +156,9 @@ public abstract class ItemFragment extends MainActivityFragment {
     super.onSaveInstanceState(outState);
     // Save icon; may fail
     try {
-      Bitmap icon = getIcon();
+      final Bitmap icon = getIcon();
       if (icon != null) {
-        File file = Radio.storeToFile(getMainActivity(), icon, Integer.toString(hashCode()));
+        final File file = Radio.storeToFile(getMainActivity(), icon, Integer.toString(hashCode()));
         outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
       }
     } catch (FileNotFoundException fileNotFoundException) {
@@ -276,6 +215,64 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   @NonNull
+  @Override
+  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
+    // Inflate the view so that graphical objects exists
+    final View view = inflater.inflate(R.layout.content_item_modify, container, false);
+    nameEditText = view.findViewById(R.id.name_edit_text);
+    countryEditText = view.findViewById(R.id.country_edit_text);
+    progressBar = view.findViewById(R.id.progress_bar);
+    urlEditText = view.findViewById(R.id.url_edit_text);
+    iconEditText = view.findViewById(R.id.icon_edit_text);
+    iconLinearLayout = view.findViewById(R.id.icon_linear_layout);
+    webPageEditText = view.findViewById(R.id.web_page_edit_text);
+    darFmRadioButton = view.findViewById(R.id.dar_fm_radio_button);
+    searchImageButton = view.findViewById(R.id.search_image_button);
+    final View countryEditLinearlayout = view.findViewById(R.id.country_edit_linearlayout);
+    // Order matters!
+    ((RadioGroup) view.findViewById(R.id.search_radio_group)).setOnCheckedChangeListener(
+      (group, checkedId) -> {
+        boolean isDarFmSelected = (checkedId == R.id.dar_fm_radio_button);
+        searchImageButton.setImageResource(isDarFmSelected ?
+          R.drawable.ic_search_white_40dp : R.drawable.ic_baseline_image_search_white_40dp);
+        webPageEditText.setEnabled(!isDarFmSelected);
+        urlEditText.setEnabled(!isDarFmSelected);
+        if (isDarFmSelected) {
+          iconEditText.setText("");
+        }
+        iconLinearLayout.setVisibility(isDarFmSelected ? View.GONE : View.VISIBLE);
+        countryEditLinearlayout.setVisibility(getVisibleFrom(isDarFmSelected));
+      });
+    searchImageButton.setOnClickListener(v -> {
+      flushKeyboard();
+      if (getNetworkProxy().isDeviceOffline()) {
+        tell(R.string.no_internet);
+      } else if (darFmRadioButton.isChecked()) {
+        new DarFmSearcher();
+      } else {
+        URL iconUrl = iconWatcher.url;
+        URL webPageUrl = webPageWatcher.url;
+        if ((iconUrl == null) && (webPageUrl == null)) {
+          tell(R.string.no_icon_found);
+        } else {
+          // Search in icon URL if available
+          if (iconUrl == null) {
+            new IconWebSearcher(webPageUrl);
+          } else {
+            new IconUrlSearcher(iconUrl);
+          }
+        }
+      }
+    });
+    view.findViewById(R.id.browse_button).setOnClickListener(v ->
+      startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*"), BROWSE_INTENT));
+    urlWatcher = new UrlWatcher(urlEditText);
+    webPageWatcher = new UrlWatcher(webPageEditText);
+    iconWatcher = new UrlWatcher(iconEditText);
+    return view;
+  }
+
+  @NonNull
   protected String getRadioName() {
     return nameEditText.getText().toString().toUpperCase();
   }
@@ -288,11 +285,12 @@ public abstract class ItemFragment extends MainActivityFragment {
 
   protected void setRadioIcon(@NonNull Bitmap icon) {
     // Resize bitmap as a square
-    int height = icon.getHeight();
-    int width = icon.getWidth();
-    int min = Math.min(height, width);
+    final int height = icon.getHeight();
+    final int width = icon.getWidth();
+    final int min = Math.min(height, width);
     icon = Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
-    Drawable drawable = new BitmapDrawable(getResources(), MainActivity.createScaledBitmap(icon));
+    final Drawable drawable =
+      new BitmapDrawable(getResources(), MainActivity.createScaledBitmap(icon));
     nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(null, drawable, null, null);
     // radioIcon stored as tag
     nameEditText.setTag(icon);
@@ -444,7 +442,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     protected void onSearch() {
       if (radios.isEmpty()) {
         try {
-          Element search = Jsoup
+          final Element search = Jsoup
             .connect(DAR_FM_PLAYLIST_REQUEST +
               getRadioName().replace(" ", SPACE_FOR_SEARCH) + getCountrySearch() +
               DAR_FM_PAGESIZE + DAR_FM_PARTNER_TOKEN)
@@ -467,9 +465,9 @@ public abstract class ItemFragment extends MainActivityFragment {
       }
       // When radio is known, fetch data
       if (radios.size() == 1) {
-        Map<String, String> foundRadio = radios.get(0);
+        final Map<String, String> foundRadio = radios.get(0);
         try {
-          Element station = Jsoup
+          final Element station = Jsoup
             .connect(DAR_FM_STATIONS_REQUEST + foundRadio.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
             .get();
           foundRadio.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
@@ -492,14 +490,14 @@ public abstract class ItemFragment extends MainActivityFragment {
           tell(R.string.dar_fm_failed);
           break;
         case 1:
-          Map<String, String> foundRadio = radios.get(0);
-          String radioName = foundRadio.get(DAR_FM_NAME);
+          final Map<String, String> foundRadio = radios.get(0);
+          final String radioName = foundRadio.get(DAR_FM_NAME);
           if (radioName != null) {
             nameEditText.setText(radioName.toUpperCase());
           }
           urlEditText.setText(DAR_FM_BASE_URL + foundRadio.get(DAR_FM_ID));
-          boolean isDarFmWebPageFound = foundRadio.containsKey(DAR_FM_WEB_PAGE);
-          boolean isIconFound = (foundIcon != null);
+          final boolean isDarFmWebPageFound = foundRadio.containsKey(DAR_FM_WEB_PAGE);
+          final boolean isIconFound = (foundIcon != null);
           if (isDarFmWebPageFound) {
             webPageEditText.setText(foundRadio.get(DAR_FM_WEB_PAGE));
           }
@@ -529,7 +527,8 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @NonNull
     private String getCountrySearch() {
-      String countrySearch = countryEditText.getText().toString().toUpperCase().replace(" ", "");
+      final String countrySearch =
+        countryEditText.getText().toString().toUpperCase().replace(" ", "");
       return (countrySearch.length() > 0) ? COUNTRY_FOR_SEARCH + countrySearch : "";
     }
 
@@ -564,7 +563,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     protected void onSearch() {
-      URL uRL = Radio.getUrlFromM3u(url);
+      final URL uRL = Radio.getUrlFromM3u(url);
       streamContent = (uRL == null) ? null : new RadioURL(uRL).getStreamContentType();
     }
 

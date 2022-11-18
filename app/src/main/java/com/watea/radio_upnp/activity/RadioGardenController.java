@@ -49,8 +49,8 @@ import java.util.regex.Pattern;
 //  }
 //  }
 // Channel: http://radio.garden/api/ara/content/listen/{channelId}/channel.mp3
-public class RadioGardenProxy {
-  private static final String LOG_TAG = RadioGardenProxy.class.getName();
+public class RadioGardenController {
+  private static final String LOG_TAG = RadioGardenController.class.getName();
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static final String MARKET = "market://details?id=";
   private static final String RADIO_GARDEN_PACKAGE = "com.jonathanpuckey.radiogarden";
@@ -65,7 +65,7 @@ public class RadioGardenProxy {
   @NonNull
   private final MainActivity mainActivity;
 
-  public RadioGardenProxy(@NonNull MainActivity mainActivity) {
+  public RadioGardenController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
     radioGardenAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
       .setTitle(R.string.title_radio_garden)
@@ -162,14 +162,14 @@ public class RadioGardenProxy {
     final URL webSite = tempWebSite;
     final Bitmap icon = tempIcon;
     final JSONObject data = tempData;
-    final boolean isOk = tempIssOk;
+    final boolean isAsynchronousOk = tempIssOk;
     // Synchronous update
     handler.post(() -> {
-      boolean toTell = isOk;
+      boolean isAddOk = isAsynchronousOk;
       final RadioLibrary radioLibrary = mainActivity.getRadioLibrary();
-      if (toTell) {
+      if (isAddOk) {
         try {
-          toTell = (radioLibrary != null) && radioLibrary.isOpen() && radioLibrary.add(new Radio(
+          isAddOk = (radioLibrary != null) && radioLibrary.isOpen() && radioLibrary.add(new Radio(
             data.getString("title"),
             new URL(RADIO_GARDEN + LISTEN + id + CHANNEL_MP3),
             webSite,
@@ -180,10 +180,7 @@ public class RadioGardenProxy {
           Log.d(LOG_TAG, "handle synchronous exception", exception);
         }
       }
-      tell(toTell);
-      if (toTell) {
-        radioLibrary.refreshListeners();
-      }
+      tell(isAddOk);
     });
   }
 

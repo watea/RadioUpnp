@@ -44,10 +44,10 @@ public class EasyX509TrustManager implements X509TrustManager {
 
   public EasyX509TrustManager() throws NoSuchAlgorithmException, KeyStoreException {
     super();
-    TrustManagerFactory factory =
+    final TrustManagerFactory factory =
       TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     factory.init((KeyStore) null);
-    TrustManager[] trustManagers = factory.getTrustManagers();
+    final TrustManager[] trustManagers = factory.getTrustManagers();
     if (trustManagers.length == 0) {
       throw new NoSuchAlgorithmException("No trust manager found");
     }

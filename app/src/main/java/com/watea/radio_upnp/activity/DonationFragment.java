@@ -120,7 +120,8 @@ public class DonationFragment
       if (ownProductDetailss.isEmpty() || !billingClient.isReady()) {
         paymentAlertDialogBuilder.show();
       } else {
-        String productName = GOOGLE_PRODUCTS.get(googleSpinner.getSelectedItemPosition()).zza();
+        final String productName =
+          GOOGLE_PRODUCTS.get(googleSpinner.getSelectedItemPosition()).zza();
         Log.d(LOG_TAG, "Selected item in spinner: " + productName);
         final ProductDetails productDetails = ownProductDetailss.get(productName);
         assert productDetails != null;
@@ -146,12 +147,10 @@ public class DonationFragment
     return R.string.title_donate;
   }
 
-  @Nullable
+  @NonNull
   @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater,
-    @Nullable ViewGroup container,
-    @Nullable Bundle savedInstanceState) {
+  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
+    // Inflate the view so that graphical objects exists
     final View view = inflater.inflate(R.layout.content_donation, container, false);
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
@@ -230,8 +229,8 @@ public class DonationFragment
   }
 
   private void logBillingResult(@NonNull String location, @NonNull BillingResult billingResult) {
-    int responseCode = billingResult.getResponseCode();
-    String debugMessage = billingResult.getDebugMessage();
+    final int responseCode = billingResult.getResponseCode();
+    final String debugMessage = billingResult.getDebugMessage();
     switch (responseCode) {
       case BillingClient.BillingResponseCode.OK:
       case BillingClient.BillingResponseCode.USER_CANCELED:

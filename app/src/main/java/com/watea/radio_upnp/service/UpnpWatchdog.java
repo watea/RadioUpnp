@@ -64,7 +64,7 @@ public class UpnpWatchdog {
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          String currentTransportState =
+          final String currentTransportState =
             actionInvocation.getOutput("CurrentTransportState").getValue().toString();
           if (currentTransportState.equals("TRANSITIONING") ||
             currentTransportState.equals("PLAYING")) {

@@ -51,7 +51,7 @@ public class ItemModifyFragment extends ItemFragment {
     if (savedInstanceState == null) {
       nameEditText.setText(radio.getName());
       urlEditText.setText(radio.getURL().toString());
-      URL webPageURL = radio.getWebPageURL();
+      final URL webPageURL = radio.getWebPageURL();
       if (webPageURL != null) {
         webPageEditText.setText(webPageURL.toString());
       }

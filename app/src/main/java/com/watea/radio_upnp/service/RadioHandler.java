@@ -152,7 +152,7 @@ public class RadioHandler extends AbstractHandler {
       for (String header : httpURLConnection.getHeaderFields().keySet()) {
         // ICY data not forwarded, as only used here
         if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
-          String value = httpURLConnection.getHeaderField(header);
+          final String value = httpURLConnection.getHeaderField(header);
           if (value != null) {
             response.setHeader(header, value);
           }
@@ -163,7 +163,7 @@ public class RadioHandler extends AbstractHandler {
         response.setHeader("contentFeatures.dlna.org", "*");
         response.setHeader("transferMode.dlna.org", "Streaming");
         // Force ContentType as some devices require it
-        String contentType = ((UpnpController) controller).getContentType();
+        final String contentType = ((UpnpController) controller).getContentType();
         if (contentType == null) {
           // Should not happen
           Log.e(LOG_TAG, "Internal failure; ContentType is null");
@@ -178,11 +178,11 @@ public class RadioHandler extends AbstractHandler {
       if (isGet) {
         // Try to find charset
         final String contentEncoding = httpURLConnection.getContentEncoding();
-        Charset charset = (contentEncoding == null) ?
+        final Charset charset = (contentEncoding == null) ?
           Charset.defaultCharset() : Charset.forName(contentEncoding);
         // Find metadata place, 0 if undefined
         int metadataOffset = 0;
-        List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
+        final List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
         try {
           metadataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
         } catch (NumberFormatException numberFormatException) {
@@ -228,15 +228,15 @@ public class RadioHandler extends AbstractHandler {
     Log.d(LOG_TAG, "handleStreaming: entering");
     // Send rate
     listener.onNewInformation("", rate, lockKey);
-    byte[] buffer = new byte[1];
-    ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
+    final byte[] buffer = new byte[1];
+    final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
     int metadataBlockBytesRead = 0;
     int metadataSize = 0;
     // Stop if not current controller
     while (controller == this.controller) {
       // Do not read if paused
       if (!controller.isPaused()) {
-        int readResult = inputStream.read(buffer);
+        final int readResult = inputStream.read(buffer);
         if (readResult < 0) {
           Log.d(LOG_TAG, "No more data to read");
           break;
@@ -247,7 +247,7 @@ public class RadioHandler extends AbstractHandler {
             outputStream.write(buffer);
           } else {
             // Metadata: look for title information
-            int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+            final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
             // First byte gives size (16 bytes chunks) to read for metadata
             if (metadataIndex == 0) {
               metadataSize = buffer[0] * 16;
@@ -272,9 +272,9 @@ public class RadioHandler extends AbstractHandler {
                 if (BuildConfig.DEBUG) {
                   Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
                 }
-                Matcher matcher = PATTERN_ICY.matcher(metadata);
+                final Matcher matcher = PATTERN_ICY.matcher(metadata);
                 // Tell listener
-                String information =
+                final String information =
                   (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
                 if (information != null) {
                   listener.onNewInformation(information, rate, lockKey);

@@ -57,8 +57,7 @@ public class ExportDevice extends LocalDevice {
         new ManufacturerDetails("fr.watea@gmail.com"),
         new ModelDetails("RadioUpnpExport", "RadioUpnp radios export device")),
       new AnnotationLocalServiceBinder().read(Exporter.class));
-    @SuppressWarnings("unchecked")
-    LocalService<Exporter> exportService = getServices()[0];
+    @SuppressWarnings("unchecked") final LocalService<Exporter> exportService = getServices()[0];
     serviceManager = new DefaultServiceManager<>(exportService, Exporter.class);
     exportService.setManager(serviceManager);
   }

@@ -81,7 +81,7 @@ public class UpnpActionController {
 
   // Remove remaining actions on device or all (device == null)
   private synchronized void releaseActions(@NonNull final Device<?, ?, ?> device) {
-    Iterator<UpnpAction> iter = upnpActions.iterator();
+    final Iterator<UpnpAction> iter = upnpActions.iterator();
     while (iter.hasNext()) {
       if (iter.next().getDevice().equals(device)) {
         iter.remove();
@@ -166,7 +166,7 @@ public class UpnpActionController {
 
     @NonNull
     protected ActionInvocation<?> getActionInvocation(@Nullable String instanceId) {
-      ActionInvocation<?> actionInvocation = new ActionInvocation<>(action);
+      final ActionInvocation<?> actionInvocation = new ActionInvocation<>(action);
       if (instanceId != null) {
         actionInvocation.setInput("InstanceID", instanceId);
       }

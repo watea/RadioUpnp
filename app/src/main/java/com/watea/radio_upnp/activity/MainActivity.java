@@ -64,7 +64,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.adapter.RadiosAdapter;
+import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
 import com.watea.radio_upnp.model.Radio;
@@ -178,7 +178,7 @@ public class MainActivity
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
   private ImportController importController;
-  private RadioGardenProxy radioGardenProxy;
+  private RadioGardenController radioGardenController;
   // />
   private RadioLibrary radioLibrary = null;
   private boolean gotItRadioGarden = false;
@@ -226,7 +226,7 @@ public class MainActivity
 
   @NonNull
   public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap) {
-    return RadiosAdapter.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
+    return RadiosMainAdapter.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
   }
 
   public static int getSmallIconSize() {
@@ -246,11 +246,11 @@ public class MainActivity
   @SuppressLint("NonConstantResourceId")
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-    Integer id = menuItem.getItemId();
+    final Integer id = menuItem.getItemId();
     // Note: switch not to use as id not final
     switch (id) {
       case R.id.action_radio_garden:
-        radioGardenProxy.launchRadioGarden(gotItRadioGarden);
+        radioGardenController.launchRadioGarden(gotItRadioGarden);
         break;
       case R.id.action_import:
         importController.showAlertDialog();
@@ -292,13 +292,13 @@ public class MainActivity
     if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
       floatingActionButton.setImageResource(resource);
     }
-    Integer menuId = FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass());
+    final Integer menuId = FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass());
     // Change checked menu if necessary
     if (menuId != null) {
       checkNavigationMenu(menuId);
     }
     // Back button?
-    boolean isMainFragment = getCurrentFragment() instanceof MainFragment;
+    final boolean isMainFragment = getCurrentFragment() instanceof MainFragment;
     drawerToggle.setDrawerIndicatorEnabled(isMainFragment);
     drawerLayout.setDrawerLockMode(
       isMainFragment ? DrawerLayout.LOCK_MODE_UNLOCKED : DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
@@ -338,7 +338,7 @@ public class MainActivity
 
   // radio is null for current
   public void startReading(@Nullable Radio radio) {
-    UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
+    final UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
     playerController.startReading(
       radio,
       ((androidUpnpService != null) &&
@@ -349,8 +349,8 @@ public class MainActivity
 
   @NonNull
   public Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
-    FragmentManager fragmentManager = getSupportFragmentManager();
-    String tag = fragmentClass.getSimpleName();
+    final FragmentManager fragmentManager = getSupportFragmentManager();
+    final String tag = fragmentClass.getSimpleName();
     Fragment fragment = fragmentManager.findFragmentByTag(tag);
     if (fragment == null) {
       try {
@@ -361,7 +361,7 @@ public class MainActivity
         throw new RuntimeException();
       }
     }
-    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+    final FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
     fragmentTransaction.replace(R.id.content_frame, fragment, tag);
     // First fragment transaction not saved to enable back leaving the app
     if (getCurrentFragment() != null) {
@@ -393,11 +393,11 @@ public class MainActivity
 
   @Override
   public boolean onCreateOptionsMenu(@NonNull Menu menu) {
-    MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
+    final MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
     if (currentFragment == null) {
       Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
     } else {
-      int menuId = currentFragment.getMenuId();
+      final int menuId = currentFragment.getMenuId();
       if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
         getMenuInflater().inflate(menuId, menu);
         currentFragment.onCreateOptionsMenu(menu);
@@ -429,7 +429,7 @@ public class MainActivity
   @Override
   protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
-    Fragment fragment = getCurrentFragment();
+    final Fragment fragment = getCurrentFragment();
     if (fragment != null) {
       fragment.onActivityResult(requestCode, resultCode, data);
     }
@@ -466,7 +466,7 @@ public class MainActivity
     // Create radio database (order matters)
     radioLibrary = new RadioLibrary(this);
     // Create default radios on first start
-    SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    final SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden), false);
     // Init database
     if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
@@ -483,7 +483,7 @@ public class MainActivity
     playerController.onActivityResume(radioLibrary);
     // Radio Garden share?
     if (newIntent != null) {
-      radioGardenProxy.onNewIntent(newIntent);
+      radioGardenController.onNewIntent(newIntent);
       newIntent = null;
     }
   }
@@ -517,7 +517,7 @@ public class MainActivity
     assert getSupportActionBar() != null;
     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     // Radio Garden
-    radioGardenProxy = new RadioGardenProxy(this);
+    radioGardenController = new RadioGardenController(this);
     // Import function
     importController = new ImportController(this);
     // Set navigation drawer toggle (according to documentation)
@@ -526,11 +526,11 @@ public class MainActivity
     // Set the drawer toggle as the DrawerListener
     drawerLayout.addDrawerListener(drawerToggle);
     // Navigation drawer
-    NavigationView navigationView = findViewById(R.id.navigation_view);
+    final NavigationView navigationView = findViewById(R.id.navigation_view);
     navigationView.setNavigationItemSelectedListener(this);
     navigationMenu = navigationView.getMenu();
     // Build alert about dialog
-    View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
+    final View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
     ((TextView) aboutView.findViewById(R.id.version_name_text_view))
       .setText(BuildConfig.VERSION_NAME);
     aboutAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
@@ -546,7 +546,7 @@ public class MainActivity
         .show();
     }
     // Specific UPnP devices dialog
-    RecyclerView upnpRecyclerView = new RecyclerView(this);
+    final RecyclerView upnpRecyclerView = new RecyclerView(this);
     upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
@@ -578,7 +578,7 @@ public class MainActivity
   @Override
   protected void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    Fragment currentFragment = getCurrentFragment();
+    final Fragment currentFragment = getCurrentFragment();
     // Stored to tag activity has been disposed
     if (currentFragment != null) {
       outState.putString(
@@ -595,9 +595,10 @@ public class MainActivity
 
   private void sendLogcatMail() {
     // File is stored at root place for app
-    File logFile = new File(getFilesDir(), "logcat.txt");
-    String packageName = getPackageName();
-    String[] command = new String[]{"logcat", "-d", "-f", logFile.toString(), packageName + ":D"};
+    final File logFile = new File(getFilesDir(), "logcat.txt");
+    final String packageName = getPackageName();
+    final String[] command =
+      new String[]{"logcat", "-d", "-f", logFile.toString(), packageName + ":D"};
     try {
       Runtime.getRuntime().exec(command);
       // Prepare mail
@@ -622,10 +623,11 @@ public class MainActivity
   }
 
   private void dumpRadios() {
-    File dumpFile = new File(getExternalFilesDir(null), "radios.csv");
-    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
-      // Restore checked item
-      .setOnDismissListener(dialogInterface -> checkNavigationMenu());
+    final File dumpFile = new File(getExternalFilesDir(null), "radios.csv");
+    final AlertDialog.Builder alertDialogBuilder =
+      new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+        // Restore checked item
+        .setOnDismissListener(dialogInterface -> checkNavigationMenu());
     try (Writer writer = new OutputStreamWriter(new FileOutputStream(dumpFile))) {
       writer.write(radioLibrary.marshall(true));
       alertDialogBuilder.setMessage(R.string.export_done);
@@ -637,7 +639,7 @@ public class MainActivity
   }
 
   private void setNotification() {
-    Intent intent = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ?
+    final Intent intent = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ?
       new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
         .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()) :
       new Intent("android.settings.APP_NOTIFICATION_SETTINGS")
@@ -654,7 +656,7 @@ public class MainActivity
   private void setDefaultRadios() {
     for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
       try {
-        Radio radio = new Radio(
+        final Radio radio = new Radio(
           defaultRadio.name,
           new URL(defaultRadio.uRL),
           new URL(defaultRadio.webPageURL),

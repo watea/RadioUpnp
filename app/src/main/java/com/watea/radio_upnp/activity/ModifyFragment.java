@@ -23,7 +23,6 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,13 +41,13 @@ public class ModifyFragment extends MainActivityFragment {
   // <HMI assets
   private FrameLayout defaultFrameLayout;
   // />
-  private RadiosModifyAdapter radiosModifyAdapter;
+  private RadiosModifyAdapter radiosModifyAdapter = null;
 
   @Override
   public void onResume() {
     super.onResume();
     assert getRadioLibrary() != null;
-    radiosModifyAdapter.onResume(getRadioLibrary());
+    radiosModifyAdapter.set(getRadioLibrary());
   }
 
   @NonNull
@@ -67,34 +66,31 @@ public class ModifyFragment extends MainActivityFragment {
     return R.string.title_modify;
   }
 
-  @Nullable
+  @NonNull
   @Override
-  public View onCreateView(
-    @NonNull LayoutInflater inflater,
-    @Nullable ViewGroup container,
-    @Nullable Bundle savedInstanceState) {
+  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
     // Inflate the view so that graphical objects exists
     final View view = inflater.inflate(R.layout.content_main, container, false);
-    RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     // Adapters (order matters!)
     radiosModifyAdapter = new RadiosModifyAdapter(
       new RadiosModifyAdapter.Listener() {
         @Override
-        public void onModifyClick(@NonNull Radio radio) {
+        public void onClick(@NonNull Radio radio) {
           ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
+        }
+
+        @Override
+        public void onCountChange(boolean isEmpty) {
+          defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
         }
 
         // Radio shall not be changed if currently played
         @Override
         public void onWarnChange() {
           tell(R.string.not_to_delete);
-        }
-
-        @Override
-        public void onEmpty(boolean isEmpty) {
-          defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
         }
       },
       MainActivity.getSmallIconSize(),
@@ -105,6 +101,6 @@ public class ModifyFragment extends MainActivityFragment {
   @Override
   public void onPause() {
     super.onPause();
-    radiosModifyAdapter.onPause();
+    radiosModifyAdapter.unset();
   }
 }

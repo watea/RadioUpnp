@@ -23,9 +23,12 @@
 
 package com.watea.radio_upnp.activity;
 
+import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -37,6 +40,7 @@ import com.watea.radio_upnp.service.NetworkProxy;
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
+  private View view = null;
 
   // Required empty constructor
   public MainActivityFragment() {
@@ -45,6 +49,15 @@ public abstract class MainActivityFragment extends Fragment {
 
   protected static int getVisibleFrom(boolean isVisible) {
     return isVisible ? View.VISIBLE : View.INVISIBLE;
+  }
+
+  @Nullable
+  @Override
+  public View onCreateView(
+    @NonNull LayoutInflater inflater,
+    @Nullable ViewGroup container,
+    @Nullable Bundle savedInstanceState) {
+    return (view == null) ? view = onCreateView(inflater, container) : view;
   }
 
   @Override
@@ -86,6 +99,10 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   public abstract int getTitle();
+
+  @NonNull
+  protected abstract View onCreateView(
+    @NonNull LayoutInflater inflater, @Nullable ViewGroup container);
 
   @Nullable
   protected RadioLibrary getRadioLibrary() {
