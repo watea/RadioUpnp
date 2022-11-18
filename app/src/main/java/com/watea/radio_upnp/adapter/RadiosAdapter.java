@@ -35,7 +35,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -44,19 +43,21 @@ import java.util.Vector;
 
 public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   extends RecyclerView.Adapter<V> {
-  protected final int iconSize;
   @NonNull
   protected final Listener listener;
   protected final List<Long> radioIds = new Vector<>();
+  private final int resource;
+  private final int iconSize;
   @Nullable
   protected RadioLibrary radioLibrary = null;
   @NonNull
   private RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
   };
 
-  public RadiosAdapter(@NonNull Listener listener, int iconSize) {
+  public RadiosAdapter(@NonNull Listener listener, int iconSize, int resource) {
     this.listener = listener;
     this.iconSize = iconSize;
+    this.resource = resource;
   }
 
   @NonNull
@@ -68,15 +69,6 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     if (radioLibrary != null) {
       radioLibrary.removeListener(radioLibraryListener);
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  @NonNull
-  @Override
-  public V onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-    return (V) new ViewHolder(LayoutInflater
-      .from(viewGroup.getContext())
-      .inflate(R.layout.row_radio, viewGroup, false));
   }
 
   @Override
@@ -102,6 +94,11 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
       isPreferred ? radioLibrary.getPreferredRadioIds() : radioLibrary.getAllRadioIds());
     notifyDataSetChanged();
     onCountChange(radioIds.isEmpty());
+  }
+
+  @NonNull
+  protected View getView(@NonNull ViewGroup viewGroup) {
+    return LayoutInflater.from(viewGroup.getContext()).inflate(resource, viewGroup, false);
   }
 
   // Must be called
@@ -159,7 +156,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
       this.radio = radio;
       setImage(new BitmapDrawable(
         radioTextView.getResources(),
-        RadiosMainAdapter.createScaledBitmap(this.radio.getIcon(), iconSize)));
+        createScaledBitmap(this.radio.getIcon(), iconSize)));
       radioTextView.setText(this.radio.getName());
     }
   }

@@ -26,6 +26,7 @@ package com.watea.radio_upnp.adapter;
 import android.graphics.drawable.BitmapDrawable;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -68,7 +69,7 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
     @NonNull Listener listener,
     int iconSize,
     @NonNull RecyclerView recyclerView) {
-    super(listener, iconSize);
+    super(listener, iconSize, R.layout.row_modify_radio);
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
     // Adapter shall be defined for RecyclerView
@@ -78,6 +79,12 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
   // Must be called
   public void set(@NonNull RadioLibrary radioLibrary) {
     super.set(radioLibrary, modifyRadioLibraryListener, false);
+  }
+
+  @NonNull
+  @Override
+  public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    return new ViewHolder(getView(viewGroup));
   }
 
   private void databaseWarn() {

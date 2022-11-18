@@ -64,7 +64,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.adapter.RadiosMainAdapter;
+import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
 import com.watea.radio_upnp.model.Radio;
@@ -226,7 +226,7 @@ public class MainActivity
 
   @NonNull
   public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap) {
-    return RadiosMainAdapter.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
+    return RadiosAdapter.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
   }
 
   public static int getSmallIconSize() {

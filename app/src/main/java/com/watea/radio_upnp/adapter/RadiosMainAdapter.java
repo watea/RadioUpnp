@@ -27,10 +27,12 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -61,12 +63,18 @@ public class RadiosMainAdapter extends RadiosAdapter<RadiosMainAdapter.ViewHolde
   };
 
   public RadiosMainAdapter(@NonNull Listener listener, int iconSize) {
-    super(listener, iconSize);
+    super(listener, iconSize, R.layout.row_radio);
   }
 
   // Must be called
   public void set(@NonNull RadioLibrary radioLibrary, boolean isPreferredRadios) {
     super.set(radioLibrary, mainRadioLibraryListener, isPreferredRadios);
+  }
+
+  @NonNull
+  @Override
+  public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    return new ViewHolder(getView(viewGroup));
   }
 
   public interface Listener extends RadiosAdapter.Listener {
