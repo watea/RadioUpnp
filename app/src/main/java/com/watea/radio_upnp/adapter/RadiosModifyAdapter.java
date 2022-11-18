@@ -175,7 +175,7 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
     @Override
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
-      preferredImageButton.setImageResource(radio.isPreferred() ?
+      preferredImageButton.setImageResource(this.radio.isPreferred() ?
         R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
     }
   }
