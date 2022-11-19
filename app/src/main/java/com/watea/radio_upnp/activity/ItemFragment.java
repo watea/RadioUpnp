@@ -218,7 +218,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   @Override
   public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
     // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_item_modify, container, false);
+    final View view = inflater.inflate(R.layout.content_item, container, false);
     nameEditText = view.findViewById(R.id.name_edit_text);
     countryEditText = view.findViewById(R.id.country_edit_text);
     progressBar = view.findViewById(R.id.progress_bar);
