@@ -51,14 +51,14 @@
     <string name="legend_country">Country code for search (optional)</string>
     <string name="legend_streaming_url">Streaming URL</string>
     <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
-    <string name="legend_page_url">Web page URL (optional)</string>
+    <string name="legend_page_url">Web page URL (optional) - used for icon</string>
     <string name="legend_page_url_example">http://direct.myradio.fr</string>
     <string name="icon_url">Icon URL (optional), or click <b>BROWSE</b></string>
     <string name="icon_url_example">https://www.my_cloud.com/icons/my_icon.png</string>
     <string name="radio_definition_error">Radio definition not well formed</string>
     <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>
     <string name="live_streaming">Live streaming</string>
-    <string name="no_icon_found">Icon search failed, check if Web page URL or Icon URL are valid</string>
+    <string name="no_icon_found">Icon search in Icon URL or Web page URL failed!</string>
     <string name="no_local_icon">No valid local icon found</string>
     <string name="connection_test_failed">Connection test failed</string>
     <string name="mime_not_authorized">Warning! MIME type is not authorized.\nAudio content: </string>
@@ -82,7 +82,7 @@
     <string name="donation_alert_dialog_title">Error occurred</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
     <string name="dar_fm_radio_button">Search with <b>OnRad.io</b> server</string>
-    <string name="dar_fm_failed">OnRad.io search failed</string>
+    <string name="dar_fm_failed"><b>OnRad.io</b> search failed</string>
     <string name="image_from_url_radio_button">Manual fill in</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>

@@ -52,6 +52,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   @Nullable
   protected RadioLibrary radioLibrary = null;
   private int currentRadioIndex = DEFAULT;
+  private boolean isPreferred = false;
   @NonNull
   private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
     @Override
@@ -69,9 +70,12 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
 
     @Override
     public void onAdd(@NonNull Long radioId) {
-      radioIds.add(radioId);
-      notifyItemRangeInserted(getIndexOf(radioId), 1);
-      onCountChange(false);
+      // Don't add to view if preferred switch is activated, as new radio if not preferred
+      if (!isPreferred) {
+        radioIds.add(radioId);
+        notifyItemRangeInserted(getIndexOf(radioId), 1);
+        onCountChange(false);
+      }
     }
 
     @Override
@@ -128,6 +132,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
 
   @SuppressLint("NotifyDataSetChanged")
   public void refresh(boolean isPreferred) {
+    this.isPreferred = isPreferred;
     radioIds.clear();
     assert radioLibrary != null;
     radioIds.addAll(
