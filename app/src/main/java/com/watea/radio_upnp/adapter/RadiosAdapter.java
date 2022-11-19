@@ -61,15 +61,10 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
 
     @Override
     public void onNewCurrentRadio(@Nullable Radio radio) {
-      if (currentRadioIndex >= 0) {
-        notifyItemChanged(currentRadioIndex);
-      }
-      if (radio == null) {
-        currentRadioIndex = DEFAULT;
-      } else {
-        currentRadioIndex = getIndexOf(radio);
-        notifyItemChanged(currentRadioIndex);
-      }
+      final int previousCurrentRadioIndex = currentRadioIndex;
+      currentRadioIndex = getIndexOf(radio);
+      notifyItemChanged(previousCurrentRadioIndex);
+      notifyItemChanged(currentRadioIndex);
     }
 
     @Override
@@ -135,6 +130,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     assert radioLibrary != null;
     radioIds.addAll(
       isPreferred ? radioLibrary.getPreferredRadioIds() : radioLibrary.getAllRadioIds());
+    currentRadioIndex = getIndexOf(radioLibrary.getCurrentRadio());
     notifyDataSetChanged();
     onCountChange(radioIds.isEmpty());
   }
@@ -143,7 +139,6 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   public void set(@NonNull RadioLibrary radioLibrary, boolean isPreferred) {
     this.radioLibrary = radioLibrary;
     this.radioLibrary.addListener(radioLibraryListener);
-    currentRadioIndex = getIndexOf(this.radioLibrary.getCurrentRadio());
     refresh(isPreferred);
   }
 
