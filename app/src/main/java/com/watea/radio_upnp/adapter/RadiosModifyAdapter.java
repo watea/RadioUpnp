@@ -40,15 +40,10 @@ import com.watea.radio_upnp.model.Radio;
 public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewHolder> {
   private static final String LOG_TAG = RadiosModifyAdapter.class.getName();
 
-  public RadiosModifyAdapter(
-    @NonNull Listener listener,
-    int iconSize,
-    @NonNull RecyclerView recyclerView) {
-    super(listener, iconSize, R.layout.row_modify_radio);
+  public RadiosModifyAdapter(@NonNull Listener listener, @NonNull RecyclerView recyclerView) {
+    super(listener, R.layout.row_modify_radio, recyclerView);
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
-    // Adapter shall be defined for RecyclerView
-    recyclerView.setAdapter(this);
   }
 
   @NonNull

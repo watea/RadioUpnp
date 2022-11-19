@@ -41,6 +41,24 @@ public class ModifyFragment extends MainActivityFragment {
   // <HMI assets
   private FrameLayout defaultFrameLayout;
   // />
+  private final RadiosModifyAdapter.Listener radiosModifyAdapterListener =
+    new RadiosModifyAdapter.Listener() {
+      @Override
+      public void onClick(@NonNull Radio radio) {
+        ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
+      }
+
+      @Override
+      public void onCountChange(boolean isEmpty) {
+        defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
+      }
+
+      // Radio shall not be changed if currently played
+      @Override
+      public void onWarnChange() {
+        tell(R.string.not_to_delete);
+      }
+    };
   private RadiosModifyAdapter radiosModifyAdapter = null;
 
   @Override
@@ -74,27 +92,8 @@ public class ModifyFragment extends MainActivityFragment {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
-    // Adapters (order matters!)
-    radiosModifyAdapter = new RadiosModifyAdapter(
-      new RadiosModifyAdapter.Listener() {
-        @Override
-        public void onClick(@NonNull Radio radio) {
-          ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
-        }
-
-        @Override
-        public void onCountChange(boolean isEmpty) {
-          defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
-        }
-
-        // Radio shall not be changed if currently played
-        @Override
-        public void onWarnChange() {
-          tell(R.string.not_to_delete);
-        }
-      },
-      MainActivity.getSmallIconSize(),
-      radiosRecyclerView);
+    // Adapter
+    radiosModifyAdapter = new RadiosModifyAdapter(radiosModifyAdapterListener, radiosRecyclerView);
     return view;
   }
 

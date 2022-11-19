@@ -31,13 +31,14 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 public class RadiosMainAdapter extends RadiosAdapter<RadiosMainAdapter.ViewHolder> {
-  public RadiosMainAdapter(@NonNull Listener listener, int iconSize) {
-    super(listener, iconSize, R.layout.row_radio);
+  public RadiosMainAdapter(@NonNull Listener listener, @NonNull RecyclerView recyclerView) {
+    super(listener, R.layout.row_radio, recyclerView);
   }
 
   @NonNull

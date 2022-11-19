@@ -35,6 +35,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -48,7 +49,6 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   protected final Listener listener;
   protected final List<Long> radioIds = new Vector<>();
   private final int resource;
-  private final int iconSize;
   @Nullable
   protected RadioLibrary radioLibrary = null;
   private int currentRadioIndex = DEFAULT;
@@ -92,10 +92,12 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     }
   };
 
-  public RadiosAdapter(@NonNull Listener listener, int iconSize, int resource) {
+  public RadiosAdapter(
+    @NonNull Listener listener, int resource, @NonNull RecyclerView recyclerView) {
     this.listener = listener;
-    this.iconSize = iconSize;
     this.resource = resource;
+    // Adapter shall be defined for RecyclerView
+    recyclerView.setAdapter(this);
   }
 
   @NonNull
@@ -191,7 +193,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
       this.radio = radio;
       setImage(new BitmapDrawable(
         radioTextView.getResources(),
-        createScaledBitmap(this.radio.getIcon(), iconSize)));
+        createScaledBitmap(this.radio.getIcon(), MainActivity.getSmallIconSize())));
       radioTextView.setText(this.radio.getName());
     }
 

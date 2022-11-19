@@ -68,7 +68,8 @@ public class MainFragment extends MainActivityFragment {
   private int radioClickCount = 0;
   private boolean isPreferredRadios = false;
   private boolean gotItRadioLongPress;
-  private final RadiosMainAdapter.Listener radiosAdapterListener = new RadiosMainAdapter.Listener() {
+  private final RadiosMainAdapter.Listener radiosMainAdapterListener =
+    new RadiosMainAdapter.Listener() {
     @Override
     public void onClick(@NonNull Radio radio) {
       if (getNetworkProxy().isDeviceOffline()) {
@@ -187,8 +188,7 @@ public class MainFragment extends MainActivityFragment {
     radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     // Adapters (order matters!)
-    radiosMainAdapter = new RadiosMainAdapter(radiosAdapterListener, MainActivity.getSmallIconSize());
-    radiosRecyclerView.setAdapter(radiosMainAdapter);
+    radiosMainAdapter = new RadiosMainAdapter(radiosMainAdapterListener, radiosRecyclerView);
     upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
     radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
