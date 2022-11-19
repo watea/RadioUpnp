@@ -43,6 +43,7 @@ import java.util.Vector;
 
 public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   extends RecyclerView.Adapter<V> {
+  private static final int DEFAULT = -1;
   @NonNull
   protected final Listener listener;
   protected final List<Long> radioIds = new Vector<>();
@@ -50,8 +51,50 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   private final int iconSize;
   @Nullable
   protected RadioLibrary radioLibrary = null;
+  private int currentRadioIndex = DEFAULT;
   @NonNull
-  private RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+    @Override
+    public void onPreferredChange(@NonNull Radio radio) {
+      notifyItemChanged(getIndexOf(radio));
+    }
+
+    @Override
+    public void onNewCurrentRadio(@Nullable Radio radio) {
+      if (currentRadioIndex >= 0) {
+        notifyItemChanged(currentRadioIndex);
+      }
+      if (radio == null) {
+        currentRadioIndex = DEFAULT;
+      } else {
+        currentRadioIndex = getIndexOf(radio);
+        notifyItemChanged(currentRadioIndex);
+      }
+    }
+
+    @Override
+    public void onAdd(@NonNull Long radioId) {
+      radioIds.add(radioId);
+      notifyItemRangeInserted(getIndexOf(radioId), 1);
+      onCountChange(false);
+    }
+
+    @Override
+    public void onRemove(@NonNull Long radioId) {
+      final int index = getIndexOf(radioId);
+      radioIds.remove(index);
+      notifyItemRemoved(index);
+      onCountChange(radioIds.isEmpty());
+    }
+
+    @Override
+    public void onMove(@NonNull Long fromId, @NonNull Long toId) {
+      final int fromIndex = getIndexOf(fromId);
+      final int toIndex = getIndexOf(toId);
+      radioIds.set(toIndex, fromId);
+      radioIds.set(fromIndex, toId);
+      notifyItemMoved(fromIndex, toIndex);
+    }
   };
 
   public RadiosAdapter(@NonNull Listener listener, int iconSize, int resource) {
@@ -96,28 +139,25 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     onCountChange(radioIds.isEmpty());
   }
 
+  // Must be called
+  public void set(@NonNull RadioLibrary radioLibrary, boolean isPreferred) {
+    this.radioLibrary = radioLibrary;
+    this.radioLibrary.addListener(radioLibraryListener);
+    currentRadioIndex = getIndexOf(this.radioLibrary.getCurrentRadio());
+    refresh(isPreferred);
+  }
+
   @NonNull
   protected View getView(@NonNull ViewGroup viewGroup) {
     return LayoutInflater.from(viewGroup.getContext()).inflate(resource, viewGroup, false);
-  }
-
-  // Must be called
-  protected void set(
-    @NonNull RadioLibrary radioLibrary,
-    @NonNull RadioLibrary.Listener radioLibraryListener,
-    boolean isPreferred) {
-    this.radioLibrary = radioLibrary;
-    this.radioLibraryListener = radioLibraryListener;
-    this.radioLibrary.addListener(radioLibraryListener);
-    refresh(isPreferred);
   }
 
   protected int getIndexOf(@NonNull Long radioId) {
     return radioIds.indexOf(radioId);
   }
 
-  protected int getIndexOf(@NonNull Radio radio) {
-    return getIndexOf(radio.getId());
+  protected int getIndexOf(@Nullable Radio radio) {
+    return (radio == null) ? DEFAULT : getIndexOf(radio.getId());
   }
 
   protected void onCountChange(boolean isEmpty) {
@@ -158,6 +198,11 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
         radioTextView.getResources(),
         createScaledBitmap(this.radio.getIcon(), iconSize)));
       radioTextView.setText(this.radio.getName());
+    }
+
+    protected boolean isCurrentRadio() {
+      assert radio != Radio.DUMMY_RADIO;
+      return (getIndexOf(radio) == currentRadioIndex);
     }
   }
 }

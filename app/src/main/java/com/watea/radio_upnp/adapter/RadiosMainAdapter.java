@@ -34,41 +34,10 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
 
 public class RadiosMainAdapter extends RadiosAdapter<RadiosMainAdapter.ViewHolder> {
-  private static final int DEFAULT = -1;
-  private int currentRadioIndex = DEFAULT;
-  @NonNull
-  private final RadioLibrary.Listener mainRadioLibraryListener = new RadioLibrary.Listener() {
-    @Override
-    public void onNewCurrentRadio(@Nullable Radio radio) {
-      if (currentRadioIndex != DEFAULT) {
-        notifyItemChanged(currentRadioIndex);
-      }
-      if (radio == null) {
-        currentRadioIndex = DEFAULT;
-      } else {
-        currentRadioIndex = getIndexOf(radio);
-        notifyItemChanged(currentRadioIndex);
-      }
-    }
-
-    @Override
-    public void onAdd(@NonNull Long radioId) {
-      radioIds.add(radioId);
-      notifyItemRangeInserted(getIndexOf(radioId), 1);
-      onCountChange(false);
-    }
-  };
-
   public RadiosMainAdapter(@NonNull Listener listener, int iconSize) {
     super(listener, iconSize, R.layout.row_radio);
-  }
-
-  // Must be called
-  public void set(@NonNull RadioLibrary radioLibrary, boolean isPreferredRadios) {
-    super.set(radioLibrary, mainRadioLibraryListener, isPreferredRadios);
   }
 
   @NonNull
@@ -96,7 +65,7 @@ public class RadiosMainAdapter extends RadiosAdapter<RadiosMainAdapter.ViewHolde
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
       assert radioLibrary != null;
-      if (radioLibrary.isCurrentRadio(this.radio)) {
+      if (isCurrentRadio()) {
         radioTextView.setBackground(defaultBackground);
       } else {
         radioTextView.setBackgroundColor(getDominantColor(this.radio.getIcon()));

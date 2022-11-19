@@ -92,7 +92,7 @@
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
     <string name="notification_needed">This app is intended to be used with notifications enabled.</string>
     <string name="import_message">[GO!] searches a remote DISPLAYED RadioUpnp app on local network, and imports ALL radios. App must have been launched on remote device a few seconds before.\nPlease wait (about 5s) for result popup messages.</string>
-    <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically!\n</string>
+    <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically (take a few seconds)!\n</string>
     <string name="import_connection_failed">No remote app found. Please verify!</string>
     <string name="import_failed">Error on received data; remote app may be inactive (not DISPLAYED). Please verify!</string>
     <string name="import_action_failed">Unable to execute import action from remote app</string>

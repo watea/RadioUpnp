@@ -82,6 +82,11 @@ public class MainFragment extends MainActivityFragment {
     }
 
     @Override
+    public void onCountChange(boolean isEmpty) {
+      defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
+    }
+
+    @Override
     public boolean onLongClick(@Nullable Uri webPageUri) {
       if (webPageUri == null) {
         tell(R.string.no_web_page);
@@ -89,11 +94,6 @@ public class MainFragment extends MainActivityFragment {
         getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
       }
       return true;
-    }
-
-    @Override
-    public void onCountChange(boolean isEmpty) {
-      defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
     }
   };
   private boolean gotItDlnaEnable;

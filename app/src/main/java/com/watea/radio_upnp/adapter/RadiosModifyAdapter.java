@@ -36,34 +36,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
 
 public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewHolder> {
   private static final String LOG_TAG = RadiosModifyAdapter.class.getName();
-  @NonNull
-  private final RadioLibrary.Listener modifyRadioLibraryListener = new RadioLibrary.Listener() {
-    @Override
-    public void onPreferredChange(@NonNull Radio radio) {
-      notifyItemChanged(getIndexOf(radio));
-    }
-
-    @Override
-    public void onRemove(@NonNull Long radioId) {
-      final int index = getIndexOf(radioId);
-      radioIds.remove(index);
-      notifyItemRemoved(index);
-      onCountChange(radioIds.isEmpty());
-    }
-
-    @Override
-    public void onMove(@NonNull Long from, @NonNull Long to) {
-      final int fromIndex = getIndexOf(from);
-      final int toIndex = getIndexOf(to);
-      radioIds.set(toIndex, from);
-      radioIds.set(fromIndex, to);
-      notifyItemMoved(fromIndex, toIndex);
-    }
-  };
 
   public RadiosModifyAdapter(
     @NonNull Listener listener,
@@ -74,11 +49,6 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
     // Adapter shall be defined for RecyclerView
     recyclerView.setAdapter(this);
-  }
-
-  // Must be called
-  public void set(@NonNull RadioLibrary radioLibrary) {
-    super.set(radioLibrary, modifyRadioLibraryListener, false);
   }
 
   @NonNull
@@ -102,8 +72,7 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
     @Override
     public int getMovementFlags(
       @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-      assert radioLibrary != null;
-      final boolean isCurrentRadio = radioLibrary.isCurrentRadio(((ViewHolder) viewHolder).radio);
+      final boolean isCurrentRadio = ((ViewHolder) viewHolder).isCurrentRadio();
       if (isCurrentRadio) {
         ((Listener) listener).onWarnChange();
       }

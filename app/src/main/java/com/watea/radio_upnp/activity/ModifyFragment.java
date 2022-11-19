@@ -47,7 +47,7 @@ public class ModifyFragment extends MainActivityFragment {
   public void onResume() {
     super.onResume();
     assert getRadioLibrary() != null;
-    radiosModifyAdapter.set(getRadioLibrary());
+    radiosModifyAdapter.set(getRadioLibrary(), false);
   }
 
   @NonNull
