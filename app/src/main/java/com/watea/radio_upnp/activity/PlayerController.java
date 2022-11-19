@@ -67,6 +67,7 @@ class PlayerController {
   @NonNull
   private final MainActivity mainActivity;
   private final List<Map<String, String>> playInformations = new Vector<>();
+  @NonNull
   private final SimpleAdapter playlistAdapter;
   // <HMI assets
   @NonNull
@@ -96,7 +97,7 @@ class PlayerController {
   // />
   private int informationCount = 0;
   @Nullable
-  private RadioLibrary radioLibrary;
+  private RadioLibrary radioLibrary = null;
   private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
     @Override
     public void onPreferredChange(@NonNull Radio radio) {
