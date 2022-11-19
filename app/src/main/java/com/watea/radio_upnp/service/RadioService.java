@@ -99,7 +99,6 @@ public class RadioService
       }
     };
   private HttpServer httpServer = null;
-  private MediaMetadataCompat mediaMetadataCompat = null;
   private boolean isAllowedToRewind, isForeground = false;
   private String lockKey;
   private NotificationCompat.Action actionPause;
@@ -221,13 +220,15 @@ public class RadioService
     // We add current radio information to current media data
     handler.post(() -> {
       if (hasLockKey(lockKey) && (radio != null)) {
-        session.setMetadata(RadioService.this.mediaMetadataCompat =
-          radio.getMediaMetadataBuilder()
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
-            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
-            // Use WRITER for rate
-            .putString(MediaMetadataCompat.METADATA_KEY_WRITER, rate)
-            .build());
+        final Bundle extras = mediaController.getExtras();
+        // Rate in extras
+        extras.putString(getString(R.string.key_rate), rate);
+        session.setExtras(extras);
+        // Media information in ARTIST and SUBTITLE
+        session.setMetadata(radio.getMediaMetadataBuilder()
+          .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
+          .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
+          .build());
         // Update notification
         notificationManager.notify(NOTIFICATION_ID, getNotification());
       }
@@ -300,7 +301,7 @@ public class RadioService
           default:
             playerAdapter.release();
             httpServer.setRadioHandlerController(null);
-            session.setMetadata(mediaMetadataCompat = null);
+            session.setMetadata(null);
             session.setActive(false);
             stopForeground(true);
             stopSelf();
@@ -384,7 +385,9 @@ public class RadioService
         MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
       // Show controls on lock screen even when user hides sensitive content
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-    if (mediaMetadataCompat == null) {
+    MediaMetadataCompat mediaMetadataCompat;
+    if ((mediaController == null) ||
+      ((mediaMetadataCompat = mediaController.getMetadata()) == null)) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
     } else {
       final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
@@ -498,7 +501,7 @@ public class RadioService
       }
       // Synchronize session data
       session.setActive(true);
-      session.setMetadata(mediaMetadataCompat = radio.getMediaMetadataBuilder().build());
+      session.setMetadata(radio.getMediaMetadataBuilder().build());
       session.setExtras(extras);
       lockKey = UUID.randomUUID().toString();
       if (isUpnp) {

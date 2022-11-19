@@ -343,42 +343,17 @@ public class Radio {
 
   @NonNull
   public MediaMetadataCompat.Builder getMediaMetadataBuilder() {
-    //SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy");
     final Bitmap icon = getIcon();
     return new MediaMetadataCompat.Builder()
-      //.putLong(MediaMetadataCompat.METADATA_KEY_ADVERTISEMENT, 0)
-      //.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Album")
       .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, icon)
-      //.putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, "AlbumArtURI")
-      //.putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ARTIST, "AlbumArtist")
       .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, icon)
-      //.putString(MediaMetadataCompat.METADATA_KEY_ART_URI, "ArtURI")
-      //.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Artist")
-      //.putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, "Author")
-      //.putLong(MediaMetadataCompat.METADATA_KEY_BT_FOLDER_TYPE, MediaDescriptionCompat.BT_FOLDER_TYPE_TITLES)
-      //.putString(MediaMetadataCompat.METADATA_KEY_COMPILATION, "Compilation")
-      //.putString(MediaMetadataCompat.METADATA_KEY_COMPOSER, "Composer")
-      //.putString(MediaMetadataCompat.METADATA_KEY_DATE, "Date")
-      //.putLong(MediaMetadataCompat.METADATA_KEY_DISC_NUMBER, 0)
-      //.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, "DisplayDescription")
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
-      //.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, "DisplayIconURI")
-      //.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, "DisplaySubtitle")
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, name)
-      //.putLong(MediaMetadataCompat.METADATA_KEY_DOWNLOAD_STATUS, MediaDescriptionCompat.STATUS_DOWNLOADED)
-      //.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, -1)
-      //.putString(MediaMetadataCompat.METADATA_KEY_GENRE, "Genre")
       .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id.toString())
-      //.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, "MediaURI")
-      //.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1)
       .putRating(
         MediaMetadataCompat.METADATA_KEY_RATING,
         RatingCompat.newPercentageRating(isPreferred ? 100 : 0))
       .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name);
-    //.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 0)
-    //.putRating(MediaMetadataCompat.METADATA_KEY_USER_RATING,  RatingCompat.newPercentageRating(100))
-    //.putString(MediaMetadataCompat.METADATA_KEY_WRITER, "Writer")
-    //.putLong(MediaMetadataCompat.METADATA_KEY_YEAR, Long.valueOf(simpleDateFormat.format(Calendar.getInstance().getTime())))
   }
 
   public boolean storeIcon(@NonNull Context context) {

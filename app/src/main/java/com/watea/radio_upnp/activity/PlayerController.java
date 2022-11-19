@@ -91,6 +91,8 @@ class PlayerController {
   private final AlertDialog informationPressAlertDialog;
   @NonNull
   private final AlertDialog playlistAlertDialog;
+  @NonNull
+  private final MediaBrowserCompat mediaBrowser;
   // />
   private int informationCount = 0;
   @Nullable
@@ -130,6 +132,7 @@ class PlayerController {
         onPlaybackStateChanged(new PlaybackStateCompat.Builder()
           .setState(PlaybackStateCompat.STATE_ERROR, 0, 1.0f, SystemClock.elapsedRealtime())
           .build());
+        mediaBrowser.disconnect();
         Log.d(LOG_TAG, "onSessionDestroyed: RadioService is dead!!!");
       }
 
@@ -137,7 +140,7 @@ class PlayerController {
       @SuppressLint("SwitchIntDef")
       @Override
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
-        final int intState = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
+        final int intState = getState(state);
         final Bundle bundle = mediaController.getExtras();
         final boolean isUpnp =
           (bundle != null) && bundle.containsKey(mainActivity.getString(R.string.key_upnp_device));
@@ -186,23 +189,29 @@ class PlayerController {
       // Manage dynamic data
       @Override
       public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
-        // Check if media data are actually coming from this session
-        PlaybackStateCompat playbackStateCompat;
-        if ((mediaMetadata != null) &&
-          (mediaController != null) &&
-          ((playbackStateCompat = mediaController.getPlaybackState()) != null) &&
-          (playbackStateCompat.getState() == PlaybackStateCompat.STATE_PLAYING)) {
-          String information = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
-          playedRadioInformationTextView.setText(information);
-          // Use WRITER for rate
-          final String rate = mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_WRITER);
-          playedRadioRateTextView.setText(
-            (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
-          // Fill playlist
-          if (information != null) {
-            DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-            addInformations(dateFormat.format(Calendar.getInstance().getTime()), information);
-          }
+        // Validity check
+        final int state = getState(mediaController.getPlaybackState());
+        if ((mediaMetadata == null) ||
+          !((state == PlaybackStateCompat.STATE_PLAYING) ||
+            (state == PlaybackStateCompat.STATE_BUFFERING) ||
+            (state == PlaybackStateCompat.STATE_CONNECTING))) {
+          return;
+        }
+        // Use SubTitle as notification
+        final CharSequence information = mediaMetadata.getDescription().getSubtitle();
+        playedRadioInformationTextView.setText(information);
+        // Rate in extras
+        final Bundle extras = mediaController.getExtras();
+        final String rate = (extras == null) ?
+          null : extras.getString(mainActivity.getString(R.string.key_rate));
+        playedRadioRateTextView.setText(
+          (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
+        // Fill playlist
+        if (information != null) {
+          DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+          addInformation(
+            dateFormat.format(Calendar.getInstance().getTime()),
+            information.toString());
         }
       }
 
@@ -211,24 +220,23 @@ class PlayerController {
         playImageButton.setVisibility(MainActivityFragment.getVisibleFrom(!isWaiting));
         progressBar.setVisibility(MainActivityFragment.getVisibleFrom(isWaiting));
       }
+
+      private int getState(@Nullable final PlaybackStateCompat state) {
+        return (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
+      }
     };
-  @Nullable
-  private MediaBrowserCompat mediaBrowser = null;
   // MediaController from the MediaBrowser when it has successfully connected
   private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback =
     new MediaBrowserCompat.ConnectionCallback() {
       @Override
       public void onConnected() {
-        // Do nothing if we were disposed
-        if (mediaBrowser == null) {
-          return;
-        }
         // Get a MediaController for the MediaSession
         mediaController = new MediaControllerCompat(mainActivity, mediaBrowser.getSessionToken());
+        MediaControllerCompat.setMediaController(mainActivity, mediaController);
         // Link to the callback controller
         mediaController.registerCallback(mediaControllerCallback);
         // Sync existing MediaSession state with UI
-        MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
+        final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
         mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
         radioLibrary.setCurrentRadio(mediaMetadataCompat);
@@ -240,9 +248,7 @@ class PlayerController {
         if (mediaController != null) {
           radioLibrary.setCurrentRadio(null);
           mediaController.unregisterCallback(mediaControllerCallback);
-          mediaController = null;
         }
-        mediaBrowser = null;
       }
 
       @Override
@@ -337,23 +343,18 @@ class PlayerController {
         radioLibrary.setPreferred(radio.getId(), !radio.isPreferred());
       }
     });
+    // Create MediaBrowserServiceCompat, launch RadioService
+    mediaBrowser = new MediaBrowserCompat(
+      mainActivity,
+      new ComponentName(mainActivity, RadioService.class),
+      mediaBrowserConnectionCallback,
+      null);
   }
 
   // Must be called on activity resume
-  // Handle services
   public void onActivityResume(@NonNull RadioLibrary radioLibrary) {
-    // Link to radioLibrary
-    this.radioLibrary = radioLibrary;
-    this.radioLibrary.addListener(radioLibraryListener);
-    // MediaBrowser creation, launch RadioService
-    if (mediaBrowser == null) {
-      mediaBrowser = new MediaBrowserCompat(
-        mainActivity,
-        new ComponentName(mainActivity, RadioService.class),
-        mediaBrowserConnectionCallback,
-        null);
-      mediaBrowser.connect();
-    }
+    (this.radioLibrary = radioLibrary).addListener(radioLibraryListener);
+    mediaBrowser.connect();
   }
 
   // Must be called on activity pause
@@ -371,11 +372,9 @@ class PlayerController {
         mainActivity.getString(R.string.key_information_press_got_it), gotItInformationPress)
       .apply();
     // Disconnect mediaBrowser, if necessary
-    if (mediaBrowser != null) {
-      mediaBrowser.disconnect();
-      // Forced suspended connection
-      mediaBrowserConnectionCallback.onConnectionSuspended();
-    }
+    mediaBrowser.disconnect();
+    // Forced suspended connection
+    mediaBrowserConnectionCallback.onConnectionSuspended();
   }
 
   // radio == null for current, do nothing if no current
@@ -407,7 +406,7 @@ class PlayerController {
     return (mediaController == null) ? null : radioLibrary.getCurrentRadio();
   }
 
-  private void addInformations(@NonNull String date, @NonNull String information) {
+  private void addInformation(@NonNull String date, @NonNull String information) {
     // No empty data
     if (information.isEmpty()) {
       return;
