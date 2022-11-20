@@ -224,6 +224,7 @@ public class RadioService
         }
         // Media information in ARTIST and SUBTITLE
         session.setMetadata(radio.getMediaMetadataBuilder()
+          .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, getPackageName())
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
           .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
           .build());

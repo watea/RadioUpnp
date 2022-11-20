@@ -190,12 +190,11 @@ class PlayerController {
       // Manage dynamic data
       @Override
       public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
-        // Validity check
-        final int state = getState(mediaController.getPlaybackState());
+        // Validity check: information must come from package
         if ((mediaMetadata == null) ||
-          !((state == PlaybackStateCompat.STATE_PLAYING) ||
-            (state == PlaybackStateCompat.STATE_BUFFERING) ||
-            (state == PlaybackStateCompat.STATE_CONNECTING))) {
+          (!mainActivity
+            .getPackageName()
+            .equals(mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI)))) {
           return;
         }
         // Use SubTitle as notification
