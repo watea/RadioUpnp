@@ -50,7 +50,7 @@ import java.util.Arrays;
 import java.util.List;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
-// and audio focus.
+// and audio focus
 public abstract class PlayerAdapter
   implements RadioHandler.Controller, AudioManager.OnAudioFocusChangeListener {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";

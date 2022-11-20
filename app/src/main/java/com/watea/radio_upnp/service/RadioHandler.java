@@ -226,7 +226,7 @@ public class RadioHandler extends AbstractHandler {
     @NonNull final String lockKey,
     @NonNull final Controller controller) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
-    // Send rate
+    // Flush information, send rate
     listener.onNewInformation("", rate, lockKey);
     final byte[] buffer = new byte[1];
     final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);

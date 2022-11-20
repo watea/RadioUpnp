@@ -372,7 +372,7 @@ class PlayerController {
       .putBoolean(
         mainActivity.getString(R.string.key_information_press_got_it), gotItInformationPress)
       .apply();
-    // Disconnect mediaBrowser, if necessary
+    // Disconnect mediaBrowser
     mediaBrowser.disconnect();
     // Forced suspended connection
     mediaBrowserConnectionCallback.onConnectionSuspended();

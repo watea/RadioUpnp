@@ -27,7 +27,6 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -51,13 +50,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.core.content.ContextCompat;
 import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.VolumeProviderCompat;
 import androidx.media.session.MediaButtonReceiver;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
@@ -77,10 +74,11 @@ public class RadioService
   extends MediaBrowserServiceCompat
   implements PlayerAdapter.Listener, RadioHandler.Listener {
   private static final String LOG_TAG = RadioService.class.getName();
+  private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
   private static final int NOTIFICATION_ID = 9;
-  private static final int REQUEST_CODE = 501;
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
+  private final Intent intent = new Intent(this, RadioService.class);
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
@@ -99,7 +97,7 @@ public class RadioService
       }
     };
   private HttpServer httpServer = null;
-  private boolean isAllowedToRewind, isForeground = false;
+  private boolean isAllowedToRewind = false;
   private String lockKey;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
@@ -200,7 +198,7 @@ public class RadioService
   @Override
   public BrowserRoot onGetRoot(
     @NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
-    return new BrowserRoot(radioLibrary.getRoot(), null);
+    return new BrowserRoot(EMPTY_MEDIA_ROOT_ID, null);
   }
 
   // Not used by app
@@ -208,8 +206,6 @@ public class RadioService
   public void onLoadChildren(
     @NonNull final String parentMediaId,
     @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
-    result.sendResult(
-      parentMediaId.equals(radioLibrary.getRoot()) ? radioLibrary.getMediaItems() : null);
   }
 
   @Override
@@ -220,10 +216,12 @@ public class RadioService
     // We add current radio information to current media data
     handler.post(() -> {
       if (hasLockKey(lockKey) && (radio != null)) {
-        final Bundle extras = mediaController.getExtras();
         // Rate in extras
-        extras.putString(getString(R.string.key_rate), rate);
-        session.setExtras(extras);
+        if (rate != null) {
+          final Bundle extras = mediaController.getExtras();
+          extras.putString(getString(R.string.key_rate), rate);
+          session.setExtras(extras);
+        }
         // Media information in ARTIST and SUBTITLE
         session.setMetadata(radio.getMediaMetadataBuilder()
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
@@ -251,78 +249,51 @@ public class RadioService
             // Relaunch now allowed
             isAllowedToRewind = true;
           case PlaybackStateCompat.STATE_BUFFERING:
-            if (isForeground) {
-              notificationManager.notify(NOTIFICATION_ID, getNotification());
-            } else {
-              startForeground(NOTIFICATION_ID, getNotification());
-              isForeground = true;
-            }
+            startForeground(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            // API 31 and above don't allow to restart from foreground
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-              stopForeground(false);
-              isForeground = false;
-            }
             notificationManager.notify(NOTIFICATION_ID, getNotification());
             break;
           case PlaybackStateCompat.STATE_ERROR:
             // For user convenience, session is kept alive
-            if (isForeground) {
-              playerAdapter.release();
-              httpServer.setRadioHandlerController(null);
-              // Try to relaunch just once
-              if (isAllowedToRewind) {
-                isAllowedToRewind = false;
-                handler.postDelayed(() -> {
-                    try {
-                      // Still in error?
-                      if (mediaController.getPlaybackState().getState() ==
-                        PlaybackStateCompat.STATE_ERROR) {
-                        mediaSessionCompatCallback.onRewind();
-                      }
-                    } catch (Exception exception) {
-                      Log.i(LOG_TAG, "Relaunch failed");
+            playerAdapter.release();
+            httpServer.setRadioHandlerController(null);
+            // Try to relaunch just once
+            if (isAllowedToRewind) {
+              isAllowedToRewind = false;
+              handler.postDelayed(() -> {
+                  try {
+                    // Still in error?
+                    if (mediaController.getPlaybackState().getState() ==
+                      PlaybackStateCompat.STATE_ERROR) {
+                      mediaSessionCompatCallback.onRewind();
                     }
-                  },
-                  4000);
-              } else {
-                // API 31 and above don't allow to restart from foreground
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                  stopForeground(false);
-                  isForeground = false;
-                }
-                notificationManager.notify(NOTIFICATION_ID, getNotification());
-              }
-              break;
+                  } catch (Exception exception) {
+                    Log.i(LOG_TAG, "Relaunch failed");
+                  }
+                },
+                4000);
+            } else {
+              notificationManager.notify(NOTIFICATION_ID, getNotification());
             }
+            break;
           default:
             playerAdapter.release();
             httpServer.setRadioHandlerController(null);
             session.setMetadata(null);
             session.setActive(false);
-            stopForeground(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+              stopForeground(STOP_FOREGROUND_REMOVE);
+            } else {
+              stopForeground(true);
+            }
             stopSelf();
-            isForeground = isAllowedToRewind = false;
+            isAllowedToRewind = false;
         }
       }
     });
-  }
-
-  @Override
-  public int onStartCommand(Intent intent, int flags, int startId) {
-    Log.d(LOG_TAG, "onStartCommand");
-    isForeground = false;
-    if (playerAdapter == null) {
-      Log.d(LOG_TAG, "onStartCommand: internal failure; playerAdapter is null!");
-      failStop();
-    } else if (!playerAdapter.prepareFromMediaId()) {
-      Log.d(LOG_TAG, "onStartCommand failed to launch player");
-      failStop();
-    }
-    return super.onStartCommand(intent, flags, startId);
   }
 
   @Override
@@ -356,13 +327,6 @@ public class RadioService
     stopSelf();
   }
 
-  private void failStop() {
-    // startForeground must be called, avoid ANR
-    startForeground(NOTIFICATION_ID, getNotification());
-    stopForeground(true);
-    stopSelf();
-  }
-
   private boolean hasLockKey(@NonNull String lockKey) {
     return session.isActive() && lockKey.equals(this.lockKey);
   }
@@ -374,20 +338,15 @@ public class RadioService
       .setSilent(true)
       .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
-      .setContentIntent(PendingIntent.getActivity(
-        this,
-        REQUEST_CODE,
-        new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
+      .setContentIntent(mediaController.getSessionActivity())
       // When notification is deleted (when playback is paused and notification can be
       // deleted) fire MediaButtonPendingIntent with ACTION_STOP
       .setDeleteIntent(
         MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
       // Show controls on lock screen even when user hides sensitive content
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-    MediaMetadataCompat mediaMetadataCompat;
-    if ((mediaController == null) ||
-      ((mediaMetadataCompat = mediaController.getMetadata()) == null)) {
+    final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
+    if (mediaMetadataCompat == null) {
       Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
     } else {
       final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
@@ -402,9 +361,8 @@ public class RadioService
     final int[] actions0123 = {0, 1, 2, 3};
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
-    PlaybackStateCompat playbackStateCompat;
-    if ((mediaController == null) ||
-      ((playbackStateCompat = mediaController.getPlaybackState()) == null)) {
+    final PlaybackStateCompat playbackStateCompat = mediaController.getPlaybackState();
+    if (playbackStateCompat == null) {
       builder.setOngoing(false);
     } else {
       builder
@@ -527,8 +485,11 @@ public class RadioService
       // PlayerAdapter controls radio stream
       httpServer.setRadioHandlerController(playerAdapter);
       // Start service, must be done while activity has foreground
-      ContextCompat.startForegroundService(
-        RadioService.this, new Intent(RadioService.this, RadioService.class));
+      if (playerAdapter.prepareFromMediaId()) {
+        startService(intent);
+      } else {
+        Log.d(LOG_TAG, "onPrepareFromMediaId: playerAdapter.prepareFromMediaId failed");
+      }
     }
 
     @Override
@@ -582,18 +543,16 @@ public class RadioService
       return null;
     }
 
-    // Do nothing if no active session or no radio fund
+    // Do nothing if no radio fund
     private void skipTo(int direction) {
-      if (mediaController != null) {
-        Bundle extras = mediaController.getExtras();
-        Long nextRadioId = radioLibrary.get(
-          Long.valueOf(getMediaId()),
-          extras.getBoolean(getString(R.string.key_preferred_radios)),
-          direction);
-        if (nextRadioId != null) {
-          // Same extras are reused
-          mediaSessionCompatCallback.onPrepareFromMediaId(nextRadioId.toString(), extras);
-        }
+      final Bundle extras = mediaController.getExtras();
+      Long nextRadioId = radioLibrary.get(
+        Long.valueOf(getMediaId()),
+        extras.getBoolean(getString(R.string.key_preferred_radios)),
+        direction);
+      if (nextRadioId != null) {
+        // Same extras are reused
+        mediaSessionCompatCallback.onPrepareFromMediaId(nextRadioId.toString(), extras);
       }
     }
   }

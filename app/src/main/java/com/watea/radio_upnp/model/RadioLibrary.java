@@ -31,7 +31,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.util.Log;
 
@@ -179,30 +178,6 @@ public class RadioLibrary {
       return true;
     }
     return false;
-  }
-
-  @NonNull
-  public String getRoot() {
-    return "root";
-  }
-
-  @NonNull
-  public List<MediaBrowserCompat.MediaItem> getMediaItems() throws RuntimeException {
-    final List<MediaBrowserCompat.MediaItem> result = new Vector<>();
-    final Cursor cursor = allIdsQuery();
-    int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);
-    while (cursor.moveToNext()) {
-      final Radio radio = getFrom(cursor.getLong(idColumnIndex));
-      if (radio == null) {
-        Log.e(LOG_TAG, "getMediaItems: internal failure");
-        throw new RuntimeException();
-      }
-      result.add(new MediaBrowserCompat.MediaItem(
-        radio.getMediaMetadataBuilder().build().getDescription(),
-        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE));
-    }
-    cursor.close();
-    return result;
   }
 
   @Nullable
