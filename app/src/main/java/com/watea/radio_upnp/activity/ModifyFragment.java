@@ -23,13 +23,10 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -68,6 +65,12 @@ public class ModifyFragment extends MainActivityFragment {
     radiosModifyAdapter.set(getRadioLibrary(), false);
   }
 
+  @Override
+  public void onPause() {
+    super.onPause();
+    radiosModifyAdapter.unset();
+  }
+
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
@@ -84,22 +87,17 @@ public class ModifyFragment extends MainActivityFragment {
     return R.string.title_modify;
   }
 
-  @NonNull
   @Override
-  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
-    // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_main, container, false);
+  protected int getLayout() {
+    return R.layout.content_main;
+  }
+
+  @Override
+  public void onCreateView(@NonNull View view) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     // Adapter
     radiosModifyAdapter = new RadiosModifyAdapter(radiosModifyAdapterListener, radiosRecyclerView);
-    return view;
-  }
-
-  @Override
-  public void onPause() {
-    super.onPause();
-    radiosModifyAdapter.unset();
   }
 }

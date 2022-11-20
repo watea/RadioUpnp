@@ -39,10 +39,8 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -214,11 +212,13 @@ public abstract class ItemFragment extends MainActivityFragment {
     return R.menu.menu_item_modify;
   }
 
-  @NonNull
   @Override
-  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
-    // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_item, container, false);
+  protected int getLayout() {
+    return R.layout.content_item;
+  }
+
+  @Override
+  public void onCreateView(@NonNull View view) {
     nameEditText = view.findViewById(R.id.name_edit_text);
     countryEditText = view.findViewById(R.id.country_edit_text);
     progressBar = view.findViewById(R.id.progress_bar);
@@ -269,7 +269,6 @@ public abstract class ItemFragment extends MainActivityFragment {
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
     iconWatcher = new UrlWatcher(iconEditText);
-    return view;
   }
 
   @NonNull

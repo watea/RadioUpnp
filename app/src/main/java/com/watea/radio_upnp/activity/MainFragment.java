@@ -31,11 +31,9 @@ import android.content.SharedPreferences;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -70,33 +68,33 @@ public class MainFragment extends MainActivityFragment {
   private boolean gotItRadioLongPress;
   private final RadiosMainAdapter.Listener radiosMainAdapterListener =
     new RadiosMainAdapter.Listener() {
-    @Override
-    public void onClick(@NonNull Radio radio) {
-      if (getNetworkProxy().isDeviceOffline()) {
-        tell(R.string.no_internet);
-      } else {
-        getMainActivity().startReading(radio);
-        if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
-          radioLongPressAlertDialog.show();
+      @Override
+      public void onClick(@NonNull Radio radio) {
+        if (getNetworkProxy().isDeviceOffline()) {
+          tell(R.string.no_internet);
+        } else {
+          getMainActivity().startReading(radio);
+          if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
+            radioLongPressAlertDialog.show();
+          }
         }
       }
-    }
 
-    @Override
-    public void onCountChange(boolean isEmpty) {
-      defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
-    }
-
-    @Override
-    public boolean onLongClick(@Nullable Uri webPageUri) {
-      if (webPageUri == null) {
-        tell(R.string.no_web_page);
-      } else {
-        getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
+      @Override
+      public void onCountChange(boolean isEmpty) {
+        defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
       }
-      return true;
-    }
-  };
+
+      @Override
+      public boolean onLongClick(@Nullable Uri webPageUri) {
+        if (webPageUri == null) {
+          tell(R.string.no_web_page);
+        } else {
+          getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
+        }
+        return true;
+      }
+    };
   private boolean gotItDlnaEnable;
   private boolean gotItPreferredRadios;
   private RadiosMainAdapter radiosMainAdapter = null;
@@ -112,6 +110,24 @@ public class MainFragment extends MainActivityFragment {
     radiosMainAdapter.set(getRadioLibrary(), isPreferredRadios);
     // UPnP changes
     upnpDevicesAdapter.setChosenDeviceListener(chosenDeviceListener);
+  }
+
+  @Override
+  public void onPause() {
+    super.onPause();
+    // Context exists
+    assert getActivity() != null;
+    // Shared preferences
+    getActivity()
+      .getPreferences(Context.MODE_PRIVATE)
+      .edit()
+      .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
+      .putBoolean(getString(R.string.key_dlna_enable_got_it), gotItDlnaEnable)
+      .putBoolean(getString(R.string.key_preferred_radios_got_it), gotItPreferredRadios)
+      .apply();
+    // Clear resources
+    upnpDevicesAdapter.setChosenDeviceListener(null);
+    radiosMainAdapter.unset();
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -178,11 +194,13 @@ public class MainFragment extends MainActivityFragment {
     return R.string.title_main;
   }
 
-  @NonNull
   @Override
-  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
-    // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_main, container, false);
+  protected int getLayout() {
+    return R.layout.content_main;
+  }
+
+  @Override
+  public void onCreateView(@NonNull View view) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
     radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
@@ -204,7 +222,6 @@ public class MainFragment extends MainActivityFragment {
       .setPositiveButton(
         R.string.action_got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
       .create();
-    return view;
   }
 
   @Override
@@ -227,24 +244,6 @@ public class MainFragment extends MainActivityFragment {
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
-  }
-
-  @Override
-  public void onPause() {
-    super.onPause();
-    // Context exists
-    assert getActivity() != null;
-    // Shared preferences
-    getActivity()
-      .getPreferences(Context.MODE_PRIVATE)
-      .edit()
-      .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
-      .putBoolean(getString(R.string.key_dlna_enable_got_it), gotItDlnaEnable)
-      .putBoolean(getString(R.string.key_preferred_radios_got_it), gotItPreferredRadios)
-      .apply();
-    // Clear resources
-    upnpDevicesAdapter.setChosenDeviceListener(null);
-    radiosMainAdapter.unset();
   }
 
   private boolean wifiTest(@NonNull Runnable runnable) {

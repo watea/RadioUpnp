@@ -441,7 +441,6 @@ public class MainActivity
     // Shared preferences
     getPreferences(Context.MODE_PRIVATE)
       .edit()
-      .putBoolean(getString(R.string.key_first_start), false) // Just one time at start
       .putBoolean(getString(R.string.key_radio_garden), gotItRadioGarden)
       .apply();
     // Stop UPnP service
@@ -471,6 +470,8 @@ public class MainActivity
     // Init database
     if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
       setDefaultRadios();
+      // Robustness: store immediately to avoid bad user experience in case of app crash
+      sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
     }
     // Start the UPnP service
     if (!bindService(

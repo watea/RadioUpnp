@@ -41,6 +41,8 @@ import com.watea.radio_upnp.service.NetworkProxy;
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
   private View view = null;
+  private ViewGroup container = null;
+  private int yScrollPosition = 0;
 
   // Required empty constructor
   public MainActivityFragment() {
@@ -57,14 +59,30 @@ public abstract class MainActivityFragment extends Fragment {
     @NonNull LayoutInflater inflater,
     @Nullable ViewGroup container,
     @Nullable Bundle savedInstanceState) {
-    return (view == null) ? view = onCreateView(inflater, container) : view;
+    assert container != null;
+    this.container = container;
+    if (view == null) {
+      onCreateView(view = inflater.inflate(getLayout(), container, false));
+    }
+    assert view != null;
+    return view;
   }
 
   @Override
   public void onResume() {
     super.onResume();
+    // Restore scroll
+    container.setScrollY(yScrollPosition);
     // Decorate
     getMainActivity().onFragmentResume(this);
+  }
+
+  @Override
+  public void onPause() {
+    super.onPause();
+    // Store scroll position.
+    // Note: not saved InstanceState as not necessary for user experience.
+    yScrollPosition = container.getScrollY();
   }
 
   @Override
@@ -100,9 +118,9 @@ public abstract class MainActivityFragment extends Fragment {
 
   public abstract int getTitle();
 
-  @NonNull
-  protected abstract View onCreateView(
-    @NonNull LayoutInflater inflater, @Nullable ViewGroup container);
+  protected abstract int getLayout();
+
+  protected abstract void onCreateView(@NonNull View view);
 
   @Nullable
   protected RadioLibrary getRadioLibrary() {

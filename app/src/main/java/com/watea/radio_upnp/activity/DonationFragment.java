@@ -28,9 +28,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 
@@ -147,11 +145,13 @@ public class DonationFragment
     return R.string.title_donate;
   }
 
-  @NonNull
   @Override
-  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
-    // Inflate the view so that graphical objects exists
-    final View view = inflater.inflate(R.layout.content_donation, container, false);
+  protected int getLayout() {
+    return R.layout.content_donation;
+  }
+
+  @Override
+  public void onCreateView(@NonNull View view) {
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
     // Alert dialog
@@ -169,7 +169,6 @@ public class DonationFragment
       getResources().getStringArray(R.array.donation_google_catalog_values));
     donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     googleSpinner.setAdapter(donationAdapter);
-    return view;
   }
 
   @Override
