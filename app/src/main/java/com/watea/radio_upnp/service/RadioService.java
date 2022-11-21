@@ -552,14 +552,11 @@ public class RadioService
 
     // Do nothing if no radio fund
     private void skipTo(int direction) {
-      final Bundle extras = mediaController.getExtras();
-      Long nextRadioId = radioLibrary.get(
-        Long.valueOf(getMediaId()),
-        extras.getBoolean(getString(R.string.key_preferred_radios)),
-        direction);
+      final Long nextRadioId = radioLibrary.get(Long.valueOf(getMediaId()), direction);
       if (nextRadioId != null) {
         // Same extras are reused
-        mediaSessionCompatCallback.onPrepareFromMediaId(nextRadioId.toString(), extras);
+        mediaSessionCompatCallback.onPrepareFromMediaId(
+          nextRadioId.toString(), mediaController.getExtras());
       }
     }
   }

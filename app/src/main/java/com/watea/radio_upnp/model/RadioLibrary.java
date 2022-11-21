@@ -181,8 +181,8 @@ public class RadioLibrary {
   }
 
   @Nullable
-  public Long get(@NonNull Long radioId, boolean isPreferred, int direction) {
-    final List<Long> ids = isPreferred ? getPreferredRadioIds() : getAllRadioIds();
+  public Long get(@NonNull Long radioId, int direction) {
+    final List<Long> ids = getAllRadioIds();
     return ids.contains(radioId) ?
       ids.get((ids.size() + ids.indexOf(radioId) + direction) % ids.size()) :
       null;
