@@ -109,7 +109,7 @@ class PlayerController {
     // Manage radio description
     @Override
     public void onNewCurrentRadio(@Nullable Radio radio) {
-      boolean isVisible = (radio != null);
+      final boolean isVisible = (radio != null);
       albumArtImageView.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
       playedRadioLinearLayout.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
       if (isVisible) {
@@ -190,28 +190,23 @@ class PlayerController {
       // Manage dynamic data
       @Override
       public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
-        // Validity check: information must come from package
-        if ((mediaMetadata == null) ||
-          (!mainActivity
-            .getPackageName()
-            .equals(mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI)))) {
-          return;
-        }
-        // Use SubTitle as notification
-        final CharSequence information = mediaMetadata.getDescription().getSubtitle();
-        playedRadioInformationTextView.setText(information);
-        // Rate in extras
-        final Bundle extras = mediaController.getExtras();
-        final String rate = (extras == null) ?
-          null : extras.getString(mainActivity.getString(R.string.key_rate));
-        playedRadioRateTextView.setText(
-          (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
-        // Fill playlist
-        if (information != null) {
-          DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-          addInformation(
-            dateFormat.format(Calendar.getInstance().getTime()),
-            information.toString());
+        if ((mediaMetadata != null) && isValid(mediaMetadata)) {
+          // Use SubTitle as notification
+          final CharSequence information = mediaMetadata.getDescription().getSubtitle();
+          playedRadioInformationTextView.setText(information);
+          // Rate in extras
+          final Bundle extras = mediaController.getExtras();
+          final String rate = (extras == null) ?
+            null : extras.getString(mainActivity.getString(R.string.key_rate));
+          playedRadioRateTextView.setText(
+            (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
+          // Fill playlist
+          if (information != null) {
+            DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+            addInformation(
+              dateFormat.format(Calendar.getInstance().getTime()),
+              information.toString());
+          }
         }
       }
 
@@ -238,8 +233,10 @@ class PlayerController {
         // Sync existing MediaSession state with UI
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
-        mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
-        radioLibrary.setCurrentRadio(mediaMetadataCompat);
+        if ((mediaMetadataCompat != null) && isValid(mediaMetadataCompat)) {
+          mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
+          radioLibrary.setCurrentRadio(mediaMetadataCompat);
+        }
         // Nota: no mediaBrowser.subscribe here needed
       }
 
@@ -353,6 +350,9 @@ class PlayerController {
 
   // Must be called on activity resume
   public void onActivityResume(@NonNull RadioLibrary radioLibrary) {
+    // Reset start state
+    radioLibraryListener.onNewCurrentRadio(null);
+    // Connect
     (this.radioLibrary = radioLibrary).addListener(radioLibraryListener);
     mediaBrowser.connect();
   }
@@ -379,6 +379,7 @@ class PlayerController {
 
   // radio == null for current, do nothing if no current
   public void startReading(@Nullable Radio radio, @Nullable String upnpDeviceIdentity) {
+    // Should not happen
     if (mediaController == null) {
       mainActivity.tell(R.string.radio_connection_waiting);
       return;
@@ -397,13 +398,19 @@ class PlayerController {
     mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
     // Information are cleared
     playInformations.clear();
-    insertInformations("", mainActivity.getString(R.string.no_data));
+    insertInformation("", mainActivity.getString(R.string.no_data));
   }
 
   @Nullable
   private Radio getCurrentRadio() {
     assert radioLibrary != null;
     return (mediaController == null) ? null : radioLibrary.getCurrentRadio();
+  }
+
+  // Validity check: information must come from package
+  private boolean isValid(@NonNull MediaMetadataCompat mediaMetadataCompat) {
+    return mainActivity.getPackageName().equals(
+      mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI));
   }
 
   private void addInformation(@NonNull String date, @NonNull String information) {
@@ -419,7 +426,7 @@ class PlayerController {
     // Insert if new
     if (playInformations.isEmpty() ||
       !information.equals(playInformations.get(playInformations.size() - 1).get(INFORMATION))) {
-      insertInformations(date, information);
+      insertInformation(date, information);
       // User help for fist valid information after a few time
       if (!(informationPressAlertDialog.isShowing() || gotItInformationPress) &&
         (informationCount++ > 4)) {
@@ -428,7 +435,7 @@ class PlayerController {
     }
   }
 
-  private void insertInformations(@NonNull String date, @NonNull String information) {
+  private void insertInformation(@NonNull String date, @NonNull String information) {
     final Map<String, String> informationMap = new Hashtable<>();
     informationMap.put(DATE, date);
     informationMap.put(INFORMATION, information);

@@ -27,6 +27,7 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -55,6 +56,7 @@ import androidx.media.VolumeProviderCompat;
 import androidx.media.session.MediaButtonReceiver;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
@@ -74,11 +76,11 @@ public class RadioService
   extends MediaBrowserServiceCompat
   implements PlayerAdapter.Listener, RadioHandler.Listener {
   private static final String LOG_TAG = RadioService.class.getName();
+  private static final int REQUEST_CODE = 501;
   private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
   private static final int NOTIFICATION_ID = 9;
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
-  private final Intent intent = new Intent(this, RadioService.class);
   private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
@@ -339,7 +341,11 @@ public class RadioService
       .setSilent(true)
       .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
-      .setContentIntent(mediaController.getSessionActivity())
+      .setContentIntent(PendingIntent.getActivity(
+        this,
+        REQUEST_CODE,
+        new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
       // When notification is deleted (when playback is paused and notification can be
       // deleted) fire MediaButtonPendingIntent with ACTION_STOP
       .setDeleteIntent(
@@ -487,7 +493,7 @@ public class RadioService
       httpServer.setRadioHandlerController(playerAdapter);
       // Start service, must be done while activity has foreground
       if (playerAdapter.prepareFromMediaId()) {
-        startService(intent);
+        startService(new Intent(RadioService.this, RadioService.class));
       } else {
         Log.d(LOG_TAG, "onPrepareFromMediaId: playerAdapter.prepareFromMediaId failed");
       }

@@ -51,7 +51,7 @@ public class RadioLibrary {
   private final Context context;
   // Current managed radio
   @Nullable
-  private Long currentRadioId;
+  private Long currentRadioId = null;
 
   public RadioLibrary(@NonNull Context context) {
     this.context = context;
