@@ -23,6 +23,8 @@
 
 package com.watea.radio_upnp.model;
 
+import androidx.annotation.NonNull;
+
 public interface Consumer<T> {
-  void accept(T t);
+  void accept(@NonNull T t);
 }

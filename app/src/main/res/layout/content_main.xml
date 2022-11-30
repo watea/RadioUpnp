@@ -21,42 +21,36 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
 
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/radios_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <FrameLayout
+        android:id="@+id/view_radios_default"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/radios_recycler_view"
+        <ImageView
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="@dimen/tile_size"
+            app:srcCompat="@drawable/ic_error_blue_24dp"
+            tools:ignore="ContentDescription" />
 
-        <FrameLayout
-            android:id="@+id/view_radios_default"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/tile_size"
-                app:srcCompat="@drawable/ic_error_blue_24dp"
-                tools:ignore="ContentDescription" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="@string/radio_no_radio"
-                android:textStyle="bold" />
-
-        </FrameLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/radio_no_radio"
+            android:textStyle="bold" />
 
     </FrameLayout>
 
-</androidx.core.widget.NestedScrollView>
+</FrameLayout>

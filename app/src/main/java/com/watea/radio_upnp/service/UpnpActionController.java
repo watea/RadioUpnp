@@ -65,7 +65,7 @@ public class UpnpActionController {
   }
 
   public void fetchContentType(@NonNull Radio radio) {
-    String contentType = new RadioURL(radio.getURL()).getStreamContentType();
+    final String contentType = new RadioURL(radio.getURL()).getStreamContentType();
     if (contentType != null) {
       contentTypes.put(radio, contentType);
     }

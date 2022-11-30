@@ -50,12 +50,12 @@ import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.registry.RegistryListener;
 
-class ImportController {
+public class ImportController {
   private static final String LOG_TAG = ImportController.class.getName();
   private static final int IMPORT_DELAY = 4000; // ms
   private static final DeviceTypeHeader EXPORTER_DEVICE_TYPE_HEADER =
     new DeviceTypeHeader(EXPORTER_DEVICE_TYPE);
-  private final Handler handler = new Handler(Looper.getMainLooper());
+  private static final Handler handler = new Handler(Looper.getMainLooper());
   @NonNull
   private final MainActivity mainActivity;
   // <HMI assets
@@ -156,13 +156,13 @@ class ImportController {
         @Override
         public void success(ActionInvocation actionInvocation) {
           Log.d(LOG_TAG, "Export action success");
-          String export = actionInvocation.getOutput(Exporter.EXPORT).toString();
+          final String export = actionInvocation.getOutput(Exporter.EXPORT).toString();
           // Must be called on main thread for thread safety
           handler.post(() -> {
-            RadioLibrary radioLibrary = mainActivity.getRadioLibrary();
-            assert radioLibrary != null;
-            mainActivity.tell((radioLibrary.isOpen() && radioLibrary.importFrom(export)) ?
-              R.string.import_successful : R.string.import_failed);
+            final RadioLibrary radioLibrary = mainActivity.getRadioLibrary();
+            final boolean tell =
+              (radioLibrary != null) && radioLibrary.isOpen() && radioLibrary.importFrom(export);
+            mainActivity.tell(tell ? R.string.import_successful : R.string.import_failed);
           });
         }
 

@@ -538,7 +538,7 @@ public class RadioService
           return remoteDevice;
         }
         // Embedded devices?
-        RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
+        final RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
         if (remoteDevices != null) {
           for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
             if (UpnpDevice.getIdentity(embeddedRemoteDevice).equals(identity)) {

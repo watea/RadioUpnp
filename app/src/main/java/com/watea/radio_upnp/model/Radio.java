@@ -208,7 +208,8 @@ public class Radio {
     @NonNull Context context, @NonNull Bitmap bitmap, @NonNull String fileName)
     throws FileNotFoundException {
     fileName = fileName + ".png";
-    FileOutputStream fileOutputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
+    final FileOutputStream fileOutputStream =
+      context.openFileOutput(fileName, Context.MODE_PRIVATE);
     if (!bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream)) {
       Log.e(LOG_TAG, "bitmapToFile: internal failure");
       throw new FileNotFoundException();
@@ -218,7 +219,7 @@ public class Radio {
 
   @NonNull
   private static Bitmap toBitmap(@NonNull String base64String) {
-    byte[] byteArray = Base64.decode(base64String, Base64.NO_WRAP);
+    final byte[] byteArray = Base64.decode(base64String, Base64.NO_WRAP);
     return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
   }
 

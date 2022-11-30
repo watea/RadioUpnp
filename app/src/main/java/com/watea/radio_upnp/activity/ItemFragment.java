@@ -141,7 +141,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     // Restore icon
     if (savedInstanceState != null) {
       try {
-        String file = savedInstanceState.getString(getString(R.string.key_radio_icon_file));
+        final String file = savedInstanceState.getString(getString(R.string.key_radio_icon_file));
         setRadioIcon(BitmapFactory.decodeFile(file));
       } catch (Exception exception) {
         Log.e(LOG_TAG, "onActivityCreated: internal failure restoring context", exception);
@@ -250,8 +250,8 @@ public abstract class ItemFragment extends MainActivityFragment {
       } else if (darFmRadioButton.isChecked()) {
         new DarFmSearcher();
       } else {
-        URL iconUrl = iconWatcher.url;
-        URL webPageUrl = webPageWatcher.url;
+        final URL iconUrl = iconWatcher.url;
+        final URL webPageUrl = webPageWatcher.url;
         if ((iconUrl == null) && (webPageUrl == null)) {
           tell(R.string.no_icon_found);
         } else {
@@ -450,7 +450,7 @@ public abstract class ItemFragment extends MainActivityFragment {
           for (Element station : search.getElementsByTag("station")) {
             // As stated, may fail
             try {
-              Map<String, String> radioMap = new Hashtable<>();
+              final Map<String, String> radioMap = new Hashtable<>();
               radioMap.put(DAR_FM_ID, extractValue(station, "station_id"));
               radioMap.put(DAR_FM_NAME, extractValue(station, "callsign"));
               addToRadiosInOrder(radioMap);
@@ -536,7 +536,7 @@ public abstract class ItemFragment extends MainActivityFragment {
       if (newName != null) {
         newName = newName.toLowerCase();
         for (int index = 0; index < radios.size(); index++) {
-          String name = radios.get(index).get(DAR_FM_NAME);
+          final String name = radios.get(index).get(DAR_FM_NAME);
           if ((name == null) || (name.toLowerCase().compareTo(newName) > 0)) {
             radios.add(index, radioMap);
             return;

@@ -37,7 +37,7 @@ import org.fourthline.cling.model.meta.Icon;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
 public class UpnpDevice {
-  private final Handler handler = new Handler(Looper.getMainLooper());
+  private static final Handler handler = new Handler(Looper.getMainLooper());
   @Nullable
   private final RemoteDevice remoteDevice;
   @Nullable
@@ -87,7 +87,7 @@ public class UpnpDevice {
       int maxWidth = 0;
       assert remoteDevice != null;
       for (Icon deviceIcon : remoteDevice.getIcons()) {
-        int width = deviceIcon.getWidth();
+        final int width = deviceIcon.getWidth();
         if (width > maxWidth) {
           maxWidth = width;
           largestIcon = deviceIcon;

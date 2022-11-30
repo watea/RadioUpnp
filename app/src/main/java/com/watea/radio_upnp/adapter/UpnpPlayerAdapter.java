@@ -117,9 +117,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
     this.device = device;
     this.upnpActionController = upnpActionController;
     this.logoUri = logoUri;
-    Service<?, ?> connectionManager = device.findService(CONNECTION_MANAGER_ID);
-    Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
-    Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
+    final Service<?, ?> connectionManager = device.findService(CONNECTION_MANAGER_ID);
+    final Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
+    final Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
     upnpWatchdog = new UpnpWatchdog(
       this.upnpActionController,
       avTransportService,
@@ -198,7 +198,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
 
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          ActionArgumentValue<?> instanceIdArgument = actionInvocation.getOutput("AVTransportID");
+          final ActionArgumentValue<?> instanceIdArgument =
+            actionInvocation.getOutput("AVTransportID");
           if (instanceIdArgument != null) {
             instanceId = instanceIdArgument.getValue().toString();
           }
@@ -216,7 +217,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
         public ActionInvocation<?> getActionInvocation() {
-          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
           actionInvocation.setInput(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume));
           actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
           Log.d(LOG_TAG, "Volume required: " + currentVolume);
@@ -240,7 +241,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
         public ActionInvocation<?> getActionInvocation() {
-          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
           actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
           return actionInvocation;
         }
@@ -278,8 +279,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
         public ActionInvocation<?> getActionInvocation() {
-          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-          String metadata = getMetaData();
+          final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          final String metadata = getMetaData();
           actionInvocation.setInput("CurrentURI", radioUri.toString());
           actionInvocation.setInput(INPUT_CURRENT_URI_METADATA, metadata);
           Log.d(LOG_TAG, "SetAVTransportURI=> InstanceID: " + instanceId);
@@ -310,7 +311,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
 
         @Override
         public void success(@NonNull ActionInvocation<?> actionInvocation) {
-          List<String> protocolInfos = new Vector<>();
+          final List<String> protocolInfos = new Vector<>();
           for (String protocolInfo : actionInvocation.getOutput("Sink").toString().split(",")) {
             if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
               Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
@@ -474,7 +475,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
 
   @Nullable
   private String searchContentType(@NonNull String contentType) {
-    List<String> protocolInfos = upnpActionController.getProtocolInfo(device);
+    final List<String> protocolInfos = upnpActionController.getProtocolInfo(device);
     if (protocolInfos != null) {
       Pattern mimePattern = Pattern.compile("http-get:\\*:(" + contentType + "):.*");
       for (String protocolInfo : protocolInfos) {

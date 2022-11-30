@@ -60,7 +60,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Vector;
 
-class PlayerController {
+public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
   private static final String DATE = "date";
   private static final String INFORMATION = "information";
@@ -202,7 +202,7 @@ class PlayerController {
             (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
           // Fill playlist
           if (information != null) {
-            DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+            final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
             addInformation(
               dateFormat.format(Calendar.getInstance().getTime()),
               information.toString());
@@ -323,7 +323,7 @@ class PlayerController {
     playImageButton.setOnLongClickListener(playImageButtonView -> {
       // Should not happen
       if (mediaController == null) {
-        this.mainActivity.tell(R.string.radio_connection_waiting);
+        mainActivity.tell(R.string.radio_connection_waiting);
       } else {
         mediaController.getTransportControls().stop();
       }

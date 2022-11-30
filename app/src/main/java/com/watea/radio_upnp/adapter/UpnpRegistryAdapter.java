@@ -41,7 +41,7 @@ import org.fourthline.cling.registry.Registry;
 // Handle device if service AV_TRANSPORT_SERVICE_ID is found
 public class UpnpRegistryAdapter extends DefaultRegistryListener {
   private static final String LOG_TAG = UpnpRegistryAdapter.class.getName();
-  private final Handler handler = new Handler(Looper.getMainLooper());
+  private static final Handler handler = new Handler(Looper.getMainLooper());
   @NonNull
   private final Listener listener;
 
@@ -58,7 +58,7 @@ public class UpnpRegistryAdapter extends DefaultRegistryListener {
       return;
     }
     // Embedded devices?
-    RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
+    final RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
     if (remoteDevices != null) {
       Log.d(LOG_TAG, "EmbeddedRemoteDevices found: " + remoteDevices.length);
       for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
@@ -83,10 +83,10 @@ public class UpnpRegistryAdapter extends DefaultRegistryListener {
   // Returns true if AV_TRANSPORT_SERVICE_ID is found
   private boolean add(final RemoteDevice remoteDevice) {
     Log.d(LOG_TAG, "RemoteDevice found: " + remoteDevice.getDisplayString());
-    RemoteService[] remoteServices = remoteDevice.getServices();
+    final RemoteService[] remoteServices = remoteDevice.getServices();
     Log.d(LOG_TAG, "> RemoteServices found: " + remoteServices.length);
     for (Service<?, ?> service : remoteServices) {
-      ServiceId serviceId = service.getServiceId();
+      final ServiceId serviceId = service.getServiceId();
       Log.d(LOG_TAG, ">> RemoteService: " + serviceId);
       if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
         Log.d(LOG_TAG, ">>> UPnP reader found!");
