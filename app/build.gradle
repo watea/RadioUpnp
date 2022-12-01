@@ -27,7 +27,7 @@ android {
     compileSdkVersion 33
     defaultConfig {
         applicationId "com.watea.radio_upnp"
-        minSdkVersion 23
+        minSdkVersion 22
         targetSdkVersion 33
         versionCode 26118
         versionName "2.61.18"

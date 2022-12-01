@@ -28,12 +28,16 @@ import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
+import java.util.List;
 
 public class NetworkProxy {
   private static final String SCHEME = "http";
@@ -61,14 +65,23 @@ public class NetworkProxy {
 
   // Only Wifi and Cellular is supported
   public boolean isDeviceOffline() {
-    if (connectivityManager == null) {
-      return true;
-    } else {
-      final NetworkCapabilities capabilities =
-        connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
-      return (capabilities == null) ||
-        !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-          capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+      if (connectivityManager == null) {
+        return true;
+      } else {
+        final NetworkCapabilities capabilities =
+          connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
+        return (capabilities == null) ||
+          !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
+      }
+    }
+    else
+    {
+      NetworkInfo netInfo = connectivityManager.getActiveNetworkInfo();
+      return (netInfo == null) ||
+        !(netInfo.getType() == ConnectivityManager.TYPE_MOBILE ||
+          netInfo.getType() == ConnectivityManager.TYPE_WIFI);
     }
   }
 
@@ -84,17 +97,33 @@ public class NetworkProxy {
 
   @Nullable
   private String getIpAddress() {
-    if (connectivityManager != null) {
-      final LinkProperties linkProperties =
-        connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
-      if (linkProperties != null) {
-        for (LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
-          final InetAddress inetAddress = linkAddress.getAddress();
-          if (inetAddress instanceof java.net.Inet4Address) {
-            return inetAddress.getHostAddress();
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+      if (connectivityManager != null) {
+        final LinkProperties linkProperties =
+          connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
+        if (linkProperties != null) {
+          for (LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
+            final InetAddress inetAddress = linkAddress.getAddress();
+              if (inetAddress instanceof java.net.Inet4Address) {
+                return inetAddress.getHostAddress();
+              }
+            }
           }
         }
-      }
+      } else {
+        try {
+          List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+          for (NetworkInterface intf : interfaces) {
+            List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+            for (InetAddress inetAddress : addrs) {
+              if (!inetAddress.isLoopbackAddress()) {
+                if (inetAddress instanceof java.net.Inet4Address)
+                   return inetAddress.getHostAddress();
+              }
+            }
+          }
+        } catch (Exception ignored) {
+      } // eat exceptions
     }
     return null;
   }
