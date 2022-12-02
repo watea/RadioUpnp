@@ -65,20 +65,17 @@ public class NetworkProxy {
 
   // Only Wifi and Cellular is supported
   public boolean isDeviceOffline() {
+    if (connectivityManager == null) {
+      return true;
+    }
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-      if (connectivityManager == null) {
-        return true;
-      } else {
-        final NetworkCapabilities capabilities =
-          connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
+      final NetworkCapabilities capabilities =
+        connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
         return (capabilities == null) ||
           !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
-      }
-    }
-    else
-    {
-      NetworkInfo netInfo = connectivityManager.getActiveNetworkInfo();
+    } else {
+      final NetworkInfo netInfo = connectivityManager.getActiveNetworkInfo();
       return (netInfo == null) ||
         !(netInfo.getType() == ConnectivityManager.TYPE_MOBILE ||
           netInfo.getType() == ConnectivityManager.TYPE_WIFI);
