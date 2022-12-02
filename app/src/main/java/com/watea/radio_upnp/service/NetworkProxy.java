@@ -71,9 +71,9 @@ public class NetworkProxy {
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
       final NetworkCapabilities capabilities =
         connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
-        return (capabilities == null) ||
-          !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
+      return (capabilities == null) ||
+        !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+          capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
     } else {
       final NetworkInfo netInfo = connectivityManager.getActiveNetworkInfo();
       return (netInfo == null) ||
