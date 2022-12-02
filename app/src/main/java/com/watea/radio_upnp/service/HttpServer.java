@@ -77,6 +77,10 @@ public class HttpServer extends Thread {
     radioHandler.setController(radioHandlerController);
   }
 
+  public void resumeHandler() {
+    radioHandler.resume();
+  }
+
   @NonNull
   public Uri getLoopbackUri() {
     return NetworkProxy.getLoopbackUri(getPort());
@@ -98,6 +102,7 @@ public class HttpServer extends Thread {
   public void stopServer() {
     try {
       Log.d(LOG_TAG, "HTTP server stop");
+      resumeHandler();
       server.stop();
     } catch (Exception exception) {
       Log.i(LOG_TAG, "HTTP server stop error", exception);

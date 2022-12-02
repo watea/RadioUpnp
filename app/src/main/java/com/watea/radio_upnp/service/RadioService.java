@@ -501,6 +501,7 @@ public class RadioService
 
     @Override
     public void onPlay() {
+      httpServer.resumeHandler();
       playerAdapter.play();
     }
 
