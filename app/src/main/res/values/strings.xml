@@ -23,8 +23,8 @@
 
 <resources>
     <string name="app_name">RadioUpnp</string>
-    <string name="radio_service_description">Streams radio for RadioUpnp app.</string>
-    <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app.</string>
+    <string name="radio_service_description">Streams radio for RadioUpnp app</string>
+    <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
     <string name="copyright">Copyright &#169; 2018 Stephane Treuchot</string>
     <string name="credit">Credit:</string>
     <string name="credit_0">- Icon by shareicon.net</string>
@@ -73,7 +73,7 @@
     <string name="preferred_radios">Display only preferred radios.\nPreferred radios are set in Modify screen.</string>
     <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>
     <string name="icon_updated">Icon updated!</string>
-    <string name="dar_fm_went_wrong">Radio found!\nIcon or web page unavailable.</string>
+    <string name="dar_fm_went_wrong">Radio found!\nIcon or web page unavailable</string>
     <string name="dar_fm_done">Radio found!</string>
     <string name="donation_button_close">Close</string>
     <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer.\nThanks a lot!</string>
@@ -90,7 +90,7 @@
     <string name="not_to_delete">Current radio cannot be deleted</string>
     <string name="report_error">Error, report could not be generated</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
-    <string name="notification_needed">This app is intended to be used with notifications enabled.</string>
+    <string name="notification_needed">This app is intended to be used with notifications enabled</string>
     <string name="import_message">[GO!] searches a remote DISPLAYED RadioUpnp app on local network, and imports ALL radios. App must have been launched on remote device a few seconds before.\nPlease wait (about 5s) for result popup messages.</string>
     <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically (take a few seconds)!\n</string>
     <string name="import_connection_failed">No remote app found. Please verify!</string>
@@ -98,10 +98,11 @@
     <string name="import_action_failed">Unable to execute import action from remote app</string>
     <string name="import_successful">Import successful!</string>
     <string name="no_data">No playlist data found</string>
-    <string name="dump_error">Error: local export file could not be generated.</string>
+    <string name="dump_error">Error: local export file could not be generated</string>
     <string name="export_done">Export file "radios.csv" created.\nInternal Storage: Android/data/com.watea.radio_upnp/files</string>
     <string name="radio_garden_radio_added">Radio Garden radio added!</string>
     <string name="try_to_add_from_radio_garden">Try to add from Radio Garden.\nMay take some time, please wait&#8230;</string>
+    <string name="play_store_not_installed">Play Store not available.\nRadio Garden cannot be installed!</string>
     <string-array name="donation_google_catalog_values">
         <item>0,50 €</item>
         <item>1,00 €</item>
