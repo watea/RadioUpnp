@@ -42,11 +42,6 @@ android {
             debuggable true
         }
     }
-    packagingOptions {
-        resources {
-            excludes += ['META-INF/DEPENDENCIES']
-        }
-    }
     compileOptions {
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -83,8 +78,11 @@ dependencies {
     //noinspection GradleDependency
     implementation 'org.seamless:seamless-xml:1.1.1'
     // jetty
+    //noinspection GradleDependency
     implementation 'org.eclipse.jetty:jetty-server:8.2.0.v20160908'
+    //noinspection GradleDependency
     implementation 'org.eclipse.jetty:jetty-servlet:8.2.0.v20160908'
+    //noinspection GradleDependency
     implementation 'org.eclipse.jetty:jetty-client:8.2.0.v20160908'
     // Playstore
     implementation 'com.android.billingclient:billing:5.1.0'

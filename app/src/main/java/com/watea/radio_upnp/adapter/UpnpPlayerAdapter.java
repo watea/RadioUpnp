@@ -130,7 +130,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @Override
         public ActionInvocation<?> getActionInvocation() {
-          ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
           actionInvocation.setInput("Speed", "1");
           return actionInvocation;
         }

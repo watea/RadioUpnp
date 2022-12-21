@@ -86,8 +86,14 @@ public class RadioHandler extends AbstractHandler {
       .build();
   }
 
+  public synchronized void resume() {
+    notifyAll();
+  }
+
+  // Must be called
   public void setController(@Nullable Controller controller) {
     this.controller = controller;
+    resume();
   }
 
   @Override
@@ -121,6 +127,10 @@ public class RadioHandler extends AbstractHandler {
         handleConnection(request, response, radio, lockKey, controller);
       }
     }
+  }
+
+  private synchronized void pause() throws InterruptedException {
+    wait();
   }
 
   private void handleConnection(
@@ -224,7 +234,7 @@ public class RadioHandler extends AbstractHandler {
     @NonNull final OutputStream outputStream,
     @Nullable final String rate,
     @NonNull final String lockKey,
-    @NonNull final Controller controller) throws IOException {
+    @NonNull final Controller controller) throws IOException, InterruptedException {
     Log.d(LOG_TAG, "handleStreaming: entering");
     // Flush information, send rate
     listener.onNewInformation("", rate, lockKey);
@@ -234,54 +244,54 @@ public class RadioHandler extends AbstractHandler {
     int metadataSize = 0;
     // Stop if not current controller
     while (controller == this.controller) {
-      // Do not read if paused
-      if (!controller.isPaused()) {
-        final int readResult = inputStream.read(buffer);
-        if (readResult < 0) {
-          Log.d(LOG_TAG, "No more data to read");
-          break;
-        }
-        if (readResult > 0) {
-          // Only stream data are transferred
-          if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
-            outputStream.write(buffer);
-          } else {
-            // Metadata: look for title information
-            final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
-            // First byte gives size (16 bytes chunks) to read for metadata
-            if (metadataIndex == 0) {
-              metadataSize = buffer[0] * 16;
-              metadataBuffer.clear();
-            } else if (metadataIndex <= METADATA_MAX) {
-              // Other bytes are metadata
-              metadataBuffer.put(buffer[0]);
-            }
-            // End of metadata, extract pattern
-            if (metadataIndex == metadataSize) {
-              CharBuffer metadata = null;
-              metadataBuffer.flip();
-              // Exception blocked on metadata
-              try {
-                metadata = charsetDecoder.decode(metadataBuffer);
-              } catch (Exception exception) {
-                if (BuildConfig.DEBUG) {
-                  Log.w(LOG_TAG, "Error decoding metadata", exception);
-                }
+      if (this.controller.isPaused()) {
+        pause();
+      }
+      final int readResult = inputStream.read(buffer);
+      if (readResult < 0) {
+        Log.d(LOG_TAG, "No more data to read");
+        break;
+      }
+      if (readResult > 0) {
+        // Only stream data are transferred
+        if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+          outputStream.write(buffer);
+        } else {
+          // Metadata: look for title information
+          final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+          // First byte gives size (16 bytes chunks) to read for metadata
+          if (metadataIndex == 0) {
+            metadataSize = buffer[0] * 16;
+            metadataBuffer.clear();
+          } else if (metadataIndex <= METADATA_MAX) {
+            // Other bytes are metadata
+            metadataBuffer.put(buffer[0]);
+          }
+          // End of metadata, extract pattern
+          if (metadataIndex == metadataSize) {
+            CharBuffer metadata = null;
+            metadataBuffer.flip();
+            // Exception blocked on metadata
+            try {
+              metadata = charsetDecoder.decode(metadataBuffer);
+            } catch (Exception exception) {
+              if (BuildConfig.DEBUG) {
+                Log.w(LOG_TAG, "Error decoding metadata", exception);
               }
-              if ((metadata != null) && (metadata.length() > 0)) {
-                if (BuildConfig.DEBUG) {
-                  Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
-                }
-                final Matcher matcher = PATTERN_ICY.matcher(metadata);
-                // Tell listener
-                final String information =
-                  (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
-                if (information != null) {
-                  listener.onNewInformation(information, rate, lockKey);
-                }
-              }
-              metadataBlockBytesRead = 0;
             }
+            if ((metadata != null) && (metadata.length() > 0)) {
+              if (BuildConfig.DEBUG) {
+                Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+              }
+              final Matcher matcher = PATTERN_ICY.matcher(metadata);
+              // Tell listener
+              final String information =
+                (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
+              if (information != null) {
+                listener.onNewInformation(information, rate, lockKey);
+              }
+            }
+            metadataBlockBytesRead = 0;
           }
         }
       }

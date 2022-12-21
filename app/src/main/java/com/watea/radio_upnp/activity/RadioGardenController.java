@@ -25,6 +25,7 @@ package com.watea.radio_upnp.activity;
 
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Handler;
@@ -77,6 +78,7 @@ public class RadioGardenController {
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static final String MARKET = "market://details?id=";
   private static final String RADIO_GARDEN_PACKAGE = "com.jonathanpuckey.radiogarden";
+  private static final String PLAY_STORE_PACKAGE = "com.android.vending";
   private static final String RADIO_GARDEN = "http://radio.garden/api/ara/content/";
   private static final String CHANNEL = "channel/";
   private static final String LISTEN = "listen/";
@@ -146,15 +148,24 @@ public class RadioGardenController {
     }
   }
 
+  // Show help if not gotIt.
+  // Else launch Radio Garden or bring user to the market if Radio Garden not installed.
   public void launchRadioGarden(boolean gotIt) {
     if (gotIt) {
-      // Launch Radio Garden or bring user to the market if Radio Garden not installed
-      final Intent intent = mainActivity
-        .getPackageManager()
-        .getLaunchIntentForPackage(RADIO_GARDEN_PACKAGE);
-      mainActivity.startActivity(((intent == null) ? new Intent(Intent.ACTION_VIEW) : intent)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        .setData(Uri.parse(MARKET + RADIO_GARDEN_PACKAGE)));
+      final PackageManager packageManager = mainActivity.getPackageManager();
+      Intent intent = packageManager.getLaunchIntentForPackage(RADIO_GARDEN_PACKAGE);
+      if (intent == null) {
+        // Radio Garden not installed
+        intent = packageManager.getLaunchIntentForPackage(PLAY_STORE_PACKAGE);
+        if (intent == null) {
+          // Play Store not installed
+          mainActivity.tell(R.string.play_store_not_installed);
+          return;
+        } else {
+          intent = new Intent(Intent.ACTION_VIEW).setData(Uri.parse(MARKET + RADIO_GARDEN_PACKAGE));
+        }
+      }
+      mainActivity.startActivity(intent);
     } else {
       radioGardenAlertDialog.show();
     }

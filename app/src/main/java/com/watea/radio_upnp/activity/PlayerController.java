@@ -352,7 +352,7 @@ public class PlayerController {
   public void onActivityResume(@NonNull RadioLibrary radioLibrary) {
     // Reset start state
     radioLibraryListener.onNewCurrentRadio(null);
-    // Connect
+    // Connect to other components
     (this.radioLibrary = radioLibrary).addListener(radioLibraryListener);
     mediaBrowser.connect();
   }
