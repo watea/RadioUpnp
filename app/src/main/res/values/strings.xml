@@ -25,6 +25,7 @@
     <string name="app_name">RadioUpnp</string>
     <string name="radio_service_description">Streams radio for RadioUpnp app</string>
     <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
+    <string name="http_service_description">Handles HTTP request for RadioUpnp app</string>
     <string name="copyright">Copyright &#169; 2018 Stephane Treuchot</string>
     <string name="credit">Credit:</string>
     <string name="credit_0">- Icon by shareicon.net</string>

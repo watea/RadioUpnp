@@ -70,7 +70,15 @@
         </service>
 
         <service
-            android:name="org.fourthline.cling.android.AndroidUpnpServiceImpl"
+            android:name="com.watea.radio_upnp.service.HttpService"
+            android:description="@string/http_service_description"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback">
+        </service>
+
+        <service
+            android:name="com.watea.radio_upnp.cling.UpnpService"
             android:description="@string/upnp_service_description"
             android:enabled="true"
             android:exported="false"

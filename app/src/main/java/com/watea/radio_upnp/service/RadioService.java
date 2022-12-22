@@ -60,12 +60,12 @@ import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
+import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
 
 import org.fourthline.cling.android.AndroidUpnpService;
-import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
@@ -81,15 +81,46 @@ public class RadioService
   private static final int NOTIFICATION_ID = 9;
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
-  private final UpnpServiceConnection upnpConnection = new UpnpServiceConnection();
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
   private NotificationManagerCompat notificationManager;
   private UpnpActionController upnpActionController = null;
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
+  private final ServiceConnection upnpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+      androidUpnpService = (AndroidUpnpService) iBinder;
+      assert androidUpnpService != null;
+      upnpActionController = new UpnpActionController(androidUpnpService);
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName componentName) {
+      androidUpnpService = null;
+      assert upnpActionController != null;
+      upnpActionController.release(false);
+      upnpActionController = null;
+    }
+  };
   private MediaSessionCompat session;
   private RadioLibrary radioLibrary = null;
+  private HttpService.HttpServer httpServer = null;
+  private final ServiceConnection httpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+      httpServer = (HttpService.HttpServer) iBinder;
+      // Bind to RadioHandler
+      if (httpServer != null) {
+        httpServer.bindRadioHandler(RadioService.this, radioLibrary::getFrom);
+      }
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName componentName) {
+      httpServer = null;
+    }
+  };
   private PlayerAdapter playerAdapter = null;
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
@@ -98,7 +129,6 @@ public class RadioService
         playerAdapter.adjustVolume(direction);
       }
     };
-  private HttpServer httpServer = null;
   private boolean isAllowedToRewind = false;
   private String lockKey;
   private NotificationCompat.Action actionPause;
@@ -147,23 +177,15 @@ public class RadioService
     }
     // Radio library access
     radioLibrary = new RadioLibrary(this);
-    // Init HTTP Server
-    httpServer = new HttpServer(
-      this,
-      getString(R.string.app_name),
-      radioLibrary::getFrom,
-      this,
-      () -> {
-        Log.d(LOG_TAG, "HTTP Server error");
-        stopSelf();
-      });
-    httpServer.start();
-    // Bind to UPnP service, launch if not already
+    // Bind to HTTP service
     if (!bindService(
-      new Intent(this, AndroidUpnpServiceImpl.class),
-      upnpConnection,
-      BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
+      new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+    }
+    // Bind to UPnP service
+    if (!bindService(
+      new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
     }
     // Prepare notification
     actionPause = new NotificationCompat.Action(
@@ -262,7 +284,9 @@ public class RadioService
           case PlaybackStateCompat.STATE_ERROR:
             // For user convenience, session is kept alive
             playerAdapter.release();
-            httpServer.setRadioHandlerController(null);
+            if (httpServer != null) {
+              httpServer.setRadioHandlerController(null);
+            }
             // Try to relaunch just once
             if (isAllowedToRewind) {
               isAllowedToRewind = false;
@@ -283,8 +307,12 @@ public class RadioService
             }
             break;
           default:
-            playerAdapter.release();
-            httpServer.setRadioHandlerController(null);
+            if (playerAdapter != null) {
+              playerAdapter.release();
+            }
+            if (httpServer != null) {
+              httpServer.setRadioHandlerController(null);
+            }
             session.setMetadata(null);
             session.setActive(false);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -307,14 +335,12 @@ public class RadioService
     if (playerAdapter != null) {
       playerAdapter.stop();
     }
+    // Stop HTTP service
+    unbindService(httpConnection);
     // Stop UPnP service
     unbindService(upnpConnection);
     // Forced disconnection
     upnpConnection.onServiceDisconnected(null);
-    // Stop HTTP server, if created
-    if (httpServer != null) {
-      httpServer.stopServer();
-    }
     // Release radioLibrary, if opened
     if (radioLibrary != null) {
       radioLibrary.close();
@@ -414,25 +440,6 @@ public class RadioService
     return mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
   }
 
-  private class UpnpServiceConnection implements ServiceConnection {
-    @Override
-    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-      androidUpnpService = (AndroidUpnpService) iBinder;
-      if (androidUpnpService != null) {
-        upnpActionController = new UpnpActionController(androidUpnpService);
-      }
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName componentName) {
-      androidUpnpService = null;
-      if (upnpActionController != null) {
-        upnpActionController.release(false);
-        upnpActionController = null;
-      }
-    }
-  }
-
   // PlayerAdapter from session for actual media controls
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
@@ -457,7 +464,8 @@ public class RadioService
       boolean isUpnp = extras.containsKey(getString(R.string.key_upnp_device));
       final Device<?, ?, ?> chosenDevice = isUpnp ?
         getChosenDevice(extras.getString(getString(R.string.key_upnp_device))) : null;
-      final Uri serverUri = httpServer.getUri();
+      assert httpServer != null;
+      final Uri serverUri = httpServer.getUri(RadioService.this);
       // UPnP not accepted if environment not OK => force local
       if (isUpnp &&
         ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
@@ -476,7 +484,7 @@ public class RadioService
           radio,
           lockKey,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
-          httpServer.createLogoFile(radio),
+          httpServer.createLogoFile(RadioService.this, radio),
           chosenDevice,
           upnpActionController);
         session.setPlaybackToRemote(volumeProviderCompat);
@@ -501,7 +509,8 @@ public class RadioService
 
     @Override
     public void onPlay() {
-      httpServer.resumeHandler();
+      assert httpServer != null;
+      httpServer.unlockRadioHandler();
       playerAdapter.play();
     }
 
@@ -528,6 +537,7 @@ public class RadioService
     @Override
     public void onStop() {
       playerAdapter.stop();
+      playerAdapter = null;
     }
 
     private Device<?, ?, ?> getChosenDevice(String identity) {

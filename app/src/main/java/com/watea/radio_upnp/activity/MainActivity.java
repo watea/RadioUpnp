@@ -67,13 +67,14 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
+import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
+import com.watea.radio_upnp.service.HttpService;
 import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.fourthline.cling.android.AndroidUpnpService;
-import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
 import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.registry.Registry;
@@ -184,42 +185,53 @@ public class MainActivity
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
   private AndroidUpnpService androidUpnpService = null;
+  private UpnpService.Binder upnpServiceBinder = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
+  private HttpService.HttpServer httpServer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) {
+      upnpServiceBinder = (UpnpService.Binder) service;
       androidUpnpService = (AndroidUpnpService) service;
-      assert getRegistry() != null;
-      // Add local export device
-      importController.addExportService(getRegistry());
-      // Define adapters
-      upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
-      // Add all devices to the list we already know about
-      for (RemoteDevice remoteDevice : getRegistry().getRemoteDevices()) {
-        upnpRegistryAdapter.remoteDeviceAdded(getRegistry(), remoteDevice);
-        importController.getRegistryListener().remoteDeviceAdded(getRegistry(), remoteDevice);
+      // We don't know which service (HTTP or UPnP) is ready first to init UPnP Service
+      if (httpServer != null) {
+        initUpnpService();
       }
-      // Get ready for future device advertisements
-      getRegistry().addListener(upnpRegistryAdapter);
-      getRegistry().addListener(importController.getRegistryListener());
-      // Ask for devices
-      upnpSearch();
     }
 
     @Override
     public void onServiceDisconnected(ComponentName className) {
       // Robustness, shall be defined here
       if (androidUpnpService != null) {
-        assert getRegistry() != null;
+        final Registry registry = androidUpnpService.getRegistry();
         if (upnpRegistryAdapter != null) {
-          getRegistry().removeListener(upnpRegistryAdapter);
+          registry.removeListener(upnpRegistryAdapter);
           upnpRegistryAdapter = null;
         }
-        getRegistry().removeListener(importController.getRegistryListener());
+        registry.removeListener(importController.getRegistryListener());
         androidUpnpService = null;
       }
       upnpDevicesAdapter.onResetRemoteDevices();
+    }
+  };
+  private final ServiceConnection httpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+      httpServer = (HttpService.HttpServer) iBinder;
+      // We don't know which service (HTTP or UPnP) is ready first to init UPnP Service
+      if (androidUpnpService != null) {
+        initUpnpService();
+      }
+      // Launch HTTP Server
+      startService(new Intent(MainActivity.this, HttpService.class));
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName componentName) {
+      assert httpServer != null;
+      httpServer.stop();
+      httpServer = null;
     }
   };
   private Intent newIntent = null;
@@ -329,8 +341,7 @@ public class MainActivity
     if (androidUpnpService == null) {
       tell(R.string.service_not_available);
     } else {
-      assert getRegistry() != null;
-      getRegistry().removeAllRemoteDevices();
+      androidUpnpService.getRegistry().removeAllRemoteDevices();
       upnpDevicesAdapter.onResetRemoteDevices();
       tell(R.string.dlna_search_reset);
     }
@@ -438,6 +449,7 @@ public class MainActivity
   @Override
   protected void onPause() {
     super.onPause();
+    Log.d(LOG_TAG, "onPause");
     // Shared preferences
     getPreferences(Context.MODE_PRIVATE)
       .edit()
@@ -445,12 +457,16 @@ public class MainActivity
       .apply();
     // Stop UPnP service
     unbindService(upnpConnection);
+    // Stop HTTP service
+    unbindService(httpConnection);
     // Forced disconnection
+    httpConnection.onServiceDisconnected(null);
     upnpConnection.onServiceDisconnected(null);
     // PlayerController call
     playerController.onActivityPause();
     // Close radios database
     radioLibrary.close();
+    Log.d(LOG_TAG, "onPause done!");
   }
 
   @Override
@@ -462,6 +478,7 @@ public class MainActivity
   @Override
   protected void onResume() {
     super.onResume();
+    Log.d(LOG_TAG, "onResume");
     // Create radio database (order matters)
     radioLibrary = new RadioLibrary(this);
     // Create default radios on first start
@@ -473,12 +490,14 @@ public class MainActivity
       // Robustness: store immediately to avoid bad user experience in case of app crash
       sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
     }
-    // Start the UPnP service
+    // Bind to UPnP service
     if (!bindService(
-      new Intent(this, AndroidUpnpServiceImpl.class),
-      upnpConnection,
-      BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
+      new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
+    }
+    // Bind to HTTP Service
+    if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
     }
     // PlayerController call
     playerController.onActivityResume(radioLibrary);
@@ -487,6 +506,7 @@ public class MainActivity
       radioGardenController.onNewIntent(newIntent);
       newIntent = null;
     }
+    Log.d(LOG_TAG, "onResume done!");
   }
 
   @Override
@@ -594,6 +614,30 @@ public class MainActivity
     }
   }
 
+  private void initUpnpService() {
+    assert httpServer != null;
+    assert upnpServiceBinder != null;
+    assert androidUpnpService != null;
+    // Init the service
+    upnpServiceBinder.init(httpServer);
+    // So registry is defined
+    final Registry registry = androidUpnpService.getRegistry();
+    // Add local export device
+    importController.addExportService(registry);
+    // Define adapters
+    upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
+    // Add all devices to the list we already know about
+    for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
+      upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
+      importController.getRegistryListener().remoteDeviceAdded(registry, remoteDevice);
+    }
+    // Get ready for future device advertisements
+    registry.addListener(upnpRegistryAdapter);
+    registry.addListener(importController.getRegistryListener());
+    // Ask for devices
+    upnpSearch();
+  }
+
   private void sendLogcatMail() {
     // File is stored at root place for app
     final File logFile = new File(getFilesDir(), "logcat.txt");
@@ -647,11 +691,6 @@ public class MainActivity
         .putExtra("app_package", getPackageName())
         .putExtra("app_uid", getApplicationInfo().uid);
     startActivity(intent);
-  }
-
-  @Nullable
-  private Registry getRegistry() {
-    return (androidUpnpService == null) ? null : androidUpnpService.getRegistry();
   }
 
   private void setDefaultRadios() {

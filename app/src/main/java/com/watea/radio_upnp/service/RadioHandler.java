@@ -59,20 +59,16 @@ public class RadioHandler extends AbstractHandler {
   @NonNull
   private final String userAgent;
   @NonNull
-  private final Callback callback;
+  private Callback callback = unused -> null;
   @NonNull
-  private final Listener listener;
+  private Listener listener = new Listener() {
+  };
   @Nullable
   private Controller controller = null;
 
-  public RadioHandler(
-    @NonNull String userAgent,
-    @NonNull Callback callback,
-    @NonNull Listener listener) {
+  public RadioHandler(@NonNull String userAgent) {
     super();
     this.userAgent = userAgent;
-    this.callback = callback;
-    this.listener = listener;
   }
 
   // Add ID and lock key to given URI as query parameter
@@ -86,14 +82,14 @@ public class RadioHandler extends AbstractHandler {
       .build();
   }
 
-  public synchronized void resume() {
+  // Must be called
+  public synchronized void setController(@Nullable Controller controller) {
+    this.controller = controller;
     notifyAll();
   }
 
-  // Must be called
-  public void setController(@Nullable Controller controller) {
-    this.controller = controller;
-    resume();
+  public synchronized void unlock() {
+    notifyAll();
   }
 
   @Override
@@ -127,6 +123,11 @@ public class RadioHandler extends AbstractHandler {
         handleConnection(request, response, radio, lockKey, controller);
       }
     }
+  }
+
+  public void bind(@NonNull Listener listener, @NonNull Callback callback) {
+    this.listener = listener;
+    this.callback = callback;
   }
 
   private synchronized void pause() throws InterruptedException {
@@ -300,10 +301,11 @@ public class RadioHandler extends AbstractHandler {
   }
 
   public interface Listener {
-    void onNewInformation(
+    default void onNewInformation(
       @NonNull String information,
       @Nullable String rate,
-      @NonNull String lockKey);
+      @NonNull String lockKey) {
+    }
   }
 
   public interface Callback {
