@@ -134,9 +134,12 @@ public class HttpService extends Service {
     void unlockRadioHandler();
 
     void stop();
+
+    @NonNull
+    Server getServer();
   }
 
-  protected class Binder extends android.os.Binder implements HttpServer {
+  public class Binder extends android.os.Binder implements HttpServer {
     @Override
     public int getLocalPort() {
       return ((ServerConnector) server.getConnectors()[0]).getLocalPort();
@@ -199,6 +202,12 @@ public class HttpService extends Service {
     @Override
     public void stop() {
       HttpService.this.stopSelf();
+    }
+
+    @NonNull
+    @Override
+    public Server getServer() {
+      return server;
     }
   }
 }

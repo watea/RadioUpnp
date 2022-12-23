@@ -21,10 +21,13 @@ import androidx.annotation.NonNull;
 
 import com.watea.radio_upnp.service.HttpService;
 
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.fourthline.cling.transport.spi.ServletContainerAdapter;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 import javax.servlet.Servlet;
@@ -59,8 +62,25 @@ public class JettyServletContainer implements ServletContainerAdapter {
   }
 
   @Override
-  public synchronized int addConnector(String host, int port) {
-    return httpServer.getLocalPort();
+  public synchronized int addConnector(String host, int port) throws IOException {
+    final Server server = httpServer.getServer();
+    final ServerConnector connector = new ServerConnector(server);
+    connector.setHost(host);
+    connector.setPort(port);
+    // Open immediately so we can get the assigned local port
+    connector.open();
+    // Only add if open() succeeded
+    httpServer.getServer().addConnector(connector);
+    // stats the connector if the server is started (server starts all connectors when started)
+    if (server.isStarted()) {
+      try {
+        connector.start();
+      } catch (Exception ex) {
+        Log.e(LOG_TAG, "Couldn't start connector: " + connector, ex);
+        throw new RuntimeException(ex);
+      }
+    }
+    return connector.getLocalPort();
   }
 
   @Override

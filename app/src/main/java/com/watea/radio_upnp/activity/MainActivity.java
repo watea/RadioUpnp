@@ -194,10 +194,7 @@ public class MainActivity
     public void onServiceConnected(ComponentName className, IBinder service) {
       upnpServiceBinder = (UpnpService.Binder) service;
       androidUpnpService = (AndroidUpnpService) service;
-      // We don't know which service (HTTP or UPnP) is ready first to init UPnP Service
-      if (httpServer != null) {
-        initUpnpService();
-      }
+      initUpnpService();
     }
 
     @Override
@@ -214,17 +211,42 @@ public class MainActivity
       }
       upnpDevicesAdapter.onResetRemoteDevices();
     }
+
+    private void initUpnpService() {
+      assert httpServer != null;
+      assert upnpServiceBinder != null;
+      assert androidUpnpService != null;
+      // Init the service
+      upnpServiceBinder.init(httpServer);
+      // So registry is defined
+      final Registry registry = androidUpnpService.getRegistry();
+      // Add local export device
+      importController.addExportService(registry);
+      // Define adapters
+      upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
+      // Add all devices to the list we already know about
+      for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
+        upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
+        importController.getRegistryListener().remoteDeviceAdded(registry, remoteDevice);
+      }
+      // Get ready for future device advertisements
+      registry.addListener(upnpRegistryAdapter);
+      registry.addListener(importController.getRegistryListener());
+      // Now we can launch HTTP Server
+      startService(new Intent(MainActivity.this, HttpService.class));
+      // Ask for devices
+      upnpSearch();
+    }
   };
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
       httpServer = (HttpService.HttpServer) iBinder;
-      // We don't know which service (HTTP or UPnP) is ready first to init UPnP Service
-      if (androidUpnpService != null) {
-        initUpnpService();
+      // Bind to UPnP service
+      if (!bindService(
+        new Intent(MainActivity.this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+        Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
       }
-      // Launch HTTP Server
-      startService(new Intent(MainActivity.this, HttpService.class));
     }
 
     @Override
@@ -490,11 +512,6 @@ public class MainActivity
       // Robustness: store immediately to avoid bad user experience in case of app crash
       sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
     }
-    // Bind to UPnP service
-    if (!bindService(
-      new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
-    }
     // Bind to HTTP Service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
@@ -612,30 +629,6 @@ public class MainActivity
         outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
       }
     }
-  }
-
-  private void initUpnpService() {
-    assert httpServer != null;
-    assert upnpServiceBinder != null;
-    assert androidUpnpService != null;
-    // Init the service
-    upnpServiceBinder.init(httpServer);
-    // So registry is defined
-    final Registry registry = androidUpnpService.getRegistry();
-    // Add local export device
-    importController.addExportService(registry);
-    // Define adapters
-    upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
-    // Add all devices to the list we already know about
-    for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
-      upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
-      importController.getRegistryListener().remoteDeviceAdded(registry, remoteDevice);
-    }
-    // Get ready for future device advertisements
-    registry.addListener(upnpRegistryAdapter);
-    registry.addListener(importController.getRegistryListener());
-    // Ask for devices
-    upnpSearch();
   }
 
   private void sendLogcatMail() {
