@@ -71,7 +71,7 @@ public class JettyServletContainer implements ServletContainerAdapter {
     connector.open();
     // Only add if open() succeeded
     httpServer.getServer().addConnector(connector);
-    // stats the connector if the server is started (server starts all connectors when started)
+    // Start the connector if the server is started (server starts all connectors when started)
     if (server.isStarted()) {
       try {
         connector.start();

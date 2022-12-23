@@ -185,39 +185,16 @@ public class MainActivity
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
   private AndroidUpnpService androidUpnpService = null;
-  private UpnpService.Binder upnpServiceBinder = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private HttpService.HttpServer httpServer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) {
-      upnpServiceBinder = (UpnpService.Binder) service;
       androidUpnpService = (AndroidUpnpService) service;
-      initUpnpService();
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName className) {
-      // Robustness, shall be defined here
-      if (androidUpnpService != null) {
-        final Registry registry = androidUpnpService.getRegistry();
-        if (upnpRegistryAdapter != null) {
-          registry.removeListener(upnpRegistryAdapter);
-          upnpRegistryAdapter = null;
-        }
-        registry.removeListener(importController.getRegistryListener());
-        androidUpnpService = null;
-      }
-      upnpDevicesAdapter.onResetRemoteDevices();
-    }
-
-    private void initUpnpService() {
-      assert httpServer != null;
-      assert upnpServiceBinder != null;
-      assert androidUpnpService != null;
       // Init the service
-      upnpServiceBinder.init(httpServer);
+      assert httpServer != null;
+      ((UpnpService.Binder) service).init(httpServer);
       // So registry is defined
       final Registry registry = androidUpnpService.getRegistry();
       // Add local export device
@@ -237,12 +214,27 @@ public class MainActivity
       // Ask for devices
       upnpSearch();
     }
+
+    @Override
+    public void onServiceDisconnected(ComponentName className) {
+      // Robustness, shall be defined here
+      if (androidUpnpService != null) {
+        final Registry registry = androidUpnpService.getRegistry();
+        if (upnpRegistryAdapter != null) {
+          registry.removeListener(upnpRegistryAdapter);
+          upnpRegistryAdapter = null;
+        }
+        registry.removeListener(importController.getRegistryListener());
+        androidUpnpService = null;
+      }
+      upnpDevicesAdapter.onResetRemoteDevices();
+    }
   };
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
       httpServer = (HttpService.HttpServer) iBinder;
-      // Bind to UPnP service
+      // Now we can bind to UPnP service
       if (!bindService(
         new Intent(MainActivity.this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
         Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
@@ -512,7 +504,7 @@ public class MainActivity
       // Robustness: store immediately to avoid bad user experience in case of app crash
       sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
     }
-    // Bind to HTTP Service
+    // Bind to HTTP Service, connection will launch UPnP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
     }

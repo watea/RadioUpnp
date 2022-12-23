@@ -111,8 +111,6 @@ public class HttpService extends Service {
   }
 
   public interface HttpServer {
-    int getLocalPort();
-
     // Return logo file Uri; a jpeg file
     @Nullable
     Uri createLogoFile(@NonNull Context context, @NonNull Radio radio);
@@ -140,11 +138,6 @@ public class HttpService extends Service {
   }
 
   public class Binder extends android.os.Binder implements HttpServer {
-    @Override
-    public int getLocalPort() {
-      return ((ServerConnector) server.getConnectors()[0]).getLocalPort();
-    }
-
     @Override
     // Return logo file Uri; a jpeg file
     @Nullable
@@ -208,6 +201,10 @@ public class HttpService extends Service {
     @Override
     public Server getServer() {
       return server;
+    }
+
+    private int getLocalPort() {
+      return ((ServerConnector) server.getConnectors()[0]).getLocalPort();
     }
   }
 }
