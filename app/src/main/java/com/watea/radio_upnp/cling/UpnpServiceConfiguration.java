@@ -17,6 +17,7 @@ package com.watea.radio_upnp.cling;
 
 import androidx.annotation.NonNull;
 
+import com.watea.radio_upnp.service.Exporter;
 import com.watea.radio_upnp.service.HttpService;
 
 import org.fourthline.cling.DefaultUpnpServiceConfiguration;
@@ -26,6 +27,8 @@ import org.fourthline.cling.binding.xml.RecoveringUDA10DeviceDescriptorBinderImp
 import org.fourthline.cling.binding.xml.ServiceDescriptorBinder;
 import org.fourthline.cling.binding.xml.UDA10ServiceDescriptorBinderSAXImpl;
 import org.fourthline.cling.model.Namespace;
+import org.fourthline.cling.model.types.ServiceType;
+import org.fourthline.cling.model.types.UDAServiceType;
 import org.fourthline.cling.transport.impl.AsyncServletStreamServerConfigurationImpl;
 import org.fourthline.cling.transport.impl.AsyncServletStreamServerImpl;
 import org.fourthline.cling.transport.impl.RecoveringGENAEventProcessorImpl;
@@ -87,9 +90,15 @@ public class UpnpServiceConfiguration extends DefaultUpnpServiceConfiguration {
       new JettyServletContainer(httpServer), networkAddressFactory.getStreamListenPort()));
   }
 
+  // Limit response to UPnP search
+  @Override
+  public ServiceType[] getExclusiveServiceTypes() {
+    return new ServiceType[]{new UDAServiceType(Exporter.EXPORTER_SERVICE)};
+  }
+
   @Override
   public int getRegistryMaintenanceIntervalMillis() {
-    return 3000; // Preserve battery on Android, only run every 3 seconds
+    return 5000; // Preserve battery on Android, only run every 5 seconds
   }
 
   @Override
