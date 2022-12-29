@@ -34,7 +34,6 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.RadioHandler;
 import com.watea.radio_upnp.service.UpnpActionController;
 import com.watea.radio_upnp.service.UpnpWatchdog;
 
@@ -53,7 +52,7 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.UpnpController {
+public class UpnpPlayerAdapter extends PlayerAdapter {
   public static final ServiceId AV_TRANSPORT_SERVICE_ID = new UDAServiceId("AVTransport");
   public static final DeviceType RENDERER_DEVICE_TYPE = new UDADeviceType("MediaRenderer");
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
@@ -409,7 +408,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter implements RadioHandler.Upn
 
   // Special handling for MIME type
   @NonNull
-  @Override
   public String getContentType() {
     final String HEAD_EXP = "[a-z]*/";
     String contentType = upnpActionController.getContentType(radio);

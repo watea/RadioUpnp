@@ -36,6 +36,7 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -125,9 +126,11 @@ public class HttpService extends Service {
 
     void bindRadioHandler(
       @NonNull RadioHandler.Listener radioHandlerListener,
-      @NonNull RadioHandler.Callback radioHandlerCallback);
+      @NonNull RadioLibrary.Provider radioLibraryProvider);
 
-    void setRadioHandlerController(@Nullable RadioHandler.Controller radioHandlerController);
+    void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController);
+
+    void resetRadioHandlerController();
 
     void unlockRadioHandler();
 
@@ -176,15 +179,21 @@ public class HttpService extends Service {
     @Override
     public void bindRadioHandler(
       @NonNull RadioHandler.Listener radioHandlerListener,
-      @NonNull RadioHandler.Callback radioHandlerCallback) {
+      @NonNull RadioLibrary.Provider radioLibraryProvider) {
       assert radioHandler != null;
-      radioHandler.bind(radioHandlerListener, radioHandlerCallback);
+      radioHandler.bind(radioHandlerListener, radioLibraryProvider);
     }
 
     @Override
-    public void setRadioHandlerController(@Nullable RadioHandler.Controller radioHandlerController) {
+    public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
       assert radioHandler != null;
       radioHandler.setController(radioHandlerController);
+    }
+
+    @Override
+    public void resetRadioHandlerController() {
+      assert radioHandler != null;
+      radioHandler.resetController();
     }
 
     @Override

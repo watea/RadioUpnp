@@ -285,7 +285,7 @@ public class RadioService
             // For user convenience, session is kept alive
             playerAdapter.release();
             if (httpServer != null) {
-              httpServer.setRadioHandlerController(null);
+              httpServer.resetRadioHandlerController();
             }
             // Try to relaunch just once
             if (isAllowedToRewind) {
@@ -311,7 +311,7 @@ public class RadioService
               playerAdapter.release();
             }
             if (httpServer != null) {
-              httpServer.setRadioHandlerController(null);
+              httpServer.resetRadioHandlerController();
             }
             session.setMetadata(null);
             session.setActive(false);
@@ -497,8 +497,27 @@ public class RadioService
           RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       }
-      // PlayerAdapter controls radio stream
-      httpServer.setRadioHandlerController(playerAdapter);
+      // Set controller for HTTP handler
+      httpServer.setRadioHandlerController(new RadioHandler.Controller() {
+        @NonNull
+        @Override
+        public String getKey() {
+          return lockKey;
+        }
+
+        @Override
+        public boolean isPaused() {
+          return playerAdapter.isPaused();
+        }
+
+        @NonNull
+        @Override
+        public String getContentType() {
+          return (playerAdapter instanceof UpnpPlayerAdapter) ?
+            ((UpnpPlayerAdapter) playerAdapter).getContentType() :
+            RadioHandler.Controller.super.getContentType();
+        }
+      });
       // Start service, must be done while activity has foreground
       if (playerAdapter.prepareFromMediaId()) {
         startService(new Intent(RadioService.this, RadioService.class));

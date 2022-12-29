@@ -364,6 +364,11 @@ public class RadioLibrary {
     }
   }
 
+  public interface Provider {
+    @Nullable
+    Radio getFrom(@NonNull Long radioId);
+  }
+
   private static class RadioDbSQLHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
     private static final String DATABASE_NAME = "Radio.db";

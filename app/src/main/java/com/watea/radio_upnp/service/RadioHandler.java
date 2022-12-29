@@ -31,6 +31,7 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -59,12 +60,13 @@ public class RadioHandler extends AbstractHandler {
   @NonNull
   private final String userAgent;
   @NonNull
-  private Callback callback = unused -> null;
+  private RadioLibrary.Provider radioLibraryProvider = unused -> null;
   @NonNull
   private Listener listener = new Listener() {
   };
-  @Nullable
-  private Controller controller = null;
+  @NonNull
+  private Controller controller = new Controller() {
+  };
 
   public RadioHandler(@NonNull String userAgent) {
     super();
@@ -83,9 +85,13 @@ public class RadioHandler extends AbstractHandler {
   }
 
   // Must be called
-  public synchronized void setController(@Nullable Controller controller) {
+  public synchronized void setController(@NonNull Controller controller) {
     this.controller = controller;
-    notifyAll();
+  }
+
+  public synchronized void resetController() {
+    controller = new Controller() {
+    };
   }
 
   public synchronized void unlock() {
@@ -112,34 +118,30 @@ public class RadioHandler extends AbstractHandler {
     final String[] params = param.split(SEPARATOR);
     final String radioId = (params.length > 0) ? params[0] : null;
     final String lockKey = (params.length > 1) ? params[1] : null;
-    if ((radioId == null) || (lockKey == null) || (controller == null)) {
-      Log.i(LOG_TAG, "Unexpected request received. Radio || UUID || controller is null.");
+    if ((radioId == null) || (lockKey == null)) {
+      Log.i(LOG_TAG, "Unexpected request received. Radio or UUID is null.");
     } else {
-      final Radio radio = callback.getFrom(Long.decode(radioId));
+      final Radio radio = radioLibraryProvider.getFrom(Long.decode(radioId));
       if (radio == null) {
         Log.i(LOG_TAG, "Unknown radio");
       } else {
         baseRequest.setHandled(true);
-        handleConnection(request, response, radio, lockKey, controller);
+        handleConnection(request, response, radio, lockKey);
       }
     }
   }
 
-  public void bind(@NonNull Listener listener, @NonNull Callback callback) {
+  public void bind(@NonNull Listener listener,
+                   @NonNull RadioLibrary.Provider radioLibraryProvider) {
     this.listener = listener;
-    this.callback = callback;
-  }
-
-  private synchronized void pause() throws InterruptedException {
-    wait();
+    this.radioLibraryProvider = radioLibraryProvider;
   }
 
   private void handleConnection(
     @NonNull final HttpServletRequest request,
     @NonNull final HttpServletResponse response,
     @NonNull final Radio radio,
-    @NonNull final String lockKey,
-    @NonNull final Controller controller) {
+    @NonNull final String lockKey) {
     final String method = request.getMethod();
     Log.d(LOG_TAG,
       "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
@@ -169,19 +171,15 @@ public class RadioHandler extends AbstractHandler {
           }
         }
       }
-      if (controller instanceof UpnpController) {
+      final String contentType = controller.getContentType();
+      // contentType defined only for UPnP
+      if (contentType.length() > 0) {
         // DLNA header, as found in documentation, not sure it is useful (should not)
         response.setHeader("contentFeatures.dlna.org", "*");
         response.setHeader("transferMode.dlna.org", "Streaming");
         // Force ContentType as some devices require it
-        final String contentType = ((UpnpController) controller).getContentType();
-        if (contentType == null) {
-          // Should not happen
-          Log.e(LOG_TAG, "Internal failure; ContentType is null");
-        } else {
-          Log.d(LOG_TAG, "UPnP connection; ContentType forced: " + contentType);
-          response.setContentType(contentType);
-        }
+        Log.d(LOG_TAG, "UPnP connection; ContentType forced: " + contentType);
+        response.setContentType(contentType);
       }
       response.setStatus(HttpServletResponse.SC_OK);
       response.flushBuffer();
@@ -213,8 +211,7 @@ public class RadioHandler extends AbstractHandler {
           metadataOffset,
           outputStream,
           httpURLConnection.getHeaderField("icy-br"),
-          lockKey,
-          controller);
+          lockKey);
       }
     } catch (Exception exception) {
       Log.d(LOG_TAG, "handleConnection error", exception);
@@ -234,8 +231,7 @@ public class RadioHandler extends AbstractHandler {
     final int metadataOffset,
     @NonNull final OutputStream outputStream,
     @Nullable final String rate,
-    @NonNull final String lockKey,
-    @NonNull final Controller controller) throws IOException, InterruptedException {
+    @NonNull final String lockKey) throws IOException {
     Log.d(LOG_TAG, "handleStreaming: entering");
     // Flush information, send rate
     listener.onNewInformation("", rate, lockKey);
@@ -244,56 +240,49 @@ public class RadioHandler extends AbstractHandler {
     int metadataBlockBytesRead = 0;
     int metadataSize = 0;
     // Stop if not current controller
-    while (controller == this.controller) {
-      if (this.controller.isPaused()) {
-        pause();
-      }
-      final int readResult = inputStream.read(buffer);
-      if (readResult < 0) {
-        Log.d(LOG_TAG, "No more data to read");
-        break;
-      }
-      if (readResult > 0) {
-        // Only stream data are transferred
-        if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+    while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
+      final boolean isActiv = !controller.isPaused();
+      // Only stream data are transferred
+      if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+        if (isActiv) {
           outputStream.write(buffer);
-        } else {
-          // Metadata: look for title information
-          final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
-          // First byte gives size (16 bytes chunks) to read for metadata
-          if (metadataIndex == 0) {
-            metadataSize = buffer[0] * 16;
-            metadataBuffer.clear();
-          } else if (metadataIndex <= METADATA_MAX) {
-            // Other bytes are metadata
-            metadataBuffer.put(buffer[0]);
-          }
-          // End of metadata, extract pattern
-          if (metadataIndex == metadataSize) {
-            CharBuffer metadata = null;
-            metadataBuffer.flip();
-            // Exception blocked on metadata
-            try {
-              metadata = charsetDecoder.decode(metadataBuffer);
-            } catch (Exception exception) {
-              if (BuildConfig.DEBUG) {
-                Log.w(LOG_TAG, "Error decoding metadata", exception);
-              }
+        }
+      } else {
+        // Metadata: look for title information
+        final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+        // First byte gives size (16 bytes chunks) to read for metadata
+        if (metadataIndex == 0) {
+          metadataSize = buffer[0] * 16;
+          metadataBuffer.clear();
+        } else if (metadataIndex <= METADATA_MAX) {
+          // Other bytes are metadata
+          metadataBuffer.put(buffer[0]);
+        }
+        // End of metadata, extract pattern
+        if (metadataIndex == metadataSize) {
+          CharBuffer metadata = null;
+          metadataBuffer.flip();
+          // Exception blocked on metadata
+          try {
+            metadata = charsetDecoder.decode(metadataBuffer);
+          } catch (Exception exception) {
+            if (BuildConfig.DEBUG) {
+              Log.w(LOG_TAG, "Error decoding metadata", exception);
             }
-            if ((metadata != null) && (metadata.length() > 0)) {
-              if (BuildConfig.DEBUG) {
-                Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
-              }
-              final Matcher matcher = PATTERN_ICY.matcher(metadata);
-              // Tell listener
-              final String information =
-                (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
-              if (information != null) {
-                listener.onNewInformation(information, rate, lockKey);
-              }
-            }
-            metadataBlockBytesRead = 0;
           }
+          if ((metadata != null) && (metadata.length() > 0)) {
+            if (BuildConfig.DEBUG) {
+              Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+            }
+            final Matcher matcher = PATTERN_ICY.matcher(metadata);
+            // Tell listener
+            final String information =
+              (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
+            if (isActiv && (information != null)) {
+              listener.onNewInformation(information, rate, lockKey);
+            }
+          }
+          metadataBlockBytesRead = 0;
         }
       }
     }
@@ -308,17 +297,20 @@ public class RadioHandler extends AbstractHandler {
     }
   }
 
-  public interface Callback {
-    @Nullable
-    Radio getFrom(@NonNull Long radioId);
-  }
-
   public interface Controller {
-    boolean isPaused();
-  }
+    @NonNull
+    default String getKey() {
+      return "";
+    }
 
-  public interface UpnpController extends Controller {
-    @Nullable
-    String getContentType();
+    default boolean isPaused() {
+      return false;
+    }
+
+    // Only for UPnP
+    @NonNull
+    default String getContentType() {
+      return "";
+    }
   }
 }

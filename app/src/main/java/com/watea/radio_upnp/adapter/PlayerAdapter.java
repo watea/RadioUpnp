@@ -44,15 +44,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.RadioHandler;
 
 import java.util.Arrays;
 import java.util.List;
 
 // Abstract player implementation that handles playing music with proper handling of headphones
 // and audio focus
-public abstract class PlayerAdapter
-  implements RadioHandler.Controller, AudioManager.OnAudioFocusChangeListener {
+public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
   protected static final String DEFAULT_CONTENT_TYPE = AUDIO_CONTENT_TYPE + "mpeg";
   protected static final String APPLICATION_CONTENT_TYPE = "application/";
@@ -125,7 +123,6 @@ public abstract class PlayerAdapter
     return false;
   }
 
-  @Override
   public boolean isPaused() {
     return (state == PlaybackStateCompat.STATE_PAUSED);
   }
