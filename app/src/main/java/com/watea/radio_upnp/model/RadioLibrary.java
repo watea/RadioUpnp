@@ -244,20 +244,10 @@ public class RadioLibrary {
     return result.toString();
   }
 
-  // Symmetrical from export().
-  // Returns true if some radios have been imported.
-  public boolean importFrom(@NonNull String importString) {
-    boolean result = false;
-    if (!importString.isEmpty()) {
-      for (String radioString : importString.split(SPACER)) {
-        try {
-          result = add(new Radio(radioString)) || result;
-        } catch (MalformedURLException malformedURLException) {
-          Log.e(LOG_TAG, "importFrom: a radio failed to be imported", malformedURLException);
-        }
-      }
-    }
-    return result;
+  // Symmetrical to marshall
+  @NonNull
+  public String[] getRadioStrings(@NonNull String importString) {
+    return importString.split(SPACER);
   }
 
   // Utility for database update of radio position
