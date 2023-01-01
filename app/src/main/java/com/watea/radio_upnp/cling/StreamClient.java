@@ -71,7 +71,7 @@ public class StreamClient
     try {
       client.start();
     } catch (Exception exception) {
-      throw new InitializationException("Could not start Jetty HTTP client", exception);
+      throw new InitializationException("Could not start Jetty HttpClient", exception);
     }
   }
 
@@ -80,7 +80,7 @@ public class StreamClient
     try {
       client.stop();
     } catch (Exception exception) {
-      Log.i(LOG_TAG, "Error stopping HTTP client", exception);
+      Log.i(LOG_TAG, "Error stopping Jetty HttpClient", exception);
     }
   }
 
@@ -205,6 +205,7 @@ public class StreamClient
       }
       // -- Body --
       if (requestMessage.hasBody()) {
+        byte[] buffer;
         if (requestMessage.getBodyType() == UpnpMessage.BodyType.STRING) {
           Log.d(LOG_TAG, "Writing textual request body: " + requestMessage);
           final MimeType contentType = (requestMessage.getContentTypeHeader() == null) ?
@@ -214,13 +215,11 @@ public class StreamClient
             "UTF-8" :
             requestMessage.getContentTypeCharset();
           request.header(CONTENT_TYPE, contentType.toString());
-          byte[] buffer;
           try {
             buffer = requestMessage.getBodyString().getBytes(charset);
           } catch (UnsupportedEncodingException exception) {
             throw new RuntimeException("Unsupported character encoding: " + charset, exception);
           }
-          request.content(new BytesContentProvider(buffer));
         } else {
           Log.d(LOG_TAG, "Writing binary request body: " + requestMessage);
           if (requestMessage.getContentTypeHeader() == null)
@@ -228,10 +227,10 @@ public class StreamClient
               "Missing content type header in request message: " + requestMessage);
           final MimeType contentType = requestMessage.getContentTypeHeader().getValue();
           request.header(CONTENT_TYPE, contentType.toString());
-          final byte[] buffer = requestMessage.getBodyBytes();
+          buffer = requestMessage.getBodyBytes();
           request.header(CONTENT_LENGTH, String.valueOf(buffer.length));
-          request.content(new BytesContentProvider(buffer));
         }
+        request.content(new BytesContentProvider(buffer));
       }
     }
 

@@ -75,9 +75,9 @@ public class JettyServletContainer implements ServletContainerAdapter {
     if (server.isStarted()) {
       try {
         connector.start();
-      } catch (Exception ex) {
-        Log.e(LOG_TAG, "Couldn't start connector: " + connector, ex);
-        throw new RuntimeException(ex);
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "Couldn't start connector: " + connector, exception);
+        throw new RuntimeException(exception);
       }
     }
     return connector.getLocalPort();
