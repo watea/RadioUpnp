@@ -52,7 +52,6 @@ import org.fourthline.cling.registry.RegistryListener;
 
 import java.net.MalformedURLException;
 import java.util.List;
-import java.util.Vector;
 
 public class ImportController {
   private static final String LOG_TAG = ImportController.class.getName();
@@ -153,80 +152,76 @@ public class ImportController {
     final ActionInvocation<?> actionInvocation = new ActionInvocation<>(
       remoteDevice.findService(Exporter.EXPORTER_SERVICE_ID).getAction(ACTION_GET_EXPORT));
     // Executes asynchronous in the background
-    androidUpnpService.getControlPoint().execute(
-      new ActionCallback(actionInvocation) {
-        private final List<String> radioUrls = new Vector<>();
-        private final RadioLibrary radioLibrary = mainActivity.getRadioLibrary();
+    androidUpnpService.getControlPoint().execute(new ActionCallback(actionInvocation) {
+      private final RadioLibrary radioLibrary = mainActivity.getRadioLibrary();
+      private List<String> radioUrls;
 
-        @Override
-        public void success(ActionInvocation actionInvocation) {
-          Log.d(LOG_TAG, "Export action success");
-          final String export = actionInvocation.getOutput(Exporter.EXPORT).toString();
-          // Must be called on main thread for thread safety
-          handler.post(() -> {
-            if (export.isEmpty()) {
-              mainActivity.tell(R.string.import_no_import);
-            } else {
-              // Do nothing if session is closed
-              if (checkRadioLibrary()) {
-                assert radioLibrary != null;
-                // Search all radios URL
-                for (Long id : radioLibrary.getAllRadioIds()) {
-                  final Radio radio = radioLibrary.getFrom(id);
-                  if (radio != null) {
-                    radioUrls.add(radio.getURL().toString());
-                  }
-                }
-                // Import each radio asynchronously
-                final String[] radioStrings = radioLibrary.getRadioStrings(export);
-                new Thread(() -> {
-                  for (String radioString : radioStrings) {
-                    // Must be called on main thread for thread safety
-                    handler.post(() -> {
-                      // Do nothing if session is closed
-                      if (checkRadioLibrary()) {
-                        importRadio(radioString);
-                      }
-                    });
-                  }
-                }).start();
-              }
-            }
-          });
-        }
-
-        @Override
-        public void failure(
-          ActionInvocation actionInvocation, UpnpResponse operation, String defaultMsg) {
-          Log.d(LOG_TAG, "Export action error: " + defaultMsg);
-          mainActivity.tell(R.string.import_action_failed);
-        }
-
-        private boolean checkRadioLibrary() {
-          if ((radioLibrary != null) && radioLibrary.isOpen()) {
-            return true;
-          }
-          mainActivity.tell(R.string.import_bad_state);
-          return false;
-        }
-
-        private void importRadio(@NonNull String radioString) {
-          boolean result = false;
-          Radio radio = null;
-          try {
-            radio = new Radio(radioString);
-            // Don't add radio if already there
-            if (!radioUrls.contains(radio.getURL().toString())) {
+      @Override
+      public void success(ActionInvocation actionInvocation) {
+        Log.d(LOG_TAG, "Export action success");
+        final String export = actionInvocation.getOutput(Exporter.EXPORT).toString();
+        // Must be called on main thread for thread safety
+        handler.post(() -> {
+          if (export.isEmpty()) {
+            mainActivity.tell(R.string.import_no_import);
+          } else {
+            // Do nothing if session is closed
+            if (checkRadioLibrary()) {
               assert radioLibrary != null;
-              result = radioLibrary.add(radio);
+              radioUrls = radioLibrary.getAllRadioUrls();
+              // Import each radio asynchronously
+              final String[] radioStrings = radioLibrary.getRadioStrings(export);
+              new Thread(() -> {
+                for (String radioString : radioStrings) {
+                  // Must be called on main thread for thread safety
+                  handler.post(() -> {
+                    // Do nothing if session is closed
+                    if (checkRadioLibrary()) {
+                      importRadio(radioString);
+                    }
+                  });
+                }
+                handler.post(
+                  () -> mainActivity.tell(mainActivity.getString(R.string.import_successful)));
+              }).start();
             }
-          } catch (MalformedURLException malformedURLException) {
-            Log.e(LOG_TAG, "importRadio: a radio failed to be imported", malformedURLException);
           }
-          mainActivity.tell(
-            mainActivity.getString(result ? R.string.import_successful : R.string.import_failed) +
-              ((radio == null) ? mainActivity.getString(R.string.unknown) : radio.getName()) + "!");
+        });
+      }
+
+      @Override
+      public void failure(
+        ActionInvocation actionInvocation, UpnpResponse operation, String defaultMsg) {
+        Log.d(LOG_TAG, "Export action error: " + defaultMsg);
+        mainActivity.tell(R.string.import_action_failed);
+      }
+
+      private boolean checkRadioLibrary() {
+        if ((radioLibrary != null) && radioLibrary.isOpen()) {
+          return true;
         }
-      });
+        mainActivity.tell(R.string.import_bad_state);
+        return false;
+      }
+
+      private void importRadio(@NonNull String radioString) {
+        try {
+          final Radio radio = new Radio(radioString);
+          final String radioUrl = radio.getURL().toString();
+          // Don't add radio if already there
+          if (!radioUrls.contains(radioUrl)) {
+            assert radioLibrary != null;
+            final boolean result = radioLibrary.add(radio);
+            if (result) {
+              radioUrls.add(radioUrl);
+            }
+            Log.d(LOG_TAG,
+              "importRadio: " + (result ? "fail" : "success") + " for " + radio.getName());
+          }
+        } catch (MalformedURLException malformedURLException) {
+          Log.e(LOG_TAG, "importRadio: a radio failed to be imported", malformedURLException);
+        }
+      }
+    });
   }
 }

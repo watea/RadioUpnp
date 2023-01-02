@@ -40,6 +40,7 @@ import androidx.annotation.Nullable;
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Vector;
+import java.util.function.Function;
 
 public class RadioLibrary {
   private static final String LOG_TAG = RadioLibrary.class.getName();
@@ -150,12 +151,20 @@ public class RadioLibrary {
 
   @NonNull
   public List<Long> getAllRadioIds() {
-    return cursorToIdListAndClose(allIdsQuery());
+    final Cursor cursor = allIdsQuery();
+    return cursorToListAndClose(cursor, RadioSQLContract.Columns._ID, cursor::getLong);
+  }
+
+  @NonNull
+  public List<String> getAllRadioUrls() {
+    final Cursor cursor = allUrlsQuery();
+    return cursorToListAndClose(cursor, RadioSQLContract.Columns.COLUMN_URL, cursor::getString);
   }
 
   @NonNull
   public List<Long> getPreferredRadioIds() {
-    return cursorToIdListAndClose(preferredIdsQuery());
+    final Cursor cursor = preferredIdsQuery();
+    return cursorToListAndClose(cursor, RadioSQLContract.Columns._ID, cursor::getLong);
   }
 
   // Add a radio and store according icon
@@ -258,15 +267,19 @@ public class RadioLibrary {
     return contentValues;
   }
 
+  // columnName must be in cursor
   @NonNull
-  private List<Long> cursorToIdListAndClose(@NonNull Cursor cursor) {
-    final int idColumnIndex = cursor.getColumnIndexOrThrow(RadioSQLContract.Columns._ID);
-    final List<Long> radioIds = new Vector<>();
+  private <T> List<T> cursorToListAndClose(
+    @NonNull Cursor cursor,
+    @NonNull String columnName,
+    @NonNull Function<Integer, T> supplier) {
+    final List<T> results = new Vector<>();
+    final int idColumnIndex = cursor.getColumnIndexOrThrow(columnName);
     while (cursor.moveToNext()) {
-      radioIds.add(cursor.getLong(idColumnIndex));
+      results.add(supplier.apply(idColumnIndex));
     }
     cursor.close();
-    return radioIds;
+    return results;
   }
 
   @NonNull
@@ -286,6 +299,25 @@ public class RadioLibrary {
       null,
       // The sort order
       RadioSQLContract.Columns.COLUMN_POSITION + " ASC");
+  }
+
+  @NonNull
+  private Cursor allUrlsQuery() {
+    return radioDataBase.query(
+      // The table to query
+      RadioSQLContract.Columns.TABLE_RADIO,
+      // The columns to return
+      new String[]{RadioSQLContract.Columns.COLUMN_URL},
+      // The columns for the WHERE clause
+      null,
+      // The values for the WHERE clause
+      null,
+      // don't group the rows
+      null,
+      // don't filter by row groups
+      null,
+      // The sort order
+      null);
   }
 
   @NonNull
