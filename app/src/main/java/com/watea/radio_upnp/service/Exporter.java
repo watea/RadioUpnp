@@ -36,12 +36,15 @@ import org.fourthline.cling.binding.annotations.UpnpService;
 import org.fourthline.cling.binding.annotations.UpnpServiceId;
 import org.fourthline.cling.binding.annotations.UpnpServiceType;
 import org.fourthline.cling.binding.annotations.UpnpStateVariable;
+import org.fourthline.cling.model.types.ServiceId;
+import org.fourthline.cling.model.types.UDAServiceId;
 
 @UpnpService(
   serviceId = @UpnpServiceId(Exporter.EXPORTER_SERVICE),
   serviceType = @UpnpServiceType(value = Exporter.EXPORTER_SERVICE))
 public class Exporter {
   public static final String EXPORTER_SERVICE = "Exporter";
+  public static final ServiceId EXPORTER_SERVICE_ID = new UDAServiceId(EXPORTER_SERVICE);
   public static final String ACTION_GET_EXPORT = "GetExport";
   public static final String EXPORT = "Export";
   private static final String LOG_TAG = Exporter.class.getName();

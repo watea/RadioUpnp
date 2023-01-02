@@ -46,7 +46,6 @@ import org.fourthline.cling.model.action.ActionInvocation;
 import org.fourthline.cling.model.message.UpnpResponse;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
 import org.fourthline.cling.model.meta.RemoteDevice;
-import org.fourthline.cling.model.types.UDAServiceId;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.registry.RegistryListener;
@@ -152,9 +151,7 @@ public class ImportController {
     }
     // Build call
     final ActionInvocation<?> actionInvocation = new ActionInvocation<>(
-      remoteDevice
-        .findService(new UDAServiceId(Exporter.EXPORTER_SERVICE))
-        .getAction(ACTION_GET_EXPORT));
+      remoteDevice.findService(Exporter.EXPORTER_SERVICE_ID).getAction(ACTION_GET_EXPORT));
     // Executes asynchronous in the background
     androidUpnpService.getControlPoint().execute(
       new ActionCallback(actionInvocation) {

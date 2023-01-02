@@ -17,6 +17,7 @@ package com.watea.radio_upnp.cling;
 
 import androidx.annotation.NonNull;
 
+import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
 import com.watea.radio_upnp.service.Exporter;
 import com.watea.radio_upnp.service.HttpService;
 
@@ -88,12 +89,6 @@ public class UpnpServiceConfiguration extends DefaultUpnpServiceConfiguration {
     // Use Jetty, start/stop a new shared instance of JettyServletContainer
     return new AsyncServletStreamServerImpl(new AsyncServletStreamServerConfigurationImpl(
       new JettyServletContainer(httpServer), networkAddressFactory.getStreamListenPort()));
-  }
-
-  // Limit response to UPnP search
-  @Override
-  public ServiceType[] getExclusiveServiceTypes() {
-    return new ServiceType[]{new UDAServiceType(Exporter.EXPORTER_SERVICE)};
   }
 
   @Override
