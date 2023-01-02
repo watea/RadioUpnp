@@ -33,7 +33,6 @@ import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -107,12 +106,10 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     if (audioManager == null) {
       Log.e(LOG_TAG, "AudioManager is null");
     }
-    audioFocusRequest = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ?
-      new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-        .setAudioAttributes(PLAYBACK_ATTRIBUTES)
-        .setOnAudioFocusChangeListener(this, new Handler(Looper.getMainLooper()))
-        .build() :
-      null;
+    audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+      .setAudioAttributes(PLAYBACK_ATTRIBUTES)
+      .setOnAudioFocusChangeListener(this, new Handler(Looper.getMainLooper()))
+      .build();
   }
 
   public static boolean isHandling(@NonNull String protocolInfo) {
@@ -265,28 +262,17 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   }
 
   private void releaseAudioFocus() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      if (audioFocusRequest != null) {
-        Log.d(LOG_TAG, "Audio focus released");
-        audioManager.abandonAudioFocusRequest(audioFocusRequest);
-      }
-    } else {
+    if (audioFocusRequest != null) {
       Log.d(LOG_TAG, "Audio focus released");
-      audioManager.abandonAudioFocus(this);
+      audioManager.abandonAudioFocusRequest(audioFocusRequest);
     }
   }
 
   private boolean requestAudioFocus() {
     boolean request;
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      assert audioFocusRequest != null;
-      request = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
-        audioManager.requestAudioFocus(audioFocusRequest));
-    } else {
-      request = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
-        audioManager.requestAudioFocus(
-          this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN));
-    }
+    assert audioFocusRequest != null;
+    request = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
+      audioManager.requestAudioFocus(audioFocusRequest));
     if (request) {
       Log.d(LOG_TAG, "Audio focus request succeeded");
       return true;

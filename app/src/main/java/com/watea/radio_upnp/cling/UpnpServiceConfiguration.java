@@ -17,8 +17,6 @@ package com.watea.radio_upnp.cling;
 
 import androidx.annotation.NonNull;
 
-import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
-import com.watea.radio_upnp.service.Exporter;
 import com.watea.radio_upnp.service.HttpService;
 
 import org.fourthline.cling.DefaultUpnpServiceConfiguration;
@@ -28,8 +26,6 @@ import org.fourthline.cling.binding.xml.RecoveringUDA10DeviceDescriptorBinderImp
 import org.fourthline.cling.binding.xml.ServiceDescriptorBinder;
 import org.fourthline.cling.binding.xml.UDA10ServiceDescriptorBinderSAXImpl;
 import org.fourthline.cling.model.Namespace;
-import org.fourthline.cling.model.types.ServiceType;
-import org.fourthline.cling.model.types.UDAServiceType;
 import org.fourthline.cling.transport.impl.AsyncServletStreamServerConfigurationImpl;
 import org.fourthline.cling.transport.impl.AsyncServletStreamServerImpl;
 import org.fourthline.cling.transport.impl.RecoveringGENAEventProcessorImpl;

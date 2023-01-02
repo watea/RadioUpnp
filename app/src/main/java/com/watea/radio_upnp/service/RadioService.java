@@ -34,7 +34,6 @@ import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -154,26 +153,24 @@ public class RadioService
     // Cancel all notifications to handle the case where the Service was killed and
     // restarted by the system
     notificationManager.cancelAll();
-    // Create the (mandatory) notification channel when running on Android Oreo and more
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-        NotificationChannel notificationChannel = new NotificationChannel(
-          CHANNEL_ID,
-          getString(R.string.radio_service_notification_name),
-          NotificationManager.IMPORTANCE_HIGH);
-        // Configure the notification channel
-        notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
-        notificationChannel.enableLights(true);
-        notificationChannel.enableVibration(false);
-        // Sets the notification light color for notifications posted to this
-        // channel, if the device supports this feature
-        notificationChannel.setLightColor(Color.GREEN);
-        notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-        notificationManager.createNotificationChannel(notificationChannel);
-        Log.d(LOG_TAG, "New channel created");
-      } else {
-        Log.i(LOG_TAG, "Existing channel reused");
-      }
+    // Create the (mandatory) notification channel
+    if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+      NotificationChannel notificationChannel = new NotificationChannel(
+        CHANNEL_ID,
+        getString(R.string.radio_service_notification_name),
+        NotificationManager.IMPORTANCE_HIGH);
+      // Configure the notification channel
+      notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
+      notificationChannel.enableLights(true);
+      notificationChannel.enableVibration(false);
+      // Sets the notification light color for notifications posted to this
+      // channel, if the device supports this feature
+      notificationChannel.setLightColor(Color.GREEN);
+      notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+      notificationManager.createNotificationChannel(notificationChannel);
+      Log.d(LOG_TAG, "New channel created");
+    } else {
+      Log.i(LOG_TAG, "Existing channel reused");
     }
     // Radio library access
     radioLibrary = new RadioLibrary(this);
@@ -315,11 +312,7 @@ public class RadioService
             }
             session.setMetadata(null);
             session.setActive(false);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-              stopForeground(STOP_FOREGROUND_REMOVE);
-            } else {
-              stopForeground(true);
-            }
+            stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
             isAllowedToRewind = false;
         }

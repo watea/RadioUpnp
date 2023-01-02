@@ -34,7 +34,6 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -669,12 +668,8 @@ public class MainActivity
   }
 
   private void setNotification() {
-    final Intent intent = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ?
-      new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-        .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()) :
-      new Intent("android.settings.APP_NOTIFICATION_SETTINGS")
-        .putExtra("app_package", getPackageName())
-        .putExtra("app_uid", getApplicationInfo().uid);
+    final Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+      .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
     startActivity(intent);
   }
 
