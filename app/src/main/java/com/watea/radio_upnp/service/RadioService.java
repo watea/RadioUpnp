@@ -507,7 +507,7 @@ public class RadioService
 
         @Override
         public boolean isPaused() {
-          return playerAdapter.isPaused();
+          return (playerAdapter != null) && playerAdapter.isPaused();
         }
 
         @NonNull
