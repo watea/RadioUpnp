@@ -56,6 +56,8 @@ public class RadioHandler extends AbstractHandler {
   private static final int METADATA_MAX = 256;
   private static final String PARAMS = "params";
   private static final String SEPARATOR = "_";
+  private static final Controller DEFAULT_CONTROLLER = new Controller() {
+  };
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
@@ -65,8 +67,7 @@ public class RadioHandler extends AbstractHandler {
   private Listener listener = new Listener() {
   };
   @NonNull
-  private Controller controller = new Controller() {
-  };
+  private Controller controller = DEFAULT_CONTROLLER;
 
   public RadioHandler(@NonNull String userAgent) {
     super();
@@ -90,8 +91,7 @@ public class RadioHandler extends AbstractHandler {
   }
 
   public synchronized void resetController() {
-    controller = new Controller() {
-    };
+    controller = DEFAULT_CONTROLLER;
   }
 
   public synchronized void unlock() {
