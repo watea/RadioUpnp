@@ -241,12 +241,9 @@ public class RadioHandler extends AbstractHandler {
     int metadataSize = 0;
     // Stop if not current controller
     while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
-      final boolean isActiv = !controller.isPaused();
       // Only stream data are transferred
       if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
-        if (isActiv) {
-          outputStream.write(buffer);
-        }
+        outputStream.write(buffer);
       } else {
         // Metadata: look for title information
         final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
@@ -278,7 +275,7 @@ public class RadioHandler extends AbstractHandler {
             // Tell listener
             final String information =
               (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
-            if (isActiv && (information != null)) {
+            if (information != null) {
               listener.onNewInformation(information, rate, lockKey);
             }
           }
@@ -301,10 +298,6 @@ public class RadioHandler extends AbstractHandler {
     @NonNull
     default String getKey() {
       return "";
-    }
-
-    default boolean isPaused() {
-      return false;
     }
 
     // Only for UPnP

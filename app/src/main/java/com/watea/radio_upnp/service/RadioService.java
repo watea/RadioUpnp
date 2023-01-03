@@ -498,11 +498,6 @@ public class RadioService
           return lockKey;
         }
 
-        @Override
-        public boolean isPaused() {
-          return (playerAdapter != null) && playerAdapter.isPaused();
-        }
-
         @NonNull
         @Override
         public String getContentType() {

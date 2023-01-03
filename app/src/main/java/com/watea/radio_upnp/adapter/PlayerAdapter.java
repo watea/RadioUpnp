@@ -120,10 +120,6 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     return false;
   }
 
-  public boolean isPaused() {
-    return (state == PlaybackStateCompat.STATE_PAUSED);
-  }
-
   // Must be called
   public synchronized final boolean prepareFromMediaId() {
     Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
