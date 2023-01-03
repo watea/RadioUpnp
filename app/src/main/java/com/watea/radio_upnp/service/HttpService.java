@@ -71,14 +71,17 @@ public class HttpService extends Service {
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
-    try {
-      Log.d(LOG_TAG, "HTTP server start");
-      // Handlers are all defined here...
-      server.setHandler(handlers);
-      // ... so we can start
-      server.start();
-    } catch (Exception exception) {
-      Log.d(LOG_TAG, "HTTP server start error", exception);
+    // Start server only if not already done
+    if (!server.isStarted()) {
+      try {
+        Log.d(LOG_TAG, "HTTP server start");
+        // Handlers are all defined here...
+        server.setHandler(handlers);
+        // ... so we can start
+        server.start();
+      } catch (Exception exception) {
+        Log.d(LOG_TAG, "HTTP server start error", exception);
+      }
     }
     return super.onStartCommand(intent, flags, startId);
   }
