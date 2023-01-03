@@ -52,9 +52,11 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case ExoPlayer.STATE_READY:
-          changeAndNotifyState(getPlayingPausedState(exoPlayer.getPlayWhenReady()));
+          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
           break;
         case ExoPlayer.STATE_IDLE:
+          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
+          break;
         case ExoPlayer.STATE_ENDED:
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
           break;
@@ -63,15 +65,6 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
           Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
       }
-    }
-
-    @Override
-    public void onPlayWhenReadyChanged(boolean playWhenReady, int reason) {
-      changeAndNotifyState(getPlayingPausedState(playWhenReady));
-    }
-
-    private int getPlayingPausedState(boolean playWhenReady) {
-      return playWhenReady ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
     }
   };
 
@@ -124,19 +117,19 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   @Override
   protected void onPrepareFromMediaId() {
     exoPlayer.setMediaItem(MediaItem.fromUri(radioUri));
-    exoPlayer.setPlayWhenReady(true);
     exoPlayer.addListener(playerListener);
     exoPlayer.prepare();
+    exoPlayer.setPlayWhenReady(true);
   }
 
   @Override
   protected void onPlay() {
-    exoPlayer.setPlayWhenReady(true);
+    onPrepareFromMediaId();
   }
 
   @Override
   protected void onPause() {
-    exoPlayer.setPlayWhenReady(false);
+    exoPlayer.stop();
   }
 
   @Override
