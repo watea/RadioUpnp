@@ -83,9 +83,9 @@ public class JettyServletContainer implements ServletContainerAdapter {
     return connector.getLocalPort();
   }
 
-  // Nothing to do here
   @Override
   public synchronized void removeConnector(String host, int port) {
+    stopIfRunning();
   }
 
   @Override

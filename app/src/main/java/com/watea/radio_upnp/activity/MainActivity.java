@@ -66,6 +66,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
+import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
@@ -185,11 +186,10 @@ public class MainActivity
   private AndroidUpnpService androidUpnpService = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
-  private final ServiceConnection httpConnection = new ServiceConnection() {
+  private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
-    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-      // Retrieve UPnP service
-      androidUpnpService = ((HttpService.Binder) iBinder).getAndroidUpnpService();
+    public void onServiceConnected(ComponentName componentName, IBinder service) {
+      androidUpnpService = (AndroidUpnpService) service;
       if (androidUpnpService != null) {
         // Registry is defined
         final Registry registry = androidUpnpService.getRegistry();
@@ -209,7 +209,6 @@ public class MainActivity
       }
     }
 
-    // Release resources
     @Override
     public void onServiceDisconnected(ComponentName name) {
       if (androidUpnpService != null) {
@@ -222,6 +221,26 @@ public class MainActivity
         androidUpnpService = null;
       }
       upnpDevicesAdapter.onResetRemoteDevices();
+    }
+  };
+  private final ServiceConnection httpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+      // Set HTTP server
+      UpnpService.setHttpServer(((HttpService.Binder) service).getHttpServer());
+      // Now we can bind to UPnP service
+      if (!bindService(
+        new Intent(MainActivity.this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+        Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+      }
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+      // Release UPnP service
+      unbindService(upnpConnection);
+      // Force disconnection to release resources
+      upnpConnection.onServiceDisconnected(null);
     }
   };
   private Intent newIntent = null;
@@ -477,7 +496,7 @@ public class MainActivity
       // Robustness: store immediately to avoid bad user experience in case of app crash
       sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
     }
-    // Bind to HTTP service, connection will bind to UPnP service
+    // Bind to HTTP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
     }
