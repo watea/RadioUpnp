@@ -50,15 +50,16 @@ public class HttpService extends Service {
   private static final String LOG_TAG = HttpService.class.getName();
   private static final String LOGO_FILE = "logo";
   private static final int REMOTE_LOGO_SIZE = 300;
-  private final Server server = new Server(0);
   private final HandlerList handlers = new HandlerList();
   private final Binder binder = new Binder();
+  private Server server;
   @Nullable
   private RadioHandler radioHandler = null;
 
   @Override
   public void onCreate() {
     super.onCreate();
+    server = new Server(0);
     // Handler for radio stream
     radioHandler = new RadioHandler(getString(R.string.app_name));
     // Handler for local files
@@ -67,23 +68,6 @@ public class HttpService extends Service {
     // Add the ResourceHandler to the server
     addHandler(resourceHandler);
     addHandler(radioHandler);
-  }
-
-  @Override
-  public int onStartCommand(Intent intent, int flags, int startId) {
-    // Start server only if not already done
-    if (!server.isStarted()) {
-      try {
-        Log.d(LOG_TAG, "HTTP server start");
-        // Handlers are all defined here...
-        server.setHandler(handlers);
-        // ... so we can start
-        server.start();
-      } catch (Exception exception) {
-        Log.d(LOG_TAG, "HTTP server start error", exception);
-      }
-    }
-    return super.onStartCommand(intent, flags, startId);
   }
 
   @Override
@@ -137,15 +121,16 @@ public class HttpService extends Service {
 
     void unlockRadioHandler();
 
-    void stop();
-
     @NonNull
     Server getServer();
+
+    // Start server only if not already done
+    void startIfNotRunning();
   }
 
   public class Binder extends android.os.Binder implements HttpServer {
-    @Override
     // Return logo file Uri; a jpeg file
+    @Override
     @Nullable
     public Uri createLogoFile(@NonNull Context context, @NonNull Radio radio) {
       final String name = LOGO_FILE + radio.getId() + ".jpg";
@@ -204,15 +189,25 @@ public class HttpService extends Service {
       HttpService.this.unlockRadioHandler();
     }
 
-    @Override
-    public void stop() {
-      HttpService.this.stopSelf();
-    }
-
     @NonNull
     @Override
     public Server getServer() {
       return server;
+    }
+
+    @Override
+    public void startIfNotRunning() {
+      if (!server.isStarted()) {
+        try {
+          Log.d(LOG_TAG, "HTTP server start");
+          // Handlers are all defined here...
+          server.setHandler(handlers);
+          // ... so we can start
+          server.start();
+        } catch (Exception exception) {
+          Log.d(LOG_TAG, "HTTP server start error", exception);
+        }
+      }
     }
 
     private int getLocalPort() {

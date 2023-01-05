@@ -74,8 +74,7 @@
             android:description="@string/http_service_description"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="mediaPlayback">
-        </service>
+            android:foregroundServiceType="mediaPlayback" />
 
         <service
             android:name="com.watea.radio_upnp.cling.UpnpService"

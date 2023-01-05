@@ -186,15 +186,11 @@ public class MainActivity
   private AndroidUpnpService androidUpnpService = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
-  private HttpService.HttpServer httpServer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName className, IBinder service) {
       androidUpnpService = (AndroidUpnpService) service;
-      // Init the service
-      assert httpServer != null;
-      ((UpnpService.Binder) service).init(httpServer);
-      // So registry is defined
+      // Registry is defined
       final Registry registry = androidUpnpService.getRegistry();
       // Add local export device
       importController.addExportService(registry);
@@ -207,9 +203,6 @@ public class MainActivity
       }
       // Get ready for future device advertisements
       registry.addListener(upnpRegistryAdapter);
-      registry.addListener(importController.getRegistryListener());
-      // Now we can launch HTTP Server
-      startService(new Intent(MainActivity.this, HttpService.class));
       // Ask for devices
       upnpSearch();
     }
@@ -232,8 +225,9 @@ public class MainActivity
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-      httpServer = (HttpService.HttpServer) iBinder;
-      // Now we can bind to UPnP service
+      // Define HTTP server for UPnP service
+      UpnpService.setHttpServer((HttpService.HttpServer) iBinder);
+      // Now we can bind to UPnP service (will launch HTTP server)
       if (!bindService(
         new Intent(MainActivity.this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
         Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
@@ -241,10 +235,10 @@ public class MainActivity
     }
 
     @Override
-    public void onServiceDisconnected(ComponentName componentName) {
-      assert httpServer != null;
-      httpServer.stop();
-      httpServer = null;
+    public void onServiceDisconnected(ComponentName name) {
+      MainActivity.this.unbindService(upnpConnection);
+      // Forced UPnP disconnection to release resources
+      upnpConnection.onServiceDisconnected(null);
     }
   };
   private Intent newIntent = null;
@@ -468,13 +462,10 @@ public class MainActivity
       .edit()
       .putBoolean(getString(R.string.key_radio_garden), gotItRadioGarden)
       .apply();
-    // Stop UPnP service
-    unbindService(upnpConnection);
-    // Stop HTTP service
+    // Release HTTP service
     unbindService(httpConnection);
-    // Forced disconnection
+    // Force disconnection to release resources
     httpConnection.onServiceDisconnected(null);
-    upnpConnection.onServiceDisconnected(null);
     // PlayerController call
     playerController.onActivityPause();
     // Close radios database
@@ -503,7 +494,7 @@ public class MainActivity
       // Robustness: store immediately to avoid bad user experience in case of app crash
       sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
     }
-    // Bind to HTTP Service, connection will launch UPnP service
+    // Bind to HTTP service, connection will bind to UPnP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
     }

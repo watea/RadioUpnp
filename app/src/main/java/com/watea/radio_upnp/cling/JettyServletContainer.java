@@ -70,7 +70,7 @@ public class JettyServletContainer implements ServletContainerAdapter {
     // Open immediately so we can get the assigned local port
     connector.open();
     // Only add if open() succeeded
-    httpServer.getServer().addConnector(connector);
+    server.addConnector(connector);
     // Start the connector if the server is started (server starts all connectors when started)
     if (server.isStarted()) {
       try {
@@ -83,9 +83,9 @@ public class JettyServletContainer implements ServletContainerAdapter {
     return connector.getLocalPort();
   }
 
+  // Nothing to do here
   @Override
   public synchronized void removeConnector(String host, int port) {
-    stopIfRunning();
   }
 
   @Override
@@ -100,12 +100,12 @@ public class JettyServletContainer implements ServletContainerAdapter {
     httpServer.addHandler(servletHandler);
   }
 
-  // Nothing to do here
   @Override
   public void startIfNotRunning() {
+    httpServer.startIfNotRunning();
   }
 
-  // Nothing to do here
+  // Nothing to do here, server will be stopped by service
   @Override
   public void stopIfRunning() {
   }
