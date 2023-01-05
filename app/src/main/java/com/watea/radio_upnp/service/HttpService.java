@@ -24,8 +24,10 @@
 package com.watea.radio_upnp.service;
 
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.IBinder;
@@ -35,6 +37,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -43,43 +46,45 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
+import org.fourthline.cling.android.AndroidUpnpService;
 
 import java.io.FileOutputStream;
 
 public class HttpService extends Service {
   private static final String LOG_TAG = HttpService.class.getName();
-  private static final String LOGO_FILE = "logo";
-  private static final int REMOTE_LOGO_SIZE = 300;
-  private final HandlerList handlers = new HandlerList();
   private final Binder binder = new Binder();
-  private Server server;
-  @Nullable
+  private AndroidUpnpService androidUpnpService;
+  private final ServiceConnection upnpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName className, IBinder iBinder) {
+      androidUpnpService = (AndroidUpnpService) iBinder;
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName className) {
+      androidUpnpService = null;
+    }
+  };
   private RadioHandler radioHandler = null;
+  private HttpServer httpServer = null;
 
   @Override
   public void onCreate() {
     super.onCreate();
-    server = new Server(0);
-    // Handler for radio stream
-    radioHandler = new RadioHandler(getString(R.string.app_name));
-    // Handler for local files
-    final ResourceHandler resourceHandler = new ResourceHandler();
-    resourceHandler.setResourceBase(getFilesDir().getPath());
-    // Add the ResourceHandler to the server
-    addHandler(resourceHandler);
-    addHandler(radioHandler);
+    // Set HTTP server and bind to UPnP service (will launch server when ready)
+    UpnpService.setHttpServer(httpServer = new HttpServer());
+    if (!bindService(
+      new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
+    }
   }
 
   @Override
   public void onDestroy() {
-    try {
-      Log.d(LOG_TAG, "HTTP server stop");
-      // Release RadioHandler if paused
-      unlockRadioHandler();
-      server.stop();
-    } catch (Exception exception) {
-      Log.i(LOG_TAG, "HTTP server stop error", exception);
-    }
+    // Release UPnP service (will stop HTTP server)
+    unbindService(upnpConnection);
+    // Force disconnection to release resources
+    upnpConnection.onServiceDisconnected(null);
     super.onDestroy();
   }
 
@@ -89,48 +94,26 @@ public class HttpService extends Service {
     return binder;
   }
 
-  private void addHandler(@NonNull Handler handler) {
-    handlers.addHandler(handler);
-  }
-
-  private void unlockRadioHandler() {
-    assert radioHandler != null;
-    radioHandler.unlock();
-  }
-
-  public interface HttpServer {
-    // Return logo file Uri; a jpeg file
-    @Nullable
-    Uri createLogoFile(@NonNull Context context, @NonNull Radio radio);
-
-    @Nullable
-    Uri getUri(@NonNull Context context);
-
+  public class HttpServer {
+    private static final String LOGO_FILE = "logo";
+    private static final int REMOTE_LOGO_SIZE = 300;
+    private final HandlerList handlers = new HandlerList();
     @NonNull
-    Uri getLoopbackUri();
+    private final Server server;
 
-    void addHandler(@NonNull Handler handler);
+    public HttpServer() {
+      server = new Server(0);
+      // Handler for radio stream
+      radioHandler = new RadioHandler(getString(R.string.app_name));
+      // Handler for local files
+      final ResourceHandler resourceHandler = new ResourceHandler();
+      resourceHandler.setResourceBase(getFilesDir().getPath());
+      // Add the ResourceHandler to the server
+      addHandler(resourceHandler);
+      addHandler(radioHandler);
+    }
 
-    void bindRadioHandler(
-      @NonNull RadioHandler.Listener radioHandlerListener,
-      @NonNull RadioLibrary.Provider radioLibraryProvider);
-
-    void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController);
-
-    void resetRadioHandlerController();
-
-    void unlockRadioHandler();
-
-    @NonNull
-    Server getServer();
-
-    // Start server only if not already done
-    void startIfNotRunning();
-  }
-
-  public class Binder extends android.os.Binder implements HttpServer {
     // Return logo file Uri; a jpeg file
-    @Override
     @Nullable
     public Uri createLogoFile(@NonNull Context context, @NonNull Radio radio) {
       final String name = LOGO_FILE + radio.getId() + ".jpg";
@@ -147,24 +130,20 @@ public class HttpService extends Service {
       return (uri == null) ? null : uri.buildUpon().appendEncodedPath(name).build();
     }
 
-    @Override
     @Nullable
     public Uri getUri(@NonNull Context context) {
       return new NetworkProxy(context).getUri(getLocalPort());
     }
 
-    @Override
     @NonNull
     public Uri getLoopbackUri() {
       return NetworkProxy.getLoopbackUri(getLocalPort());
     }
 
-    @Override
     public void addHandler(@NonNull Handler handler) {
-      HttpService.this.addHandler(handler);
+      handlers.addHandler(handler);
     }
 
-    @Override
     public void bindRadioHandler(
       @NonNull RadioHandler.Listener radioHandlerListener,
       @NonNull RadioLibrary.Provider radioLibraryProvider) {
@@ -172,30 +151,21 @@ public class HttpService extends Service {
       radioHandler.bind(radioHandlerListener, radioLibraryProvider);
     }
 
-    @Override
     public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
       assert radioHandler != null;
       radioHandler.setController(radioHandlerController);
     }
 
-    @Override
     public void resetRadioHandlerController() {
       assert radioHandler != null;
       radioHandler.resetController();
     }
 
-    @Override
-    public void unlockRadioHandler() {
-      HttpService.this.unlockRadioHandler();
-    }
-
     @NonNull
-    @Override
     public Server getServer() {
       return server;
     }
 
-    @Override
     public void startIfNotRunning() {
       if (!server.isStarted()) {
         try {
@@ -210,8 +180,34 @@ public class HttpService extends Service {
       }
     }
 
+    public void stopIfRunning() {
+      try {
+        Log.d(LOG_TAG, "HTTP server stop");
+        // Release RadioHandler
+        radioHandler.unBind();
+        // Stop server
+        if (server.isStarted()) {
+          server.stop();
+        }
+      } catch (Exception exception) {
+        Log.i(LOG_TAG, "HTTP server stop error", exception);
+      }
+    }
+
     private int getLocalPort() {
       return ((ServerConnector) server.getConnectors()[0]).getLocalPort();
+    }
+  }
+
+  public class Binder extends android.os.Binder {
+    @NonNull
+    public HttpServer getHttpServer() {
+      return httpServer;
+    }
+
+    @Nullable
+    public AndroidUpnpService getAndroidUpnpService() {
+      return androidUpnpService;
     }
   }
 }

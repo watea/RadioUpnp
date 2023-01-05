@@ -105,8 +105,8 @@ public class JettyServletContainer implements ServletContainerAdapter {
     httpServer.startIfNotRunning();
   }
 
-  // Nothing to do here, server will be stopped by service
   @Override
   public void stopIfRunning() {
+    httpServer.stopIfRunning();
   }
 }

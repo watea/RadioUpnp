@@ -59,7 +59,6 @@ import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
-import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
@@ -86,38 +85,33 @@ public class RadioService
   private UpnpActionController upnpActionController = null;
   private Radio radio = null;
   private AndroidUpnpService androidUpnpService = null;
-  private final ServiceConnection upnpConnection = new ServiceConnection() {
-    @Override
-    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-      androidUpnpService = (AndroidUpnpService) iBinder;
-      assert androidUpnpService != null;
-      upnpActionController = new UpnpActionController(androidUpnpService);
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName componentName) {
-      androidUpnpService = null;
-      assert upnpActionController != null;
-      upnpActionController.release(false);
-      upnpActionController = null;
-    }
-  };
   private MediaSessionCompat session;
   private RadioLibrary radioLibrary = null;
   private HttpService.HttpServer httpServer = null;
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-      httpServer = (HttpService.HttpServer) iBinder;
+      final HttpService.Binder httpServiceBinder = (HttpService.Binder) iBinder;
+      // Retrieve HTTP server
+      httpServer = httpServiceBinder.getHttpServer();
       // Bind to RadioHandler
-      if (httpServer != null) {
-        httpServer.bindRadioHandler(RadioService.this, radioLibrary::getFrom);
+      httpServer.bindRadioHandler(RadioService.this, radioLibrary::getFrom);
+      // Retrieve UPnP service
+      androidUpnpService = httpServiceBinder.getAndroidUpnpService();
+      if (androidUpnpService != null) {
+        upnpActionController = new UpnpActionController(androidUpnpService);
       }
     }
 
+    // Release resources
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
       httpServer = null;
+      androidUpnpService = null;
+      if (upnpActionController != null) {
+        upnpActionController.release(false);
+        upnpActionController = null;
+      }
     }
   };
   private PlayerAdapter playerAdapter = null;
@@ -174,13 +168,9 @@ public class RadioService
     }
     // Radio library access
     radioLibrary = new RadioLibrary(this);
-    // Bind to HTTP service
+    // Bind to HTTP service, connection will bind to UPnP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-    }
-    // Bind to UPnP service
-    if (!bindService(new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
     }
     // Prepare notification
     actionPause = new NotificationCompat.Action(
@@ -326,12 +316,10 @@ public class RadioService
     if (playerAdapter != null) {
       playerAdapter.stop();
     }
-    // Release UPnP service (before HTTP service)
-    unbindService(upnpConnection);
-    // Forced UPnP disconnection to release resources
-    upnpConnection.onServiceDisconnected(null);
     // Release HTTP service
     unbindService(httpConnection);
+    // Force disconnection to release resources
+    httpConnection.onServiceDisconnected(null);
     // Release radioLibrary, if opened
     if (radioLibrary != null) {
       radioLibrary.close();
@@ -514,8 +502,6 @@ public class RadioService
 
     @Override
     public void onPlay() {
-      assert httpServer != null;
-      httpServer.unlockRadioHandler();
       playerAdapter.play();
     }
 

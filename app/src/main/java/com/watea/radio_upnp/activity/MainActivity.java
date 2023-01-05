@@ -66,7 +66,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
-import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
@@ -186,30 +185,33 @@ public class MainActivity
   private AndroidUpnpService androidUpnpService = null;
   private UpnpRegistryAdapter upnpRegistryAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
-  private final ServiceConnection upnpConnection = new ServiceConnection() {
+  private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
-    public void onServiceConnected(ComponentName className, IBinder service) {
-      androidUpnpService = (AndroidUpnpService) service;
-      // Registry is defined
-      final Registry registry = androidUpnpService.getRegistry();
-      // Add local export device
-      importController.addExportService(registry);
-      // Define adapters
-      upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
-      // Add all devices to the list we already know about
-      for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
-        upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
-        importController.getRegistryListener().remoteDeviceAdded(registry, remoteDevice);
+    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+      // Retrieve UPnP service
+      androidUpnpService = ((HttpService.Binder) iBinder).getAndroidUpnpService();
+      if (androidUpnpService != null) {
+        // Registry is defined
+        final Registry registry = androidUpnpService.getRegistry();
+        // Add local export device
+        importController.addExportService(registry);
+        // Define adapters
+        upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
+        // Add all devices to the list we already know about
+        for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
+          upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
+          importController.getRegistryListener().remoteDeviceAdded(registry, remoteDevice);
+        }
+        // Get ready for future device advertisements
+        registry.addListener(upnpRegistryAdapter);
+        // Ask for devices
+        upnpSearch();
       }
-      // Get ready for future device advertisements
-      registry.addListener(upnpRegistryAdapter);
-      // Ask for devices
-      upnpSearch();
     }
 
+    // Release resources
     @Override
-    public void onServiceDisconnected(ComponentName className) {
-      // Robustness, shall be defined here
+    public void onServiceDisconnected(ComponentName name) {
       if (androidUpnpService != null) {
         final Registry registry = androidUpnpService.getRegistry();
         if (upnpRegistryAdapter != null) {
@@ -220,25 +222,6 @@ public class MainActivity
         androidUpnpService = null;
       }
       upnpDevicesAdapter.onResetRemoteDevices();
-    }
-  };
-  private final ServiceConnection httpConnection = new ServiceConnection() {
-    @Override
-    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-      // Define HTTP server for UPnP service
-      UpnpService.setHttpServer((HttpService.HttpServer) iBinder);
-      // Now we can bind to UPnP service (will launch HTTP server)
-      if (!bindService(
-        new Intent(MainActivity.this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
-        Log.e(LOG_TAG, "Internal failure; UpnpService not bound");
-      }
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-      MainActivity.this.unbindService(upnpConnection);
-      // Forced UPnP disconnection to release resources
-      upnpConnection.onServiceDisconnected(null);
     }
   };
   private Intent newIntent = null;

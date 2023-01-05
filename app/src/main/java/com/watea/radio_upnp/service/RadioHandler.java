@@ -58,14 +58,16 @@ public class RadioHandler extends AbstractHandler {
   private static final String SEPARATOR = "_";
   private static final Controller DEFAULT_CONTROLLER = new Controller() {
   };
+  private static final RadioLibrary.Provider DEFAULT_RADIOLIBRARY_PROVIDER = unused -> null;
+  private static final Listener DEFAULT_LISTENER = new Listener() {
+  };
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
   @NonNull
-  private RadioLibrary.Provider radioLibraryProvider = unused -> null;
+  private RadioLibrary.Provider radioLibraryProvider = DEFAULT_RADIOLIBRARY_PROVIDER;
   @NonNull
-  private Listener listener = new Listener() {
-  };
+  private Listener listener = DEFAULT_LISTENER;
   @NonNull
   private Controller controller = DEFAULT_CONTROLLER;
 
@@ -92,10 +94,6 @@ public class RadioHandler extends AbstractHandler {
 
   public synchronized void resetController() {
     controller = DEFAULT_CONTROLLER;
-  }
-
-  public synchronized void unlock() {
-    notifyAll();
   }
 
   @Override
@@ -131,10 +129,19 @@ public class RadioHandler extends AbstractHandler {
     }
   }
 
-  public void bind(@NonNull Listener listener,
-                   @NonNull RadioLibrary.Provider radioLibraryProvider) {
+  // Must be called
+  public void bind(
+    @NonNull Listener listener,
+    @NonNull RadioLibrary.Provider radioLibraryProvider) {
     this.listener = listener;
     this.radioLibraryProvider = radioLibraryProvider;
+  }
+
+  // Must be called to close
+  public void unBind() {
+    resetController();
+    listener = DEFAULT_LISTENER;
+    radioLibraryProvider = DEFAULT_RADIOLIBRARY_PROVIDER;
   }
 
   private void handleConnection(
