@@ -340,7 +340,7 @@ public class PlayerController {
         radioLibrary.setPreferred(radio.getId(), !radio.isPreferred());
       }
     });
-    // Create MediaBrowserServiceCompat, launch RadioService
+    // Create MediaBrowserServiceCompat
     mediaBrowser = new MediaBrowserCompat(
       mainActivity,
       new ComponentName(mainActivity, RadioService.class),
@@ -354,6 +354,7 @@ public class PlayerController {
     radioLibraryListener.onNewCurrentRadio(null);
     // Connect to other components
     (this.radioLibrary = radioLibrary).addListener(radioLibraryListener);
+    // Launch RadioService
     mediaBrowser.connect();
   }
 

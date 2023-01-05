@@ -206,12 +206,15 @@ public class MainActivity
         registry.addListener(upnpRegistryAdapter);
         // Ask for devices
         upnpSearch();
+        // Now we can call PlayerController
+        playerController.onActivityResume(radioLibrary);
       }
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
       if (androidUpnpService != null) {
+        // Clear UPnP stuff
         final Registry registry = androidUpnpService.getRegistry();
         if (upnpRegistryAdapter != null) {
           registry.removeListener(upnpRegistryAdapter);
@@ -219,7 +222,10 @@ public class MainActivity
         }
         registry.removeListener(importController.getRegistryListener());
         androidUpnpService = null;
+        // Clear PlayerController call
+        playerController.onActivityPause();
       }
+      // No more devices
       upnpDevicesAdapter.onResetRemoteDevices();
     }
   };
@@ -468,8 +474,6 @@ public class MainActivity
     unbindService(httpConnection);
     // Force disconnection to release resources
     httpConnection.onServiceDisconnected(null);
-    // PlayerController call
-    playerController.onActivityPause();
     // Close radios database
     radioLibrary.close();
     Log.d(LOG_TAG, "onPause done!");
@@ -500,8 +504,6 @@ public class MainActivity
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
     }
-    // PlayerController call
-    playerController.onActivityResume(radioLibrary);
     // Radio Garden share?
     if (newIntent != null) {
       radioGardenController.onNewIntent(newIntent);

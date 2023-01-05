@@ -112,20 +112,11 @@ public class RadioService
       httpServer = ((HttpService.Binder) service).getHttpServer();
       // Bind to RadioHandler
       httpServer.bindRadioHandler(RadioService.this, radioLibrary::getFrom);
-      // Now we can bind to UPnP service
-      if (!bindService(
-        new Intent(RadioService.this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
-        Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-      }
     }
 
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
       httpServer = null;
-      // Release UPnP service
-      unbindService(upnpConnection);
-      // Force disconnection to release resources
-      upnpConnection.onServiceDisconnected(null);
     }
   };
   private PlayerAdapter playerAdapter = null;
@@ -184,6 +175,10 @@ public class RadioService
     radioLibrary = new RadioLibrary(this);
     // Bind to HTTP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+    }
+    // Bind to UPnP service
+    if (!bindService(new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
     }
     // Prepare notification
@@ -330,10 +325,12 @@ public class RadioService
     if (playerAdapter != null) {
       playerAdapter.stop();
     }
-    // Release HTTP service
+    // Release services
     unbindService(httpConnection);
+    unbindService(upnpConnection);
     // Force disconnection to release resources
     httpConnection.onServiceDisconnected(null);
+    upnpConnection.onServiceDisconnected(null);
     // Release radioLibrary, if opened
     if (radioLibrary != null) {
       radioLibrary.close();
