@@ -66,7 +66,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
-import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
@@ -206,8 +205,6 @@ public class MainActivity
         registry.addListener(upnpRegistryAdapter);
         // Ask for devices
         upnpSearch();
-        // Now we can call PlayerController
-        playerController.onActivityResume(radioLibrary);
       }
     }
 
@@ -222,8 +219,6 @@ public class MainActivity
         }
         registry.removeListener(importController.getRegistryListener());
         androidUpnpService = null;
-        // Clear PlayerController call
-        playerController.onActivityPause();
       }
       // No more devices
       upnpDevicesAdapter.onResetRemoteDevices();
@@ -232,21 +227,13 @@ public class MainActivity
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-      // Set HTTP server
-      UpnpService.setHttpServer(((HttpService.Binder) service).getHttpServer());
-      // Now we can bind to UPnP service
-      if (!bindService(
-        new Intent(MainActivity.this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
-        Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-      }
+      // Bind to UPnP service
+      ((HttpService.Binder) service).addUpnpConnection(upnpConnection);
     }
 
+    // Nothing to do here
     @Override
     public void onServiceDisconnected(ComponentName name) {
-      // Release UPnP service
-      unbindService(upnpConnection);
-      // Force disconnection to release resources
-      upnpConnection.onServiceDisconnected(null);
     }
   };
   private Intent newIntent = null;
@@ -476,6 +463,8 @@ public class MainActivity
     httpConnection.onServiceDisconnected(null);
     // Close radios database
     radioLibrary.close();
+    // Clear PlayerController call
+    playerController.onActivityPause();
     Log.d(LOG_TAG, "onPause done!");
   }
 
@@ -509,6 +498,8 @@ public class MainActivity
       radioGardenController.onNewIntent(newIntent);
       newIntent = null;
     }
+    // PlayerController init
+    playerController.onActivityResume(radioLibrary);
     Log.d(LOG_TAG, "onResume done!");
   }
 

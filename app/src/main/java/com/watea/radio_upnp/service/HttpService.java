@@ -24,8 +24,10 @@
 package com.watea.radio_upnp.service;
 
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.IBinder;
@@ -35,6 +37,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
@@ -45,16 +48,46 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 
 import java.io.FileOutputStream;
+import java.util.List;
+import java.util.Vector;
 
 public class HttpService extends Service {
   private static final String LOG_TAG = HttpService.class.getName();
   private final Binder binder = new Binder();
+  private final List<ServiceConnection> upnpConnections = new Vector<>();
+  private UpnpService.Binder upnpServiceBinder = null;
+  private final ServiceConnection upnpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+      upnpServiceBinder = (UpnpService.Binder) service;
+      upnpConnections.forEach(connection -> connection.onServiceConnected(name, service));
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+      upnpConnections.forEach(connection -> connection.onServiceDisconnected(name));
+      upnpConnections.clear();
+      upnpServiceBinder = null;
+    }
+  };
   private HttpServer httpServer = null;
 
   @Override
   public void onCreate() {
     super.onCreate();
-    httpServer = new HttpServer();
+    // Set HTTP server
+    UpnpService.setHttpServer(httpServer = new HttpServer());
+    // Now we can bind to UPnP service
+    if (!bindService(new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+    }
+  }
+
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    unbindService(upnpConnection);
+    upnpConnection.onServiceDisconnected(null);
   }
 
   @Nullable
@@ -167,6 +200,14 @@ public class HttpService extends Service {
     @NonNull
     public HttpServer getHttpServer() {
       return httpServer;
+    }
+
+    public void addUpnpConnection(@NonNull ServiceConnection upnpConnection) {
+      upnpConnections.add(upnpConnection);
+      // Connect UPnP service is already up
+      if (upnpServiceBinder != null) {
+        upnpConnection.onServiceConnected(null, upnpServiceBinder);
+      }
     }
   }
 }

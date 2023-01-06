@@ -59,7 +59,6 @@ import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
-import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
@@ -108,14 +107,17 @@ public class RadioService
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
+      final HttpService.Binder httpService = (HttpService.Binder) service;
       // Retrieve HTTP server
-      httpServer = ((HttpService.Binder) service).getHttpServer();
+      httpServer = httpService.getHttpServer();
       // Bind to RadioHandler
       httpServer.bindRadioHandler(RadioService.this, radioLibrary::getFrom);
+      // Bind to UPnP service
+      httpService.addUpnpConnection(upnpConnection);
     }
 
     @Override
-    public void onServiceDisconnected(ComponentName componentName) {
+    public void onServiceDisconnected(ComponentName name) {
       httpServer = null;
     }
   };
@@ -175,10 +177,6 @@ public class RadioService
     radioLibrary = new RadioLibrary(this);
     // Bind to HTTP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-    }
-    // Bind to UPnP service
-    if (!bindService(new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
     }
     // Prepare notification
@@ -327,10 +325,8 @@ public class RadioService
     }
     // Release services
     unbindService(httpConnection);
-    unbindService(upnpConnection);
     // Force disconnection to release resources
     httpConnection.onServiceDisconnected(null);
-    upnpConnection.onServiceDisconnected(null);
     // Release radioLibrary, if opened
     if (radioLibrary != null) {
       radioLibrary.close();
