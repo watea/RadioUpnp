@@ -323,7 +323,7 @@ public class RadioService
     if (playerAdapter != null) {
       playerAdapter.stop();
     }
-    // Release services
+    // Release HTTP service
     unbindService(httpConnection);
     // Force disconnection to release resources
     httpConnection.onServiceDisconnected(null);

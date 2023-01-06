@@ -86,7 +86,9 @@ public class HttpService extends Service {
   @Override
   public void onDestroy() {
     super.onDestroy();
+    // Release UPnP service
     unbindService(upnpConnection);
+    // Force disconnection to release resources
     upnpConnection.onServiceDisconnected(null);
   }
 
@@ -204,7 +206,7 @@ public class HttpService extends Service {
 
     public void addUpnpConnection(@NonNull ServiceConnection upnpConnection) {
       upnpConnections.add(upnpConnection);
-      // Connect UPnP service is already up
+      // Connect UPnP service if already up
       if (upnpServiceBinder != null) {
         upnpConnection.onServiceConnected(null, upnpServiceBinder);
       }
