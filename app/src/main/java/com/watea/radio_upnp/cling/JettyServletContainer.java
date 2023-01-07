@@ -21,7 +21,6 @@ import androidx.annotation.NonNull;
 
 import com.watea.radio_upnp.service.HttpService;
 
-import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -63,29 +62,18 @@ public class JettyServletContainer implements ServletContainerAdapter {
 
   @Override
   public synchronized int addConnector(String host, int port) throws IOException {
-    final Server server = httpServer.getServer();
-    final ServerConnector connector = new ServerConnector(server);
-    connector.setHost(host);
-    connector.setPort(port);
+    final ServerConnector connector = httpServer.getConnector();
     // Open immediately so we can get the assigned local port
-    connector.open();
-    // Only add if open() succeeded
-    server.addConnector(connector);
-    // Start the connector if the server is started (server starts all connectors when started)
-    if (server.isStarted()) {
-      try {
-        connector.start();
-      } catch (Exception exception) {
-        Log.e(LOG_TAG, "Couldn't start connector: " + connector, exception);
-        throw new RuntimeException(exception);
-      }
+    if (!connector.isOpen()) {
+      connector.open();
     }
     return connector.getLocalPort();
   }
 
   @Override
   public synchronized void removeConnector(String host, int port) {
-    stopIfRunning();
+    // In case of network change, we clean registry here
+    httpServer.registryClean();
   }
 
   @Override
@@ -97,7 +85,7 @@ public class JettyServletContainer implements ServletContainerAdapter {
       servletHandler.setContextPath(contextPath);
     }
     servletHandler.addServlet(new ServletHolder(servlet), "/*");
-    httpServer.addHandler(servletHandler);
+    httpServer.setServletHandler(servletHandler);
   }
 
   @Override
@@ -105,8 +93,8 @@ public class JettyServletContainer implements ServletContainerAdapter {
     httpServer.startIfNotRunning();
   }
 
+  // Nothing to do here
   @Override
   public void stopIfRunning() {
-    httpServer.stopIfRunning();
   }
 }

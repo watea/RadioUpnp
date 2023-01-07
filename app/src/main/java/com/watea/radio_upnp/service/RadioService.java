@@ -142,6 +142,7 @@ public class RadioService
   @Override
   public void onCreate() {
     super.onCreate();
+    Log.d(LOG_TAG, "onCreate");
     // Create a new MediaSession and controller...
     session = new MediaSessionCompat(this, LOG_TAG);
     mediaController = session.getController();
@@ -206,7 +207,6 @@ public class RadioService
       getString(R.string.action_skip_to_previous),
       MediaButtonReceiver.buildMediaButtonPendingIntent(
         this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS));
-    Log.d(LOG_TAG, "onCreate: done!");
   }
 
   // Not used by app
@@ -318,7 +318,7 @@ public class RadioService
   @Override
   public void onDestroy() {
     super.onDestroy();
-    Log.d(LOG_TAG, "onDestroy: requested...");
+    Log.d(LOG_TAG, "onDestroy");
     // Stop player to be clean on resources (if not, audio focus is not well handled)
     if (playerAdapter != null) {
       playerAdapter.stop();
@@ -333,7 +333,6 @@ public class RadioService
     }
     // Finally session
     session.release();
-    Log.d(LOG_TAG, "onDestroy: done!");
   }
 
   @Override

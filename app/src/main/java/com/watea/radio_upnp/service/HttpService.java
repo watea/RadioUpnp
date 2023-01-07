@@ -41,13 +41,14 @@ import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import java.io.FileOutputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 
@@ -75,6 +76,7 @@ public class HttpService extends Service {
   @Override
   public void onCreate() {
     super.onCreate();
+    Log.d(LOG_TAG, "onCreate");
     // Set HTTP server
     UpnpService.setHttpServer(httpServer = new HttpServer());
     // Now we can bind to UPnP service
@@ -86,10 +88,13 @@ public class HttpService extends Service {
   @Override
   public void onDestroy() {
     super.onDestroy();
+    Log.d(LOG_TAG, "onDestroy");
     // Release UPnP service
     unbindService(upnpConnection);
     // Force disconnection to release resources
     upnpConnection.onServiceDisconnected(null);
+    // Release server
+    httpServer.stop();
   }
 
   @Nullable
@@ -102,17 +107,17 @@ public class HttpService extends Service {
     private static final String LOGO_FILE = "logo";
     private static final int REMOTE_LOGO_SIZE = 300;
     private final HandlerList handlers = new HandlerList();
-    private final Server server = new Server(0);
     // Handler for radio stream
     private final RadioHandler radioHandler = new RadioHandler(getString(R.string.app_name));
+    private final Server server = new Server(0);
 
     public HttpServer() {
       // Handler for local files
       final ResourceHandler resourceHandler = new ResourceHandler();
       resourceHandler.setResourceBase(getFilesDir().getPath());
       // Add the ResourceHandler to the server
-      addHandler(resourceHandler);
-      addHandler(radioHandler);
+      handlers.addHandler(resourceHandler);
+      handlers.addHandler(radioHandler);
     }
 
     // Return logo file Uri; a jpeg file
@@ -142,10 +147,6 @@ public class HttpService extends Service {
       return NetworkProxy.getLoopbackUri(getLocalPort());
     }
 
-    public void addHandler(@NonNull Handler handler) {
-      handlers.addHandler(handler);
-    }
-
     public void bindRadioHandler(
       @NonNull RadioHandler.Listener radioHandlerListener,
       @NonNull RadioLibrary.Provider radioLibraryProvider) {
@@ -160,12 +161,8 @@ public class HttpService extends Service {
       radioHandler.resetController();
     }
 
-    @NonNull
-    public Server getServer() {
-      return server;
-    }
-
     public void startIfNotRunning() {
+      Log.d(LOG_TAG, "startIfNotRunning");
       if (!server.isStarted()) {
         try {
           Log.d(LOG_TAG, "HTTP server start");
@@ -179,22 +176,38 @@ public class HttpService extends Service {
       }
     }
 
-    public void stopIfRunning() {
+    public void stop() {
+      Log.d(LOG_TAG, "stop");
       try {
-        Log.d(LOG_TAG, "HTTP server stop");
         // Release RadioHandler
         radioHandler.unBind();
         // Stop server
-        if (server.isStarted()) {
-          server.stop();
-        }
+        server.stop();
       } catch (Exception exception) {
         Log.i(LOG_TAG, "HTTP server stop error", exception);
       }
     }
 
+    public void registryClean() {
+      if (upnpServiceBinder != null) {
+        upnpServiceBinder.getControlPoint().getRegistry().removeAllRemoteDevices();
+      }
+    }
+
+    public void setServletHandler(@NonNull ServletContextHandler servletHandler) {
+      if (Arrays.stream(handlers.getHandlers())
+        .noneMatch(handler -> handler instanceof ServletContextHandler)) {
+        handlers.addHandler(servletHandler);
+      }
+    }
+
+    @NonNull
+    public ServerConnector getConnector() {
+      return (ServerConnector) server.getConnectors()[0];
+    }
+
     private int getLocalPort() {
-      return ((ServerConnector) server.getConnectors()[0]).getLocalPort();
+      return getConnector().getLocalPort();
     }
   }
 
