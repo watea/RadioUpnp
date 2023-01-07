@@ -43,6 +43,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final int READ_TIMEOUT = DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * 10;
   @NonNull
   private final ExoPlayer exoPlayer;
+  private boolean isPaused = false;
   private final Player.Listener playerListener = new Player.Listener() {
     @Override
     public void onPlaybackStateChanged(int playbackState) {
@@ -55,8 +56,10 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
           changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
           break;
         case ExoPlayer.STATE_IDLE:
-          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
-          break;
+          if (isPaused) {
+            changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
+            break;
+          }
         case ExoPlayer.STATE_ENDED:
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
           break;
@@ -129,6 +132,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPause() {
+    isPaused = true;
     exoPlayer.stop();
   }
 
