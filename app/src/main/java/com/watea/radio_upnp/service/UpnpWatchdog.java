@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 
 public class UpnpWatchdog {
   private static final String LOG_TAG = UpnpWatchdog.class.getName();
-  private static final int DELAY = 10000; // ms
+  private static final int DELAY = 3000; // ms
   private static final int TOLERANCE = 1;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();

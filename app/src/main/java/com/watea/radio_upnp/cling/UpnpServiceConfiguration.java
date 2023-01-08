@@ -89,7 +89,7 @@ public class UpnpServiceConfiguration extends DefaultUpnpServiceConfiguration {
 
   @Override
   public int getRegistryMaintenanceIntervalMillis() {
-    return 5000; // Preserve battery on Android, only run every 5 seconds
+    return 3000; // Preserve battery on Android, only run every 3 seconds
   }
 
   @Override
