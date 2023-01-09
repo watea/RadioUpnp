@@ -38,7 +38,6 @@ import org.fourthline.cling.model.meta.Action;
 import org.fourthline.cling.model.meta.Device;
 
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -81,12 +80,7 @@ public class UpnpActionController {
 
   // Remove remaining actions on device or all (device == null)
   private synchronized void releaseActions(@NonNull final Device<?, ?, ?> device) {
-    final Iterator<UpnpAction> iter = upnpActions.iterator();
-    while (iter.hasNext()) {
-      if (iter.next().getDevice().equals(device)) {
-        iter.remove();
-      }
-    }
+    upnpActions.removeIf(upnpAction -> upnpAction.getDevice().equals(device));
   }
 
   private synchronized void runNextAction() {

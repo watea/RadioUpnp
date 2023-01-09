@@ -43,7 +43,6 @@ import com.watea.radio_upnp.model.UpnpDevice;
 
 import org.fourthline.cling.model.meta.RemoteDevice;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
@@ -157,13 +156,7 @@ public class UpnpDevicesAdapter
   }
 
   private void remove(@NonNull RemoteDevice remoteDevice) {
-    Iterator<UpnpDevice> iter = upnpDevices.iterator();
-    while (iter.hasNext()) {
-      if (iter.next().hasRemoteDevice(remoteDevice)) {
-        iter.remove();
-        break;
-      }
-    }
+    upnpDevices.removeIf(upnpDevice -> upnpDevice.hasRemoteDevice(remoteDevice));
   }
 
   private void tellChosenDevice() {
