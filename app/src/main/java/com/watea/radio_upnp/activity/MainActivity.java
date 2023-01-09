@@ -65,7 +65,6 @@ import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
-import com.watea.radio_upnp.adapter.UpnpRegistryAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioLibrary;
 import com.watea.radio_upnp.model.UpnpDevice;
@@ -74,8 +73,8 @@ import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
-import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.registry.Registry;
+import org.fourthline.cling.registry.RegistryListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -83,7 +82,10 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Hashtable;
 import java.util.Map;
 
@@ -183,7 +185,6 @@ public class MainActivity
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
   private AndroidUpnpService androidUpnpService = null;
-  private UpnpRegistryAdapter upnpRegistryAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
@@ -194,15 +195,15 @@ public class MainActivity
         final Registry registry = androidUpnpService.getRegistry();
         // Add local export device
         importController.addExportService(registry);
-        // Define adapters
-        upnpRegistryAdapter = new UpnpRegistryAdapter(upnpDevicesAdapter);
         // Add all devices to the list we already know about
-        for (RemoteDevice remoteDevice : registry.getRemoteDevices()) {
-          upnpRegistryAdapter.remoteDeviceAdded(registry, remoteDevice);
-          importController.getRegistryListener().remoteDeviceAdded(registry, remoteDevice);
-        }
+        upnpDevicesAdapter.resetRemoteDevices();
+        final Collection<RegistryListener> registryListeners = Arrays.asList(
+          importController.getRegistryListener(), upnpDevicesAdapter.getRegistryListener());
+        registry.getRemoteDevices().forEach(remoteDevice ->
+          registryListeners.forEach(registryListener ->
+            registryListener.remoteDeviceAdded(registry, remoteDevice)));
         // Get ready for future device advertisements
-        registry.addListener(upnpRegistryAdapter);
+        registryListeners.forEach(registry::addListener);
         // Ask for devices
         upnpSearch();
       }
@@ -213,15 +214,11 @@ public class MainActivity
       if (androidUpnpService != null) {
         // Clear UPnP stuff
         final Registry registry = androidUpnpService.getRegistry();
-        if (upnpRegistryAdapter != null) {
-          registry.removeListener(upnpRegistryAdapter);
-          upnpRegistryAdapter = null;
-        }
-        registry.removeListener(importController.getRegistryListener());
+        new ArrayList<>(registry.getListeners()).forEach(registry::removeListener);
         androidUpnpService = null;
       }
       // No more devices
-      upnpDevicesAdapter.onResetRemoteDevices();
+      upnpDevicesAdapter.resetRemoteDevices();
     }
   };
   private final ServiceConnection httpConnection = new ServiceConnection() {
@@ -344,7 +341,7 @@ public class MainActivity
       tell(R.string.service_not_available);
     } else {
       androidUpnpService.getRegistry().removeAllRemoteDevices();
-      upnpDevicesAdapter.onResetRemoteDevices();
+      upnpDevicesAdapter.resetRemoteDevices();
       tell(R.string.dlna_search_reset);
     }
   }

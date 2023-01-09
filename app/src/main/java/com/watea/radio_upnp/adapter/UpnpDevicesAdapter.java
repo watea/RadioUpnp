@@ -23,10 +23,15 @@
 
 package com.watea.radio_upnp.adapter;
 
+import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.AV_TRANSPORT_SERVICE_ID;
+
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,14 +47,20 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.UpnpDevice;
 
 import org.fourthline.cling.model.meta.RemoteDevice;
+import org.fourthline.cling.model.meta.RemoteService;
+import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.model.types.ServiceId;
+import org.fourthline.cling.registry.DefaultRegistryListener;
+import org.fourthline.cling.registry.Registry;
+import org.fourthline.cling.registry.RegistryListener;
 
 import java.util.List;
 import java.util.Vector;
 
-public class UpnpDevicesAdapter
-  extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
-  implements UpnpRegistryAdapter.Listener {
+public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder> {
+  private static final String LOG_TAG = UpnpDevicesAdapter.class.getName();
   private static final UpnpDevice DUMMY_DEVICE = new UpnpDevice(null);
+  private static final Handler handler = new Handler(Looper.getMainLooper());
   private final List<UpnpDevice> upnpDevices = new Vector<>();
   @NonNull
   private final RowClickListener rowClickListener;
@@ -63,7 +74,7 @@ public class UpnpDevicesAdapter
     @NonNull RowClickListener rowClickListener) {
     this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
     this.rowClickListener = rowClickListener;
-    onResetRemoteDevices();
+    resetRemoteDevices();
   }
 
   public void setChosenDeviceListener(@Nullable ChosenDeviceListener chosenDeviceListener) {
@@ -105,14 +116,76 @@ public class UpnpDevicesAdapter
     notifyChange();
   }
 
+  @NonNull
+  public RegistryListener getRegistryListener() {
+    return new DefaultRegistryListener() {
+      @Override
+      public void remoteDeviceAdded(Registry registry, RemoteDevice remoteDevice) {
+        // This device?
+        if (add(remoteDevice)) {
+          return;
+        }
+        // Embedded devices?
+        final RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
+        if (remoteDevices != null) {
+          Log.d(LOG_TAG, "EmbeddedRemoteDevices found: " + remoteDevices.length);
+          for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
+            if (add(embeddedRemoteDevice)) {
+              return;
+            }
+          }
+        }
+      }
+
+      @Override
+      public void remoteDeviceRemoved(Registry registry, RemoteDevice remoteDevice) {
+        Log.d(LOG_TAG, "RemoteDevice and embedded removed: " + remoteDevice.getDisplayString());
+        // This device?
+        handler.post(() -> remove(remoteDevice));
+        // Embedded devices?
+        for (RemoteDevice embeddedRemoteDevice : remoteDevice.getEmbeddedDevices()) {
+          handler.post(() -> remove(embeddedRemoteDevice));
+        }
+      }
+
+      // Returns true if AV_TRANSPORT_SERVICE_ID is found
+      private boolean add(final RemoteDevice remoteDevice) {
+        Log.d(LOG_TAG, "RemoteDevice found: " + remoteDevice.getDisplayString());
+        final RemoteService[] remoteServices = remoteDevice.getServices();
+        Log.d(LOG_TAG, "> RemoteServices found: " + remoteServices.length);
+        for (Service<?, ?> service : remoteServices) {
+          final ServiceId serviceId = service.getServiceId();
+          Log.d(LOG_TAG, ">> RemoteService: " + serviceId);
+          if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
+            Log.d(LOG_TAG, ">>> UPnP reader found!");
+            handler.post(() -> addOrReplace(remoteDevice));
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+  }
+
   public void removeChosenUpnpDevice() {
     setChosenUpnpDevice(null);
   }
 
+  public void resetRemoteDevices() {
+    upnpDevices.clear();
+    setDummyDeviceForWaiting();
+    notifyChange();
+  }
+
+  @Nullable
+  public Bitmap getChosenUpnpDeviceIcon() {
+    UpnpDevice upnpDevice = getChosenUpnpDevice();
+    return (upnpDevice == null) ? null : upnpDevice.getIcon();
+  }
+
   // Replace if already here
-  @Override
-  public void onAddOrReplace(@NonNull RemoteDevice remoteDevice) {
-    remove(remoteDevice);
+  private void addOrReplace(@NonNull RemoteDevice remoteDevice) {
+    clean(remoteDevice);
     // Remove dummy device if any
     if (isWaiting()) {
       upnpDevices.clear();
@@ -133,29 +206,15 @@ public class UpnpDevicesAdapter
     }
   }
 
-  @Override
-  public void onRemove(@NonNull RemoteDevice remoteDevice) {
-    remove(remoteDevice);
+  private void remove(@NonNull RemoteDevice remoteDevice) {
+    clean(remoteDevice);
     if (upnpDevices.isEmpty()) {
       setDummyDeviceForWaiting();
     }
     notifyChange();
   }
 
-  @Override
-  public void onResetRemoteDevices() {
-    upnpDevices.clear();
-    setDummyDeviceForWaiting();
-    notifyChange();
-  }
-
-  @Nullable
-  public Bitmap getChosenUpnpDeviceIcon() {
-    UpnpDevice upnpDevice = getChosenUpnpDevice();
-    return (upnpDevice == null) ? null : upnpDevice.getIcon();
-  }
-
-  private void remove(@NonNull RemoteDevice remoteDevice) {
+  private void clean(@NonNull RemoteDevice remoteDevice) {
     upnpDevices.removeIf(upnpDevice -> upnpDevice.hasRemoteDevice(remoteDevice));
   }
 
