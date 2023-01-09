@@ -244,6 +244,10 @@ public class RadioService
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
           .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
           .build());
+        // Update UPnP
+        if (playerAdapter instanceof UpnpPlayerAdapter) {
+          ((UpnpPlayerAdapter) playerAdapter).onNewInformation(information);
+        }
         // Update notification
         notificationManager.notify(NOTIFICATION_ID, getNotification());
       }
