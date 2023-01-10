@@ -105,9 +105,12 @@ public class RadioService
   private RadioLibrary radioLibrary;
   private HttpService.HttpServer httpServer = null;
   private final ServiceConnection httpConnection = new ServiceConnection() {
+    @Nullable
+    private HttpService.Binder httpService = null;
+
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
-      final HttpService.Binder httpService = (HttpService.Binder) service;
+      httpService = (HttpService.Binder) service;
       // Retrieve HTTP server
       httpServer = httpService.getHttpServer();
       // Bind to RadioHandler
@@ -118,6 +121,11 @@ public class RadioService
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
+      // Unbind UPnP service
+      if (httpService != null) {
+        httpService.removeUpnpConnection(upnpConnection);
+      }
+      // Unbind HTTP server
       httpServer = null;
     }
   };
@@ -130,7 +138,7 @@ public class RadioService
       }
     };
   private boolean isAllowedToRewind = false;
-  private String lockKey;
+  private String lockKey = null;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
   private NotificationCompat.Action actionPlay;

@@ -224,5 +224,10 @@ public class HttpService extends Service {
         upnpConnection.onServiceConnected(null, upnpServiceBinder);
       }
     }
+
+    public void removeUpnpConnection(@NonNull ServiceConnection upnpConnection) {
+      upnpConnection.onServiceDisconnected(null);
+      upnpConnections.remove(upnpConnection);
+    }
   }
 }
