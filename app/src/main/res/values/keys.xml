@@ -36,6 +36,6 @@
     <string name="key_current_fragment">key_current_fragment</string>
     <string name="key_radio_garden">key_radio_garden</string>
     <!-- Bundles -->
-    <string name="key_upnp_device">key_dlna_device</string>
+    <string name="key_upnp_device">key_upnp_device</string>
     <string name="key_rate">key_rate</string>
 </resources>

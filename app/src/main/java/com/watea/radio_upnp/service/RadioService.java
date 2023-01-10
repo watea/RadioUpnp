@@ -102,7 +102,7 @@ public class RadioService
     }
   };
   private MediaSessionCompat session;
-  private RadioLibrary radioLibrary = null;
+  private RadioLibrary radioLibrary;
   private HttpService.HttpServer httpServer = null;
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Override
@@ -279,7 +279,9 @@ public class RadioService
             break;
           case PlaybackStateCompat.STATE_ERROR:
             // For user convenience, session is kept alive
-            playerAdapter.release();
+            if (playerAdapter != null) {
+              playerAdapter.release();
+            }
             if (httpServer != null) {
               httpServer.resetRadioHandlerController();
             }
@@ -429,6 +431,27 @@ public class RadioService
     return mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
   }
 
+  private Device<?, ?, ?> getChosenDevice(@NonNull String identity) {
+    if (androidUpnpService == null) {
+      return null;
+    }
+    for (RemoteDevice remoteDevice : androidUpnpService.getRegistry().getRemoteDevices()) {
+      if (UpnpDevice.getIdentity(remoteDevice).equals(identity)) {
+        return remoteDevice;
+      }
+      // Embedded devices?
+      final RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
+      if (remoteDevices != null) {
+        for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
+          if (UpnpDevice.getIdentity(embeddedRemoteDevice).equals(identity)) {
+            return embeddedRemoteDevice;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   // PlayerAdapter from session for actual media controls
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
@@ -441,32 +464,31 @@ public class RadioService
       if (playerAdapter != null) {
         playerAdapter.stop();
       }
-      // Radio retrieved in database
-      radio = radioLibrary.getFrom(Long.valueOf(mediaId));
-      // Robustness: if radio is not found, abort (should not happen as current radio
-      // not allowed to be deleted)
-      if (radio == null) {
-        Log.d(LOG_TAG, "onPrepareFromMediaId: radio not found");
-        return;
-      }
-      // Set actual player UPnP? Extra shall contain UPnP device UDN.
-      boolean isUpnp = extras.containsKey(getString(R.string.key_upnp_device));
-      final Device<?, ?, ?> chosenDevice = isUpnp ?
-        getChosenDevice(extras.getString(getString(R.string.key_upnp_device))) : null;
-      assert httpServer != null;
-      final Uri serverUri = httpServer.getUri(RadioService.this);
-      // UPnP not accepted if environment not OK => force local
-      if (isUpnp &&
-        ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
-        Log.d(LOG_TAG, "onPrepareFromMediaId: can't process UPnP device");
-        isUpnp = false;
-      }
       // Synchronize session data
       session.setActive(true);
-      session.setMetadata(radio.getMediaMetadataBuilder().build());
       session.setExtras(extras);
       lockKey = UUID.randomUUID().toString();
-      if (isUpnp) {
+      // Try to retrieve radio
+      try {
+        radio = radioLibrary.getFrom(Long.valueOf(mediaId));
+        if (radio == null) {
+          abort("onPrepareFromMediaId: radio not found");
+          return;
+        }
+      } catch (Exception exception) {
+        abort("onPrepareFromMediaId: radioLibrary error; " + exception);
+        return;
+      }
+      session.setMetadata(radio.getMediaMetadataBuilder().build());
+      if (extras.containsKey(getString(R.string.key_upnp_device))) {
+        final Device<?, ?, ?> chosenDevice = getChosenDevice(extras.getString(getString(R.string.key_upnp_device)));
+        assert httpServer != null;
+        final Uri serverUri = httpServer.getUri(RadioService.this);
+        // UPnP not accepted if environment not OK: force STOP
+        if ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null)) {
+          abort("onPrepareFromMediaId: can't process UPnP device");
+          return;
+        }
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
@@ -541,27 +563,6 @@ public class RadioService
       playerAdapter = null;
     }
 
-    private Device<?, ?, ?> getChosenDevice(String identity) {
-      if (androidUpnpService == null) {
-        return null;
-      }
-      for (RemoteDevice remoteDevice : androidUpnpService.getRegistry().getRemoteDevices()) {
-        if (UpnpDevice.getIdentity(remoteDevice).equals(identity)) {
-          return remoteDevice;
-        }
-        // Embedded devices?
-        final RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
-        if (remoteDevices != null) {
-          for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
-            if (UpnpDevice.getIdentity(embeddedRemoteDevice).equals(identity)) {
-              return embeddedRemoteDevice;
-            }
-          }
-        }
-      }
-      return null;
-    }
-
     // Do nothing if no radio fund
     private void skipTo(int direction) {
       final Long nextRadioId = radioLibrary.get(Long.valueOf(getMediaId()), direction);
@@ -570,6 +571,13 @@ public class RadioService
         mediaSessionCompatCallback.onPrepareFromMediaId(
           nextRadioId.toString(), mediaController.getExtras());
       }
+    }
+
+    private void abort(@NonNull String log) {
+      Log.d(LOG_TAG, log);
+      onPlaybackStateChange(
+        PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_STOPPED).build(),
+        lockKey);
     }
   }
 }

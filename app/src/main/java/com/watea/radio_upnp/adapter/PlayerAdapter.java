@@ -112,6 +112,12 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
       .build();
   }
 
+  @NonNull
+  public static PlaybackStateCompat.Builder getPlaybackStateCompatBuilder(int state) {
+    return new PlaybackStateCompat.Builder()
+      .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
+  }
+
   public static boolean isHandling(@NonNull String protocolInfo) {
     for (String audioContentPrefix : AUDIO_CONTENT_PREFIXS) {
       if (protocolInfo.contains(audioContentPrefix))
@@ -233,9 +239,8 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
       Log.i(LOG_TAG, "=> no change");
     } else {
       state = newState;
-      listener.onPlaybackStateChange(new PlaybackStateCompat.Builder()
-        .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime())
-        .setActions(getAvailableActions()).build(), lockKey);
+      listener.onPlaybackStateChange(
+        getPlaybackStateCompatBuilder(state).setActions(getAvailableActions()).build(), lockKey);
     }
   }
 
