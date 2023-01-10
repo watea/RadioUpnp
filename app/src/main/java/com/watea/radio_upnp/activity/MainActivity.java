@@ -223,20 +223,20 @@ public class MainActivity
   };
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Nullable
-    private HttpService.Binder httpService = null;
+    private HttpService.Binder httpServiceBinder = null;
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-      httpService = (HttpService.Binder) service;
+      httpServiceBinder = (HttpService.Binder) service;
       // Bind to UPnP service
-      httpService.addUpnpConnection(upnpConnection);
+      httpServiceBinder.addUpnpConnection(upnpConnection);
     }
 
     // Nothing to do here
     @Override
     public void onServiceDisconnected(ComponentName name) {
-      if (httpService != null) {
-        httpService.removeUpnpConnection(upnpConnection);
+      if (httpServiceBinder != null) {
+        httpServiceBinder.removeUpnpConnection(upnpConnection);
       }
     }
   };

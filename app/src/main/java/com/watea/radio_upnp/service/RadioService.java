@@ -106,24 +106,24 @@ public class RadioService
   private HttpService.HttpServer httpServer = null;
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Nullable
-    private HttpService.Binder httpService = null;
+    private HttpService.Binder httpServiceBinder = null;
 
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
-      httpService = (HttpService.Binder) service;
+      httpServiceBinder = (HttpService.Binder) service;
       // Retrieve HTTP server
-      httpServer = httpService.getHttpServer();
+      httpServer = httpServiceBinder.getHttpServer();
       // Bind to RadioHandler
       httpServer.bindRadioHandler(RadioService.this, radioLibrary::getFrom);
       // Bind to UPnP service
-      httpService.addUpnpConnection(upnpConnection);
+      httpServiceBinder.addUpnpConnection(upnpConnection);
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
       // Unbind UPnP service
-      if (httpService != null) {
-        httpService.removeUpnpConnection(upnpConnection);
+      if (httpServiceBinder != null) {
+        httpServiceBinder.removeUpnpConnection(upnpConnection);
       }
       // Unbind HTTP server
       httpServer = null;
