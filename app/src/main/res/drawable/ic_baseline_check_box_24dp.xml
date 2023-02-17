@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><!--
+<!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,21 +21,12 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<resources>
-    <!-- Preferences -->
-    <string name="key_first_start">key_first_start</string>
-    <string name="key_preferred_radios">key_preferred_radios</string>
-    <string name="key_selected_device">key_selected_device</string>
-    <string name="key_radio_long_press_got_it">key_radio_long_press_got_it</string>
-    <string name="key_play_long_press_got_it">key_play_long_press_got_it</string>
-    <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
-    <string name="key_preferred_radios_got_it">key_preferred_radios_got_it</string>
-    <string name="key_information_press_got_it">key_information_press_got_it</string>
-    <string name="key_radio_icon_file">key_radio_icon_file</string>
-    <string name="key_radio_index">key_radio_index</string>
-    <string name="key_current_fragment">key_current_fragment</string>
-    <string name="key_radio_garden">key_radio_garden</string>
-    <!-- Bundles -->
-    <string name="key_upnp_device">key_upnp_device</string>
-    <string name="key_rate">key_rate</string>
-</resources>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportHeight="24"
+    android:viewportWidth="24">
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M19,3L5,3c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.11,0 2,-0.9 2,-2L21,5c0,-1.1 -0.89,-2 -2,-2zM10,17l-5,-5 1.41,-1.41L10,14.17l7.59,-7.59L19,8l-9,9z"/>
+</vector>

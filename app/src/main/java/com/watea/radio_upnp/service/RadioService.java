@@ -60,7 +60,7 @@ import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.model.UpnpDevice;
 
 import org.fourthline.cling.android.AndroidUpnpService;
@@ -102,7 +102,7 @@ public class RadioService
     }
   };
   private MediaSessionCompat session;
-  private RadioLibrary radioLibrary;
+  private Radios radios;
   private HttpService.HttpServer httpServer = null;
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Nullable
@@ -114,7 +114,7 @@ public class RadioService
       // Retrieve HTTP server
       httpServer = httpServiceBinder.getHttpServer();
       // Bind to RadioHandler
-      httpServer.bindRadioHandler(RadioService.this, radioLibrary::getFrom);
+      httpServer.bindRadioHandler(RadioService.this);
       // Bind to UPnP service
       httpServiceBinder.addUpnpConnection(upnpConnection);
     }
@@ -183,7 +183,7 @@ public class RadioService
       Log.i(LOG_TAG, "Existing channel reused");
     }
     // Radio library access
-    radioLibrary = new RadioLibrary(this);
+    radios = MainActivity.getRadios();
     // Bind to HTTP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
@@ -257,7 +257,7 @@ public class RadioService
           ((UpnpPlayerAdapter) playerAdapter).onNewInformation(information);
         }
         // Update notification
-        notificationManager.notify(NOTIFICATION_ID, getNotification());
+        buildNotification();
       }
     });
   }
@@ -283,7 +283,7 @@ public class RadioService
           case PlaybackStateCompat.STATE_PAUSED:
             // No relaunch on pause
             isAllowedToRewind = false;
-            notificationManager.notify(NOTIFICATION_ID, getNotification());
+            buildNotification();
             break;
           case PlaybackStateCompat.STATE_ERROR:
             // For user convenience, session is kept alive
@@ -309,7 +309,7 @@ public class RadioService
                 },
                 4000);
             } else {
-              notificationManager.notify(NOTIFICATION_ID, getNotification());
+              buildNotification();
             }
             break;
           default:
@@ -341,10 +341,6 @@ public class RadioService
     unbindService(httpConnection);
     // Force disconnection to release resources
     httpConnection.onServiceDisconnected(null);
-    // Release radioLibrary, if opened
-    if (radioLibrary != null) {
-      radioLibrary.close();
-    }
     // Finally session
     session.release();
   }
@@ -434,11 +430,6 @@ public class RadioService
       .build();
   }
 
-  @NonNull
-  private String getMediaId() {
-    return mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
-  }
-
   private Device<?, ?, ?> getChosenDevice(@NonNull String identity) {
     if (androidUpnpService == null) {
       return null;
@@ -460,6 +451,15 @@ public class RadioService
     return null;
   }
 
+
+  private void buildNotification() {
+    try {
+      notificationManager.notify(NOTIFICATION_ID, getNotification());
+    } catch (SecurityException securityException) {
+      Log.e(LOG_TAG, "Notification not allowed");
+    }
+  }
+
   // PlayerAdapter from session for actual media controls
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
@@ -478,7 +478,7 @@ public class RadioService
       lockKey = UUID.randomUUID().toString();
       // Try to retrieve radio
       try {
-        radio = radioLibrary.getFrom(Long.valueOf(mediaId));
+        radio = radios.getRadioFrom(mediaId);
         if (radio == null) {
           abort("onPrepareFromMediaId: radio not found");
           return;
@@ -562,7 +562,7 @@ public class RadioService
 
     @Override
     public void onRewind() {
-      mediaSessionCompatCallback.onPrepareFromMediaId(getMediaId(), mediaController.getExtras());
+      onPrepareFromMediaId(radio);
     }
 
     @Override
@@ -573,12 +573,14 @@ public class RadioService
 
     // Do nothing if no radio fund
     private void skipTo(int direction) {
-      final Long nextRadioId = radioLibrary.get(Long.valueOf(getMediaId()), direction);
-      if (nextRadioId != null) {
-        // Same extras are reused
-        mediaSessionCompatCallback.onPrepareFromMediaId(
-          nextRadioId.toString(), mediaController.getExtras());
-      }
+      // Same extras are reused
+      onPrepareFromMediaId(radios.getRadioFrom(radio, direction));
+    }
+
+    private void onPrepareFromMediaId(@NonNull Radio radio) {
+      mediaSessionCompatCallback.onPrepareFromMediaId(
+        Integer.toString(radio.hashCode()),
+        mediaController.getExtras());
     }
 
     private void abort(@NonNull String log) {

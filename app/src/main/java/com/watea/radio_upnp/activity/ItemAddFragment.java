@@ -23,7 +23,7 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.util.Log;
+import android.graphics.Bitmap;
 import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
@@ -32,8 +32,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 public class ItemAddFragment extends ItemFragment {
-  private static final String LOG_TAG = ItemAddFragment.class.getName();
-
   @Override
   public int getTitle() {
     return R.string.title_item_add;
@@ -42,15 +40,11 @@ public class ItemAddFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
-      boolean result = (urlWatcher.url == null);
-      try {
-        assert getRadioLibrary() != null;
-        result = !result && getRadioLibrary().add(
-          new Radio(getRadioName(), urlWatcher.url, webPageWatcher.url, false, getIcon()));
-      } catch (Exception exception) {
-        Log.e(LOG_TAG, "onOptionsItemSelected: internal failure", exception);
-      }
-      if (!result) {
+      final Bitmap icon = getIcon();
+      if ((urlWatcher.url == null) ||
+        (icon == null) ||
+        !getRadios().add(new Radio(
+          getRadioName(), getIcon(), urlWatcher.url, webPageWatcher.url))) {
         tell(R.string.radio_database_update_failed);
       }
       onBackPressed();

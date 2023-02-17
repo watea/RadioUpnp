@@ -39,7 +39,6 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.cling.UpnpService;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -123,7 +122,7 @@ public class HttpService extends Service {
     // Return logo file Uri; a jpeg file
     @Nullable
     public Uri createLogoFile(@NonNull Context context, @NonNull Radio radio) {
-      final String name = LOGO_FILE + radio.getId() + ".jpg";
+      final String name = LOGO_FILE + radio.hashCode() + ".jpg";
       try {
         try (FileOutputStream fileOutputStream = context.openFileOutput(name, Context.MODE_PRIVATE)) {
           Bitmap
@@ -147,10 +146,8 @@ public class HttpService extends Service {
       return NetworkProxy.getLoopbackUri(getLocalPort());
     }
 
-    public void bindRadioHandler(
-      @NonNull RadioHandler.Listener radioHandlerListener,
-      @NonNull RadioLibrary.Provider radioLibraryProvider) {
-      radioHandler.bind(radioHandlerListener, radioLibraryProvider);
+    public void bindRadioHandler(@NonNull RadioHandler.Listener radioHandlerListener) {
+      radioHandler.bind(radioHandlerListener);
     }
 
     public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {

@@ -28,7 +28,6 @@ import java.util.concurrent.ExecutorService;
  * @author Christian Bauer
  */
 public class StreamClientConfiguration extends AbstractStreamClientConfiguration {
-
   public StreamClientConfiguration(ExecutorService timeoutExecutorService) {
     super(timeoutExecutorService);
   }

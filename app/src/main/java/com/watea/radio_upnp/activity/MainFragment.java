@@ -34,6 +34,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -106,8 +107,7 @@ public class MainFragment extends MainActivityFragment {
     // Force column count
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
     // Set view
-    assert getRadioLibrary() != null;
-    radiosMainAdapter.set(getRadioLibrary(), isPreferredRadios);
+    radiosMainAdapter.set(isPreferredRadios);
     // UPnP changes
     upnpDevicesAdapter.setChosenDeviceListener(chosenDeviceListener);
   }
@@ -200,7 +200,7 @@ public class MainFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onCreateView(@NonNull View view) {
+  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
     radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><!--
+<!--
   ~ Copyright (c) 2018. Stephane Treuchot
   ~
   ~ Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,11 +21,12 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-
-    android:id="@+id/row_darfm_radio_name_text_view"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="@dimen/app_vertical_margin"
-    android:textAllCaps="true"
-    android:textStyle="bold" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportHeight="24"
+    android:viewportWidth="24">
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M19,5v14H5V5h14m0,-2H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2z"/>
+</vector>

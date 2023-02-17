@@ -48,7 +48,7 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioService;
 
 import java.text.DateFormat;
@@ -64,11 +64,6 @@ public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
   private static final String DATE = "date";
   private static final String INFORMATION = "information";
-  @NonNull
-  private final MainActivity mainActivity;
-  private final List<Map<String, String>> playInformations = new Vector<>();
-  @NonNull
-  private final SimpleAdapter playlistAdapter;
   // <HMI assets
   @NonNull
   private final ImageButton playImageButton;
@@ -92,23 +87,28 @@ public class PlayerController {
   private final AlertDialog informationPressAlertDialog;
   @NonNull
   private final AlertDialog playlistAlertDialog;
+  // />
+  @NonNull
+  private final SimpleAdapter playlistAdapter;
+  @NonNull
+  private final MainActivity mainActivity;
+  private final List<Map<String, String>> playInformations = new Vector<>();
   @NonNull
   private final MediaBrowserCompat mediaBrowser;
-  // />
-  private int informationCount = 0;
-  @Nullable
-  private RadioLibrary radioLibrary = null;
-  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
+  @NonNull
+  private final Radios radios;
+  private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onPreferredChange(@NonNull Radio radio) {
-      if (radioLibrary.isCurrentRadio(radio)) {
+      if (MainActivity.isCurrentRadio(radio)) {
         setPreferredButton(radio.isPreferred());
       }
     }
-
-    // Manage radio description
+  };
+  private final MainActivity.Listener mainActivityListener = new MainActivity.Listener() {
     @Override
     public void onNewCurrentRadio(@Nullable Radio radio) {
+      // Manage radio description
       final boolean isVisible = (radio != null);
       albumArtImageView.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
       playedRadioLinearLayout.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
@@ -119,6 +119,7 @@ public class PlayerController {
       }
     }
   };
+  private int informationCount = 0;
   private boolean gotItPlayLongPress;
   private boolean gotItInformationPress;
   @Nullable
@@ -162,12 +163,12 @@ public class PlayerController {
             break;
           case PlaybackStateCompat.STATE_BUFFERING:
           case PlaybackStateCompat.STATE_CONNECTING:
-            radioLibrary.setCurrentRadio(mediaController.getMetadata());
+            setCurrentRadio(mediaController.getMetadata());
             setFrameVisibility(true, true);
             break;
           case PlaybackStateCompat.STATE_NONE:
           case PlaybackStateCompat.STATE_STOPPED:
-            radioLibrary.setCurrentRadio(null);
+            MainActivity.setCurrentRadio((Radio) null);
             setFrameVisibility(false, false);
             break;
           default:
@@ -177,7 +178,7 @@ public class PlayerController {
             // (as it would require a Radio Service safe context,
             // too complex to implement).
             if (isUpnp) {
-              radioLibrary.setCurrentRadio(null);
+              MainActivity.setCurrentRadio((Radio) null);
             } else {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
@@ -235,7 +236,7 @@ public class PlayerController {
         mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
         if ((mediaMetadataCompat != null) && isValid(mediaMetadataCompat)) {
           mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
-          radioLibrary.setCurrentRadio(mediaMetadataCompat);
+          setCurrentRadio(mediaMetadataCompat);
         }
         // Nota: no mediaBrowser.subscribe here needed
       }
@@ -243,7 +244,7 @@ public class PlayerController {
       @Override
       public void onConnectionSuspended() {
         if (mediaController != null) {
-          radioLibrary.setCurrentRadio(null);
+          MainActivity.setCurrentRadio((Radio) null);
           mediaController.unregisterCallback(mediaControllerCallback);
         }
       }
@@ -256,6 +257,8 @@ public class PlayerController {
 
   public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
     this.mainActivity = mainActivity;
+    // Radios list
+    radios = MainActivity.getRadios();
     // Shared preferences
     final SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
     gotItPlayLongPress = sharedPreferences.getBoolean(
@@ -336,8 +339,7 @@ public class PlayerController {
         // Should not happen
         Log.i(LOG_TAG, "Internal failure, radio is null");
       } else {
-        assert radioLibrary != null;
-        radioLibrary.setPreferred(radio.getId(), !radio.isPreferred());
+        radios.setPreferred(radio, !radio.isPreferred());
       }
     });
     // Create MediaBrowserServiceCompat
@@ -349,11 +351,12 @@ public class PlayerController {
   }
 
   // Must be called on activity resume
-  public void onActivityResume(@NonNull RadioLibrary radioLibrary) {
+  public void onActivityResume() {
     // Reset start state
-    radioLibraryListener.onNewCurrentRadio(null);
+    mainActivityListener.onNewCurrentRadio(null);
     // Connect to other components
-    (this.radioLibrary = radioLibrary).addListener(radioLibraryListener);
+    radios.addListener(radiosListener);
+    MainActivity.addListener(mainActivityListener);
     // Launch RadioService
     mediaBrowser.connect();
   }
@@ -362,8 +365,8 @@ public class PlayerController {
   // Handle services
   public void onActivityPause() {
     // Clear radioLibrary
-    assert radioLibrary != null;
-    radioLibrary.removeListener(radioLibraryListener);
+    radios.removeListener(radiosListener);
+    MainActivity.removeListener(mainActivityListener);
     // Shared preferences
     mainActivity
       .getPreferences(Context.MODE_PRIVATE)
@@ -396,7 +399,7 @@ public class PlayerController {
     if (upnpDeviceIdentity != null) {
       bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
     }
-    mediaController.getTransportControls().prepareFromMediaId(radio.getId().toString(), bundle);
+    mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
     // Information are cleared
     playInformations.clear();
     insertInformation("", mainActivity.getString(R.string.no_data));
@@ -404,8 +407,12 @@ public class PlayerController {
 
   @Nullable
   private Radio getCurrentRadio() {
-    assert radioLibrary != null;
-    return (mediaController == null) ? null : radioLibrary.getCurrentRadio();
+    return (mediaController == null) ? null : MainActivity.getCurrentRadio();
+  }
+
+  private static void setCurrentRadio(@NonNull MediaMetadataCompat mediaMetadataCompat) {
+    MainActivity.setCurrentRadio(
+      mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
   }
 
   // Validity check: information must come from package

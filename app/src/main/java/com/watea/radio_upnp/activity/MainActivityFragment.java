@@ -23,18 +23,22 @@
 
 package com.watea.radio_upnp.activity;
 
+import android.content.Context;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.NetworkProxy;
 
 // Upper class for fragments of the main activity
@@ -62,7 +66,7 @@ public abstract class MainActivityFragment extends Fragment {
     assert container != null;
     this.container = container;
     if (view == null) {
-      onCreateView(view = inflater.inflate(getLayout(), container, false));
+      onCreateView(view = inflater.inflate(getLayout(), container, false), container);
     }
     assert view != null;
     return view;
@@ -120,11 +124,11 @@ public abstract class MainActivityFragment extends Fragment {
 
   protected abstract int getLayout();
 
-  protected abstract void onCreateView(@NonNull View view);
+  protected abstract void onCreateView(@NonNull View view, @Nullable ViewGroup container);
 
-  @Nullable
-  protected RadioLibrary getRadioLibrary() {
-    return getMainActivity().getRadioLibrary();
+  @NonNull
+  protected Radios getRadios() {
+    return MainActivity.getRadios();
   }
 
   protected void tell(int message) {
@@ -152,5 +156,34 @@ public abstract class MainActivityFragment extends Fragment {
 
   protected boolean isActuallyAdded() {
     return ((getActivity() != null) && isAdded());
+  }
+
+
+  protected void flushKeyboard() {
+    assert getView() != null;
+    flushKeyboard(getView());
+  }
+
+  protected void flushKeyboard(@NonNull View view) {
+    assert getContext() != null;
+    ((InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE))
+      .hideSoftInputFromWindow(view.getWindowToken(), 0);
+  }
+
+  // Abstract class to handle web search
+  protected abstract class Searcher extends Thread {
+    @Override
+    public void run() {
+      onSearch();
+      new Handler(Looper.getMainLooper()).post(() -> {
+        if (isActuallyAdded()) {
+          onPostSearch();
+        }
+      });
+    }
+
+    protected abstract void onSearch();
+
+    protected abstract void onPostSearch();
   }
 }

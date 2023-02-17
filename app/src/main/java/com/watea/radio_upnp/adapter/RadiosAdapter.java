@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.adapter;
 
 import android.annotation.SuppressLint;
-import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,29 +36,22 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.Radios;
 
 import java.util.List;
-import java.util.Vector;
 
 public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   extends RecyclerView.Adapter<V> {
   private static final int DEFAULT = -1;
   @NonNull
   protected final Listener listener;
-  protected final List<Long> radioIds = new Vector<>();
-  private final int resource;
-  @Nullable
-  protected RadioLibrary radioLibrary = null;
-  private int currentRadioIndex = DEFAULT;
-  private boolean isPreferred = false;
   @NonNull
-  private final RadioLibrary.Listener radioLibraryListener = new RadioLibrary.Listener() {
-    @Override
-    public void onPreferredChange(@NonNull Radio radio) {
-      notifyItemChanged(getIndexOf(radio));
-    }
-
+  protected final Radios radios;
+  private final int resource;
+  protected List<Radio> filteredRadios;
+  private int currentRadioIndex = DEFAULT;
+  @NonNull
+  private final MainActivity.Listener mainActivityListener = new MainActivity.Listener() {
     @Override
     public void onNewCurrentRadio(@Nullable Radio radio) {
       final int previousCurrentRadioIndex = currentRadioIndex;
@@ -67,85 +59,75 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
       notifyItemChanged(previousCurrentRadioIndex);
       notifyItemChanged(currentRadioIndex);
     }
+  };
+  private boolean isPreferred = false;
+  @NonNull
+  private final Radios.Listener radiosListener = new Radios.Listener() {
+    @Override
+    public void onPreferredChange(@NonNull Radio radio) {
+      notifyItemChanged(getIndexOf(radio));
+    }
 
     @Override
-    public void onAdd(@NonNull Long radioId) {
+    public void onAdd(@NonNull Radio radio) {
       // Don't add to view if preferred switch is activated, as new radio if not preferred
       if (!isPreferred) {
-        radioIds.add(radioId);
-        notifyItemRangeInserted(getIndexOf(radioId), 1);
-        onCountChange(false);
+        updateFilteredRadios();
+        notifyItemRangeInserted(getIndexOf(radio), 1);
       }
     }
 
     @Override
-    public void onRemove(@NonNull Long radioId) {
-      final int index = getIndexOf(radioId);
-      radioIds.remove(index);
-      notifyItemRemoved(index);
-      onCountChange(radioIds.isEmpty());
+    public void onRemove(@NonNull Radio radio) {
+      updateFilteredRadios();
+      notifyItemRemoved(getIndexOf(radio));
     }
 
     @Override
-    public void onMove(@NonNull Long fromId, @NonNull Long toId) {
-      final int fromIndex = getIndexOf(fromId);
-      final int toIndex = getIndexOf(toId);
-      radioIds.set(toIndex, fromId);
-      radioIds.set(fromIndex, toId);
-      notifyItemMoved(fromIndex, toIndex);
+    public void onMove(int from, int to) {
+      updateFilteredRadios();
+      notifyItemMoved(from, to);
     }
   };
 
   public RadiosAdapter(
-    @NonNull Listener listener, int resource, @NonNull RecyclerView recyclerView) {
+    @NonNull Listener listener,
+    int resource,
+    @NonNull RecyclerView recyclerView) {
+    this.radios = MainActivity.getRadios();
     this.listener = listener;
     this.resource = resource;
     // Adapter shall be defined for RecyclerView
     recyclerView.setAdapter(this);
   }
 
-  @NonNull
-  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
-    return Bitmap.createScaledBitmap(bitmap, size, size, true);
-  }
-
   public void unset() {
-    if (radioLibrary != null) {
-      radioLibrary.removeListener(radioLibraryListener);
-    }
+    MainActivity.removeListener(mainActivityListener);
+    radios.removeListener(radiosListener);
   }
 
   @Override
   public void onBindViewHolder(@NonNull V v, int i) {
-    assert radioLibrary != null;
-    if (radioLibrary.isOpen()) {
-      final Radio radio = radioLibrary.getFrom(radioIds.get(i));
-      assert radio != null;
-      v.setView(radio);
-    }
+    assert filteredRadios != null;
+    v.setView(filteredRadios.get(i));
   }
 
   @Override
   public int getItemCount() {
-    return radioIds.size();
+    return filteredRadios.size();
   }
 
   @SuppressLint("NotifyDataSetChanged")
   public void refresh(boolean isPreferred) {
     this.isPreferred = isPreferred;
-    radioIds.clear();
-    assert radioLibrary != null;
-    radioIds.addAll(
-      isPreferred ? radioLibrary.getPreferredRadioIds() : radioLibrary.getAllRadioIds());
-    currentRadioIndex = getIndexOf(radioLibrary.getCurrentRadio());
+    updateFilteredRadios();
     notifyDataSetChanged();
-    onCountChange(radioIds.isEmpty());
   }
 
   // Must be called
-  public void set(@NonNull RadioLibrary radioLibrary, boolean isPreferred) {
-    this.radioLibrary = radioLibrary;
-    this.radioLibrary.addListener(radioLibraryListener);
+  public void set(boolean isPreferred) {
+    MainActivity.addListener(mainActivityListener);
+    radios.addListener(radiosListener);
     refresh(isPreferred);
   }
 
@@ -154,16 +136,14 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     return LayoutInflater.from(viewGroup.getContext()).inflate(resource, viewGroup, false);
   }
 
-  protected int getIndexOf(@NonNull Long radioId) {
-    return radioIds.indexOf(radioId);
-  }
-
   protected int getIndexOf(@Nullable Radio radio) {
-    return (radio == null) ? DEFAULT : getIndexOf(radio.getId());
+    return (radio == null) ? DEFAULT : filteredRadios.indexOf(radio);
   }
 
-  protected void onCountChange(boolean isEmpty) {
-    listener.onCountChange(isEmpty);
+  private void updateFilteredRadios() {
+    filteredRadios = isPreferred ? radios.preferredGet() : radios;
+    currentRadioIndex = getIndexOf(MainActivity.getCurrentRadio());
+    listener.onCountChange(filteredRadios.isEmpty());
   }
 
   public interface Listener {
@@ -198,7 +178,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
       this.radio = radio;
       setImage(new BitmapDrawable(
         radioTextView.getResources(),
-        createScaledBitmap(this.radio.getIcon(), MainActivity.getSmallIconSize())));
+        Radio.createScaledBitmap(this.radio.getIcon(), MainActivity.getSmallIconSize())));
       radioTextView.setText(this.radio.getName());
     }
 

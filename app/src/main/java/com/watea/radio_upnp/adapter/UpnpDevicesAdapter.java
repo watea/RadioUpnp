@@ -291,7 +291,7 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
       // Icon
       Bitmap bitmap = upnpDevice.getIcon();
       bitmap = (bitmap == null) ? castIcon : bitmap;
-      bitmap = RadiosAdapter.createScaledBitmap(bitmap, ICON_SIZE);
+      bitmap = Bitmap.createScaledBitmap(bitmap, ICON_SIZE, ICON_SIZE, true);
       upnpDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         new BitmapDrawable(view.getResources(), bitmap), null, null, null);
       // Selected item

@@ -84,6 +84,8 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-servlet:9.3.30.v20211001'
     //noinspection GradleDependency
     implementation 'org.eclipse.jetty:jetty-client:9.3.30.v20211001'
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12
+    implementation 'org.slf4j:slf4j-log4j12:2.0.6'
     // Playstore
     implementation 'com.android.billingclient:billing:5.1.0'
 }

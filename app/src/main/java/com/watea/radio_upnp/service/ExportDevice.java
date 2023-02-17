@@ -23,10 +23,6 @@
 
 package com.watea.radio_upnp.service;
 
-import androidx.annotation.NonNull;
-
-import com.watea.radio_upnp.model.RadioLibrary;
-
 import org.fourthline.cling.binding.annotations.AnnotationLocalServiceBinder;
 import org.fourthline.cling.model.DefaultServiceManager;
 import org.fourthline.cling.model.ValidationException;
@@ -45,8 +41,6 @@ import java.util.UUID;
 public class ExportDevice extends LocalDevice {
   public static final DeviceType EXPORTER_DEVICE_TYPE =
     new UDADeviceType(Exporter.EXPORTER_SERVICE);
-  @NonNull
-  private final DefaultServiceManager<Exporter> serviceManager;
 
   public ExportDevice() throws ValidationException {
     super(
@@ -58,11 +52,6 @@ public class ExportDevice extends LocalDevice {
         new ModelDetails("RadioUpnpExport", "RadioUpnp radios export device")),
       new AnnotationLocalServiceBinder().read(Exporter.class));
     @SuppressWarnings("unchecked") final LocalService<Exporter> exportService = getServices()[0];
-    serviceManager = new DefaultServiceManager<>(exportService, Exporter.class);
-    exportService.setManager(serviceManager);
-  }
-
-  public void setRadioLibrary(@NonNull RadioLibrary radioLibrary) {
-    serviceManager.getImplementation().set(radioLibrary);
+    exportService.setManager(new DefaultServiceManager<>(exportService, Exporter.class));
   }
 }

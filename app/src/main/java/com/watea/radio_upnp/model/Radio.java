@@ -23,10 +23,8 @@
 
 package com.watea.radio_upnp.model;
 
-import android.annotation.SuppressLint;
-import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -40,6 +38,10 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.service.RadioURL;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -52,154 +54,100 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 public class Radio {
+  @NonNull
   public static final Radio DUMMY_RADIO;
   private static final String LOG_TAG = Radio.class.getName();
   private static final String SPACER = ";";
-  public static final String MARSHALL_HEAD =
-    marshall("name") + marshall("url") + marshall("webPageUrl") + marshall("isPreferred");
+  public static final String EXPORT_HEAD =
+    export("name") + export("url") + export("webPageUrl") + export("isPreferred");
+  private static final String NAME = "name";
+  private static final String ICON = "icon";
+  private static final String URL = "url";
+  private static final String WEB_PAGE_URL = "web_page_url";
+  private static final String MIME = "mime";
+  private static final String QUALITY = "quality";
+  private static final String IS_PREFERRED = "is_preferred";
+  private static final int DEFAULT = -1;
 
   static {
     Radio radio = null;
     try {
-      radio = new Radio("", new URL("http:"), null, false, null);
+      radio = new Radio(
+        "DUMMY",
+        BitmapFactory.decodeResource(Resources.getSystem(), android.R.drawable.ic_secure),
+        new URL("http:"),
+        null,
+        "",
+        0,
+        false);
     } catch (MalformedURLException malformedURLException) {
-      Log.e(LOG_TAG, "Bad static init");
+      Log.e(LOG_TAG, "Internal failure; bad static init");
     }
+    assert radio != null;
     DUMMY_RADIO = radio;
   }
 
   @NonNull
-  private Long id;
+  private final String mime;
+  private final int quality;
   @NonNull
   private String name;
   @NonNull
-  private File iconFile;
-  @NonNull
-  private Type type;
-  @NonNull
-  private Language language;
+  private Bitmap icon;
   @NonNull
   private URL url;
   @Nullable
-  private URL webPageUrl = null;
-  @NonNull
-  private Quality quality;
-  @SuppressWarnings("FieldMayBeFinal")
-  @NonNull
-  private Boolean isPreferred;
-  // Convenient member to temporary store icon,
-  // as icon is stored as file (which may be changed, actually)
-  @Nullable
-  private Bitmap icon;
+  private URL webPageUrl;
+  private boolean isPreferred;
 
-  // Create Radio with no icon file
   public Radio(
     @NonNull String name,
-    @NonNull URL uRL,
-    @Nullable URL webPageURL,
-    @NonNull Boolean isPreferred,
-    @Nullable Bitmap icon) throws MalformedURLException {
-    this(
-      name,
-      new File(""),
-      Type.MISC,
-      Language.OTHER,
-      uRL,
-      webPageURL,
-      Quality.MEDIUM,
-      isPreferred,
-      icon);
-  }
-
-  // Create Radio with no id
-  public Radio(
-    @NonNull String name,
-    @NonNull File iconFile,
-    @NonNull Type type,
-    @NonNull Language language,
-    @NonNull URL uRL,
-    @Nullable URL webPageURL,
-    @NonNull Quality quality,
-    @NonNull Boolean isPreferred,
-    @Nullable Bitmap icon) throws MalformedURLException {
-    id = -1L;
+    @NonNull Bitmap icon,
+    @NonNull URL url,
+    @Nullable URL webPageUrl,
+    @NonNull String mime,
+    int quality,
+    boolean isPreferred) {
     this.name = name;
-    this.iconFile = iconFile;
-    this.type = type;
-    this.language = language;
-    url = uRL;
-    webPageUrl = webPageURL;
+    this.icon = resize(icon);
+    this.url = url;
+    this.webPageUrl = webPageUrl;
+    this.mime = mime;
     this.quality = quality;
     this.isPreferred = isPreferred;
-    this.icon = icon;
   }
 
-  // SQL constructor
-  @SuppressLint("Range")
-  public Radio(@NonNull Cursor cursor) throws MalformedURLException {
-    id = cursor.getLong(cursor.getColumnIndex(RadioSQLContract.Columns._ID));
-    name = cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_NAME));
-    iconFile = new File(
-      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_ICON)));
-    type =
-      Type.valueOf(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_TYPE)));
-    language = Language.valueOf(
-      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_LANGUAGE)));
-    url = new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_URL)));
-    try {
-      webPageUrl =
-        new URL(cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_WEB_PAGE)));
-    } catch (MalformedURLException malformedURLException) {
-      Log.i(LOG_TAG, "Bad WebPageURL definition");
-    }
-    quality = Quality.valueOf(
-      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_QUALITY)));
-    isPreferred = Boolean.valueOf(
-      cursor.getString(cursor.getColumnIndex(RadioSQLContract.Columns.COLUMN_IS_PREFERRED)));
+  public Radio(
+    @NonNull String name,
+    @NonNull Bitmap icon,
+    @NonNull URL url,
+    @Nullable URL webPageUrl,
+    @NonNull String mime,
+    int quality) {
+    this(name, icon, url, webPageUrl, mime, quality, false);
   }
 
-  public Radio(@NonNull String string) throws MalformedURLException {
-    this(string.split(SPACER));
+  public Radio(
+    @NonNull String name,
+    @NonNull Bitmap icon,
+    @NonNull URL url,
+    @Nullable URL webPageUrl) {
+    this(name, icon, url, webPageUrl, "", DEFAULT);
   }
 
-  // Symmetrical to marshall(), no icon file created
-  private Radio(@NonNull String[] strings) throws MalformedURLException {
+  public Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
     this(
-      strings[0],
-      new URL(strings[1]),
-      (strings[2].length() == 0) ? null : new URL(strings[2]),
-      Boolean.valueOf(strings[3]),
-      toBitmap(strings[4]));
+      jSONObject.getString(NAME),
+      getBitmapFrom(jSONObject.getString(ICON)),
+      new URL(jSONObject.getString(URL)),
+      getURLFrom(jSONObject.getString(WEB_PAGE_URL)),
+      jSONObject.getString(MIME),
+      jSONObject.getInt(QUALITY),
+      jSONObject.getBoolean(IS_PREFERRED));
   }
 
-  // First URL if m3u, else do nothing
-  @Nullable
-  public static URL getUrlFromM3u(@NonNull URL uRL) {
-    if (!uRL.toString().endsWith(".m3u")) {
-      return uRL;
-    }
-    HttpURLConnection httpURLConnection = null;
-    try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-      (httpURLConnection = new RadioURL(uRL).getActualHttpURLConnection()).getInputStream()))) {
-      String result;
-      while ((result = bufferedReader.readLine()) != null) {
-        if (result.startsWith("http://") || result.startsWith("https://")) {
-          return new URL(result);
-        }
-      }
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "Error getting M3U", iOException);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
-    return null;
-  }
-
-  @NonNull
-  private static String marshall(@NonNull String string) {
-    return string + SPACER;
+  public Radio(@NonNull String json) throws JSONException, MalformedURLException {
+    this((JSONObject) new JSONTokener(json).nextValue());
   }
 
   // Store bitmap as filename.png
@@ -217,24 +165,64 @@ public class Radio {
     return new File(context.getFilesDir().getPath() + "/" + fileName);
   }
 
+  // First URL if m3u, else do nothing
+  @Nullable
+  public static URL getURLFromM3u(@NonNull URL uRL) {
+    if (!uRL.toString().endsWith(".m3u")) {
+      return uRL;
+    }
+    HttpURLConnection httpURLConnection = null;
+    try (final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+      (httpURLConnection = new RadioURL(uRL).getActualHttpURLConnection()).getInputStream()))) {
+      String result;
+      while ((result = bufferedReader.readLine()) != null) {
+        if (result.startsWith("http://") || result.startsWith("https://")) {
+          return new URL(result);
+        }
+      }
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "Error getting M3U", iOException);
+    } finally {
+      if (httpURLConnection != null) {
+        httpURLConnection.disconnect();
+      }
+    }
+    return null;
+  }
+
+  // Resize bitmap as a square
   @NonNull
-  private static Bitmap toBitmap(@NonNull String base64String) {
+  public static Bitmap resize(@NonNull Bitmap icon) {
+    final int height = icon.getHeight();
+    final int width = icon.getWidth();
+    final int min = Math.min(height, width);
+    return Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
+  }
+
+  @NonNull
+  private static String export(@NonNull String string) {
+    return string + SPACER;
+  }
+
+  @Nullable
+  private static URL getURLFrom(@NonNull String string) throws MalformedURLException {
+    return string.isEmpty() ? null : new URL(string);
+  }
+
+  @NonNull
+  private static Bitmap getBitmapFrom(@NonNull String base64String) {
     final byte[] byteArray = Base64.decode(base64String, Base64.NO_WRAP);
     return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
   }
 
-  @Nullable
-  public URL getUrlFromM3u() {
-    return getUrlFromM3u(url);
-  }
-
   @NonNull
-  public Long getId() {
-    return id;
+  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
+    return Bitmap.createScaledBitmap(bitmap, size, size, true);
   }
 
-  public void setId(@NonNull Long id) {
-    this.id = id;
+  @Nullable
+  public URL getURLFromM3u() {
+    return getURLFromM3u(url);
   }
 
   @NonNull
@@ -244,26 +232,6 @@ public class Radio {
 
   public void setName(@NonNull String name) {
     this.name = name;
-  }
-
-  @NonNull
-  public Type getType() {
-    return type;
-  }
-
-  public void setType(@NonNull Type type) {
-    this.type = type;
-  }
-
-  @SuppressWarnings("unused")
-  @NonNull
-  public Language getLanguage() {
-    return language;
-  }
-
-  @SuppressWarnings("unused")
-  public void setLanguage(@NonNull Language language) {
-    this.language = language;
   }
 
   @NonNull
@@ -294,128 +262,71 @@ public class Radio {
     return (webPageUrl == null) ? null : Uri.parse(webPageUrl.toString());
   }
 
-  @NonNull
-  public File getIconFile() {
-    return iconFile;
-  }
-
   // Note: no defined size for icon
   @NonNull
   public Bitmap getIcon() {
-    return BitmapFactory.decodeFile(iconFile.getPath());
+    return icon;
   }
 
   public void setIcon(@NonNull Bitmap icon) {
     this.icon = icon;
   }
 
-  @SuppressWarnings("unused")
-  @NonNull
-  public Quality getQuality() {
-    return quality;
-  }
-
-  @SuppressWarnings("unused")
-  public void setQuality(@NonNull Quality quality) {
-    this.quality = quality;
-  }
-
-  @NonNull
-  public Boolean isPreferred() {
+  public boolean isPreferred() {
     return isPreferred;
   }
 
-  // SQL access
-  @NonNull
-  public ContentValues toContentValues() {
-    final ContentValues contentValues = new ContentValues();
-    contentValues.put(RadioSQLContract.Columns.COLUMN_NAME, name);
-    // Null allowed on transition
-    contentValues.put(RadioSQLContract.Columns.COLUMN_ICON, iconFile.getPath());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_TYPE, type.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_LANGUAGE, language.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_URL, url.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_WEB_PAGE,
-      (webPageUrl == null) ? null : webPageUrl.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_QUALITY, quality.toString());
-    contentValues.put(RadioSQLContract.Columns.COLUMN_IS_PREFERRED, isPreferred.toString());
-    return contentValues;
+  public void setIsPreferred(boolean isPreferred) {
+    this.isPreferred = isPreferred;
+  }
+
+  public String getId() {
+    return Integer.toString(hashCode());
   }
 
   @NonNull
   public MediaMetadataCompat.Builder getMediaMetadataBuilder() {
     final Bitmap icon = getIcon();
     return new MediaMetadataCompat.Builder()
+      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, getId())
       .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, icon)
       .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, icon)
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, name)
-      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id.toString())
       .putRating(
         MediaMetadataCompat.METADATA_KEY_RATING,
         RatingCompat.newPercentageRating(isPreferred ? 100 : 0))
       .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name);
   }
 
-  public boolean storeIcon(@NonNull Context context) {
-    assert icon != null;
-    try {
-      iconFile = storeToFile(context, icon, id.toString());
-    } catch (FileNotFoundException fileNotFoundException) {
-      Log.e(LOG_TAG, "storeIcon: internal failure", fileNotFoundException);
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public boolean equals(@Nullable Object object) {
-    return ((object instanceof Radio) && (id.longValue() == ((Radio) object).id.longValue()));
-  }
-
-  // Only actually used field are exported
   @NonNull
-  public String marshall(boolean textOnly) {
-    return marshall(name) +
-      marshall(url.toString()) +
-      marshall((webPageUrl == null) ? "" : webPageUrl.toString()) +
-      marshall(isPreferred.toString()) +
-      (textOnly ? "" : marshall(iconToBase64String()));
+  public String export() {
+    return export(name) +
+      export(url.toString()) +
+      export((webPageUrl == null) ? "" : webPageUrl.toString()) +
+      export(Boolean.toString(isPreferred));
+  }
+
+  public JSONObject getJSONObject() {
+    try {
+      return new JSONObject()
+        .put(NAME, name)
+        .put(ICON, iconToBase64String())
+        .put(URL, url.toString())
+        .put(WEB_PAGE_URL, (webPageUrl == null) ? "" : webPageUrl.toString())
+        .put(MIME, mime)
+        .put(QUALITY, quality)
+        .put(IS_PREFERRED, isPreferred);
+    } catch (JSONException jSONException) {
+      Log.e("TAG", "getJSONObject: JSONException fired", jSONException);
+      return new JSONObject();
+    }
   }
 
   @NonNull
   private String iconToBase64String() {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    getIcon().compress(Bitmap.CompressFormat.PNG, 100, baos);
+    icon.compress(Bitmap.CompressFormat.PNG, 100, baos);
     return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
-  }
-
-  @SuppressWarnings("unused")
-  public enum Type {
-    POPROCK,
-    WORLD,
-    HITS,
-    URBAN,
-    ELECTRO,
-    CLASSIC,
-    NEWS,
-    MISC,
-    OTHER
-  }
-
-  @SuppressWarnings("unused")
-  public enum Language {
-    ENGLISH,
-    SPANISH,
-    FRENCH,
-    PORTUGUESE,
-    OTHER
-  }
-
-  @SuppressWarnings("unused")
-  public enum Quality {
-    LOW,
-    MEDIUM,
-    HIGH
   }
 }

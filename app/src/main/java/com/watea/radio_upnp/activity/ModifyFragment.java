@@ -24,9 +24,11 @@
 package com.watea.radio_upnp.activity;
 
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -37,7 +39,6 @@ import com.watea.radio_upnp.model.Radio;
 public class ModifyFragment extends MainActivityFragment {
   // <HMI assets
   private FrameLayout defaultFrameLayout;
-  // />
   private final RadiosModifyAdapter.Listener radiosModifyAdapterListener =
     new RadiosModifyAdapter.Listener() {
       @Override
@@ -56,13 +57,13 @@ public class ModifyFragment extends MainActivityFragment {
         tell(R.string.not_to_delete);
       }
     };
+  // />
   private RadiosModifyAdapter radiosModifyAdapter = null;
 
   @Override
   public void onResume() {
     super.onResume();
-    assert getRadioLibrary() != null;
-    radiosModifyAdapter.set(getRadioLibrary(), false);
+    radiosModifyAdapter.set(false);
   }
 
   @Override
@@ -93,7 +94,7 @@ public class ModifyFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onCreateView(@NonNull View view) {
+  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);

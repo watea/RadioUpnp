@@ -37,7 +37,7 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioURL;
 
 import org.apache.commons.io.IOUtils;
@@ -95,7 +95,7 @@ public class RadioGardenController {
     radioGardenAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
       .setTitle(R.string.title_radio_garden)
       .setIcon(R.drawable.ic_search_black_24dp)
-      .setView(R.layout.radio_garden_view)
+      .setView(R.layout.view_radio_garden)
       .setPositiveButton(
         R.string.action_got_it,
         (dialogInterface, i) -> launchRadioGarden(mainActivity.setRadioGardenGotIt()))
@@ -200,15 +200,14 @@ public class RadioGardenController {
     // Synchronous update
     handler.post(() -> {
       boolean isAddOk = isAsynchronousOk;
-      final RadioLibrary radioLibrary = mainActivity.getRadioLibrary();
+      final Radios radios = MainActivity.getRadios();
       if (isAddOk) {
         try {
-          isAddOk = (radioLibrary != null) && radioLibrary.isOpen() && radioLibrary.add(new Radio(
+          isAddOk = radios.add(new Radio(
             data.getString("title"),
+            (icon == null) ? mainActivity.getDefaultIcon() : icon,
             new URL(RADIO_GARDEN + LISTEN + id + CHANNEL_MP3),
-            webSite,
-            false,
-            (icon == null) ? mainActivity.getDefaultIcon() : icon));
+            webSite));
           Log.d(LOG_TAG, "Radio added!");
         } catch (Exception exception) {
           Log.d(LOG_TAG, "handle synchronous exception", exception);

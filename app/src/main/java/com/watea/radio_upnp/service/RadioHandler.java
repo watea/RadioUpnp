@@ -30,8 +30,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
+import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -58,14 +58,11 @@ public class RadioHandler extends AbstractHandler {
   private static final String SEPARATOR = "_";
   private static final Controller DEFAULT_CONTROLLER = new Controller() {
   };
-  private static final RadioLibrary.Provider DEFAULT_RADIOLIBRARY_PROVIDER = unused -> null;
   private static final Listener DEFAULT_LISTENER = new Listener() {
   };
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
-  @NonNull
-  private RadioLibrary.Provider radioLibraryProvider = DEFAULT_RADIOLIBRARY_PROVIDER;
   @NonNull
   private Listener listener = DEFAULT_LISTENER;
   @NonNull
@@ -82,8 +79,8 @@ public class RadioHandler extends AbstractHandler {
   public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
       .buildUpon()
-      .appendEncodedPath(RadioHandler.class.getSimpleName() + SEPARATOR + radio.getId())
-      .appendQueryParameter(PARAMS, radio.getId() + SEPARATOR + lockKey)
+      .appendEncodedPath(RadioHandler.class.getSimpleName() + SEPARATOR + radio.hashCode())
+      .appendQueryParameter(PARAMS, radio.hashCode() + SEPARATOR + lockKey)
       .build();
   }
 
@@ -114,12 +111,12 @@ public class RadioHandler extends AbstractHandler {
     }
     // Request must contain a query with radio ID and lock key
     final String[] params = param.split(SEPARATOR);
-    final String radioId = (params.length > 0) ? params[0] : null;
+    final String id = (params.length > 0) ? params[0] : null;
     final String lockKey = (params.length > 1) ? params[1] : null;
-    if ((radioId == null) || (lockKey == null)) {
+    if ((id == null) || (lockKey == null)) {
       Log.i(LOG_TAG, "Unexpected request received. Radio or UUID is null.");
     } else {
-      final Radio radio = radioLibraryProvider.getFrom(Long.decode(radioId));
+      final Radio radio = MainActivity.getRadios().getRadioFrom(id);
       if (radio == null) {
         Log.i(LOG_TAG, "Unknown radio");
       } else {
@@ -130,18 +127,14 @@ public class RadioHandler extends AbstractHandler {
   }
 
   // Must be called
-  public void bind(
-    @NonNull Listener listener,
-    @NonNull RadioLibrary.Provider radioLibraryProvider) {
+  public void bind(@NonNull Listener listener) {
     this.listener = listener;
-    this.radioLibraryProvider = radioLibraryProvider;
   }
 
   // Must be called to close
   public void unBind() {
     resetController();
     listener = DEFAULT_LISTENER;
-    radioLibraryProvider = DEFAULT_RADIOLIBRARY_PROVIDER;
   }
 
   private void handleConnection(
@@ -158,7 +151,7 @@ public class RadioHandler extends AbstractHandler {
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {
       // Accept M3U format
-      httpURLConnection = new RadioURL(radio.getUrlFromM3u()).getActualHttpURLConnection(
+      httpURLConnection = new RadioURL(radio.getURLFromM3u()).getActualHttpURLConnection(
         connection -> {
           // Default request method GET is used as some radio server handles HEAD too bad
           connection.setRequestProperty("User-Agent", userAgent);

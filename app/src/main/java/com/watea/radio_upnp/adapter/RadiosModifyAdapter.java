@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.adapter;
 
 import android.graphics.drawable.BitmapDrawable;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
@@ -38,8 +37,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewHolder> {
-  private static final String LOG_TAG = RadiosModifyAdapter.class.getName();
-
   public RadiosModifyAdapter(@NonNull Listener listener, @NonNull RecyclerView recyclerView) {
     super(listener, R.layout.row_modify_radio, recyclerView);
     // RecyclerView shall be defined for Adapter
@@ -50,10 +47,6 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
   @Override
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
     return new ViewHolder(getView(viewGroup));
-  }
-
-  private void databaseWarn() {
-    Log.w(LOG_TAG, "Internal failure, radio database update failed");
   }
 
   public interface Listener extends RadiosAdapter.Listener {
@@ -79,14 +72,8 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
       @NonNull RecyclerView recyclerView,
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
-      final Long fromId = radioIds.get(viewHolder.getAbsoluteAdapterPosition());
-      final Long toId = radioIds.get(targetViewHolder.getAbsoluteAdapterPosition());
-      assert radioLibrary != null;
-      final boolean result = radioLibrary.move(fromId, toId);
-      if (!result) {
-        databaseWarn();
-      }
-      return result;
+      return radios.swap(
+        viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
     }
 
     @Override
@@ -101,11 +88,7 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
 
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-      final int position = viewHolder.getAbsoluteAdapterPosition();
-      assert radioLibrary != null;
-      if (!radioLibrary.deleteFrom(radioIds.get(position))) {
-        databaseWarn();
-      }
+      radios.remove(viewHolder.getAbsoluteAdapterPosition());
     }
   }
 
@@ -115,13 +98,8 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
-      preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
-      preferredImageButton.setOnClickListener(v -> {
-        assert radioLibrary != null;
-        if (!radioLibrary.setPreferred(radio.getId(), !radio.isPreferred())) {
-          databaseWarn();
-        }
-      });
+      (preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button))
+        .setOnClickListener(v -> radios.setPreferred(radio, !radio.isPreferred()));
     }
 
     @NonNull

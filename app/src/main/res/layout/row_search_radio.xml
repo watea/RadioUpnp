@@ -22,32 +22,44 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
 
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="@dimen/app_margin">
+    android:orientation="vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <RelativeLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
-        android:text="@string/donation_description"
-        android:textAppearance="@android:style/TextAppearance.Small" />
+        android:padding="@dimen/app_margin">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingTop="@dimen/app_half_margin"
-        android:paddingBottom="@dimen/app_half_margin"
-        android:text="@string/donation_google_android_market_description"
-        android:textAppearance="@android:style/TextAppearance.Small" />
+        <TextView
+            android:id="@+id/row_search_radio_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:clickable="false"
+            android:drawablePadding="@dimen/app_horizontal_margin"
+            android:gravity="center_vertical"
+            android:textStyle="bold" />
 
-    <Spinner
-        android:id="@+id/donation_google_android_market_spinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:entries="@array/donation_google_catalog_values"
-        android:paddingTop="@dimen/app_half_margin" />
+        <ImageButton
+            android:id="@+id/check_image_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:checkable="true"
+            android:contentDescription="@string/action_select"
+            android:gravity="center"
+            android:tint="@color/dark_blue"
+            tools:ignore="RelativeOverlap" />
+
+    </RelativeLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorPrimary" />
 
 </LinearLayout>

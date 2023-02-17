@@ -497,7 +497,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
-      "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
+      "<item id=\"" + radio.hashCode() + "\" parentID=\"0\" restricted=\"1\">" +
       "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
       "<dc:title>" + radio.getName() + "</dc:title>" +
       "<upnp:artist>" + information + "</upnp:artist>" +

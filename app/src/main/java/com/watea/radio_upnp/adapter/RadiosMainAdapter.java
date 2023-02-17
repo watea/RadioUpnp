@@ -65,7 +65,6 @@ public class RadiosMainAdapter extends RadiosAdapter<RadiosMainAdapter.ViewHolde
     @Override
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
-      assert radioLibrary != null;
       if (isCurrentRadio()) {
         radioTextView.setBackground(defaultBackground);
       } else {
@@ -74,7 +73,7 @@ public class RadiosMainAdapter extends RadiosAdapter<RadiosMainAdapter.ViewHolde
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {
-      return createScaledBitmap(bitmap, 1).getPixel(0, 0);
+      return Radio.createScaledBitmap(bitmap, 1).getPixel(0, 0);
     }
   }
 }

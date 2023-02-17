@@ -37,12 +37,14 @@ import java.net.URL;
 
 public class ItemModifyFragment extends ItemFragment {
   private static final String LOG_TAG = ItemModifyFragment.class.getName();
-  private Long radioId = null;
+  private static final int DEFAULT = -1;
+  private int index = DEFAULT;
   private Radio radio = null;
 
   // Must be called before creation
   public void set(@NonNull Radio radio) {
     this.radio = radio;
+    index = DEFAULT;
   }
 
   @Override
@@ -58,7 +60,7 @@ public class ItemModifyFragment extends ItemFragment {
       setRadioIcon(radio.getIcon());
     } else {
       // Restore radioId, radio will be restored in onResume
-      radioId = savedInstanceState.getLong(getString(R.string.key_radio_id));
+      index = savedInstanceState.getInt(getString(R.string.key_radio_index));
     }
   }
 
@@ -67,7 +69,7 @@ public class ItemModifyFragment extends ItemFragment {
     super.onSaveInstanceState(outState);
     // Store radio; may fail
     try {
-      outState.putLong(getString(R.string.key_radio_id), radio.getId());
+      outState.putInt(getString(R.string.key_radio_index), getRadios().indexOf(radio));
     } catch (Exception exception) {
       outState.clear();
       Log.e(LOG_TAG, "onSaveInstanceState: internal failure", exception);
@@ -77,27 +79,20 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
-      assert getRadioLibrary() != null;
-      if (getRadioLibrary().isCurrentRadio(radio)) {
+      if (MainActivity.isCurrentRadio(radio)) {
         tell(R.string.not_to_modify);
       } else {
-        boolean isOk = (radio != null);
-        if (isOk) {
-          radio.setName(getRadioName());
-          assert urlWatcher.url != null;
-          radio.setURL(urlWatcher.url);
-          radio.setWebPageURL(webPageWatcher.url);
-          assert getIcon() != null;
-          radio.setIcon(getIcon());
-          // Same file name reused to store icon
-          isOk = radio.storeIcon(getMainActivity()) &&
-            getRadioLibrary().updateFrom(radio.getId(), radio.toContentValues());
-        }
-        if (!isOk) {
+        radio.setName(getRadioName());
+        assert urlWatcher.url != null;
+        radio.setURL(urlWatcher.url);
+        radio.setWebPageURL(webPageWatcher.url);
+        assert getIcon() != null;
+        radio.setIcon(getIcon());
+        if (!getRadios().modify(radio)) {
           tell(R.string.radio_database_update_failed);
         }
-        onBackPressed();
       }
+      onBackPressed();
     }
     // Always true
     return true;
@@ -107,14 +102,13 @@ public class ItemModifyFragment extends ItemFragment {
   public void onResume() {
     super.onResume();
     if (radio == null) {
-      // Restore radio from RadioLibrary, necessary in case of restoration from SavedInstanceState
-      if (radioId == null) {
-        Log.e(LOG_TAG, "onResume: radioId is null");
+      // Restore radio from Radios, necessary in case of restoration from SavedInstanceState
+      if (index < 0) {
+        Log.e(LOG_TAG, "onResume: index is bad");
         tell(R.string.radio_database_update_failed);
         onBackPressed();
       } else {
-        assert getRadioLibrary() != null;
-        radio = getRadioLibrary().getFrom(radioId);
+        radio = getRadios().get(index);
       }
     }
   }

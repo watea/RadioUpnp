@@ -25,10 +25,7 @@ package com.watea.radio_upnp.service;
 
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.activity.MainActivity;
 
 import org.fourthline.cling.binding.annotations.UpnpAction;
 import org.fourthline.cling.binding.annotations.UpnpOutputArgument;
@@ -48,21 +45,13 @@ public class Exporter {
   public static final String ACTION_GET_EXPORT = "GetExport";
   public static final String EXPORT = "Export";
   private static final String LOG_TAG = Exporter.class.getName();
-  @Nullable
-  private RadioLibrary radioLibrary;
 
   @UpnpStateVariable(sendEvents = false)
   private String export = "";
 
-  // Must be called
-  public void set(@NonNull RadioLibrary radioLibrary) {
-    this.radioLibrary = radioLibrary;
-  }
-
   @UpnpAction(out = @UpnpOutputArgument(name = EXPORT))
   public String getExport() {
-    assert radioLibrary != null;
-    export = radioLibrary.isOpen() ? radioLibrary.marshall(false) : "";
+    export = MainActivity.getRadios().toString();
     Log.d(LOG_TAG, "getExport: " + export.length() + " characters");
     return export;
   }

@@ -29,7 +29,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
+import android.view.ViewGroup;
 import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
@@ -51,6 +51,7 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class DonationFragment
   extends MainActivityFragment
@@ -58,12 +59,9 @@ public class DonationFragment
   private static final String LOG_TAG = DonationFragment.class.getName();
   private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L; // 1s
   private static final long RECONNECT_TIMER_MAX_TIME_MILLISECONDS = 1000L * 60L * 15L; // 15 mins
-  private static final List<QueryProductDetailsParams.Product> GOOGLE_PRODUCTS = Arrays.asList(
-    getProduct("radio_upnp.donation.1"),
-    getProduct("radio_upnp.donation.2"),
-    getProduct("radio_upnp.donation.3"));
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private final Map<String, ProductDetails> ownProductDetailss = new Hashtable<>();
+  private List<QueryProductDetailsParams.Product> googleProducts;
   private BillingClient billingClient;
   // <HMI assets
   private Spinner googleSpinner;
@@ -119,7 +117,7 @@ public class DonationFragment
         paymentAlertDialogBuilder.show();
       } else {
         final String productName =
-          GOOGLE_PRODUCTS.get(googleSpinner.getSelectedItemPosition()).zza();
+          googleProducts.get(googleSpinner.getSelectedItemPosition()).zza();
         Log.d(LOG_TAG, "Selected item in spinner: " + productName);
         final ProductDetails productDetails = ownProductDetailss.get(productName);
         assert productDetails != null;
@@ -151,7 +149,7 @@ public class DonationFragment
   }
 
   @Override
-  public void onCreateView(@NonNull View view) {
+  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
     // Alert dialog
@@ -161,19 +159,15 @@ public class DonationFragment
       .setMessage(R.string.donation_alert_dialog_try_again)
       .setCancelable(true)
       .setNeutralButton(R.string.donation_button_close, (dialog, which) -> dialog.dismiss());
-    // Adapters
-    assert getContext() != null;
-    ArrayAdapter<CharSequence> donationAdapter = new ArrayAdapter<>(
-      getContext(),
-      android.R.layout.simple_spinner_item,
-      getResources().getStringArray(R.array.donation_google_catalog_values));
-    donationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-    googleSpinner.setAdapter(donationAdapter);
   }
 
   @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    // Google products
+    googleProducts = Arrays.stream(getResources().getStringArray(R.array.google_products))
+      .map(DonationFragment::getProduct)
+      .collect(Collectors.toList());
     // BillingClient, new each time
     assert getContext() != null;
     billingClient = BillingClient.newBuilder(getContext())
@@ -199,7 +193,7 @@ public class DonationFragment
           reconnectMilliseconds = RECONNECT_TIMER_START_MILLISECONDS;
           // Query product details asynchronously
           billingClient.queryProductDetailsAsync(
-            QueryProductDetailsParams.newBuilder().setProductList(GOOGLE_PRODUCTS).build(),
+            QueryProductDetailsParams.newBuilder().setProductList(googleProducts).build(),
             (billingClientResult, productDetailss) -> {
               logBillingResult("productDetailsResponseListener", billingClientResult);
               if (billingClientResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {

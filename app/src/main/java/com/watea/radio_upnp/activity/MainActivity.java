@@ -63,10 +63,10 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.adapter.RadiosAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
+import com.watea.radio_upnp.model.DefaultRadios;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RadioLibrary;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.model.UpnpDevice;
 import com.watea.radio_upnp.service.HttpService;
 import com.watea.radio_upnp.service.NetworkProxy;
@@ -77,17 +77,18 @@ import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.registry.RegistryListener;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.net.URL;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 public class MainActivity
   extends AppCompatActivity
@@ -99,76 +100,17 @@ public class MainActivity
     new Hashtable<Class<? extends Fragment>, Integer>() {
       {
         put(MainFragment.class, R.id.action_home);
+        put(SearchFragment.class, R.id.action_search);
         put(ItemAddFragment.class, R.id.action_add_item);
         put(ModifyFragment.class, R.id.action_modify);
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  private static final DefaultRadio[] DEFAULT_RADIOS = {
-    new DefaultRadio(
-      "FRANCE INTER",
-      R.drawable.logo_france_inter,
-      "http://direct.franceinter.fr/live/franceinter-midfi.mp3",
-      "https://www.franceinter.fr/"),
-    new DefaultRadio(
-      "FRANCE CULTURE",
-      R.drawable.logo_france_culture,
-      "http://direct.franceculture.fr/live/franceculture-midfi.mp3",
-      "https://www.franceculture.fr/"),
-    new DefaultRadio(
-      "OUI FM",
-      R.drawable.logo_oui_fm,
-      "http://target-ad-2.cdn.dvmr.fr/ouifm-high.mp3",
-      "https://www.ouifm.fr/"),
-    new DefaultRadio(
-      "EUROPE1",
-      R.drawable.logo_europe1,
-      "http://ais-live.cloud-services.paris:8000/europe1.mp3",
-      "https://www.europe1.fr/"),
-    new DefaultRadio(
-      "RFM",
-      R.drawable.logo_rfm,
-      "http://ais-live.cloud-services.paris:8000/rfm.mp3",
-      "http://www.rfm.fr/"),
-    new DefaultRadio(
-      "SKYROCK",
-      R.drawable.logo_skyrock,
-      "http://icecast.skyrock.net/s/natio_mp3_128k",
-      "https://www.skyrock.com/"),
-    new DefaultRadio(
-      "VIRGIN",
-      R.drawable.logo_virgin,
-      "http://ais-live.cloud-services.paris:8000/virgin.mp3",
-      "https://www.virginradio.fr/"),
-    new DefaultRadio(
-      "FUN",
-      R.drawable.logo_fun,
-      "http://icecast.funradio.fr/fun-1-44-128?listen=webCwsBCggNCQgLDQUGBAcGBg",
-      "https://www.funradio.fr/"),
-    new DefaultRadio(
-      "RADIO PARADISE",
-      R.drawable.logo_radio_paradise,
-      "http://stream.radioparadise.com/flacm",
-      "https://www.radioparadise.com/"),
-    new DefaultRadio(
-      "PBB",
-      R.drawable.logo_pbb_radio,
-      "https://pbbradio.com:8443/128",
-      "https://www.allzicradio.com/en/player/listen/2579/pbb-laurent-garnier"),
-    new DefaultRadio(
-      "FIP",
-      R.drawable.logo_fip,
-      "http://icecast.radiofrance.fr/fip-hifi.aac",
-      "https://www.fip.fr/"),
-    new DefaultRadio(
-      "DAVIDE",
-      R.drawable.logo_davide,
-      "https://streaming01.zfast.co.uk/proxy/davideof",
-      "http://www.davideofmimic.com/")
-  };
   private static final DeviceTypeHeader RENDERER_DEVICE_TYPE_HEADER =
     new DeviceTypeHeader(RENDERER_DEVICE_TYPE);
-  private NetworkProxy networkProxy = null;
+  private static final List<Listener> listeners = new Vector<>();
+  private static Radios radios = null;
+  private static Radio currentRadio = null;
   // <HMI assets
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
@@ -178,10 +120,9 @@ public class MainActivity
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
+  // />
   private ImportController importController;
   private RadioGardenController radioGardenController;
-  // />
-  private RadioLibrary radioLibrary = null;
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
   private AndroidUpnpService androidUpnpService = null;
@@ -241,14 +182,53 @@ public class MainActivity
     }
   };
   private Intent newIntent = null;
+  private NetworkProxy networkProxy = null;
 
   @NonNull
   public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap) {
-    return RadiosAdapter.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
+    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
   }
 
   public static int getSmallIconSize() {
     return RADIO_ICON_SIZE / 2;
+  }
+
+  @NonNull
+  public static Radios getRadios() {
+    assert radios != null;
+    return radios;
+  }
+
+  @Nullable
+  public static Radio getCurrentRadio() {
+    return currentRadio;
+  }
+
+  public static void setCurrentRadio(@NonNull String radioId) {
+    setCurrentRadio(radios.getRadioFrom(radioId));
+  }
+
+  public static void setCurrentRadio(@Nullable Radio radio) {
+    currentRadio = radio;
+    listeners.forEach(listener -> listener.onNewCurrentRadio(currentRadio));
+  }
+
+  public static boolean isCurrentRadio(@NonNull Radio radio) {
+    return (currentRadio == radio);
+  }
+
+  public static void addListener(@NonNull Listener listener) {
+    listeners.add(listener);
+  }
+
+  public static void removeListener(@NonNull Listener listener) {
+    listeners.remove(listener);
+  }
+
+  public static void setNotification(@NonNull Context context, @NonNull String packageName) {
+    final Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+      .putExtra(Settings.EXTRA_APP_PACKAGE, packageName);
+    context.startActivity(intent);
   }
 
   @Nullable
@@ -292,11 +272,6 @@ public class MainActivity
     }
     drawerLayout.closeDrawers();
     return true;
-  }
-
-  @Nullable
-  public RadioLibrary getRadioLibrary() {
-    return radioLibrary;
   }
 
   public void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
@@ -465,8 +440,6 @@ public class MainActivity
     unbindService(httpConnection);
     // Force disconnection to release resources
     httpConnection.onServiceDisconnected(null);
-    // Close radios database
-    radioLibrary.close();
     // Clear PlayerController call
     playerController.onActivityPause();
     Log.d(LOG_TAG, "onPause done!");
@@ -482,16 +455,17 @@ public class MainActivity
   protected void onResume() {
     super.onResume();
     Log.d(LOG_TAG, "onResume");
-    // Create radio database (order matters)
-    radioLibrary = new RadioLibrary(this);
     // Create default radios on first start
     final SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden), false);
     // Init database
     if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
-      setDefaultRadios();
-      // Robustness: store immediately to avoid bad user experience in case of app crash
-      sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
+      if (radios.addAll(DefaultRadios.get(this, RADIO_ICON_SIZE))) {
+        // Robustness: store immediately to avoid bad user experience in case of app crash
+        sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
+      } else {
+        Log.e(LOG_TAG, "Internal failure; unable to init radios");
+      }
     }
     // Bind to HTTP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
@@ -503,7 +477,7 @@ public class MainActivity
       newIntent = null;
     }
     // PlayerController init
-    playerController.onActivityResume(radioLibrary);
+    playerController.onActivityResume();
     Log.d(LOG_TAG, "onResume done!");
   }
 
@@ -511,6 +485,8 @@ public class MainActivity
   @SuppressLint("InflateParams")
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    // Init radios
+    radios = new Radios(this);
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // UPnP adapter (order matters)
@@ -560,7 +536,9 @@ public class MainActivity
     if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
       new AlertDialog.Builder(this, R.style.AlertDialogStyle)
         .setMessage(R.string.notification_needed)
-        .setPositiveButton(R.string.action_go, (dialogInterface, i) -> setNotification())
+        .setPositiveButton(
+          R.string.action_go,
+          (dialogInterface, i) -> setNotification(this, getPackageName()))
         .create()
         .show();
     }
@@ -647,8 +625,8 @@ public class MainActivity
       new AlertDialog.Builder(this, R.style.AlertDialogStyle)
         // Restore checked item
         .setOnDismissListener(dialogInterface -> checkNavigationMenu());
-    try (Writer writer = new OutputStreamWriter(new FileOutputStream(dumpFile))) {
-      writer.write(radioLibrary.marshall(true));
+    try (Writer writer = new OutputStreamWriter(Files.newOutputStream(dumpFile.toPath()))) {
+      writer.write(radios.export());
       alertDialogBuilder.setMessage(R.string.export_done);
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "dumpRadios: internal failure", iOException);
@@ -657,58 +635,13 @@ public class MainActivity
     alertDialogBuilder.create().show();
   }
 
-  private void setNotification() {
-    final Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-      .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
-    startActivity(intent);
-  }
-
-  private void setDefaultRadios() {
-    for (DefaultRadio defaultRadio : DEFAULT_RADIOS) {
-      try {
-        final Radio radio = new Radio(
-          defaultRadio.name,
-          new URL(defaultRadio.uRL),
-          new URL(defaultRadio.webPageURL),
-          false,
-          resourceToBitmap(defaultRadio.drawable));
-        if (!radioLibrary.add(radio)) {
-          Log.e(LOG_TAG, "setDefaultRadios: internal failure on: " + radio.getName());
-        }
-      } catch (Exception exception) {
-        Log.e(LOG_TAG, "setDefaultRadios: internal failure", exception);
-      }
-    }
-  }
-
-  @NonNull
-  private Bitmap resourceToBitmap(int resource) {
-    return createScaledBitmap(BitmapFactory.decodeResource(getResources(), resource));
-  }
-
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
   }
 
-  private static class DefaultRadio {
-    @NonNull
-    private final String name;
-    private final int drawable;
-    @NonNull
-    private final String uRL;
-    @NonNull
-    private final String webPageURL;
-
-    private DefaultRadio(
-      @NonNull String name,
-      int drawable,
-      @NonNull String uRL,
-      @NonNull String webPageURL) {
-      this.name = name;
-      this.drawable = drawable;
-      this.uRL = uRL;
-      this.webPageURL = webPageURL;
+  public interface Listener {
+    default void onNewCurrentRadio(@Nullable Radio radio) {
     }
   }
 }
