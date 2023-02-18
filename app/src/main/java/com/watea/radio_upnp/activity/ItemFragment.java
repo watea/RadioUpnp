@@ -283,7 +283,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     @NonNull
     protected final URL url;
     @Nullable
-    protected Bitmap foundIcon = null;
+    protected Bitmap icon = null;
 
     private IconSearcher(@NonNull URL url) {
       super();
@@ -296,10 +296,10 @@ public abstract class ItemFragment extends MainActivityFragment {
     @Override
     protected void onPostSearch() {
       showSearchButton(true);
-      if (foundIcon == null) {
+      if (icon == null) {
         tell(R.string.no_icon_found);
       } else {
-        setRadioIcon(foundIcon);
+        setRadioIcon(icon);
         tell(R.string.icon_updated);
       }
     }
@@ -312,7 +312,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     protected void onSearch() {
-      foundIcon = RadioURL.iconSearch(url);
+      icon = RadioURL.iconSearch(url);
     }
   }
 
@@ -323,7 +323,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     protected void onSearch() {
-      foundIcon = new RadioURL(url).getBitmap();
+      icon = new RadioURL(url).getBitmap();
     }
   }
 
