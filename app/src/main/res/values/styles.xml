@@ -48,8 +48,8 @@
     </style>
 
     <style name="countrySpinnerItemStyle" parent="@android:style/Widget.Holo.DropDownItem.Spinner">
-        <item name="android:textColor">@color/black</item>
-        <item name="android:backgroundTint">@color/light_gray</item>
+        <item name="android:textColor">@color/light_gray</item>
+        <item name="android:backgroundTint">@color/black</item>
     </style>
 
 </resources>

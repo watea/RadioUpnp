@@ -160,14 +160,15 @@ public abstract class MainActivityFragment extends Fragment {
 
 
   protected void flushKeyboard() {
-    assert getView() != null;
-    flushKeyboard(getView());
+    final View focus = getMainActivity().getCurrentFocus();
+    if (focus != null) {
+      flushKeyboard(focus);
+    }
   }
 
-  protected void flushKeyboard(@NonNull View view) {
-    assert getContext() != null;
-    ((InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE))
-      .hideSoftInputFromWindow(view.getWindowToken(), 0);
+  protected void flushKeyboard(@NonNull View focus) {
+    ((InputMethodManager) getMainActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
+      .hideSoftInputFromWindow(focus.getWindowToken(), 0);
   }
 
   // Abstract class to handle web search

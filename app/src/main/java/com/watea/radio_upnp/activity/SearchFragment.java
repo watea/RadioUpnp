@@ -73,7 +73,6 @@ public class SearchFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private AlertDialog searchAlertDialog;
   private EditText nameEditText;
-  private View searchView;
   // />
   private boolean isFirstStart = true;
   private String[] countryCodes;
@@ -145,7 +144,8 @@ public class SearchFragment extends MainActivityFragment {
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     radiosRecyclerView.setAdapter(radiosSearchAdapter);
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
-    searchView = getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
+    final View searchView =
+      getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
     nameEditText = searchView.findViewById(R.id.name_edit_text);
     final Spinner countrySpinner = searchView.findViewById(R.id.country_spinner);
     // Build alert dialog
@@ -159,7 +159,6 @@ public class SearchFragment extends MainActivityFragment {
 
   // Valid countryCode has length == 2
   private void search(@NonNull String countryCode) {
-    flushKeyboard(searchView);
     tell(R.string.wait_search);
     radiosSearchAdapter.clear();
     defaultFrameLayout.setVisibility(View.VISIBLE);
@@ -177,10 +176,10 @@ public class SearchFragment extends MainActivityFragment {
           try {
             final String id = extractValue(station, "station_id");
             if (id.length() > 0) {
-              final Map<String, String> radio = new Hashtable<>();
-              radio.put(DAR_FM_ID, id);
-              radio.put(DAR_FM_NAME, extractValue(station, "callsign"));
-              new DarFmDetailSearcher(radio);
+              final Map<String, String> radioData = new Hashtable<>();
+              radioData.put(DAR_FM_ID, id);
+              radioData.put(DAR_FM_NAME, extractValue(station, "callsign"));
+              new DarFmDetailSearcher(radioData);
             } else {
               Log.i(LOG_TAG, "Error in data; DAR_FM_PLAYLIST_REQUEST extraction");
             }
@@ -197,13 +196,13 @@ public class SearchFragment extends MainActivityFragment {
   private class DarFmDetailSearcher extends Searcher {
     // Map of radio data
     @NonNull
-    private final Map<String, String> radio;
+    private final Map<String, String> radioData;
     @Nullable
-    private Bitmap foundIcon = null;
+    private Bitmap icon = null;
 
-    private DarFmDetailSearcher(@NonNull Map<String, String> radio) {
+    private DarFmDetailSearcher(@NonNull Map<String, String> radioData) {
       super();
-      this.radio = radio;
+      this.radioData = radioData;
       start();
     }
 
@@ -211,11 +210,11 @@ public class SearchFragment extends MainActivityFragment {
     protected void onSearch() {
       try {
         final Element station = Jsoup
-          .connect(DAR_FM_STATIONS_REQUEST + radio.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
+          .connect(DAR_FM_STATIONS_REQUEST + radioData.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
           .get();
-        radio.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
+        radioData.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
         // Order matters
-        foundIcon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
+        icon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
       } catch (MalformedURLException malformedURLException) {
         Log.i(LOG_TAG, "Error performing icon search", malformedURLException);
       } catch (IOException iOexception) {
@@ -226,19 +225,20 @@ public class SearchFragment extends MainActivityFragment {
     @SuppressLint("SetTextI18n")
     @Override
     protected void onPostSearch() {
-      final String radioName = radio.get(DAR_FM_NAME);
+      final String radioName = radioData.get(DAR_FM_NAME);
       URL webPage = null;
       try {
-        webPage = new URL(radio.get(DAR_FM_WEB_PAGE));
+        webPage = new URL(radioData.get(DAR_FM_WEB_PAGE));
       } catch (MalformedURLException malformedURLException) {
         Log.i(LOG_TAG, "No web page found for " + radioName);
       }
       try {
         radiosSearchAdapter.add(new Radio(
           (radioName == null) ? "" : radioName.toUpperCase(),
-          (foundIcon == null) ? getMainActivity().getDefaultIcon() : foundIcon,
-          new URL(DAR_FM_BASE_URL + radio.get(DAR_FM_ID)),
+          (icon == null) ? getMainActivity().getDefaultIcon() : icon,
+          new URL(DAR_FM_BASE_URL + radioData.get(DAR_FM_ID)),
           webPage));
+        // Order matters
         defaultFrameLayout.setVisibility(View.INVISIBLE);
       } catch (MalformedURLException malformedURLException) {
         Log.i(LOG_TAG, "Error adding radio: " + radioName, malformedURLException);

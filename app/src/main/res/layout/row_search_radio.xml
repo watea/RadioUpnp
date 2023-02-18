@@ -22,7 +22,6 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
 
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -35,16 +34,17 @@
 
         <TextView
             android:id="@+id/row_search_radio_text_view"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
+            android:layout_toStartOf="@+id/check_image_button"
             android:clickable="false"
             android:drawablePadding="@dimen/app_horizontal_margin"
             android:gravity="center_vertical"
             android:textStyle="bold" />
 
         <ImageButton
-            android:id="@+id/check_image_button"
+            android:id="@id/check_image_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
@@ -52,8 +52,7 @@
             android:checkable="true"
             android:contentDescription="@string/action_select"
             android:gravity="center"
-            android:tint="@color/dark_blue"
-            tools:ignore="RelativeOverlap" />
+            android:tint="@color/dark_blue" />
 
     </RelativeLayout>
 
