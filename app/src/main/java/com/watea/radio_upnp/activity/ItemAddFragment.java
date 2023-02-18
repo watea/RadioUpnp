@@ -42,7 +42,7 @@ public class ItemAddFragment extends ItemFragment {
     if (!super.onOptionsItemSelected(item)) {
       final Bitmap icon = getIcon();
       if ((urlWatcher.url == null) || (icon == null) || !getRadios().add(new Radio(
-          getRadioName(), getIcon(), urlWatcher.url, webPageWatcher.url))) {
+        getRadioName(), getIcon(), urlWatcher.url, webPageWatcher.url))) {
         tell(R.string.radio_database_update_failed);
       }
       onBackPressed();

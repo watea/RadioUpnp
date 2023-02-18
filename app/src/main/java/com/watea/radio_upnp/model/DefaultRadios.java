@@ -168,7 +168,8 @@ public class DefaultRadios {
       this.quality = quality;
     }
 
-    private Radio getRadioFrom(@NonNull Context context, int iconSize) throws MalformedURLException {
+    private Radio getRadioFrom(@NonNull Context context, int iconSize)
+      throws MalformedURLException {
       return new Radio(
         name,
         Radio.createScaledBitmap(

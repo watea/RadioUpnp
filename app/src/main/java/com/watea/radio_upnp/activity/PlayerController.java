@@ -89,6 +89,8 @@ public class PlayerController {
   private final AlertDialog playlistAlertDialog;
   // />
   @NonNull
+  private final SharedPreferences sharedPreferences;
+  @NonNull
   private final SimpleAdapter playlistAdapter;
   @NonNull
   private final MainActivity mainActivity;
@@ -260,7 +262,7 @@ public class PlayerController {
     // Radios list
     radios = MainActivity.getRadios();
     // Shared preferences
-    final SharedPreferences sharedPreferences = mainActivity.getPreferences(Context.MODE_PRIVATE);
+    sharedPreferences = this.mainActivity.getPreferences(Context.MODE_PRIVATE);
     gotItPlayLongPress = sharedPreferences.getBoolean(
       mainActivity.getString(R.string.key_play_long_press_got_it), false);
     gotItInformationPress = sharedPreferences.getBoolean(
@@ -368,8 +370,7 @@ public class PlayerController {
     radios.removeListener(radiosListener);
     MainActivity.removeListener(mainActivityListener);
     // Shared preferences
-    mainActivity
-      .getPreferences(Context.MODE_PRIVATE)
+    sharedPreferences
       .edit()
       .putBoolean(mainActivity.getString(R.string.key_play_long_press_got_it), gotItPlayLongPress)
       .putBoolean(

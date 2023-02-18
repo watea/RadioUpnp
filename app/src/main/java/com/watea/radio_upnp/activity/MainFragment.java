@@ -100,6 +100,7 @@ public class MainFragment extends MainActivityFragment {
   private boolean gotItPreferredRadios;
   private RadiosMainAdapter radiosMainAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
+  private SharedPreferences sharedPreferences;
 
   @Override
   public void onResume() {
@@ -118,8 +119,7 @@ public class MainFragment extends MainActivityFragment {
     // Context exists
     assert getActivity() != null;
     // Shared preferences
-    getActivity()
-      .getPreferences(Context.MODE_PRIVATE)
+    sharedPreferences
       .edit()
       .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
       .putBoolean(getString(R.string.key_dlna_enable_got_it), gotItDlnaEnable)
@@ -231,7 +231,7 @@ public class MainFragment extends MainActivityFragment {
       isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
     }
     // Shared preferences
-    SharedPreferences sharedPreferences = getMainActivity().getPreferences(Context.MODE_PRIVATE);
+    sharedPreferences = getMainActivity().getPreferences(Context.MODE_PRIVATE);
     gotItRadioLongPress =
       sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
     gotItDlnaEnable =

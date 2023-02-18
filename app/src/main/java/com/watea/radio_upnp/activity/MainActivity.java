@@ -68,6 +68,7 @@ import com.watea.radio_upnp.model.DefaultRadios;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.model.UpnpDevice;
+import com.watea.radio_upnp.model.legacy.RadioLibrary;
 import com.watea.radio_upnp.service.HttpService;
 import com.watea.radio_upnp.service.NetworkProxy;
 
@@ -121,6 +122,7 @@ public class MainActivity
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
   // />
+  private SharedPreferences sharedPreferences;
   private ImportController importController;
   private RadioGardenController radioGardenController;
   private boolean gotItRadioGarden = false;
@@ -432,10 +434,7 @@ public class MainActivity
     super.onPause();
     Log.d(LOG_TAG, "onPause");
     // Shared preferences
-    getPreferences(Context.MODE_PRIVATE)
-      .edit()
-      .putBoolean(getString(R.string.key_radio_garden), gotItRadioGarden)
-      .apply();
+    storeBooleanPreference(R.string.key_radio_garden, gotItRadioGarden);
     // Release HTTP service
     unbindService(httpConnection);
     // Force disconnection to release resources
@@ -455,18 +454,8 @@ public class MainActivity
   protected void onResume() {
     super.onResume();
     Log.d(LOG_TAG, "onResume");
-    // Create default radios on first start
-    final SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    // Fetch preferences
     gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden), false);
-    // Init database
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
-      if (radios.addAll(DefaultRadios.get(this, RADIO_ICON_SIZE))) {
-        // Robustness: store immediately to avoid bad user experience in case of app crash
-        sharedPreferences.edit().putBoolean(getString(R.string.key_first_start), false).apply();
-      } else {
-        Log.e(LOG_TAG, "Internal failure; unable to init radios");
-      }
-    }
     // Bind to HTTP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
@@ -485,8 +474,24 @@ public class MainActivity
   @SuppressLint("InflateParams")
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    // Fetch preferences
+    sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Init radios
     radios = new Radios(this);
+    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
+      if (radios.addAll(DefaultRadios.get(this, RADIO_ICON_SIZE))) {
+        // Robustness: store immediately to avoid bad user experience in case of app crash
+        storeBooleanPreference(R.string.key_first_start, false);
+      } else {
+        Log.e(LOG_TAG, "Internal failure; unable to init radios");
+      }
+    }
+    // Legacy support; this code should be removed after some time....
+    if (sharedPreferences.getBoolean(getString(R.string.key_legacy_to_process), true)) {
+      processLegacy();
+      // Robustness: store immediately to avoid bad user experience in case of app crash
+      storeBooleanPreference(R.string.key_legacy_to_process, false);
+    }
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // UPnP adapter (order matters)
@@ -588,6 +593,31 @@ public class MainActivity
         outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
       }
     }
+  }
+
+  // Add all legacy radios, do nothing if there is no legacy
+  private void processLegacy() {
+    RadioLibrary radioLibrary = new RadioLibrary(this);
+    radioLibrary.getAllRadioIds().forEach(radioId -> {
+      com.watea.radio_upnp.model.legacy.Radio legacyRadio = radioLibrary.getFrom(radioId);
+      // Robustness: something went wrong?
+      if (legacyRadio != null) {
+        // Robustness: catch any exception
+        try {
+          radios.add(new Radio(
+            legacyRadio.getName(),
+            legacyRadio.getIcon(),
+            legacyRadio.getURL(),
+            legacyRadio.getWebPageURL()));
+        } catch (Exception exception) {
+          Log.e(LOG_TAG, "Internal failure; reading legacy radio: " + legacyRadio.getName());
+        }
+      }
+    });
+  }
+
+  private void storeBooleanPreference(int key, boolean value) {
+    sharedPreferences.edit().putBoolean(getString(key), value).apply();
   }
 
   private void sendLogcatMail() {

@@ -188,8 +188,8 @@ public abstract class ItemFragment extends MainActivityFragment {
     webPageEditText = view.findViewById(R.id.web_page_edit_text);
     iconSearchButton = view.findViewById(R.id.icon_search_button);
     iconSearchProgressBar = view.findViewById(R.id.icon_search_progress_bar);
-    iconSearchButton.setOnClickListener(v -> iconSearch());
-    view.findViewById(R.id.browse_button).setOnClickListener(v ->
+    iconSearchButton.setOnClickListener(iconView -> iconSearch());
+    view.findViewById(R.id.browse_button).setOnClickListener(iconView ->
       startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*"), BROWSE_INTENT));
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
