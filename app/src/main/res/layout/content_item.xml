@@ -48,7 +48,6 @@
         android:id="@+id/url_edit_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:enabled="false"
         android:hint="@string/legend_streaming_url_example"
         android:importantForAutofill="no"
         android:inputType="textUri" />
