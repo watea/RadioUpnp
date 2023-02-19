@@ -147,6 +147,25 @@ public class RadioService
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
 
+  public static boolean isValid(@NonNull MediaMetadataCompat mediaMetadataCompat) {
+    return getSessionTag()
+      .equals(mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI));
+  }
+
+  @NonNull
+  private static String getSessionTag() {
+    final Package thisPackage = RadioService.class.getPackage();
+    assert thisPackage != null;
+    return thisPackage.getName();
+  }
+
+  @NonNull
+  private static MediaMetadataCompat.Builder getTaggedMediaMetadataBuilder(@NonNull Radio radio) {
+    return radio
+      .getMediaMetadataBuilder()
+      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, getSessionTag());
+  }
+
   @Override
   public void onCreate() {
     super.onCreate();
@@ -247,8 +266,7 @@ public class RadioService
           session.setExtras(extras);
         }
         // Media information in ARTIST and SUBTITLE
-        session.setMetadata(radio.getMediaMetadataBuilder()
-          .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, getPackageName())
+        session.setMetadata(getTaggedMediaMetadataBuilder(radio)
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
           .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
           .build());
@@ -487,7 +505,8 @@ public class RadioService
         abort("onPrepareFromMediaId: radioLibrary error; " + exception);
         return;
       }
-      session.setMetadata(radio.getMediaMetadataBuilder().build());
+      // Tag metadata with package name to enable session discrepancy
+      session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
       if (extras.containsKey(getString(R.string.key_upnp_device))) {
         final Device<?, ?, ?> chosenDevice = getChosenDevice(extras.getString(getString(R.string.key_upnp_device)));
         assert httpServer != null;

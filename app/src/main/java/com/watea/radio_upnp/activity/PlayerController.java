@@ -193,7 +193,7 @@ public class PlayerController {
       // Manage dynamic data
       @Override
       public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
-        if ((mediaMetadata != null) && isValid(mediaMetadata)) {
+        if ((mediaMetadata != null) && RadioService.isValid(mediaMetadata)) {
           // Use SubTitle as notification
           final CharSequence information = mediaMetadata.getDescription().getSubtitle();
           playedRadioInformationTextView.setText(information);
@@ -235,8 +235,8 @@ public class PlayerController {
         mediaController.registerCallback(mediaControllerCallback);
         // Sync existing MediaSession state with UI
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
-        mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
-        if ((mediaMetadataCompat != null) && isValid(mediaMetadataCompat)) {
+        if ((mediaMetadataCompat != null) && RadioService.isValid(mediaMetadataCompat)) {
+          mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
           mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
           setCurrentRadio(mediaMetadataCompat);
         }
@@ -414,12 +414,6 @@ public class PlayerController {
   private static void setCurrentRadio(@NonNull MediaMetadataCompat mediaMetadataCompat) {
     MainActivity.setCurrentRadio(
       mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
-  }
-
-  // Validity check: information must come from package
-  private boolean isValid(@NonNull MediaMetadataCompat mediaMetadataCompat) {
-    return mainActivity.getPackageName().equals(
-      mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI));
   }
 
   private void addInformation(@NonNull String date, @NonNull String information) {
