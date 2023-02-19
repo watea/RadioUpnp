@@ -30,4 +30,5 @@
     <dimen name="app_vertical_margin">10dp</dimen>
     <dimen name="tile_size">110dp</dimen>
     <dimen name="icon_size">24dp</dimen>
+    <dimen name="text_tile_size">50sp</dimen>
 </resources>

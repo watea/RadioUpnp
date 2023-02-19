@@ -36,7 +36,7 @@
     <FrameLayout
         android:id="@+id/view_radios_default"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content">
 
         <ImageView
             android:layout_width="match_parent"
@@ -47,6 +47,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textSize="@dimen/text_tile_size"
             android:layout_gravity="center"
             android:text="@string/radio_no_radio"
             android:textStyle="bold" />
