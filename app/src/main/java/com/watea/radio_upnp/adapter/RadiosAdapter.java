@@ -141,7 +141,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   }
 
   private void updateFilteredRadios() {
-    filteredRadios = isPreferred ? radios.preferredGet() : radios;
+    filteredRadios = isPreferred ? radios.getPreferred() : radios;
     currentRadioIndex = getIndexOf(MainActivity.getCurrentRadio());
     listener.onCountChange(filteredRadios.isEmpty());
   }

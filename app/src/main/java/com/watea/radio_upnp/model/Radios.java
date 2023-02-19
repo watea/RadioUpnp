@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Vector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Radios extends Vector<Radio> {
   private static final String LOG_TAG = Radios.class.getName();
@@ -65,7 +66,7 @@ public class Radios extends Vector<Radio> {
   }
 
   @NonNull
-  public List<Radio> preferredGet() {
+  public List<Radio> getPreferred() {
     return stream().filter(Radio::isPreferred).collect(Collectors.toList());
   }
 
@@ -106,7 +107,7 @@ public class Radios extends Vector<Radio> {
   @NonNull
   @Override
   public synchronized String toString() {
-    return getJSONObject().toString();
+    return toJSONObject().toString();
   }
 
   @NonNull
@@ -116,21 +117,14 @@ public class Radios extends Vector<Radio> {
     return result.toString();
   }
 
-  public boolean add(@NonNull JSONObject jSONObject) {
-    boolean result = false;
-    try {
-      result = add(new Radio(jSONObject));
-    } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "add: internal JSON failure", jSONException);
-    } catch (MalformedURLException malformedURLException) {
-      Log.e(LOG_TAG, "add: internal failure creating radio", malformedURLException);
-    }
-    return result;
-  }
-
   // No listener
   public boolean modify(@NonNull Radio radio) {
-    return contains(radio) && write();
+    final int index = indexOf(radio);
+    if (index >= 0) {
+      set(index, radio);
+      return write();
+    }
+    return false;
   }
 
   public void setPreferred(@NonNull Radio radio, boolean isPreferred) {
@@ -153,8 +147,33 @@ public class Radios extends Vector<Radio> {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
+  public boolean addFrom(@NonNull JSONObject jSONObject) {
+    try {
+      return addFrom((JSONArray) jSONObject.get(FILE.toLowerCase()));
+    } catch (JSONException jSONException) {
+      Log.e(LOG_TAG, "addFromJSONObject: invalid JSONObject", jSONException);
+      return false;
+    }
+  }
+
+  // Add if streaming URL is not yet available
+  private boolean addRadioFrom(@NonNull JSONObject jSONObject) {
+    boolean result = false;
+    try {
+      final Radio radio = new Radio(jSONObject);
+      if (getURLs().noneMatch(uRL -> radio.getURL().equals(uRL))) {
+        result = add(radio);
+      }
+    } catch (JSONException jSONException) {
+      Log.e(LOG_TAG, "add: internal JSON failure", jSONException);
+    } catch (MalformedURLException malformedURLException) {
+      Log.e(LOG_TAG, "add: internal failure creating radio", malformedURLException);
+    }
+    return result;
+  }
+
   @NonNull
-  private JSONObject getJSONObject() {
+  private JSONObject toJSONObject() {
     final JSONObject jSONRadios = new JSONObject();
     final JSONArray jSONRadiosArray = new JSONArray();
     // Init JSON structure
@@ -170,8 +189,8 @@ public class Radios extends Vector<Radio> {
   }
 
   @NonNull
-  private List<String> getURLs() {
-    return stream().map(Radio::getURL).map(URL::toString).collect(Collectors.toList());
+  private Stream<URL> getURLs() {
+    return stream().map(Radio::getURL);
   }
 
   private void init() {
@@ -179,29 +198,35 @@ public class Radios extends Vector<Radio> {
     try (final FileInputStream fileInputStream = new FileInputStream(fileName)) {
       final byte[] buffer = new byte[fileInputStream.available()];
       if (fileInputStream.read(buffer) < 0) {
-        Log.e(LOG_TAG, "read: internal failure");
+        Log.e(LOG_TAG, "init: internal failure");
       } else {
         string = new String(buffer);
       }
     } catch (IOException iOException) {
-      Log.e("TAG", "read: IOException fired", iOException);
+      Log.e(LOG_TAG, "init: IOException fired", iOException);
     }
     if (string != null) {
       try {
-        final JSONArray jSONArray = (JSONArray) new JSONObject(string).get(FILE.toLowerCase());
-        for (int i = 0; i < jSONArray.length(); i++) {
-          try {
-            add(new Radio((JSONObject) jSONArray.get(i)));
-          } catch (MalformedURLException malformedURLException) {
-            Log.e("TAG", "read/radio: MalformedURLException fired", malformedURLException);
-          } catch (JSONException jSONException) {
-            Log.e("TAG", "read/radio: JSONException fired", jSONException);
-          }
+        if (!addFrom(new JSONObject(string))) {
+          Log.e(LOG_TAG, "init: no valid radio found");
         }
       } catch (JSONException jSONException) {
-        Log.e("TAG", "read: JSONException fired", jSONException);
+        Log.e(LOG_TAG, "init: JSONObject can not be read", jSONException);
       }
     }
+  }
+
+  // Return true if one radio has been added
+  private boolean addFrom(@NonNull JSONArray jSONArray) {
+    boolean result = false;
+    for (int i = 0; i < jSONArray.length(); i++) {
+      try {
+        result = result || addRadioFrom((JSONObject) jSONArray.get(i));
+      } catch (JSONException jSONException) {
+        Log.e(LOG_TAG, "addFromJSONArray: JSONObject invalid", jSONException);
+      }
+    }
+    return result;
   }
 
   private boolean write() {
