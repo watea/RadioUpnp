@@ -37,7 +37,7 @@
             android:title="@string/title_search" />
         <item
             android:id="@+id/action_radio_garden"
-            android:icon="@drawable/ic_baseline_location_searching_24dp"
+            android:icon="@drawable/ic_baseline_location_searching_white_24dp"
             android:title="@string/title_radio_garden" />
         <item
             android:id="@+id/action_add_item"
