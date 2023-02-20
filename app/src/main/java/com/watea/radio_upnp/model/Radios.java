@@ -79,12 +79,6 @@ public class Radios extends Vector<Radio> {
     return tellListeners(true, listener -> listener.onMove(from, to));
   }
 
-  public synchronized boolean add(@NonNull Radio radio, boolean isToWrite) {
-    return tellListeners(
-      super.add(radio) && (!isToWrite || write()),
-      listener -> listener.onAdd(radio));
-  }
-
   @Override
   public synchronized boolean add(Radio radio) {
     return add(radio, true);
@@ -114,6 +108,12 @@ public class Radios extends Vector<Radio> {
   @Override
   public synchronized String toString() {
     return toJSONObject().toString();
+  }
+
+  public synchronized boolean add(@NonNull Radio radio, boolean isToWrite) {
+    return tellListeners(
+      super.add(radio) && (!isToWrite || write()),
+      listener -> listener.onAdd(radio));
   }
 
   @NonNull
@@ -153,7 +153,11 @@ public class Radios extends Vector<Radio> {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
-  public synchronized boolean addFrom(@NonNull JSONObject jSONObject, boolean isToWrite) {
+  public synchronized boolean addFrom(@NonNull JSONObject jSONObject) {
+    return addFrom(jSONObject, true);
+  }
+
+  private synchronized boolean addFrom(@NonNull JSONObject jSONObject, boolean isToWrite) {
     try {
       return addFrom((JSONArray) jSONObject.get(FILE.toLowerCase()), isToWrite);
     } catch (JSONException jSONException) {
