@@ -163,7 +163,7 @@ public class ImportController {
               Log.d(LOG_TAG, "JSONException exception fired: ", jSONException);
             }
             mainActivity.tell(mainActivity.getString(
-              ((jSONExport != null) && MainActivity.getRadios().addFrom(jSONExport)) ?
+              ((jSONExport != null) && MainActivity.getRadios().addFrom(jSONExport, true)) ?
                 R.string.import_successful : R.string.import_failed));
           }
         });

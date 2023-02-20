@@ -70,7 +70,7 @@ public class Radios extends Vector<Radio> {
     return stream().filter(Radio::isPreferred).collect(Collectors.toList());
   }
 
-  public boolean swap(int from, int to) {
+  public synchronized boolean swap(int from, int to) {
     final int max = size() - 1;
     if ((from > max) || (to > max)) {
       return false;
@@ -79,9 +79,15 @@ public class Radios extends Vector<Radio> {
     return tellListeners(true, listener -> listener.onMove(from, to));
   }
 
+  public synchronized boolean add(@NonNull Radio radio, boolean isToWrite) {
+    return tellListeners(
+      super.add(radio) && (!isToWrite || write()),
+      listener -> listener.onAdd(radio));
+  }
+
   @Override
-  public synchronized boolean add(@NonNull Radio radio) {
-    return tellListeners(super.add(radio) && write(), listener -> listener.onAdd(radio));
+  public synchronized boolean add(Radio radio) {
+    return add(radio, true);
   }
 
   // o != null
@@ -111,14 +117,14 @@ public class Radios extends Vector<Radio> {
   }
 
   @NonNull
-  public String export() {
+  public synchronized String export() {
     final StringBuilder result = new StringBuilder().append(Radio.EXPORT_HEAD).append("\n");
     forEach(radio -> result.append(radio.export()).append("\n"));
     return result.toString();
   }
 
   // No listener
-  public boolean modify(@NonNull Radio radio) {
+  public synchronized boolean modify(@NonNull Radio radio) {
     final int index = indexOf(radio);
     if (index >= 0) {
       set(index, radio);
@@ -134,7 +140,7 @@ public class Radios extends Vector<Radio> {
 
   // radio must be valid
   @NonNull
-  public Radio getRadioFrom(@NonNull Radio radio, int direction) {
+  public synchronized Radio getRadioFrom(@NonNull Radio radio, int direction) {
     final int size = size();
     assert size > 0;
     final int index = indexOf(radio);
@@ -143,13 +149,13 @@ public class Radios extends Vector<Radio> {
   }
 
   @Nullable
-  public Radio getRadioFrom(@NonNull String id) {
+  public synchronized Radio getRadioFrom(@NonNull String id) {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
-  public boolean addFrom(@NonNull JSONObject jSONObject) {
+  public synchronized boolean addFrom(@NonNull JSONObject jSONObject, boolean isToWrite) {
     try {
-      return addFrom((JSONArray) jSONObject.get(FILE.toLowerCase()));
+      return addFrom((JSONArray) jSONObject.get(FILE.toLowerCase()), isToWrite);
     } catch (JSONException jSONException) {
       Log.e(LOG_TAG, "addFromJSONObject: invalid JSONObject", jSONException);
       return false;
@@ -157,12 +163,12 @@ public class Radios extends Vector<Radio> {
   }
 
   // Add if streaming URL is not yet available
-  private boolean addRadioFrom(@NonNull JSONObject jSONObject) {
+  private boolean addRadioFrom(@NonNull JSONObject jSONObject, boolean isToWrite) {
     boolean result = false;
     try {
       final Radio radio = new Radio(jSONObject);
       if (getURLs().noneMatch(uRL -> radio.getURL().equals(uRL))) {
-        result = add(radio);
+        result = add(radio, isToWrite);
       }
     } catch (JSONException jSONException) {
       Log.e(LOG_TAG, "add: internal JSON failure", jSONException);
@@ -207,7 +213,7 @@ public class Radios extends Vector<Radio> {
     }
     if (string != null) {
       try {
-        if (!addFrom(new JSONObject(string))) {
+        if (!addFrom(new JSONObject(string), false)) {
           Log.e(LOG_TAG, "init: no valid radio found");
         }
       } catch (JSONException jSONException) {
@@ -217,11 +223,11 @@ public class Radios extends Vector<Radio> {
   }
 
   // Return true if one radio has been added
-  private boolean addFrom(@NonNull JSONArray jSONArray) {
+  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite) {
     boolean result = false;
     for (int i = 0; i < jSONArray.length(); i++) {
       try {
-        result = result || addRadioFrom((JSONObject) jSONArray.get(i));
+        result = addRadioFrom((JSONObject) jSONArray.get(i), isToWrite) || result;
       } catch (JSONException jSONException) {
         Log.e(LOG_TAG, "addFromJSONArray: JSONObject invalid", jSONException);
       }
