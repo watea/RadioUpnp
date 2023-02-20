@@ -160,12 +160,22 @@ public class Radios extends Vector<Radio> {
     @NonNull JSONObject jSONObject,
     boolean isToWrite,
     boolean avoidDuplicate) {
+    JSONArray jSONArray;
     try {
-      return addFrom((JSONArray) jSONObject.get(FILE.toLowerCase()), isToWrite, avoidDuplicate);
+      jSONArray = (JSONArray) jSONObject.get(FILE.toLowerCase());
     } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "addFromJSONObject: invalid JSONObject", jSONException);
+      Log.e(LOG_TAG, "addFrom: invalid JSONObject", jSONException);
       return false;
     }
+    boolean result = false;
+    for (int i = 0; i < jSONArray.length(); i++) {
+      try {
+        result = addRadioFrom((JSONObject) jSONArray.get(i), isToWrite, avoidDuplicate) || result;
+      } catch (JSONException jSONException) {
+        Log.e(LOG_TAG, "addFrom: invalid JSONArray member", jSONException);
+      }
+    }
+    return result;
   }
 
   private boolean addRadioFrom(
@@ -180,9 +190,9 @@ public class Radios extends Vector<Radio> {
         result = add(radio, isToWrite);
       }
     } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "add: internal JSON failure", jSONException);
+      Log.e(LOG_TAG, "addRadioFrom: internal JSON failure", jSONException);
     } catch (MalformedURLException malformedURLException) {
-      Log.e(LOG_TAG, "add: internal failure creating radio", malformedURLException);
+      Log.e(LOG_TAG, "addRadioFrom: internal failure creating radio", malformedURLException);
     }
     return result;
   }
@@ -191,15 +201,14 @@ public class Radios extends Vector<Radio> {
   private JSONObject toJSONObject() {
     final JSONObject jSONRadios = new JSONObject();
     final JSONArray jSONRadiosArray = new JSONArray();
-    // Init JSON structure
     try {
+      // Init JSON structure
       jSONRadios.put(FILE.toLowerCase(), jSONRadiosArray);
+      // Fill
+      stream().map(Radio::getJSONObject).forEach(jSONRadiosArray::put);
     } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "Internal failure", jSONException);
+      Log.e(LOG_TAG, "toJSONObject: internal failure", jSONException);
     }
-    // Fill
-    stream().map(Radio::getJSONObject).forEach(jSONRadiosArray::put);
-    // Result
     return jSONRadios;
   }
 
@@ -224,19 +233,6 @@ public class Radios extends Vector<Radio> {
         Log.e(LOG_TAG, "init: JSONObject can not be read", jSONException);
       }
     }
-  }
-
-  // Return true if one radio has been added
-  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite, boolean avoidDuplicate) {
-    boolean result = false;
-    for (int i = 0; i < jSONArray.length(); i++) {
-      try {
-        result = addRadioFrom((JSONObject) jSONArray.get(i), isToWrite, avoidDuplicate) || result;
-      } catch (JSONException jSONException) {
-        Log.e(LOG_TAG, "addFromJSONArray: JSONObject invalid", jSONException);
-      }
-    }
-    return result;
   }
 
   private boolean write() {
