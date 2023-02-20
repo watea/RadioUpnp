@@ -118,6 +118,8 @@ public class PlayerController {
         playedRadioNameTextView.setText(radio.getName());
         albumArtImageView.setImageBitmap(MainActivity.createScaledBitmap(radio.getIcon()));
         setPreferredButton(radio.isPreferred());
+      } else {
+        setPlayImageButtonVisibility(false, false);
       }
     }
   };
@@ -161,17 +163,18 @@ public class PlayerController {
             playImageButton.setTag(
               isUpnp ? PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
           case PlaybackStateCompat.STATE_PAUSED:
-            setFrameVisibility(true, false);
+            setPlayImageButtonVisibility(true, false);
             break;
           case PlaybackStateCompat.STATE_BUFFERING:
           case PlaybackStateCompat.STATE_CONNECTING:
+            assert mediaController != null;
             setCurrentRadio(mediaController.getMetadata());
-            setFrameVisibility(true, true);
+            setPlayImageButtonVisibility(true, true);
             break;
           case PlaybackStateCompat.STATE_NONE:
           case PlaybackStateCompat.STATE_STOPPED:
             MainActivity.setCurrentRadio((Radio) null);
-            setFrameVisibility(false, false);
+            setPlayImageButtonVisibility(false, false);
             break;
           default:
             // On error, leave radio data visibility ON, if not UPnP streaming.
@@ -185,7 +188,7 @@ public class PlayerController {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
             }
-            setFrameVisibility(!isUpnp, false);
+            setPlayImageButtonVisibility(!isUpnp, false);
             mainActivity.tell(R.string.radio_connection_error);
         }
       }
@@ -211,12 +214,6 @@ public class PlayerController {
               information.toString());
           }
         }
-      }
-
-      private void setFrameVisibility(boolean isOn, boolean isWaiting) {
-        playImageButton.setEnabled(isOn);
-        playImageButton.setVisibility(MainActivityFragment.getVisibleFrom(!isWaiting));
-        progressBar.setVisibility(MainActivityFragment.getVisibleFrom(isWaiting));
       }
 
       private int getState(@Nullable final PlaybackStateCompat state) {
@@ -404,6 +401,12 @@ public class PlayerController {
     // Information are cleared
     playInformations.clear();
     insertInformation("", mainActivity.getString(R.string.no_data));
+  }
+
+  private void setPlayImageButtonVisibility(boolean isOn, boolean isWaiting) {
+    playImageButton.setEnabled(isOn);
+    playImageButton.setVisibility(MainActivityFragment.getVisibleFrom(!isWaiting));
+    progressBar.setVisibility(MainActivityFragment.getVisibleFrom(isWaiting));
   }
 
   @Nullable

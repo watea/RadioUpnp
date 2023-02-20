@@ -78,9 +78,9 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     }
 
     @Override
-    public void onRemove(@NonNull Radio radio) {
+    public void onRemove(int index) {
       updateFilteredRadios();
-      notifyItemRemoved(getIndexOf(radio));
+      notifyItemRemoved(index);
     }
 
     @Override

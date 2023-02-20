@@ -58,7 +58,7 @@ public class DefaultRadios {
     new DefaultRadio(
       "OUI FM",
       R.drawable.logo_oui_fm,
-      "http://target-ad-2.cdn.dvmr.fr/ouifm-high.mp3",
+      "http://broadcast.infomaniak.net/ouifm-high.mp3",
       "https://www.ouifm.fr/",
       "audio/mp3",
       192),
@@ -116,13 +116,6 @@ public class DefaultRadios {
       R.drawable.logo_fip,
       "http://icecast.radiofrance.fr/fip-hifi.aac",
       "https://www.fip.fr/",
-      "audio/mp3",
-      192),
-    new DefaultRadio(
-      "DAVIDE",
-      R.drawable.logo_davide,
-      "https://streaming01.zfast.co.uk/proxy/davideof",
-      "http://www.davideofmimic.com/",
       "audio/mp3",
       192));
 

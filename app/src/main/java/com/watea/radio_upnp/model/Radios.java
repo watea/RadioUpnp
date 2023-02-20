@@ -37,12 +37,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Vector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Radios extends Vector<Radio> {
   private static final String LOG_TAG = Radios.class.getName();
@@ -88,13 +86,14 @@ public class Radios extends Vector<Radio> {
   @Override
   public boolean remove(@Nullable Object o) {
     assert o != null;
-    return tellListeners(super.remove(o) && write(), listener -> listener.onRemove((Radio) o));
+    final int index = indexOf(o);
+    return tellListeners(super.remove(o) && write(), listener -> listener.onRemove(index));
   }
 
   @Override
   public Radio remove(int index) {
     final Radio result = super.remove(index);
-    tellListeners(write(), listener -> listener.onRemove(result));
+    tellListeners(write(), listener -> listener.onRemove(index));
     return result;
   }
 
@@ -171,7 +170,7 @@ public class Radios extends Vector<Radio> {
     boolean result = false;
     try {
       final Radio radio = new Radio(jSONObject);
-      if (getURLs().noneMatch(uRL -> radio.getURL().equals(uRL))) {
+      if (stream().map(Radio::getURL).noneMatch(uRL -> radio.getURL().equals(uRL))) {
         result = add(radio, isToWrite);
       }
     } catch (JSONException jSONException) {
@@ -196,11 +195,6 @@ public class Radios extends Vector<Radio> {
     stream().map(Radio::getJSONObject).forEach(jSONRadiosArray::put);
     // Result
     return jSONRadios;
-  }
-
-  @NonNull
-  private Stream<URL> getURLs() {
-    return stream().map(Radio::getURL);
   }
 
   private void init() {
@@ -264,7 +258,7 @@ public class Radios extends Vector<Radio> {
     default void onAdd(@NonNull Radio radio) {
     }
 
-    default void onRemove(@NonNull Radio radio) {
+    default void onRemove(int index) {
     }
 
     default void onMove(int from, int to) {
