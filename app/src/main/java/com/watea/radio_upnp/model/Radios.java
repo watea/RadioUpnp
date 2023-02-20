@@ -153,24 +153,30 @@ public class Radios extends Vector<Radio> {
   }
 
   public synchronized boolean addFrom(@NonNull JSONObject jSONObject) {
-    return addFrom(jSONObject, true);
+    return addFrom(jSONObject, true, true);
   }
 
-  private synchronized boolean addFrom(@NonNull JSONObject jSONObject, boolean isToWrite) {
+  private synchronized boolean addFrom(
+    @NonNull JSONObject jSONObject,
+    boolean isToWrite,
+    boolean avoidDuplicate) {
     try {
-      return addFrom((JSONArray) jSONObject.get(FILE.toLowerCase()), isToWrite);
+      return addFrom((JSONArray) jSONObject.get(FILE.toLowerCase()), isToWrite, avoidDuplicate);
     } catch (JSONException jSONException) {
       Log.e(LOG_TAG, "addFromJSONObject: invalid JSONObject", jSONException);
       return false;
     }
   }
 
-  // Add if streaming URL is not yet available
-  private boolean addRadioFrom(@NonNull JSONObject jSONObject, boolean isToWrite) {
+  private boolean addRadioFrom(
+    @NonNull JSONObject jSONObject,
+    boolean isToWrite,
+    boolean avoidDuplicate) {
     boolean result = false;
     try {
       final Radio radio = new Radio(jSONObject);
-      if (stream().map(Radio::getURL).noneMatch(uRL -> radio.getURL().equals(uRL))) {
+      if (!avoidDuplicate ||
+        stream().map(Radio::getURL).noneMatch(uRL -> radio.getURL().equals(uRL))) {
         result = add(radio, isToWrite);
       }
     } catch (JSONException jSONException) {
@@ -211,7 +217,7 @@ public class Radios extends Vector<Radio> {
     }
     if (string != null) {
       try {
-        if (!addFrom(new JSONObject(string), false)) {
+        if (!addFrom(new JSONObject(string), false, false)) {
           Log.e(LOG_TAG, "init: no valid radio found");
         }
       } catch (JSONException jSONException) {
@@ -221,11 +227,11 @@ public class Radios extends Vector<Radio> {
   }
 
   // Return true if one radio has been added
-  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite) {
+  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite, boolean avoidDuplicate) {
     boolean result = false;
     for (int i = 0; i < jSONArray.length(); i++) {
       try {
-        result = addRadioFrom((JSONObject) jSONArray.get(i), isToWrite) || result;
+        result = addRadioFrom((JSONObject) jSONArray.get(i), isToWrite, avoidDuplicate) || result;
       } catch (JSONException jSONException) {
         Log.e(LOG_TAG, "addFromJSONArray: JSONObject invalid", jSONException);
       }
