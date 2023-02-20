@@ -36,17 +36,10 @@
 
         <!-- The main content view -->
         <androidx.core.widget.NestedScrollView
+            android:id="@+id/content_frame"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-            <!-- NestedScrollView shall have only one child, FragmentManager needs a container -->
-            <FrameLayout
-                android:id="@+id/content_frame"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-        </androidx.core.widget.NestedScrollView>
+            app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
         <!-- Actionbar -->
         <com.google.android.material.appbar.AppBarLayout

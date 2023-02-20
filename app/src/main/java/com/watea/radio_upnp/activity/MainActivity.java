@@ -355,13 +355,18 @@ public class MainActivity
         throw new RuntimeException();
       }
     }
-    final FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-    fragmentTransaction.replace(R.id.content_frame, fragment, tag);
-    // First fragment transaction not saved to enable back leaving the app
-    if (getCurrentFragment() != null) {
-      fragmentTransaction.addToBackStack(null);
+    final Fragment currentFragment = getCurrentFragment();
+    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+    if (currentFragment != null) {
+      fragmentTransaction
+        // First fragment transaction not saved to enable back leaving the app
+        .addToBackStack(null)
+        // Turn around FragmentManager weakness as ScrollView requires only one child
+        .remove(currentFragment)
+        .commit();
+      fragmentTransaction = fragmentManager.beginTransaction();
     }
-    fragmentTransaction.commit();
+    fragmentTransaction.replace(R.id.content_frame, fragment, tag).commit();
     return fragment;
   }
 
@@ -385,37 +390,6 @@ public class MainActivity
     upnpAlertDialog.show();
   }
 
-  @Override
-  public boolean onCreateOptionsMenu(@NonNull Menu menu) {
-    final MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
-    if (currentFragment == null) {
-      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
-    } else {
-      final int menuId = currentFragment.getMenuId();
-      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
-        getMenuInflater().inflate(menuId, menu);
-        currentFragment.onCreateOptionsMenu(menu);
-      }
-    }
-    return true;
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    // Pass the event to ActionBarDrawerToggle, if it returns
-    // true, then it has handled the app icon touch event
-    assert getCurrentFragment() != null;
-    return
-      drawerToggle.onOptionsItemSelected(item) ||
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        getCurrentFragment().onOptionsItemSelected(item) ||
-        // If we got here, the user's action was not recognized
-        // Invoke the superclass to handle it
-        super.onOptionsItemSelected(item);
-  }
-
   public boolean setRadioGardenGotIt() {
     return gotItRadioGarden = true;
   }
@@ -427,47 +401,6 @@ public class MainActivity
     if (fragment != null) {
       fragment.onActivityResult(requestCode, resultCode, data);
     }
-  }
-
-  @Override
-  protected void onPause() {
-    super.onPause();
-    Log.d(LOG_TAG, "onPause");
-    // Shared preferences
-    storeBooleanPreference(R.string.key_radio_garden, gotItRadioGarden);
-    // Release HTTP service
-    unbindService(httpConnection);
-    // Force disconnection to release resources
-    httpConnection.onServiceDisconnected(null);
-    // Clear PlayerController call
-    playerController.onActivityPause();
-    Log.d(LOG_TAG, "onPause done!");
-  }
-
-  @Override
-  protected void onNewIntent(Intent intent) {
-    super.onNewIntent(intent);
-    newIntent = intent;
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-    Log.d(LOG_TAG, "onResume");
-    // Fetch preferences
-    gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden), false);
-    // Bind to HTTP service
-    if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-    }
-    // Radio Garden share?
-    if (newIntent != null) {
-      radioGardenController.onNewIntent(newIntent);
-      newIntent = null;
-    }
-    // PlayerController init
-    playerController.onActivityResume();
-    Log.d(LOG_TAG, "onResume done!");
   }
 
   @Override
@@ -565,6 +498,47 @@ public class MainActivity
   }
 
   @Override
+  protected void onPause() {
+    super.onPause();
+    Log.d(LOG_TAG, "onPause");
+    // Shared preferences
+    storeBooleanPreference(R.string.key_radio_garden, gotItRadioGarden);
+    // Release HTTP service
+    unbindService(httpConnection);
+    // Force disconnection to release resources
+    httpConnection.onServiceDisconnected(null);
+    // Clear PlayerController call
+    playerController.onActivityPause();
+    Log.d(LOG_TAG, "onPause done!");
+  }
+
+  @Override
+  protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    newIntent = intent;
+  }
+
+  @Override
+  protected void onResume() {
+    super.onResume();
+    Log.d(LOG_TAG, "onResume");
+    // Fetch preferences
+    gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden), false);
+    // Bind to HTTP service
+    if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+    }
+    // Radio Garden share?
+    if (newIntent != null) {
+      radioGardenController.onNewIntent(newIntent);
+      newIntent = null;
+    }
+    // PlayerController init
+    playerController.onActivityResume();
+    Log.d(LOG_TAG, "onResume done!");
+  }
+
+  @Override
   protected void onPostCreate(Bundle savedInstanceState) {
     super.onPostCreate(savedInstanceState);
     // Sync the toggle state after onRestoreInstanceState has occurred
@@ -593,6 +567,46 @@ public class MainActivity
         outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
       }
     }
+  }
+
+  @Override
+  public boolean onCreateOptionsMenu(@NonNull Menu menu) {
+    final MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
+    if (currentFragment == null) {
+      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
+    } else {
+      final int menuId = currentFragment.getMenuId();
+      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
+        getMenuInflater().inflate(menuId, menu);
+        currentFragment.onCreateOptionsMenu(menu);
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    // Pass the event to ActionBarDrawerToggle, if it returns
+    // true, then it has handled the app icon touch event
+    assert getCurrentFragment() != null;
+    return
+      drawerToggle.onOptionsItemSelected(item) ||
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        getCurrentFragment().onOptionsItemSelected(item) ||
+        // If we got here, the user's action was not recognized
+        // Invoke the superclass to handle it
+        super.onOptionsItemSelected(item);
+  }
+
+  @Override
+  public void onBackPressed() {
+    final Fragment currentFragment = getCurrentFragment();
+    assert currentFragment != null;
+    // Turn around FragmentManager weakness as ScrollView requires only one child
+    getSupportFragmentManager().beginTransaction().remove(currentFragment).commit();
+    super.onBackPressed();
   }
 
   // Add all legacy radios, do nothing if there is no legacy

@@ -36,7 +36,6 @@ import android.view.inputmethod.InputMethodManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 
 import com.watea.radio_upnp.model.Radios;
@@ -87,7 +86,7 @@ public abstract class MainActivityFragment extends Fragment {
     super.onPause();
     // Store scroll position.
     // Note: not saved InstanceState as not necessary for user experience.
-    yScrollPosition = ((NestedScrollView) container.getParent()).getScrollY();
+    yScrollPosition = container.getScrollY();
   }
 
   @Override
