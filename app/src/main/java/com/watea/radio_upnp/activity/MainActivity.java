@@ -361,7 +361,7 @@ public class MainActivity
       fragmentTransaction
         // First fragment transaction not saved to enable back leaving the app
         .addToBackStack(null)
-        // Turn around FragmentManager weakness as ScrollView requires only one child
+        // Workaround FragmentManager weakness as ScrollView requires only one child
         .remove(currentFragment)
         .commit();
       fragmentTransaction = fragmentManager.beginTransaction();
@@ -602,10 +602,12 @@ public class MainActivity
 
   @Override
   public void onBackPressed() {
+    // Workaround FragmentManager weakness as ScrollView requires only one child
+    final FragmentManager fragmentManager = getSupportFragmentManager();
     final Fragment currentFragment = getCurrentFragment();
-    assert currentFragment != null;
-    // Turn around FragmentManager weakness as ScrollView requires only one child
-    getSupportFragmentManager().beginTransaction().remove(currentFragment).commit();
+    if ((fragmentManager.getBackStackEntryCount() > 0) && (currentFragment != null)) {
+      fragmentManager.beginTransaction().remove(currentFragment).commit();
+    }
     super.onBackPressed();
   }
 

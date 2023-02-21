@@ -47,8 +47,8 @@ import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.registry.RegistryListener;
+import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 public class ImportController {
   private static final String LOG_TAG = ImportController.class.getName();
@@ -153,18 +153,13 @@ public class ImportController {
         final String export = actionInvocation.getOutput(Exporter.EXPORT).toString();
         // Must be called on main thread for thread safety
         handler.post(() -> {
-          if (export.isEmpty()) {
-            mainActivity.tell(R.string.import_no_import);
-          } else {
-            JSONObject jSONExport = null;
-            try {
-              jSONExport = new JSONObject(export);
-            } catch (JSONException jSONException) {
-              Log.d(LOG_TAG, "JSONException exception fired: ", jSONException);
-            }
+          try {
             mainActivity.tell(mainActivity.getString(
-              ((jSONExport != null) && MainActivity.getRadios().addFrom(jSONExport)) ?
-                R.string.import_successful : R.string.import_failed));
+              MainActivity.getRadios().addFrom(new JSONArray(export)) ?
+                R.string.import_successful : R.string.import_no_import));
+          } catch (JSONException jSONException) {
+            Log.e(LOG_TAG, "JSONException exception fired: ", jSONException);
+            mainActivity.tell(R.string.import_failed);
           }
         });
       }

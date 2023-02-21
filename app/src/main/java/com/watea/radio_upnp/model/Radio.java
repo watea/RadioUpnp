@@ -307,20 +307,15 @@ public class Radio {
       export(Boolean.toString(isPreferred));
   }
 
-  public JSONObject getJSONObject() {
-    try {
-      return new JSONObject()
-        .put(NAME, name)
-        .put(ICON, iconToBase64String())
-        .put(URL, url.toString())
-        .put(WEB_PAGE_URL, (webPageUrl == null) ? "" : webPageUrl.toString())
-        .put(MIME, mime)
-        .put(QUALITY, quality)
-        .put(IS_PREFERRED, isPreferred);
-    } catch (JSONException jSONException) {
-      Log.e("TAG", "getJSONObject: JSONException fired", jSONException);
-      return new JSONObject();
-    }
+  public JSONObject getJSONObject() throws JSONException {
+    return new JSONObject()
+      .put(NAME, name)
+      .put(ICON, iconToBase64String())
+      .put(URL, url.toString())
+      .put(WEB_PAGE_URL, (webPageUrl == null) ? "" : webPageUrl.toString())
+      .put(MIME, mime)
+      .put(QUALITY, quality)
+      .put(IS_PREFERRED, isPreferred);
   }
 
   @NonNull

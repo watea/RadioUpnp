@@ -38,6 +38,7 @@ import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
+import java.util.Collection;
 import java.util.List;
 
 public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
@@ -87,6 +88,11 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     public void onMove(int from, int to) {
       updateFilteredRadios();
       notifyItemMoved(from, to);
+    }
+
+    @Override
+    public void onAddAll(@NonNull Collection<? extends Radio> c) {
+      c.forEach(this::onAdd);
     }
   };
 

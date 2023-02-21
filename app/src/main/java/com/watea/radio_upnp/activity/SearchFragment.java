@@ -101,7 +101,7 @@ public class SearchFragment extends MainActivityFragment {
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (item.getItemId() == R.id.action_done) {
-      radiosSearchAdapter.getSelectedRadios().forEach(getRadios()::add);
+      getRadios().addAll(radiosSearchAdapter.getSelectedRadios());
       onBackPressed();
     } else {
       // If we got here, the user's action was not recognized

@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Vector;
 import java.util.stream.Collectors;
 
@@ -97,16 +98,15 @@ public class Radios extends Vector<Radio> {
     return result;
   }
 
-  // No listener
   @Override
   public synchronized boolean addAll(@NonNull Collection<? extends Radio> c) {
-    return super.addAll(c) && write();
+    return tellListeners(super.addAll(c) && write(), listener -> listener.onAddAll(c));
   }
 
   @NonNull
   @Override
   public synchronized String toString() {
-    return toJSONObject().toString();
+    return toJSONArray().toString();
   }
 
   public synchronized boolean add(@NonNull Radio radio, boolean isToWrite) {
@@ -152,21 +152,12 @@ public class Radios extends Vector<Radio> {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
-  public synchronized boolean addFrom(@NonNull JSONObject jSONObject) {
-    return addFrom(jSONObject, true, true);
+  public synchronized boolean addFrom(@NonNull JSONArray jSONArray) {
+    return addFrom(jSONArray, true, true);
   }
 
-  private synchronized boolean addFrom(
-    @NonNull JSONObject jSONObject,
-    boolean isToWrite,
-    boolean avoidDuplicate) {
-    JSONArray jSONArray;
-    try {
-      jSONArray = (JSONArray) jSONObject.get(FILE.toLowerCase());
-    } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "addFrom: invalid JSONObject", jSONException);
-      return false;
-    }
+  // Returns false if nothing is added
+  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite, boolean avoidDuplicate) {
     boolean result = false;
     for (int i = 0; i < jSONArray.length(); i++) {
       try {
@@ -198,18 +189,20 @@ public class Radios extends Vector<Radio> {
   }
 
   @NonNull
-  private JSONObject toJSONObject() {
-    final JSONObject jSONRadios = new JSONObject();
-    final JSONArray jSONRadiosArray = new JSONArray();
-    try {
-      // Init JSON structure
-      jSONRadios.put(FILE.toLowerCase(), jSONRadiosArray);
-      // Fill
-      stream().map(Radio::getJSONObject).forEach(jSONRadiosArray::put);
-    } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "toJSONObject: internal failure", jSONException);
-    }
-    return jSONRadios;
+  private JSONArray toJSONArray() {
+    final JSONArray jSONArray = new JSONArray();
+    stream()
+      .map(radio -> {
+        try {
+          return radio.getJSONObject();
+        } catch (JSONException jSONException) {
+          Log.e(LOG_TAG, "toJSONArray: JSON failure for " + radio.getName(), jSONException);
+          return null;
+        }
+      })
+      .filter(Objects::nonNull)
+      .forEach(jSONArray::put);
+    return jSONArray;
   }
 
   private void init() {
@@ -226,11 +219,11 @@ public class Radios extends Vector<Radio> {
     }
     if (string != null) {
       try {
-        if (!addFrom(new JSONObject(string), false, false)) {
+        if (!addFrom(new JSONArray(string), false, false)) {
           Log.e(LOG_TAG, "init: no valid radio found");
         }
       } catch (JSONException jSONException) {
-        Log.e(LOG_TAG, "init: JSONObject can not be read", jSONException);
+        Log.e(LOG_TAG, "init: JSONArray can not be read", jSONException);
       }
     }
   }
@@ -264,6 +257,9 @@ public class Radios extends Vector<Radio> {
     }
 
     default void onMove(int from, int to) {
+    }
+
+    default void onAddAll(@NonNull Collection<? extends Radio> c) {
     }
   }
 }
