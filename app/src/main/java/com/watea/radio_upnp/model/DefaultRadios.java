@@ -56,13 +56,6 @@ public class DefaultRadios {
       "audio/mp3",
       192),
     new DefaultRadio(
-      "OUI FM",
-      R.drawable.logo_oui_fm,
-      "http://broadcast.infomaniak.net/ouifm-high.mp3",
-      "https://www.ouifm.fr/",
-      "audio/mp3",
-      192),
-    new DefaultRadio(
       "EUROPE1",
       R.drawable.logo_europe1,
       "http://ais-live.cloud-services.paris:8000/europe1.mp3",
@@ -116,6 +109,20 @@ public class DefaultRadios {
       R.drawable.logo_fip,
       "http://icecast.radiofrance.fr/fip-hifi.aac",
       "https://www.fip.fr/",
+      "audio/mp3",
+      192),
+    new DefaultRadio(
+      "MAUI'S Q103",
+      R.drawable.logo_q103,
+      "http://radio.garden/api/ara/content/listen/ZUwwAb1A/channel.mp3",
+      "http://q103maui.com/",
+      "audio/mp3",
+      192),
+    new DefaultRadio(
+      "DFM DAVID GUETTA",
+      R.drawable.logo_dfm,
+      "http://radio.garden/api/ara/content/listen/ZUwwAb1A/channel.mp3",
+      "https://dfm.ru/",
       "audio/mp3",
       192));
 
