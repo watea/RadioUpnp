@@ -206,25 +206,19 @@ public class Radios extends Vector<Radio> {
   }
 
   private void init() {
-    String string = null;
     try (final FileInputStream fileInputStream = new FileInputStream(fileName)) {
       final byte[] buffer = new byte[fileInputStream.available()];
       if (fileInputStream.read(buffer) < 0) {
         Log.e(LOG_TAG, "init: internal failure");
       } else {
-        string = new String(buffer);
+        if (!addFrom(new JSONArray(new String(buffer)), false, false)) {
+          Log.e(LOG_TAG, "init: no valid radio found");
+        }
       }
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "init: IOException fired", iOException);
-    }
-    if (string != null) {
-      try {
-        if (!addFrom(new JSONArray(string), false, false)) {
-          Log.e(LOG_TAG, "init: no valid radio found");
-        }
-      } catch (JSONException jSONException) {
-        Log.e(LOG_TAG, "init: JSONArray can not be read", jSONException);
-      }
+    } catch (JSONException jSONException) {
+      Log.e(LOG_TAG, "init: JSONArray can not be read", jSONException);
     }
   }
 
