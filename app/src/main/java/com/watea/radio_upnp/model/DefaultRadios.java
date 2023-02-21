@@ -121,7 +121,7 @@ public class DefaultRadios {
     new DefaultRadio(
       "DFM DAVID GUETTA",
       R.drawable.logo_dfm,
-      "http://radio.garden/api/ara/content/listen/ZUwwAb1A/channel.mp3",
+      "http://radio.garden/api/ara/content/listen/qotcIfno/channel.mp3",
       "https://dfm.ru/",
       "audio/mp3",
       192));
