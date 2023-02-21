@@ -119,6 +119,7 @@ public class PlayerController {
         albumArtImageView.setImageBitmap(MainActivity.createScaledBitmap(radio.getIcon()));
         setPreferredButton(radio.isPreferred());
       } else {
+        setDefaultPlayImageButton();
         setPlayImageButtonVisibility(false, false);
       }
     }
@@ -151,10 +152,8 @@ public class PlayerController {
         final boolean isUpnp =
           (bundle != null) && bundle.containsKey(mainActivity.getString(R.string.key_upnp_device));
         Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
-        // Default
-        playImageButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
-        playImageButton.setTag(PlaybackStateCompat.STATE_PLAYING);
         // Play button stores state to reach
+        setDefaultPlayImageButton();
         switch (intState) {
           case PlaybackStateCompat.STATE_PLAYING:
             // UPnP device doesn't support PAUSE but STOP
@@ -336,7 +335,7 @@ public class PlayerController {
       final Radio radio = getCurrentRadio();
       if (radio == null) {
         // Should not happen
-        Log.i(LOG_TAG, "Internal failure, radio is null");
+        Log.e(LOG_TAG, "preferredImageButton: internal failure, radio is null");
       } else {
         radios.setPreferred(radio, !radio.isPreferred());
       }
@@ -386,12 +385,10 @@ public class PlayerController {
       mainActivity.tell(R.string.radio_connection_waiting);
       return;
     }
-    if (radio == null) {
-      radio = getCurrentRadio();
-      // Robustness, shall not happen
-      if (radio == null) {
-        return;
-      }
+    if ((radio == null) && ((radio = getCurrentRadio()) == null)) {
+      // Should not happen
+      Log.e(LOG_TAG, "startReading: internal failure, radio is null");
+      return;
     }
     final Bundle bundle = new Bundle();
     if (upnpDeviceIdentity != null) {
@@ -401,6 +398,11 @@ public class PlayerController {
     // Information are cleared
     playInformations.clear();
     insertInformation("", mainActivity.getString(R.string.no_data));
+  }
+
+  private void setDefaultPlayImageButton() {
+    playImageButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
+    playImageButton.setTag(PlaybackStateCompat.STATE_PLAYING);
   }
 
   private void setPlayImageButtonVisibility(boolean isOn, boolean isWaiting) {
