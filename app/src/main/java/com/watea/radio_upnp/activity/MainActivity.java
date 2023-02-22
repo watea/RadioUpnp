@@ -501,7 +501,7 @@ public class MainActivity
     super.onPause();
     Log.d(LOG_TAG, "onPause");
     // Shared preferences
-    storeBooleanPreference(R.string.key_radio_garden, gotItRadioGarden);
+    storeBooleanPreference(R.string.key_radio_garden_got_it, gotItRadioGarden);
     // Release HTTP service
     unbindService(httpConnection);
     // Force disconnection to release resources
@@ -522,7 +522,7 @@ public class MainActivity
     super.onResume();
     Log.d(LOG_TAG, "onResume");
     // Fetch preferences
-    gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden), false);
+    gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden_got_it), false);
     // Bind to HTTP service
     if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; HttpService not bound");
