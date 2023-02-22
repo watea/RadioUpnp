@@ -418,9 +418,8 @@ public class MainActivity
       } else {
         Log.e(LOG_TAG, "Internal failure; unable to init radios");
       }
-    }
-    // Legacy support; this code should be removed after some time....
-    if (sharedPreferences.getBoolean(getString(R.string.key_legacy_to_process), true)) {
+    } else if (sharedPreferences.getBoolean(getString(R.string.key_legacy_to_process), true)) {
+      // Legacy support; this code should be removed after some time....
       processLegacy();
       // Robustness: store immediately to avoid bad user experience in case of app crash
       storeBooleanPreference(R.string.key_legacy_to_process, false);
