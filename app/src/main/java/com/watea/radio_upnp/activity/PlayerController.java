@@ -116,7 +116,7 @@ public class PlayerController {
       playedRadioLinearLayout.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
       if (isVisible) {
         playedRadioNameTextView.setText(radio.getName());
-        albumArtImageView.setImageBitmap(MainActivity.createScaledBitmap(radio.getIcon()));
+        albumArtImageView.setImageBitmap(MainActivity.iconResize(radio.getIcon()));
         setPreferredButton(radio.isPreferred());
       } else {
         setDefaultPlayImageButton();

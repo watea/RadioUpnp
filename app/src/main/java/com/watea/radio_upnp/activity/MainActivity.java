@@ -187,12 +187,13 @@ public class MainActivity
   private NetworkProxy networkProxy = null;
 
   @NonNull
-  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap) {
+  public static Bitmap iconResize(@NonNull Bitmap bitmap) {
     return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
   }
 
-  public static int getSmallIconSize() {
-    return RADIO_ICON_SIZE / 2;
+  @NonNull
+  public static Bitmap iconHalfResize(@NonNull Bitmap bitmap) {
+    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE / 2);
   }
 
   @NonNull

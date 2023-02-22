@@ -49,6 +49,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
   @NonNull
   protected final Radios radios;
   private final int resource;
+  @NonNull
   protected List<Radio> filteredRadios;
   private int currentRadioIndex = DEFAULT;
   @NonNull
@@ -101,6 +102,8 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     int resource,
     @NonNull RecyclerView recyclerView) {
     this.radios = MainActivity.getRadios();
+    // Default setting
+    filteredRadios = radios;
     this.listener = listener;
     this.resource = resource;
     // Adapter shall be defined for RecyclerView
@@ -114,7 +117,6 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
 
   @Override
   public void onBindViewHolder(@NonNull V v, int i) {
-    assert filteredRadios != null;
     v.setView(filteredRadios.get(i));
   }
 
@@ -183,8 +185,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
     protected void setView(@NonNull Radio radio) {
       this.radio = radio;
       setImage(new BitmapDrawable(
-        radioTextView.getResources(),
-        Radio.createScaledBitmap(this.radio.getIcon(), MainActivity.getSmallIconSize())));
+        radioTextView.getResources(), MainActivity.iconHalfResize(this.radio.getIcon())));
       radioTextView.setText(this.radio.getName());
     }
 

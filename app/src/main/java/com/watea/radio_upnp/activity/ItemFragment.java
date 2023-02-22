@@ -30,7 +30,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
@@ -208,11 +207,11 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   protected void setRadioIcon(@NonNull Bitmap icon) {
-    final Drawable drawable =
-      new BitmapDrawable(getResources(), MainActivity.createScaledBitmap(Radio.resize(icon)));
-    nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(null, drawable, null, null);
+    final Bitmap resizedIcon = MainActivity.iconResize(Radio.crop(icon));
+    nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
+      null, new BitmapDrawable(getResources(), resizedIcon), null, null);
     // radioIcon stored as tag
-    nameEditText.setTag(icon);
+    nameEditText.setTag(resizedIcon);
   }
 
   private void iconSearch() {

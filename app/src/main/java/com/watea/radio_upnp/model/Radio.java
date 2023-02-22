@@ -92,6 +92,7 @@ public class Radio {
   private final int quality;
   @NonNull
   private String name;
+  @SuppressWarnings("NotNullFieldNotInitialized")
   @NonNull
   private Bitmap icon;
   @NonNull
@@ -109,7 +110,7 @@ public class Radio {
     int quality,
     boolean isPreferred) {
     this.name = name;
-    this.icon = resize(icon);
+    setIcon(icon);
     this.url = url;
     this.webPageUrl = webPageUrl;
     this.mime = mime;
@@ -190,9 +191,9 @@ public class Radio {
     return null;
   }
 
-  // Resize bitmap as a square
+  // Crop bitmap as a square
   @NonNull
-  public static Bitmap resize(@NonNull Bitmap icon) {
+  public static Bitmap crop(@NonNull Bitmap icon) {
     final int height = icon.getHeight();
     final int width = icon.getWidth();
     final int min = Math.min(height, width);
@@ -269,7 +270,7 @@ public class Radio {
   }
 
   public void setIcon(@NonNull Bitmap icon) {
-    this.icon = icon;
+    this.icon = crop(icon);
   }
 
   public boolean isPreferred() {

@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.adapter;
 
 import android.annotation.SuppressLint;
-import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -50,11 +49,6 @@ public class RadiosSearchAdapter extends RecyclerView.Adapter<RadiosSearchAdapte
   private final Set<Radio> selectedRadios = new HashSet<>();
 
   public RadiosSearchAdapter() {
-  }
-
-  @NonNull
-  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
-    return Bitmap.createScaledBitmap(bitmap, size, size, true);
   }
 
   public void add(@NonNull Radio radio) {
@@ -118,8 +112,7 @@ public class RadiosSearchAdapter extends RecyclerView.Adapter<RadiosSearchAdapte
       this.radio = radio;
       radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
         new BitmapDrawable(
-          radioTextView.getResources(),
-          createScaledBitmap(this.radio.getIcon(), MainActivity.getSmallIconSize())),
+          radioTextView.getResources(), MainActivity.iconHalfResize(this.radio.getIcon())),
         null,
         null,
         null);
