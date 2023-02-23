@@ -23,22 +23,22 @@
 
 package com.watea.radio_upnp.adapter;
 
-import android.graphics.drawable.BitmapDrawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 
-public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewHolder> {
-  public RadiosModifyAdapter(@NonNull Listener listener, @NonNull RecyclerView recyclerView) {
-    super(listener, R.layout.row_modify_radio, recyclerView);
+public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapter.ViewHolder> {
+  public RadiosModifyAdapter(@NonNull RecyclerView recyclerView, @NonNull Listener listener) {
+    super(MainActivity::getRadios, R.layout.row_modify_radio, recyclerView, listener);
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
   }
@@ -49,7 +49,7 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
     return new ViewHolder(getView(viewGroup));
   }
 
-  public interface Listener extends RadiosAdapter.Listener {
+  public interface Listener extends RadiosDisplayAdapter.Listener {
     void onWarnChange();
   }
 
@@ -72,7 +72,7 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
       @NonNull RecyclerView recyclerView,
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
-      return radios.swap(
+      return ((Radios) radios).swap(
         viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
     }
 
@@ -88,30 +88,18 @@ public class RadiosModifyAdapter extends RadiosAdapter<RadiosModifyAdapter.ViewH
 
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-      radios.remove(viewHolder.getAbsoluteAdapterPosition());
+      ((Radios) radios).remove(viewHolder.getAbsoluteAdapterPosition());
     }
   }
 
-  protected class ViewHolder extends RadiosAdapter<RadiosModifyAdapter.ViewHolder>.ViewHolder {
+  protected class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
     @NonNull
     private final ImageButton preferredImageButton;
 
     ViewHolder(@NonNull View itemView) {
-      super(itemView);
+      super(itemView, R.id.row_modify_radio_text_view);
       (preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button))
-        .setOnClickListener(v -> radios.setPreferred(radio, !radio.isPreferred()));
-    }
-
-    @NonNull
-    @Override
-    protected TextView getRadioTextView(@NonNull View itemView) {
-      return itemView.findViewById(R.id.row_modify_radio_text_view);
-    }
-
-    @Override
-    protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
-      radioTextView
-        .setCompoundDrawablesRelativeWithIntrinsicBounds(bitmapDrawable, null, null, null);
+        .setOnClickListener(v -> ((Radios) radios).setPreferred(radio, !radio.isPreferred()));
     }
 
     @Override

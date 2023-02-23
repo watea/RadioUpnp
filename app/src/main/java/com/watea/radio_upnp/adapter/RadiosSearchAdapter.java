@@ -24,37 +24,32 @@
 package com.watea.radio_upnp.adapter;
 
 import android.annotation.SuppressLint;
-import android.graphics.drawable.BitmapDrawable;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
-import android.widget.TextView;
+import android.widget.CheckBox;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 
-public class RadiosSearchAdapter extends RecyclerView.Adapter<RadiosSearchAdapter.ViewHolder> {
-  private final List<Radio> radios = new Vector<>();
+public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewHolder> {
   private final Set<Radio> selectedRadios = new HashSet<>();
 
-  public RadiosSearchAdapter() {
+  public RadiosSearchAdapter(@NonNull RecyclerView recyclerView) {
+    super(Vector::new, R.layout.row_search_radio, recyclerView);
   }
 
   public void add(@NonNull Radio radio) {
     radios.add(radio);
     radios.sort(Comparator.comparing(Radio::getName));
-    notifyItemInserted(radios.indexOf(radio));
+    notifyItemInserted(getIndexOf(radio));
   }
 
   @SuppressLint("NotifyDataSetChanged")
@@ -67,66 +62,23 @@ public class RadiosSearchAdapter extends RecyclerView.Adapter<RadiosSearchAdapte
   @NonNull
   @Override
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
-    return new RadiosSearchAdapter.ViewHolder(LayoutInflater
-      .from(viewGroup.getContext())
-      .inflate(R.layout.row_search_radio, viewGroup, false));
-  }
-
-  @Override
-  public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    viewHolder.setView(radios.get(i));
-  }
-
-  @Override
-  public int getItemCount() {
-    return radios.size();
+    return new ViewHolder(getView(viewGroup));
   }
 
   public Set<Radio> getSelectedRadios() {
     return selectedRadios;
   }
 
-  public class ViewHolder extends RecyclerView.ViewHolder {
-    @NonNull
-    private final TextView radioTextView;
-    @NonNull
-    private final ImageButton checkImageButton;
-    @NonNull
-    private Radio radio = Radio.DUMMY_RADIO;
-
+  protected class ViewHolder extends RadiosAdapter.ViewHolder {
     protected ViewHolder(@NonNull View itemView) {
-      super(itemView);
-      radioTextView = itemView.findViewById(R.id.row_search_radio_text_view);
-      checkImageButton = itemView.findViewById(R.id.check_image_button);
-      checkImageButton.setOnClickListener(view -> {
-        if (isChecked()) {
-          selectedRadios.remove(radio);
-        } else {
+      super(itemView, R.id.row_search_radio_text_view);
+      itemView.findViewById(R.id.check_image_button).setOnClickListener(view -> {
+        if (((CheckBox) view).isChecked()) {
           selectedRadios.add(radio);
+        } else {
+          selectedRadios.remove(radio);
         }
-        setCheckImageButton();
       });
-    }
-
-    protected void setView(@NonNull Radio radio) {
-      this.radio = radio;
-      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        new BitmapDrawable(
-          radioTextView.getResources(), MainActivity.iconHalfResize(this.radio.getIcon())),
-        null,
-        null,
-        null);
-      radioTextView.setText(this.radio.getName());
-      setCheckImageButton();
-    }
-
-    private boolean isChecked() {
-      return selectedRadios.contains(radio);
-    }
-
-    private void setCheckImageButton() {
-      checkImageButton.setImageResource(isChecked() ?
-        R.drawable.ic_baseline_check_box_24dp : R.drawable.ic_baseline_check_box_outline_blank_24dp);
     }
   }
 }

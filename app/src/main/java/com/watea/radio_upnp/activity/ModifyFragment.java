@@ -63,7 +63,7 @@ public class ModifyFragment extends MainActivityFragment {
   @Override
   public void onResume() {
     super.onResume();
-    radiosModifyAdapter.set(false);
+    radiosModifyAdapter.set();
   }
 
   @Override
@@ -99,6 +99,6 @@ public class ModifyFragment extends MainActivityFragment {
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     // Adapter
-    radiosModifyAdapter = new RadiosModifyAdapter(radiosModifyAdapterListener, radiosRecyclerView);
+    radiosModifyAdapter = new RadiosModifyAdapter(radiosRecyclerView, radiosModifyAdapterListener);
   }
 }

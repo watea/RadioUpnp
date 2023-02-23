@@ -68,12 +68,12 @@ public class SearchFragment extends MainActivityFragment {
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
-  private final RadiosSearchAdapter radiosSearchAdapter = new RadiosSearchAdapter();
   // <HMI assets
   private FrameLayout defaultFrameLayout;
   private AlertDialog searchAlertDialog;
   private EditText nameEditText;
   // />
+  private RadiosSearchAdapter radiosSearchAdapter;
   private boolean isFirstStart = true;
   private String[] countryCodes;
 
@@ -142,12 +142,13 @@ public class SearchFragment extends MainActivityFragment {
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
-    radiosRecyclerView.setAdapter(radiosSearchAdapter);
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     final View searchView =
       getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
     nameEditText = searchView.findViewById(R.id.name_edit_text);
     final Spinner countrySpinner = searchView.findViewById(R.id.country_spinner);
+    // Adapter
+    radiosSearchAdapter = new RadiosSearchAdapter(radiosRecyclerView);
     // Build alert dialog
     searchAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setView(searchView)

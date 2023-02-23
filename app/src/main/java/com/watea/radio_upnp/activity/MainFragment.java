@@ -108,7 +108,7 @@ public class MainFragment extends MainActivityFragment {
     // Force column count
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
     // Set view
-    radiosMainAdapter.set(isPreferredRadios);
+    radiosMainAdapter.set();
     // UPnP changes
     upnpDevicesAdapter.setChosenDeviceListener(chosenDeviceListener);
   }
@@ -135,7 +135,8 @@ public class MainFragment extends MainActivityFragment {
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     switch (item.getItemId()) {
       case R.id.action_preferred:
-        radiosMainAdapter.refresh(isPreferredRadios = !isPreferredRadios);
+        isPreferredRadios = !isPreferredRadios;
+        radiosMainAdapter.refresh();
         setPreferredMenuItem();
         if (!gotItPreferredRadios) {
           preferredRadiosAlertDialog.show();
@@ -206,7 +207,10 @@ public class MainFragment extends MainActivityFragment {
     radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
     defaultFrameLayout = view.findViewById(R.id.view_radios_default);
     // Adapters (order matters!)
-    radiosMainAdapter = new RadiosMainAdapter(radiosMainAdapterListener, radiosRecyclerView);
+    radiosMainAdapter = new RadiosMainAdapter(
+      () -> isPreferredRadios ? MainActivity.getRadios().getPreferred() : MainActivity.getRadios(),
+      radiosRecyclerView,
+      radiosMainAdapterListener);
     upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
     radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)

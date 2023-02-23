@@ -23,7 +23,6 @@
 
 package com.watea.radio_upnp.adapter;
 
-import android.annotation.SuppressLint;
 import android.graphics.drawable.BitmapDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -36,150 +35,62 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.Radios;
 
-import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
-public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
+public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   extends RecyclerView.Adapter<V> {
-  private static final int DEFAULT = -1;
+  protected static final int DEFAULT = -1;
+  private final int row;
   @NonNull
-  protected final Listener listener;
+  protected Supplier<List<Radio>> radiosSupplier;
   @NonNull
-  protected final Radios radios;
-  private final int resource;
-  @NonNull
-  protected List<Radio> filteredRadios;
-  private int currentRadioIndex = DEFAULT;
-  @NonNull
-  private final MainActivity.Listener mainActivityListener = new MainActivity.Listener() {
-    @Override
-    public void onNewCurrentRadio(@Nullable Radio radio) {
-      final int previousCurrentRadioIndex = currentRadioIndex;
-      currentRadioIndex = getIndexOf(radio);
-      notifyItemChanged(previousCurrentRadioIndex);
-      notifyItemChanged(currentRadioIndex);
-    }
-  };
-  private boolean isPreferred = false;
-  @NonNull
-  private final Radios.Listener radiosListener = new Radios.Listener() {
-    @Override
-    public void onPreferredChange(@NonNull Radio radio) {
-      notifyItemChanged(getIndexOf(radio));
-    }
-
-    @Override
-    public void onAdd(@NonNull Radio radio) {
-      // Don't add to view if preferred switch is activated, as new radio if not preferred
-      if (!isPreferred) {
-        updateFilteredRadios();
-        notifyItemRangeInserted(getIndexOf(radio), 1);
-      }
-    }
-
-    @Override
-    public void onRemove(int index) {
-      updateFilteredRadios();
-      notifyItemRemoved(index);
-    }
-
-    @Override
-    public void onMove(int from, int to) {
-      updateFilteredRadios();
-      notifyItemMoved(from, to);
-    }
-
-    @Override
-    public void onAddAll(@NonNull Collection<? extends Radio> c) {
-      c.forEach(this::onAdd);
-    }
-  };
+  protected List<Radio> radios;
 
   public RadiosAdapter(
-    @NonNull Listener listener,
-    int resource,
-    @NonNull RecyclerView recyclerView) {
-    this.radios = MainActivity.getRadios();
-    // Default setting
-    filteredRadios = radios;
-    this.listener = listener;
-    this.resource = resource;
+    @NonNull Supplier<List<Radio>> radiosSupplier, int row, @NonNull RecyclerView recyclerView) {
+    this.radiosSupplier = radiosSupplier;
+    this.radios = this.radiosSupplier.get();
+    this.row = row;
     // Adapter shall be defined for RecyclerView
     recyclerView.setAdapter(this);
   }
 
-  public void unset() {
-    MainActivity.removeListener(mainActivityListener);
-    radios.removeListener(radiosListener);
-  }
-
   @Override
   public void onBindViewHolder(@NonNull V v, int i) {
-    v.setView(filteredRadios.get(i));
+    v.setView(radios.get(i));
   }
 
   @Override
   public int getItemCount() {
-    return filteredRadios.size();
+    return radios.size();
   }
 
-  @SuppressLint("NotifyDataSetChanged")
-  public void refresh(boolean isPreferred) {
-    this.isPreferred = isPreferred;
-    updateFilteredRadios();
-    notifyDataSetChanged();
-  }
-
-  // Must be called
-  public void set(boolean isPreferred) {
-    MainActivity.addListener(mainActivityListener);
-    radios.addListener(radiosListener);
-    refresh(isPreferred);
+  protected int getIndexOf(@Nullable Radio radio) {
+    return (radio == null) ? DEFAULT : radios.indexOf(radio);
   }
 
   @NonNull
   protected View getView(@NonNull ViewGroup viewGroup) {
-    return LayoutInflater.from(viewGroup.getContext()).inflate(resource, viewGroup, false);
+    return LayoutInflater.from(viewGroup.getContext()).inflate(row, viewGroup, false);
   }
 
-  protected int getIndexOf(@Nullable Radio radio) {
-    return (radio == null) ? DEFAULT : filteredRadios.indexOf(radio);
-  }
-
-  private void updateFilteredRadios() {
-    filteredRadios = isPreferred ? radios.getPreferred() : radios;
-    currentRadioIndex = getIndexOf(MainActivity.getCurrentRadio());
-    listener.onCountChange(filteredRadios.isEmpty());
-  }
-
-  public interface Listener {
-    void onClick(@NonNull Radio radio);
-
-    void onCountChange(boolean isEmpty);
-  }
-
-  protected class ViewHolder extends RecyclerView.ViewHolder {
+  protected abstract static class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
     protected final TextView radioTextView;
     @NonNull
     protected Radio radio = Radio.DUMMY_RADIO;
 
-    protected ViewHolder(@NonNull View itemView) {
+    protected ViewHolder(@NonNull View itemView, int textViewId) {
       super(itemView);
-      radioTextView = getRadioTextView(itemView);
-      radioTextView.setOnClickListener(v -> listener.onClick(radio));
+      radioTextView = itemView.findViewById(textViewId);
     }
 
-    @NonNull
-    protected TextView getRadioTextView(@NonNull View itemView) {
-      return (TextView) itemView;
-    }
-
+    // Places the Drawable relatively to radioTextView
     protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
       radioTextView
-        .setCompoundDrawablesRelativeWithIntrinsicBounds(null, bitmapDrawable, null, null);
+        .setCompoundDrawablesRelativeWithIntrinsicBounds(bitmapDrawable, null, null, null);
     }
 
     protected void setView(@NonNull Radio radio) {
@@ -187,11 +98,6 @@ public abstract class RadiosAdapter<V extends RadiosAdapter<?>.ViewHolder>
       setImage(new BitmapDrawable(
         radioTextView.getResources(), MainActivity.iconHalfResize(this.radio.getIcon())));
       radioTextView.setText(this.radio.getName());
-    }
-
-    protected boolean isCurrentRadio() {
-      assert radio != Radio.DUMMY_RADIO;
-      return (getIndexOf(radio) == currentRadioIndex);
     }
   }
 }

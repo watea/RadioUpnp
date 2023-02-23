@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.adapter;
 
 import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.View;
@@ -36,30 +37,42 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
-public class RadiosMainAdapter extends RadiosAdapter<RadiosMainAdapter.ViewHolder> {
-  public RadiosMainAdapter(@NonNull Listener listener, @NonNull RecyclerView recyclerView) {
-    super(listener, R.layout.row_radio, recyclerView);
+import java.util.List;
+import java.util.function.Supplier;
+
+public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.ViewHolder> {
+  public RadiosMainAdapter(
+    @NonNull Supplier<List<Radio>> radiosSupplier,
+    @NonNull RecyclerView recyclerView,
+    @NonNull Listener listener) {
+    super(radiosSupplier, R.layout.row_radio, recyclerView, listener);
   }
 
   @NonNull
   @Override
-  public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-    return new ViewHolder(getView(viewGroup));
+  public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    return new ViewHolder(getView(parent));
   }
 
-  public interface Listener extends RadiosAdapter.Listener {
+  public interface Listener extends RadiosDisplayAdapter.Listener {
     boolean onLongClick(@Nullable Uri webPageUri);
   }
 
-  protected class ViewHolder extends RadiosAdapter<RadiosMainAdapter.ViewHolder>.ViewHolder {
+  protected class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
     @NonNull
     private final Drawable defaultBackground;
 
     protected ViewHolder(@NonNull View itemView) {
-      super(itemView);
+      super(itemView, R.id.row_radio_name_text_view);
       defaultBackground = radioTextView.getBackground();
       radioTextView.setOnLongClickListener(
         v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
+    }
+
+    @Override
+    protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
+      radioTextView
+        .setCompoundDrawablesRelativeWithIntrinsicBounds(null, bitmapDrawable, null, null);
     }
 
     @Override
