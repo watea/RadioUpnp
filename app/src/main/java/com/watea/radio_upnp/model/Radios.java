@@ -144,7 +144,7 @@ public class Radios extends Vector<Radio> {
     assert size > 0;
     final int index = indexOf(radio);
     assert index >= 0;
-    return get(size + index + direction % size);
+    return get((size + index + direction) % size);
   }
 
   @Nullable
