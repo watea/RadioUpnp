@@ -43,7 +43,7 @@
     <string name="no_internet">Internet connexion not available</string>
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio</string>
-    <string name="onrad_io_search">Search with open web <b>OnRad.io</b> database;/nPlease note that data may be outdated:</string>
+    <string name="onrad_io_search">Search with open web <b>OnRad.io</b> database;\nplease note that data may be outdated:</string>
     <string name="dlna_search_reset">UPnP/DLNA search reset</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
     <string name="no_dlna_selection">No UPnP/DLNA device selected</string>
