@@ -59,7 +59,6 @@ import java.net.URL;
 public abstract class ItemFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemFragment.class.getName();
   private static final int BROWSE_INTENT = 7;
-  // <HMI assets
   protected EditText nameEditText;
   protected EditText urlEditText;
   protected EditText webPageEditText;
@@ -69,7 +68,6 @@ public abstract class ItemFragment extends MainActivityFragment {
   protected UrlWatcher iconWatcher;
   private Button iconSearchButton;
   private ProgressBar iconSearchProgressBar;
-  // />
 
   @Override
   public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {

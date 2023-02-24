@@ -48,7 +48,6 @@ import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.Radio;
 
 public class MainFragment extends MainActivityFragment {
-  // <HMI assets
   private FrameLayout defaultFrameLayout;
   private MenuItem dlnaMenuItem;
   private final UpnpDevicesAdapter.ChosenDeviceListener chosenDeviceListener = icon -> {
@@ -63,7 +62,6 @@ public class MainFragment extends MainActivityFragment {
   private AlertDialog radioLongPressAlertDialog;
   private AlertDialog dlnaEnableAlertDialog;
   private AlertDialog preferredRadiosAlertDialog;
-  // />
   private int radioClickCount = 0;
   private boolean isPreferredRadios = false;
   private boolean gotItRadioLongPress;

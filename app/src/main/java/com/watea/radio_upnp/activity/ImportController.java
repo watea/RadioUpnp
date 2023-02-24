@@ -56,10 +56,8 @@ public class ImportController {
   private static final DeviceTypeHeader EXPORTER_DEVICE_TYPE_HEADER =
     new DeviceTypeHeader(EXPORTER_DEVICE_TYPE);
   private static final Handler handler = new Handler(Looper.getMainLooper());
-  // <HMI assets
   @NonNull
   private final AlertDialog importAlertDialog;
-  // />
   @NonNull
   private final MainActivity mainActivity;
   @Nullable

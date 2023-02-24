@@ -37,7 +37,6 @@ import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
 
 public class ModifyFragment extends MainActivityFragment {
-  // <HMI assets
   private FrameLayout defaultFrameLayout;
   private final RadiosModifyAdapter.Listener radiosModifyAdapterListener =
     new RadiosModifyAdapter.Listener() {
@@ -57,7 +56,6 @@ public class ModifyFragment extends MainActivityFragment {
         tell(R.string.not_to_delete);
       }
     };
-  // />
   private RadiosModifyAdapter radiosModifyAdapter = null;
 
   @Override

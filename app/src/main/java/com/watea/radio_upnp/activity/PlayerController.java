@@ -64,7 +64,6 @@ public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getName();
   private static final String DATE = "date";
   private static final String INFORMATION = "information";
-  // <HMI assets
   @NonNull
   private final ImageButton playImageButton;
   @NonNull
@@ -87,7 +86,6 @@ public class PlayerController {
   private final AlertDialog informationPressAlertDialog;
   @NonNull
   private final AlertDialog playlistAlertDialog;
-  // />
   @NonNull
   private final SharedPreferences sharedPreferences;
   @NonNull

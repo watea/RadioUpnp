@@ -68,11 +68,9 @@ public class SearchFragment extends MainActivityFragment {
   private static final String DAR_FM_NAME = "name";
   private static final String DAR_FM_WEB_PAGE = "web_page";
   private static final String DAR_FM_ID = "id";
-  // <HMI assets
   private FrameLayout defaultFrameLayout;
   private AlertDialog searchAlertDialog;
   private EditText nameEditText;
-  // />
   private RadiosSearchAdapter radiosSearchAdapter;
   private boolean isFirstStart = true;
   private String[] countryCodes;

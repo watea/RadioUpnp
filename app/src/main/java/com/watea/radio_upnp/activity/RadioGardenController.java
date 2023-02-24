@@ -84,9 +84,7 @@ public class RadioGardenController {
   private static final String LISTEN = "listen/";
   private static final String CHANNEL_MP3 = "/channel.mp3";
   private static final Pattern CLIP_DATA_PATTERN = Pattern.compile("Listen to (.+) from (.+) live on Radio Garden: https://radio.garden/listen/.+/(.+)");
-  // <HMI assets
   private final AlertDialog radioGardenAlertDialog;
-  // />
   @NonNull
   private final MainActivity mainActivity;
 

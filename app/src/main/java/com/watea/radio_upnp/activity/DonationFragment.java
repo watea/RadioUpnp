@@ -63,11 +63,8 @@ public class DonationFragment
   private final Map<String, ProductDetails> ownProductDetailss = new Hashtable<>();
   private List<QueryProductDetailsParams.Product> googleProducts;
   private BillingClient billingClient;
-  // <HMI assets
   private Spinner googleSpinner;
   private AlertDialog.Builder paymentAlertDialogBuilder;
-  // />
-
   @NonNull
   private static QueryProductDetailsParams.Product getProduct(@NonNull String name) {
     return QueryProductDetailsParams.Product.newBuilder()
