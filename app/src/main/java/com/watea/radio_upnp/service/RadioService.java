@@ -403,43 +403,35 @@ public class RadioService
         // Radio current track
         .setContentText(description.getSubtitle());
     }
-    final int[] actions012 = {0, 1, 2};
-    final int[] actions0123 = {0, 1, 2, 3};
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
     final PlaybackStateCompat playbackStateCompat = mediaController.getPlaybackState();
     if (playbackStateCompat == null) {
       builder.setOngoing(false);
     } else {
-      builder
-        .addAction(actionSkipToPrevious)
-        .addAction(actionStop);
+      mediaStyle.setShowActionsInCompactView(0, 1, 2);
+      builder.addAction(actionSkipToPrevious);
       switch (playbackStateCompat.getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
           // UPnP device doesn't support PAUSE action but STOP
-          if (playerAdapter instanceof LocalPlayerAdapter) {
-            builder.addAction(actionPause);
-            mediaStyle.setShowActionsInCompactView(actions0123);
-          } else {
-            mediaStyle.setShowActionsInCompactView(actions012);
-          }
-          builder.setOngoing(true);
+          builder
+            .addAction((playerAdapter instanceof LocalPlayerAdapter) ? actionPause : actionStop)
+            .setOngoing(true);
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           builder
             .addAction(actionPlay)
             .setOngoing(false);
-          mediaStyle.setShowActionsInCompactView(actions0123);
           break;
         case PlaybackStateCompat.STATE_ERROR:
           builder
             .addAction(actionRewind)
             .setOngoing(false);
-          mediaStyle.setShowActionsInCompactView(actions0123);
           break;
         default:
-          builder.setOngoing(false);
-          mediaStyle.setShowActionsInCompactView(actions012);
+          builder
+            .addAction(actionStop)
+            .setOngoing(false);
       }
       builder.addAction(actionSkipToNext);
     }

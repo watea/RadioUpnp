@@ -65,6 +65,7 @@ public class DonationFragment
   private BillingClient billingClient;
   private Spinner googleSpinner;
   private AlertDialog.Builder paymentAlertDialogBuilder;
+
   @NonNull
   private static QueryProductDetailsParams.Product getProduct(@NonNull String name) {
     return QueryProductDetailsParams.Product.newBuilder()
