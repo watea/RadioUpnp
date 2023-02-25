@@ -582,16 +582,13 @@ public class RadioService
       playerAdapter = null;
     }
 
-    // Do nothing if no radio fund
     private void skipTo(int direction) {
-      // Same extras are reused
       onPrepareFromMediaId(radios.getRadioFrom(radio, direction));
     }
 
+    // Same extras are reused
     private void onPrepareFromMediaId(@NonNull Radio radio) {
-      mediaSessionCompatCallback.onPrepareFromMediaId(
-        Integer.toString(radio.hashCode()),
-        mediaController.getExtras());
+      onPrepareFromMediaId(Integer.toString(radio.hashCode()), mediaController.getExtras());
     }
 
     private void abort(@NonNull String log) {
