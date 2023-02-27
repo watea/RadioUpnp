@@ -41,7 +41,7 @@
         android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/app_margin"
-        android:hint="@string/searched_name"
+        android:hint="@string/searched_words"
         android:importantForAutofill="no"
         android:inputType="textCapCharacters"
         android:textAllCaps="true" />
