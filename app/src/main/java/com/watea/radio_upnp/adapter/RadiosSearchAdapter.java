@@ -69,16 +69,32 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
     return selectedRadios;
   }
 
+  @SuppressLint("NotifyDataSetChanged")
+  public void selectAll() {
+    selectedRadios.addAll(radios);
+    notifyDataSetChanged();
+  }
+
   protected class ViewHolder extends RadiosAdapter.ViewHolder {
+    @NonNull
+    private final CheckBox checkBox;
+
     protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_search_radio_text_view);
-      itemView.findViewById(R.id.check_image_button).setOnClickListener(view -> {
-        if (((CheckBox) view).isChecked()) {
+      checkBox = itemView.findViewById(R.id.check_image_button);
+      checkBox.setOnClickListener(view -> {
+        if (checkBox.isChecked()) {
           selectedRadios.add(radio);
         } else {
           selectedRadios.remove(radio);
         }
       });
+    }
+
+    @Override
+    protected void setView(@NonNull Radio radio) {
+      super.setView(radio);
+      checkBox.setChecked(selectedRadios.contains(radio));
     }
   }
 }

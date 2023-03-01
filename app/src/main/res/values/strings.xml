@@ -131,6 +131,7 @@
     <string name="action_go">Go!</string>
     <string name="action_got_it">Got it!</string>
     <string name="action_select">Select</string>
+    <string name="action_all">SELECT ALL</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
 </resources>

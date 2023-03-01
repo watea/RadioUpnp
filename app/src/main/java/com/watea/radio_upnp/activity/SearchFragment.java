@@ -96,17 +96,22 @@ public class SearchFragment extends MainActivityFragment {
     }
   }
 
+  @SuppressLint("NonConstantResourceId")
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    if (item.getItemId() == R.id.action_done) {
-      getRadios().addAll(radiosSearchAdapter.getSelectedRadios());
-      onBackPressed();
-    } else {
-      // If we got here, the user's action was not recognized
-      // Invoke the superclass to handle it
-      return super.onOptionsItemSelected(item);
+    switch (item.getItemId()) {
+      case R.id.action_all:
+        radiosSearchAdapter.selectAll();
+        return true;
+      case R.id.action_done:
+        getRadios().addAll(radiosSearchAdapter.getSelectedRadios());
+        onBackPressed();
+        return true;
+      default:
+        // If we got here, the user's action was not recognized
+        // Invoke the superclass to handle it
+        return super.onOptionsItemSelected(item);
     }
-    return true;
   }
 
   @NonNull
@@ -122,7 +127,7 @@ public class SearchFragment extends MainActivityFragment {
 
   @Override
   public int getMenuId() {
-    return R.menu.menu_item_modify;
+    return R.menu.menu_search;
   }
 
   @Override
