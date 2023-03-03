@@ -613,9 +613,9 @@ public class MainActivity
 
   // Add all legacy radios, do nothing if there is no legacy
   private void processLegacy() {
-    RadioLibrary radioLibrary = new RadioLibrary(this);
+    final RadioLibrary radioLibrary = new RadioLibrary(this);
     radioLibrary.getAllRadioIds().forEach(radioId -> {
-      com.watea.radio_upnp.model.legacy.Radio legacyRadio = radioLibrary.getFrom(radioId);
+      final com.watea.radio_upnp.model.legacy.Radio legacyRadio = radioLibrary.getFrom(radioId);
       // Robustness: something went wrong?
       if (legacyRadio != null) {
         // Robustness: catch any exception
