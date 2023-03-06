@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 33
-        versionCode 26305
-        versionName "2.63.05"
+        versionCode 26306
+        versionName "2.63.06"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -65,7 +65,7 @@ dependencies {
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.13.1'
     // exoplayer
-    implementation 'com.google.android.exoplayer:exoplayer-core:2.18.3'
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.18.4'
     // apache
     implementation 'org.apache.commons:commons-io:1.3.2'
     // cling, only 2.1.1 works on Android
