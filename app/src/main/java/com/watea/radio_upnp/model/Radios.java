@@ -156,6 +156,17 @@ public class Radios extends Vector<Radio> {
     return addFrom(jSONArray, true, true);
   }
 
+  public boolean write() {
+    try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
+      fileOutputStream.write(toString().getBytes());
+      fileOutputStream.flush();
+    } catch (IOException iOException) {
+      Log.e("TAG", "write: IOException fired", iOException);
+      return false;
+    }
+    return true;
+  }
+
   // Returns false if nothing is added
   private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite, boolean avoidDuplicate) {
     boolean result = false;
@@ -220,17 +231,6 @@ public class Radios extends Vector<Radio> {
     } catch (JSONException jSONException) {
       Log.e(LOG_TAG, "init: JSONArray can not be read", jSONException);
     }
-  }
-
-  private boolean write() {
-    try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
-      fileOutputStream.write(toString().getBytes());
-      fileOutputStream.flush();
-    } catch (IOException iOException) {
-      Log.e("TAG", "write: IOException fired", iOException);
-      return false;
-    }
-    return true;
   }
 
   private boolean tellListeners(boolean test, @NonNull Consumer<Listener> consumer) {

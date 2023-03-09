@@ -35,7 +35,7 @@
     <string name="key_radio_index">key_radio_index</string>
     <string name="key_current_fragment">key_current_fragment</string>
     <string name="key_radio_garden_got_it">key_radio_garden_got_it</string>
-    <string name="key_legacy_to_process">key_legacy_processed</string>
+    <string name="key_legacy_processed">key_legacy_processed</string>
     <!-- Bundles -->
     <string name="key_upnp_device">key_upnp_device</string>
     <string name="key_rate">key_rate</string>

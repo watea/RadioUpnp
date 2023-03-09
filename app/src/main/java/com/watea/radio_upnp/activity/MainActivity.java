@@ -415,15 +415,19 @@ public class MainActivity
     if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
       if (radios.addAll(DefaultRadios.get(this, RADIO_ICON_SIZE))) {
         // Robustness: store immediately to avoid bad user experience in case of app crash
-        storeBooleanPreference(R.string.key_first_start, false);
+        sharedPreferences
+          .edit()
+          .putBoolean(getString(R.string.key_first_start), false)
+          // false: no legacy processing needed
+          .putBoolean(getString(R.string.key_legacy_processed), false)
+          .apply();
       } else {
         Log.e(LOG_TAG, "Internal failure; unable to init radios");
       }
-    } else if (sharedPreferences.getBoolean(getString(R.string.key_legacy_to_process), true)) {
+    } else if (sharedPreferences.getBoolean(getString(R.string.key_legacy_processed), true)) {
       // Legacy support; this code should be removed after some time....
-      processLegacy();
-      // Robustness: store immediately to avoid bad user experience in case of app crash
-      storeBooleanPreference(R.string.key_legacy_to_process, false);
+      // Robustness: store immediately to avoid bad user experience in case of app crash.
+      storeBooleanPreference(R.string.key_legacy_processed, !processLegacy());
     }
     // Init connexion
     networkProxy = new NetworkProxy(this);
@@ -612,7 +616,8 @@ public class MainActivity
   }
 
   // Add all legacy radios, do nothing if there is no legacy
-  private void processLegacy() {
+  // Returns true if legacy has been processed
+  private boolean processLegacy() {
     final RadioLibrary radioLibrary = new RadioLibrary(this);
     radioLibrary.getAllRadioIds().forEach(radioId -> {
       final com.watea.radio_upnp.model.legacy.Radio legacyRadio = radioLibrary.getFrom(radioId);
@@ -621,15 +626,17 @@ public class MainActivity
         // Robustness: catch any exception
         try {
           radios.add(new Radio(
-            legacyRadio.getName(),
-            legacyRadio.getIcon(),
-            legacyRadio.getURL(),
-            legacyRadio.getWebPageURL()));
+              legacyRadio.getName(),
+              legacyRadio.getIcon(),
+              legacyRadio.getURL(),
+              legacyRadio.getWebPageURL()),
+            false);
         } catch (Exception exception) {
           Log.e(LOG_TAG, "Internal failure; reading legacy radio: " + legacyRadio.getName());
         }
       }
     });
+    return radios.write();
   }
 
   private void storeBooleanPreference(int key, boolean value) {
