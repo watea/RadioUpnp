@@ -134,7 +134,9 @@ public class RadioService
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
       @Override
       public void onAdjustVolume(int direction) {
-        playerAdapter.adjustVolume(direction);
+        if (playerAdapter != null) {
+          playerAdapter.adjustVolume(direction);
+        }
       }
     };
   private boolean isAllowedToRewind = false;
