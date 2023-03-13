@@ -615,8 +615,7 @@ public class MainActivity
     super.onBackPressed();
   }
 
-  // Add all legacy radios, do nothing if there is no legacy
-  // Returns true if legacy has been processed
+  // Add all legacy radio if any, returns true if success
   private boolean processLegacy() {
     final RadioLibrary radioLibrary = new RadioLibrary(this);
     radioLibrary.getAllRadioIds().forEach(radioId -> {
