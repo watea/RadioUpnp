@@ -26,6 +26,8 @@ package com.watea.radio_upnp.activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -37,31 +39,32 @@ import java.net.URL;
 
 public class ItemModifyFragment extends ItemFragment {
   private static final String LOG_TAG = ItemModifyFragment.class.getName();
-  private static final int DEFAULT = -1;
-  private int index = DEFAULT;
   private Radio radio = null;
 
   // Must be called before creation
   public void set(@NonNull Radio radio) {
     this.radio = radio;
-    index = DEFAULT;
   }
 
   @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
-    if (savedInstanceState == null) {
-      nameEditText.setText(radio.getName());
-      urlEditText.setText(radio.getURL().toString());
-      final URL webPageURL = radio.getWebPageURL();
-      if (webPageURL != null) {
-        webPageEditText.setText(webPageURL.toString());
-      }
-      setRadioIcon(radio.getIcon());
-    } else {
-      // Restore radioId, radio will be restored in onResume
-      index = savedInstanceState.getInt(getString(R.string.key_radio_index));
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    if (savedInstanceState != null) {
+      // Restore radio
+      radio = getRadios().get(savedInstanceState.getInt(getString(R.string.key_radio_index)));
     }
+  }
+
+  @Override
+  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+    super.onCreateView(view, container);
+    nameEditText.setText(radio.getName());
+    urlEditText.setText(radio.getURL().toString());
+    final URL webPageURL = radio.getWebPageURL();
+    if (webPageURL != null) {
+      webPageEditText.setText(webPageURL.toString());
+    }
+    setRadioIcon(radio.getIcon());
   }
 
   @Override
@@ -96,21 +99,6 @@ public class ItemModifyFragment extends ItemFragment {
     }
     // Always true
     return true;
-  }
-
-  @Override
-  public void onResume() {
-    super.onResume();
-    if (radio == null) {
-      // Restore radio from Radios, necessary in case of restoration from SavedInstanceState
-      if (index < 0) {
-        Log.e(LOG_TAG, "onResume: index is bad");
-        tell(R.string.radio_database_update_failed);
-        onBackPressed();
-      } else {
-        radio = getRadios().get(index);
-      }
-    }
   }
 
   @Override

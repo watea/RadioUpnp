@@ -227,8 +227,8 @@ public class MainFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
     if (savedInstanceState != null) {
       isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
     }

@@ -68,6 +68,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   protected UrlWatcher iconWatcher;
   private Button iconSearchButton;
   private ProgressBar iconSearchProgressBar;
+  private Bitmap restoredBitmap = null;
 
   @Override
   public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -94,15 +95,13 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   @Override
-  public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-    super.onActivityCreated(savedInstanceState);
-    // Default icon
-    setRadioIcon(getMainActivity().getDefaultIcon());
+  public void onCreate(@Nullable Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
     // Restore icon
     if (savedInstanceState != null) {
       try {
         final String file = savedInstanceState.getString(getString(R.string.key_radio_icon_file));
-        setRadioIcon(BitmapFactory.decodeFile(file));
+        restoredBitmap = BitmapFactory.decodeFile(file);
       } catch (Exception exception) {
         Log.e(LOG_TAG, "onCreate: internal failure restoring context", exception);
       }
@@ -191,6 +190,8 @@ public abstract class ItemFragment extends MainActivityFragment {
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
     iconWatcher = new UrlWatcher(iconEditText);
+    // Default icon
+    setRadioIcon((restoredBitmap == null) ? getMainActivity().getDefaultIcon() : restoredBitmap);
   }
 
   @NonNull
