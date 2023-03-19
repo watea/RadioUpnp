@@ -396,15 +396,6 @@ public class MainActivity
   }
 
   @Override
-  protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-    super.onActivityResult(requestCode, resultCode, data);
-    final Fragment fragment = getCurrentFragment();
-    if (fragment != null) {
-      fragment.onActivityResult(requestCode, resultCode, data);
-    }
-  }
-
-  @Override
   @SuppressLint("InflateParams")
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);

@@ -23,8 +23,7 @@
 
 package com.watea.radio_upnp.activity;
 
-import static android.app.Activity.RESULT_OK;
-
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -42,6 +41,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -58,7 +59,6 @@ import java.net.URL;
 
 public abstract class ItemFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemFragment.class.getName();
-  private static final int BROWSE_INTENT = 7;
   protected EditText nameEditText;
   protected EditText urlEditText;
   protected EditText webPageEditText;
@@ -69,30 +69,6 @@ public abstract class ItemFragment extends MainActivityFragment {
   private Button iconSearchButton;
   private ProgressBar iconSearchProgressBar;
   private Bitmap restoredBitmap = null;
-
-  @Override
-  public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-    super.onActivityResult(requestCode, resultCode, data);
-    final Context context = getContext();
-    // Do nothing if we were disposed
-    if ((context != null) && (requestCode == BROWSE_INTENT)) {
-      Uri uri;
-      Bitmap bitmap = null;
-      if ((resultCode == RESULT_OK) && (data != null) && ((uri = data.getData()) != null)) {
-        try {
-          bitmap = BitmapFactory.decodeStream(context.getContentResolver().openInputStream(uri));
-          if (bitmap != null) {
-            setRadioIcon(bitmap);
-          }
-        } catch (FileNotFoundException fileNotFoundException) {
-          Log.i(LOG_TAG, "Error performing icon local search", fileNotFoundException);
-        }
-      }
-      if (bitmap == null) {
-        tell(R.string.no_local_icon);
-      }
-    }
-  }
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -185,8 +161,36 @@ public abstract class ItemFragment extends MainActivityFragment {
     iconSearchButton = view.findViewById(R.id.icon_search_button);
     iconSearchProgressBar = view.findViewById(R.id.icon_search_progress_bar);
     iconSearchButton.setOnClickListener(iconView -> iconSearch());
+    final ActivityResultLauncher<Intent> activityResultLauncher = registerForActivityResult(
+      new ActivityResultContracts.StartActivityForResult(),
+      result -> {
+        final Context context = getContext();
+        // Do nothing if we were disposed
+        if (context == null) {
+          return;
+        }
+        Bitmap bitmap = null;
+        if (result.getResultCode() == Activity.RESULT_OK) {
+          final Intent data = result.getData();
+          final Uri uri = (data == null) ? null : data.getData();
+          if (uri != null) {
+            try {
+              bitmap =
+                BitmapFactory.decodeStream(context.getContentResolver().openInputStream(uri));
+              if (bitmap != null) {
+                setRadioIcon(bitmap);
+              }
+            } catch (FileNotFoundException fileNotFoundException) {
+              Log.i(LOG_TAG, "Error performing icon local search", fileNotFoundException);
+            }
+          }
+        }
+        if (bitmap == null) {
+          tell(R.string.no_local_icon);
+        }
+      });
     view.findViewById(R.id.browse_button).setOnClickListener(iconView ->
-      startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*"), BROWSE_INTENT));
+      activityResultLauncher.launch(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*")));
     urlWatcher = new UrlWatcher(urlEditText);
     webPageWatcher = new UrlWatcher(webPageEditText);
     iconWatcher = new UrlWatcher(iconEditText);
