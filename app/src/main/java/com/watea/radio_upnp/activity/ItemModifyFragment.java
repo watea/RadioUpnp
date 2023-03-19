@@ -56,18 +56,6 @@ public class ItemModifyFragment extends ItemFragment {
   }
 
   @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
-    super.onCreateView(view, container);
-    nameEditText.setText(radio.getName());
-    urlEditText.setText(radio.getURL().toString());
-    final URL webPageURL = radio.getWebPageURL();
-    if (webPageURL != null) {
-      webPageEditText.setText(webPageURL.toString());
-    }
-    setRadioIcon(radio.getIcon());
-  }
-
-  @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     // Store radio; may fail
@@ -99,6 +87,18 @@ public class ItemModifyFragment extends ItemFragment {
     }
     // Always true
     return true;
+  }
+
+  @Override
+  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+    super.onCreateView(view, container);
+    nameEditText.setText(radio.getName());
+    urlEditText.setText(radio.getURL().toString());
+    final URL webPageURL = radio.getWebPageURL();
+    if (webPageURL != null) {
+      webPageEditText.setText(webPageURL.toString());
+    }
+    setRadioIcon(radio.getIcon());
   }
 
   @Override
