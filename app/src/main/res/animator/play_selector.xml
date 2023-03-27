@@ -22,6 +22,8 @@
   -->
 
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/light_gray" android:state_enabled="false" />
+    <item
+        android:color="@color/light_gray"
+        android:state_enabled="false" />
     <item android:color="@color/white" />
 </selector>

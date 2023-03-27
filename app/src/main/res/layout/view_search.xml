@@ -25,10 +25,10 @@
 
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:theme="@style/AlertDialogStyle"
     android:clickable="true"
     android:focusableInTouchMode="true"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:theme="@style/AlertDialogStyle">
 
     <TextView
         android:layout_width="wrap_content"
