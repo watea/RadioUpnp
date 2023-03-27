@@ -247,7 +247,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         @Override
         public ActionInvocation<?> getActionInvocation() {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-          actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
+          // Should not, but may fail
+          try {
+            actionInvocation.setInput(INPUT_CHANNEL, INPUT_MASTER);
+          } catch (Exception exception) {
+            Log.d(LOG_TAG, ACTION_GET_VOLUME + ": fail", exception);
+          }
           return actionInvocation;
         }
 
@@ -410,7 +415,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     }).start();
   }
 
-  public void onPlay() {
+  @Override
+  protected void onPlay() {
     if (actionPlay != null) {
       actionPlay.schedule();
     }
@@ -418,21 +424,21 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   // Nota: as tested, not supported by UPnP device
   @Override
-  public void onPause() {
+  protected void onPause() {
     if (actionPause != null) {
       actionPause.schedule();
     }
   }
 
   @Override
-  public void onStop() {
+  protected void onStop() {
     if (actionStop != null) {
       actionStop.schedule();
     }
   }
 
   @Override
-  public void onRelease() {
+  protected void onRelease() {
     upnpWatchdog.kill();
   }
 
