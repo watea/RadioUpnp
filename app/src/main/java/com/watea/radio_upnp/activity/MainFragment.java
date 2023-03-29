@@ -175,7 +175,10 @@ public class MainFragment extends MainActivityFragment {
   @NonNull
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return v -> wifiTest(() -> getMainActivity().onUpnpReset());
+    return v -> {
+      wifiTest(() -> getMainActivity().onUpnpReset());
+      return true;
+    };
   }
 
   @Override
@@ -248,13 +251,12 @@ public class MainFragment extends MainActivityFragment {
     outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
   }
 
-  private boolean wifiTest(@NonNull Runnable runnable) {
+  private void wifiTest(@NonNull Runnable runnable) {
     if (getNetworkProxy().hasWifiIpAddress()) {
       runnable.run();
     } else {
       tell(R.string.lan_required);
     }
-    return true;
   }
 
   private void setPreferredMenuItem() {

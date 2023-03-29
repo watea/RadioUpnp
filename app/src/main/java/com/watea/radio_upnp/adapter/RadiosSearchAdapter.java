@@ -65,6 +65,7 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
     return new ViewHolder(getView(viewGroup));
   }
 
+  @NonNull
   public Set<Radio> getSelectedRadios() {
     return selectedRadios;
   }

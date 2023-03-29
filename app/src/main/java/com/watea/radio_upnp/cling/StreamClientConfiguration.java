@@ -17,6 +17,8 @@ package com.watea.radio_upnp.cling;
 
 import android.os.Build;
 
+import androidx.annotation.NonNull;
+
 import org.fourthline.cling.model.ServerClientTokens;
 import org.fourthline.cling.transport.spi.AbstractStreamClientConfiguration;
 
@@ -32,6 +34,7 @@ public class StreamClientConfiguration extends AbstractStreamClientConfiguration
     super(timeoutExecutorService);
   }
 
+  @NonNull
   @Override
   public String getUserAgentValue(int majorVersion, int minorVersion) {
     final ServerClientTokens tokens = new ServerClientTokens(majorVersion, minorVersion);

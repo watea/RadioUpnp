@@ -42,9 +42,9 @@ import java.util.function.Supplier;
 public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   extends RecyclerView.Adapter<V> {
   protected static final int DEFAULT = -1;
-  private final int row;
   @NonNull
-  protected Supplier<List<Radio>> radiosSupplier;
+  protected final Supplier<List<Radio>> radiosSupplier;
+  private final int row;
   @NonNull
   protected List<Radio> radios;
 

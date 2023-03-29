@@ -62,6 +62,7 @@ public class UpnpService extends Service {
     assert httpServer != null;
     upnpServiceConfiguration = new UpnpServiceConfiguration(httpServer);
     upnpService = new UpnpServiceImpl(upnpServiceConfiguration) {
+      @NonNull
       @Override
       protected Router createRouter(ProtocolFactory protocolFactory, Registry registry) {
         return new AndroidRouter(getConfiguration(), protocolFactory, UpnpService.this);

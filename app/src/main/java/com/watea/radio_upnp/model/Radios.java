@@ -91,6 +91,7 @@ public class Radios extends Vector<Radio> {
     return tellListeners(super.remove(o) && write(), listener -> listener.onRemove(index));
   }
 
+  @NonNull
   @Override
   public Radio remove(int index) {
     final Radio result = super.remove(index);

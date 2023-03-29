@@ -167,6 +167,7 @@ public class UpnpActionController {
       return actionInvocation;
     }
 
+    @NonNull
     protected abstract ActionInvocation<?> getActionInvocation();
 
     // Run next by default

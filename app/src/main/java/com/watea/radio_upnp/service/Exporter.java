@@ -25,6 +25,8 @@ package com.watea.radio_upnp.service;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.watea.radio_upnp.activity.MainActivity;
 
 import org.fourthline.cling.binding.annotations.UpnpAction;
@@ -49,6 +51,7 @@ public class Exporter {
   @UpnpStateVariable(sendEvents = false)
   private String export = "";
 
+  @NonNull
   @UpnpAction(out = @UpnpOutputArgument(name = EXPORT))
   public String getExport() {
     export = MainActivity.getRadios().toString();

@@ -74,12 +74,14 @@ public class UpnpServiceConfiguration extends DefaultUpnpServiceConfiguration {
     System.setProperty("org.xml.sax.driver", "org.xmlpull.v1.sax2.Driver");
   }
 
+  @NonNull
   @Override
   public org.fourthline.cling.transport.spi.StreamClient<?> createStreamClient() {
     // Use Jetty
     return new StreamClient(new StreamClientConfiguration(getSyncProtocolExecutorService()));
   }
 
+  @NonNull
   @Override
   public StreamServer<?> createStreamServer(NetworkAddressFactory networkAddressFactory) {
     // Use Jetty, start/stop a new shared instance of JettyServletContainer
@@ -92,31 +94,37 @@ public class UpnpServiceConfiguration extends DefaultUpnpServiceConfiguration {
     return 3000; // Preserve battery on Android, only run every 3 seconds
   }
 
+  @NonNull
   @Override
   protected NetworkAddressFactory createNetworkAddressFactory(int streamListenPort) {
     return new AndroidNetworkAddressFactory(streamListenPort);
   }
 
+  @NonNull
   @Override
   protected SOAPActionProcessor createSOAPActionProcessor() {
     return new RecoveringSOAPActionProcessorImpl();
   }
 
+  @NonNull
   @Override
   protected GENAEventProcessor createGENAEventProcessor() {
     return new RecoveringGENAEventProcessorImpl();
   }
 
+  @NonNull
   @Override
   protected DeviceDescriptorBinder createDeviceDescriptorBinderUDA10() {
     return new RecoveringUDA10DeviceDescriptorBinderImpl();
   }
 
+  @NonNull
   @Override
   protected ServiceDescriptorBinder createServiceDescriptorBinderUDA10() {
     return new UDA10ServiceDescriptorBinderSAXImpl();
   }
 
+  @NonNull
   @Override
   protected Namespace createNamespace() {
     // For the Jetty server, this is the servlet context path

@@ -80,9 +80,7 @@
     <string name="donation_google_android_market_description">(Google charges a fee of 15%)</string>
     <string name="donation_alert_dialog_title">Error occurred</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
-    <string name="dar_fm_radio_button">Search with <b>OnRad.io</b> server</string>
     <string name="dar_fm_failure">Note: trouble while fetching data in <b>OnRad.io</b> server</string>
-    <string name="image_from_url_radio_button">Manual fill in</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>
     <string name="not_to_modify">Current radio cannot be edited</string>
@@ -122,7 +120,6 @@
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>
     <string name="action_done">OK</string>
-    <string name="action_test">Test URL</string>
     <string name="action_move">Move</string>
     <string name="action_relaunch">Relaunch</string>
     <string name="action_skip_to_next">Skip to next</string>
@@ -130,7 +127,6 @@
     <string name="action_browse">Browse</string>
     <string name="action_go">Go!</string>
     <string name="action_got_it">Got it!</string>
-    <string name="action_select">Select</string>
     <string name="action_all">SELECT ALL</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>

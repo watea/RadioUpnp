@@ -90,10 +90,10 @@
             android:id="@+id/play_image_button"
             android:layout_width="@dimen/tile_size"
             android:layout_height="@dimen/tile_size"
-            android:tint="@animator/play_selector"
             android:visibility="invisible"
             app:srcCompat="@drawable/ic_play_arrow_white_24dp"
-            tools:ignore="ContentDescription" />
+            tools:ignore="ContentDescription"
+            app:tint="@animator/play_selector" />
 
         <ProgressBar
             android:id="@+id/progress_bar"

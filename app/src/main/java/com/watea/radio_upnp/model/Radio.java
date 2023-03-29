@@ -281,6 +281,7 @@ public class Radio {
     this.isPreferred = isPreferred;
   }
 
+  @NonNull
   public String getId() {
     return Integer.toString(hashCode());
   }
@@ -308,6 +309,7 @@ public class Radio {
       export(Boolean.toString(isPreferred));
   }
 
+  @NonNull
   public JSONObject getJSONObject() throws JSONException {
     return new JSONObject()
       .put(NAME, name)

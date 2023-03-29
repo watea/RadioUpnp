@@ -133,6 +133,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     Action<?> action = getAction(avTransportService, ACTION_PLAY, true);
     actionPlay = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
@@ -157,6 +158,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     action = getAction(avTransportService, ACTION_PAUSE, true);
     actionPause = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           return getActionInvocation(instanceId);
@@ -177,6 +179,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     action = getAction(avTransportService, ACTION_STOP, true);
     actionStop = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           return getActionInvocation(instanceId);
@@ -191,6 +194,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     action = getAction(connectionManager, ACTION_PREPARE_FOR_CONNECTION, false);
     actionPrepareForConnection = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           ActionInvocation<?> actionInvocation = getActionInvocation(null);
@@ -220,6 +224,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     action = getAction(renderingControl, ACTION_SET_VOLUME, false);
     actionSetVolume = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
@@ -244,6 +249,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     action = getAction(renderingControl, ACTION_GET_VOLUME, false);
     actionGetVolume = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
@@ -287,6 +293,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     action = getAction(avTransportService, ACTION_SET_AV_TRANSPORT_URI, true);
     actionSetAvTransportUri = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
@@ -338,6 +345,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     action = getAction(connectionManager, ACTION_GET_PROTOCOL_INFO, true);
     actionGetProtocolInfo = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           return getActionInvocation(null);

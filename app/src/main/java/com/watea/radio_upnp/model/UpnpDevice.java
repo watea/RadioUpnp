@@ -47,6 +47,7 @@ public class UpnpDevice {
     this.remoteDevice = remoteDevice;
   }
 
+  @NonNull
   public static String getIdentity(@NonNull Device<?, ?, ?> device) {
     return device.getIdentity().getUdn().getIdentifierString();
   }

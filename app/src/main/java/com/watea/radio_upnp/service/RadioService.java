@@ -442,6 +442,7 @@ public class RadioService
       .build();
   }
 
+  @Nullable
   private Device<?, ?, ?> getChosenDevice(@NonNull String identity) {
     if (androidUpnpService == null) {
       return null;

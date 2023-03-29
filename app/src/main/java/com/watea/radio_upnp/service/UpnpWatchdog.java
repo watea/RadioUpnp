@@ -57,6 +57,7 @@ public class UpnpWatchdog {
       callback.run();
     } else {
       actionWatchdog = new UpnpActionController.UpnpAction(upnpActionController, action) {
+        @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {
           return getActionInvocation(instanceIdSupplier.get());

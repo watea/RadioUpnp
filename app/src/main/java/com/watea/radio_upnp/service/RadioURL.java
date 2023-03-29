@@ -53,7 +53,7 @@ import javax.net.ssl.TrustManager;
 public class RadioURL {
   private static final String LOG_TAG = RadioURL.class.getName();
   private static final Pattern ICON_PATTERN =
-    Pattern.compile(".*(https?:/(/[-A-Za-z0-9+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
+    Pattern.compile(".*(https?:/(/[-A-Za-z\\d+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
   private static final int CONNECTION_TRY = 3;
   private static final int CONNECT_TIMEOUT =
     DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS * 2;
