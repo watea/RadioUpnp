@@ -353,12 +353,16 @@ public class PlayerController {
     // Connect to other components
     radios.addListener(radiosListener);
     MainActivity.addListener(mainActivityListener);
-    // Launch RadioService
-    mediaBrowser.connect();
+    // Launch RadioService, may fail if already called and connection not ended
+    try {
+      mediaBrowser.connect();
+    } catch (IllegalStateException illegalStateException) {
+      Log.d(LOG_TAG, "onActivityResume: mediaBrowser.connect() failed", illegalStateException);
+    }
   }
 
-  // Must be called on activity pause
-  // Handle services
+  // Must be called on activity pause.
+  // Handle services.
   public void onActivityPause() {
     // Clear radioLibrary
     radios.removeListener(radiosListener);
