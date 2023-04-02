@@ -112,7 +112,6 @@ public class MainActivity
   private static final List<Listener> listeners = new Vector<>();
   private static Radios radios = null;
   private static Radio currentRadio = null;
-  // <HMI assets
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
@@ -121,7 +120,6 @@ public class MainActivity
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
-  // />
   private SharedPreferences sharedPreferences;
   private ImportController importController;
   private RadioGardenController radioGardenController;
