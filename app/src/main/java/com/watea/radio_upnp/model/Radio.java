@@ -169,7 +169,7 @@ public class Radio {
   // First URL if m3u, else do nothing
   @Nullable
   public static URL getURLFromM3u(@NonNull URL uRL) {
-    if (!uRL.toString().endsWith(".m3u")) {
+    if (!uRL.toString().contains(".m3u")) {
       return uRL;
     }
     HttpURLConnection httpURLConnection = null;
