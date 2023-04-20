@@ -73,8 +73,8 @@ public class RadioHandler extends AbstractHandler {
     this.userAgent = userAgent;
   }
 
-  // Add ID and lock key to given URI as query parameter
-  // Don't use several query parameters to avoid encoding troubles
+  // Add ID and lock key to given URI as query parameter.
+  // Don't use several query parameters to avoid encoding troubles.
   @NonNull
   public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
@@ -223,8 +223,8 @@ public class RadioHandler extends AbstractHandler {
     Log.d(LOG_TAG, "handleConnection: leaving");
   }
 
-  // Forward stream data and handle metadata
-  // metadataOffset = 0 if no metadata
+  // Forward stream data and handle metadata.
+  // metadataOffset = 0 if no metadata.
   private void handleStreaming(
     @NonNull final InputStream inputStream,
     @NonNull final CharsetDecoder charsetDecoder,
