@@ -42,6 +42,7 @@
             android:clickable="false"
             android:drawablePadding="@dimen/app_horizontal_margin"
             android:gravity="center_vertical"
+            android:textAllCaps="true"
             android:textStyle="bold" />
 
         <ImageButton

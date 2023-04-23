@@ -23,9 +23,9 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
@@ -59,12 +59,11 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
   }
 
   protected class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
-    @NonNull
-    private final Drawable defaultBackground;
+    private final int backgroundColor;
 
     protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_radio_name_text_view);
-      defaultBackground = radioTextView.getBackground();
+      backgroundColor = getBackgroundColor();
       radioTextView.setOnLongClickListener(
         v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
     }
@@ -78,15 +77,20 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
     @Override
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
-      if (isCurrentRadio()) {
-        radioTextView.setBackground(defaultBackground);
-      } else {
-        radioTextView.setBackgroundColor(getDominantColor(this.radio.getIcon()));
-      }
+      radioTextView.setBackgroundColor(
+        isCurrentRadio() ? backgroundColor : getDominantColor(this.radio.getIcon()));
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {
       return Radio.createScaledBitmap(bitmap, 1).getPixel(0, 0);
+    }
+
+    private int getBackgroundColor() {
+      final TypedArray typedArray = radioTextView.getContext().getTheme().obtainStyledAttributes(
+        new int[]{android.R.attr.colorPrimary});
+      final int result = typedArray.getColor(0, 0);
+      typedArray.recycle();
+      return result;
     }
   }
 }
