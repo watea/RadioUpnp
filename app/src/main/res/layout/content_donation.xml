@@ -31,23 +31,18 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
-        android:text="@string/donation_description"
-        android:textAppearance="@android:style/TextAppearance.Small" />
+        android:text="@string/donation_description" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:paddingTop="@dimen/app_half_margin"
-        android:paddingBottom="@dimen/app_half_margin"
-        android:text="@string/donation_google_android_market_description"
-        android:textAppearance="@android:style/TextAppearance.Small" />
+        android:text="@string/donation_google_android_market_description" />
 
     <Spinner
         android:id="@+id/donation_google_android_market_spinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:entries="@array/donation_google_catalog_values"
-        android:paddingTop="@dimen/app_half_margin" />
+        android:padding="15dp" />
 
 </LinearLayout>
