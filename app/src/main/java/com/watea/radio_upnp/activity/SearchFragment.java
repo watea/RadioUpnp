@@ -62,6 +62,7 @@ public class SearchFragment extends MainActivityFragment {
   private static final String DAR_FM_PAGESIZE = "&pagesize=50";
   private static final String DAR_FM_STATIONS_REQUEST = DAR_FM_API + "darstations.php?station_id=";
   private static final String SPACE_FOR_SEARCH = "%20";
+  private static final String ALL_FOR_SEARCH = "*";
   private static final String COUNTRY_FOR_SEARCH = "@country%20";
   private static final String DAR_FM_PARTNER_TOKEN = "&partner_token=6453742475";
   private static final String DAR_FM_BASE_URL = "http://stream.dar.fm/";
@@ -168,9 +169,13 @@ public class SearchFragment extends MainActivityFragment {
     defaultFrameLayout.setVisibility(View.VISIBLE);
     new Thread(() -> {
       try {
+        // Search all if no entry
+        String searchedText = nameEditText.getText().toString().toUpperCase();
+        final String[] strings = searchedText.split(" ");
+        searchedText = ((strings.length == 0) || strings[0].isEmpty()) ?
+          ALL_FOR_SEARCH : searchedText.replace(" ", SPACE_FOR_SEARCH);
         final Element search = Jsoup.connect(
-            DAR_FM_PLAYLIST_REQUEST +
-              nameEditText.getText().toString().toUpperCase().replace(" ", SPACE_FOR_SEARCH) +
+            DAR_FM_PLAYLIST_REQUEST + searchedText +
               ((countryCode.length() == 2) ? COUNTRY_FOR_SEARCH + countryCode : "") +
               DAR_FM_PAGESIZE + DAR_FM_PARTNER_TOKEN)
           .get();
@@ -191,8 +196,8 @@ public class SearchFragment extends MainActivityFragment {
             Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST extraction", exception);
           }
         }
-      } catch (IOException iOexception) {
-        Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST search", iOexception);
+      } catch (IOException iOException) {
+        Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST search", iOException);
       }
     }).start();
   }
@@ -221,8 +226,8 @@ public class SearchFragment extends MainActivityFragment {
         icon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
       } catch (MalformedURLException malformedURLException) {
         Log.i(LOG_TAG, "Error performing icon search", malformedURLException);
-      } catch (IOException iOexception) {
-        Log.i(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOexception);
+      } catch (IOException iOException) {
+        Log.i(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOException);
       }
     }
 
