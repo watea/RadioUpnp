@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 33
-        versionCode 26315
-        versionName "2.63.15"
+        versionCode 26316
+        versionName "2.63.16"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -57,11 +57,11 @@ repositories {
 }
 
 dependencies {
-    implementation 'androidx.core:core:1.9.0'
+    implementation 'androidx.core:core:1.10.1'
     implementation 'androidx.media:media:1.6.0'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.3.0'
-    implementation 'com.google.android.material:material:1.8.0'
+    implementation 'com.google.android.material:material:1.9.0'
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.13.1'
     // exoplayer
@@ -87,5 +87,10 @@ dependencies {
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12
     implementation 'org.slf4j:slf4j-log4j12:2.0.6'
     // Playstore
-    implementation 'com.android.billingclient:billing:5.2.0'
+    implementation 'com.android.billingclient:billing:6.0.0'
+}
+
+configurations.implementation {
+    // Workaround troubles with implementation 'androidx.core:core:...'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
 }
