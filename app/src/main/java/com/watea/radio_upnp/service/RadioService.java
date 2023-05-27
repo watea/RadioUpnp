@@ -324,7 +324,8 @@ public class RadioService
                       mediaSessionCompatCallback.onRewind();
                     }
                   } catch (Exception exception) {
-                    Log.i(LOG_TAG, "Relaunch failed");
+                    Log.i(LOG_TAG, "Relaunch failed, we stop");
+                    mediaSessionCompatCallback.onStop();
                   }
                 },
                 4000);
@@ -581,8 +582,12 @@ public class RadioService
 
     @Override
     public void onStop() {
-      playerAdapter.stop();
-      playerAdapter = null;
+      if (playerAdapter == null) {
+        Log.d(LOG_TAG, "onStop: but playerAdapter is null!");
+      } else {
+        playerAdapter.stop();
+        playerAdapter = null;
+      }
     }
 
     private void skipTo(int direction) {
