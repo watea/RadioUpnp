@@ -77,10 +77,10 @@ public class DefaultRadios {
       "audio/mp3",
       192),
     new DefaultRadio(
-      "VIRGIN",
-      R.drawable.logo_virgin,
-      "http://ais-live.cloud-services.paris:8000/virgin.mp3",
-      "https://www.virginradio.fr/",
+      "EUROPE2",
+      R.drawable.logo_europe2,
+      "http://ais-live.cloud-services.paris/europe2.mp3",
+      "https://www.europe2.fr/",
       "audio/mp3",
       192),
     new DefaultRadio(
