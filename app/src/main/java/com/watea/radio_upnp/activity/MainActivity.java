@@ -393,6 +393,13 @@ public class MainActivity
     return gotItRadioGarden = true;
   }
 
+  @NonNull
+  public Intent getNewSendIntent() {
+    return new Intent(Intent.ACTION_SEND)
+      .setType("message/rfc822")
+      .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
+  }
+
   @Override
   @SuppressLint("InflateParams")
   protected void onCreate(Bundle savedInstanceState) {
@@ -602,13 +609,6 @@ public class MainActivity
       fragmentManager.beginTransaction().remove(currentFragment).commit();
     }
     super.onBackPressed();
-  }
-
-  @NonNull
-  public Intent getNewSendIntent() {
-    return new Intent(Intent.ACTION_SEND)
-      .setType("message/rfc822")
-      .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
   }
 
   // Add all legacy radio if any, returns true if success
