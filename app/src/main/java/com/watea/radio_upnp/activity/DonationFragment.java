@@ -157,8 +157,8 @@ public class DonationFragment
             .build());
       }
     });
-    view.findViewById(R.id.liberapay_image_button).setOnClickListener(launch(LIBERAPAY_URI));
-    view.findViewById(R.id.paypal_image_button).setOnClickListener(launch(PAYPAL_URI));
+    view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
+    view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
     // Alert dialog
     paymentAlertDialogBuilder = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
       .setIcon(android.R.drawable.ic_dialog_alert)
@@ -228,7 +228,7 @@ public class DonationFragment
     });
   }
 
-  private View.OnClickListener launch(@NonNull Uri uri) {
+  private View.OnClickListener getLauncher(@NonNull Uri uri) {
     return (view -> getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, uri)));
   }
 
