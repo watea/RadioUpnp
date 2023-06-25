@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 33
-        versionCode 26317
-        versionName "2.63.17"
+        versionCode 26318
+        versionName "2.63.18"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -87,7 +87,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12
     implementation 'org.slf4j:slf4j-log4j12:2.0.6'
     // Playstore
-    implementation 'com.android.billingclient:billing:6.0.0'
+    implementation 'com.android.billingclient:billing:6.0.1'
 }
 
 configurations.implementation {
