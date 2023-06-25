@@ -228,6 +228,7 @@ public class DonationFragment
     });
   }
 
+  @NonNull
   private View.OnClickListener getLauncher(@NonNull Uri uri) {
     return (view -> getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, uri)));
   }
