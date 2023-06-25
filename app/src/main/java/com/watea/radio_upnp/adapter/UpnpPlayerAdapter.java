@@ -144,8 +144,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
           changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
-          // Now we can launch watchdog
-          upnpWatchdog.start();
           super.success(actionInvocation);
         }
 
@@ -411,6 +409,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Override
   protected void onPrepareFromMediaId() {
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+    // Launch watchdog
+    upnpWatchdog.start();
     // Fetch content in a new thread
     new Thread(() -> {
       if (upnpActionController.getContentType(radio) == null) {
