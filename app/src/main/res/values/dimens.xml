@@ -30,4 +30,5 @@
     <dimen name="app_vertical_margin">10dp</dimen>
     <dimen name="tile_size">110dp</dimen>
     <dimen name="text_tile_size">50sp</dimen>
+    <dimen name="pay_button_size">80dp</dimen>
 </resources>

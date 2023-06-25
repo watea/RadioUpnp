@@ -102,6 +102,10 @@
     <string name="try_to_add_from_radio_garden">Try to add from Radio Garden.\nMay take some time, please wait&#8230;</string>
     <string name="play_store_not_installed">Play Store not available.\nRadio Garden cannot be installed!</string>
     <string name="icon_search">Search icon</string>
+    <string name="gooogle_play">Google Play</string>
+    <string name="liberapay">liberapay.com</string>
+    <string name="paypal">paypal.com</string>
+    <string name="or_use">or use</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

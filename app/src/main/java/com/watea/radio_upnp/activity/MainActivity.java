@@ -604,6 +604,13 @@ public class MainActivity
     super.onBackPressed();
   }
 
+  @NonNull
+  public Intent getNewSendIntent() {
+    return new Intent(Intent.ACTION_SEND)
+      .setType("message/rfc822")
+      .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
+  }
+
   // Add all legacy radio if any, returns true if success
   private boolean processLegacy() {
     final RadioLibrary radioLibrary = new RadioLibrary(this);
@@ -640,9 +647,7 @@ public class MainActivity
     try {
       Runtime.getRuntime().exec(command);
       // Prepare mail
-      startActivity(new Intent(Intent.ACTION_SEND)
-        .setType("message/rfc822")
-        .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"})
+      startActivity(getNewSendIntent()
         .putExtra(
           Intent.EXTRA_SUBJECT,
           "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
