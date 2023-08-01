@@ -37,11 +37,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.model.Consumer;
-
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Vector;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class RadioLibrary {

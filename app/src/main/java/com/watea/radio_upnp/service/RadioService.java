@@ -548,6 +548,7 @@ public class RadioService
         }
       });
       // Start service, must be done while activity has foreground
+      isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
         startService(new Intent(RadioService.this, RadioService.class));
       } else {

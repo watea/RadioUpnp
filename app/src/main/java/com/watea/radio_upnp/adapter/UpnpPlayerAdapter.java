@@ -125,12 +125,16 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     final Service<?, ?> connectionManager = device.findService(CONNECTION_MANAGER_ID);
     final Service<?, ?> avTransportService = device.findService(AV_TRANSPORT_SERVICE_ID);
     final Service<?, ?> renderingControl = device.findService(RENDERING_CONTROL_ID);
+    // Watchdog test if reader is actually playing
     upnpWatchdog = new UpnpWatchdog(
       this.upnpActionController,
       avTransportService,
       this::getInstanceId,
-      () -> changeAndNotifyState(PlaybackStateCompat.STATE_ERROR));
+      readerState -> changeAndNotifyState(
+        (readerState == UpnpWatchdog.ReaderState.PLAYING) ?
+          PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR));
     Action<?> action = getAction(avTransportService, ACTION_PLAY, true);
+    // Actual Playing state is tested by Watchdog, so nothing to do in case of success
     actionPlay = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
         @NonNull
@@ -139,12 +143,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
           actionInvocation.setInput("Speed", "1");
           return actionInvocation;
-        }
-
-        @Override
-        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
-          super.success(actionInvocation);
         }
 
         @Override

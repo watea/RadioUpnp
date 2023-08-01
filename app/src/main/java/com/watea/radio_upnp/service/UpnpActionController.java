@@ -78,11 +78,6 @@ public class UpnpActionController {
     upnpActions.clear();
   }
 
-  // Remove remaining actions on device or all (device == null)
-  private synchronized void releaseActions(@NonNull final Device<?, ?, ?> device) {
-    upnpActions.removeIf(upnpAction -> upnpAction.getDevice().equals(device));
-  }
-
   private synchronized void runNextAction() {
     if (!upnpActions.isEmpty()) {
       upnpActions.remove(0);
@@ -177,7 +172,6 @@ public class UpnpActionController {
 
     // Run next by default
     protected void failure() {
-      upnpActionController.releaseActions(getDevice());
       upnpActionController.runNextAction();
     }
   }

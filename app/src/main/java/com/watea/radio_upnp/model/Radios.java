@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class Radios extends Vector<Radio> {
@@ -236,7 +237,7 @@ public class Radios extends Vector<Radio> {
 
   private boolean tellListeners(boolean test, @NonNull Consumer<Listener> consumer) {
     if (test) {
-      listeners.forEach(consumer::accept);
+      listeners.forEach(consumer);
     }
     return test;
   }

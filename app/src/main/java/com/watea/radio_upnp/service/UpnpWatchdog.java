@@ -35,11 +35,12 @@ import org.fourthline.cling.model.meta.Service;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class UpnpWatchdog {
   private static final String LOG_TAG = UpnpWatchdog.class.getName();
   private static final int DELAY = 5000; // ms
-  private static final int TOLERANCE = 1;
+  private static final int TOLERANCE = 2;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   @Nullable
@@ -50,11 +51,11 @@ public class UpnpWatchdog {
     @NonNull UpnpActionController upnpActionController,
     @Nullable Service<?, ?> avTransportService,
     @NonNull InstanceIdSupplier instanceIdSupplier,
-    @NonNull Runnable callback) {
+    @NonNull Consumer<ReaderState> callback) {
     Action<?> action;
     if ((avTransportService == null) ||
       ((action = avTransportService.getAction(ACTION_GET_TRANSPORT_INFO)) == null)) {
-      callback.run();
+      callback.accept(ReaderState.FAILURE);
     } else {
       actionWatchdog = new UpnpActionController.UpnpAction(upnpActionController, action) {
         @NonNull
@@ -67,11 +68,11 @@ public class UpnpWatchdog {
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
           final String currentTransportState =
             actionInvocation.getOutput("CurrentTransportState").getValue().toString();
-          if (currentTransportState.equals("TRANSITIONING") ||
-            currentTransportState.equals("PLAYING")) {
+          if (currentTransportState.equals("PLAYING")) {
             failureCount = 0;
+            callback.accept(ReaderState.PLAYING);
           } else {
-            logfailure("Watchdog; state not allowed: " + currentTransportState);
+            logfailure("Watchdog; state is not PLAYING: " + currentTransportState);
           }
         }
 
@@ -83,7 +84,7 @@ public class UpnpWatchdog {
         private void logfailure(@NonNull String message) {
           Log.d(LOG_TAG, message);
           if (failureCount++ >= TOLERANCE) {
-            callback.run();
+            callback.accept(ReaderState.TIMEOUT);
           }
         }
       };
@@ -100,6 +101,10 @@ public class UpnpWatchdog {
 
   public void kill() {
     executor.shutdown();
+  }
+
+  public enum ReaderState {
+    FAILURE, TIMEOUT, PLAYING
   }
 
   public interface InstanceIdSupplier {
