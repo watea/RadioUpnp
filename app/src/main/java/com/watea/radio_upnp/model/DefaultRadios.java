@@ -98,10 +98,10 @@ public class DefaultRadios {
       "audio/mp3",
       192),
     new DefaultRadio(
-      "PBB",
-      R.drawable.logo_pbb_radio,
-      "https://pbbradio.com:8443/128",
-      "https://www.allzicradio.com/en/player/listen/2579/pbb-laurent-garnier",
+      "BBC World Service",
+      R.drawable.logo_bbc,
+      "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service",
+      "http://bbcworldservice.com",
       "audio/mp3",
       192),
     new DefaultRadio(

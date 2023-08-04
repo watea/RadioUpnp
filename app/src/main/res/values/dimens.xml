@@ -25,7 +25,6 @@
     <!-- Default screen margins, per the Android Design guidelines. -->
     <dimen name="app_margin">10dp</dimen>
     <dimen name="app_bottom_margin">50dp</dimen>
-    <dimen name="app_half_margin">5dp</dimen>
     <dimen name="app_horizontal_margin">6dp</dimen>
     <dimen name="app_vertical_margin">10dp</dimen>
     <dimen name="tile_size">110dp</dimen>
