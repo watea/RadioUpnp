@@ -84,8 +84,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Nullable
   private final UpnpActionController.UpnpAction actionPlay;
   @Nullable
-  private final UpnpActionController.UpnpAction actionPause;
-  @Nullable
   private final UpnpActionController.UpnpAction actionStop;
   @Nullable
   private final UpnpActionController.UpnpAction actionPrepareForConnection;
@@ -143,27 +141,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
           actionInvocation.setInput("Speed", "1");
           return actionInvocation;
-        }
-
-        @Override
-        protected void failure() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          super.failure();
-        }
-      };
-    action = getAction(avTransportService, ACTION_PAUSE, true);
-    actionPause = (action == null) ? null :
-      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
-        @NonNull
-        @Override
-        public ActionInvocation<?> getActionInvocation() {
-          return getActionInvocation(instanceId);
-        }
-
-        @Override
-        protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-          changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
-          super.success(actionInvocation);
         }
 
         @Override
@@ -431,9 +408,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   // Nota: as tested, not supported by UPnP device
   @Override
   protected void onPause() {
-    if (actionPause != null) {
-      actionPause.schedule();
-    }
+    Log.d(LOG_TAG, "onPause: not supported");
   }
 
   @Override
