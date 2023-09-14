@@ -30,8 +30,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 
@@ -55,9 +53,7 @@ public class RadioURL {
   private static final Pattern ICON_PATTERN =
     Pattern.compile(".*(https?:/(/[-A-Za-z\\d+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
   private static final int CONNECTION_TRY = 3;
-  private static final int CONNECT_TIMEOUT =
-    DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS * 2;
-  private static final int READ_TIMEOUT = DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * 2;
+  private static final int TIMEOUT = 8000; // ms
   // Create the SSL connection for HTTPS
   private static final SSLSocketFactory sSLSocketFactory;
 
@@ -78,6 +74,16 @@ public class RadioURL {
 
   public RadioURL(@Nullable URL uRL) {
     this.uRL = uRL;
+  }
+
+  @Nullable
+  public static String getMimeType(@NonNull HttpURLConnection httpURLConnection) {
+    return httpURLConnection.getHeaderField("Content-Type");
+  }
+
+  @Nullable
+  public static String getLocation(@NonNull HttpURLConnection httpURLConnection) {
+    return httpURLConnection.getHeaderField("Location");
   }
 
   @Nullable
@@ -117,7 +123,7 @@ public class RadioURL {
     HttpURLConnection httpURLConnection = null;
     try {
       httpURLConnection = getActualHttpURLConnection();
-      contentType = httpURLConnection.getHeaderField("Content-Type");
+      contentType = getMimeType(httpURLConnection);
       // If we get there, connection has occurred.
       // Content-Type first asset is MIME type.
       if (contentType != null) {
@@ -162,8 +168,8 @@ public class RadioURL {
       } else {
         throw new IOException("getActualHttpURLConnection: URL is not HTTP");
       }
-      httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
-      httpURLConnection.setReadTimeout(READ_TIMEOUT);
+      httpURLConnection.setConnectTimeout(TIMEOUT);
+      httpURLConnection.setReadTimeout(TIMEOUT);
       httpURLConnection.setInstanceFollowRedirects(true);
       if (httpURLConnection instanceof HttpsURLConnection) {
         ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
@@ -173,7 +179,7 @@ public class RadioURL {
       }
       // Get answer
       if (httpURLConnection.getResponseCode() / 100 == 3) {
-        uRL = new URL(httpURLConnection.getHeaderField("Location"));
+        uRL = new URL(getLocation(httpURLConnection));
         Log.d(LOG_TAG, "Redirecting to URL: " + uRL);
       } else {
         Log.d(LOG_TAG, "Connection to URL: " + uRL);

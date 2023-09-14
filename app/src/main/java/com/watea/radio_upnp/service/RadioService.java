@@ -504,7 +504,8 @@ public class RadioService
       // Tag metadata with package name to enable session discrepancy
       session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
       if (extras.containsKey(getString(R.string.key_upnp_device))) {
-        final Device<?, ?, ?> chosenDevice = getChosenDevice(extras.getString(getString(R.string.key_upnp_device)));
+        final String identity = extras.getString(getString(R.string.key_upnp_device));
+        final Device<?, ?, ?> chosenDevice = (identity == null) ? null : getChosenDevice(identity);
         assert httpServer != null;
         final Uri serverUri = httpServer.getUri(RadioService.this);
         // UPnP not accepted if environment not OK: force STOP
@@ -549,6 +550,7 @@ public class RadioService
       });
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
+      MainActivity.setCurrentRadio((Radio) null);
       if (playerAdapter.prepareFromMediaId()) {
         startService(new Intent(RadioService.this, RadioService.class));
       } else {

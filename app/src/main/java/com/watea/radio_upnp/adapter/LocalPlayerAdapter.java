@@ -29,18 +29,14 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.Player;
+import androidx.media3.exoplayer.ExoPlayer;
 
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
-import com.google.android.exoplayer2.upstream.DefaultDataSource;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.watea.radio_upnp.model.Radio;
 
 public final class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getName();
-  private static final int READ_TIMEOUT = DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS * 10;
   @NonNull
   private final ExoPlayer exoPlayer;
   private boolean isPaused = false;
@@ -78,13 +74,7 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     @NonNull String lockKey,
     @NonNull Uri radioUri) {
     super(context, listener, radio, lockKey, radioUri);
-    exoPlayer = new ExoPlayer.Builder(this.context)
-      .setMediaSourceFactory(new DefaultMediaSourceFactory(new DefaultDataSource.Factory(
-        this.context,
-        new DefaultHttpDataSource.Factory()
-          .setReadTimeoutMs(READ_TIMEOUT)
-          .setAllowCrossProtocolRedirects(true))))
-      .build();
+    exoPlayer = new ExoPlayer.Builder(this.context).build();
   }
 
   @Override
@@ -117,6 +107,10 @@ public final class LocalPlayerAdapter extends PlayerAdapter {
     return false;
   }
 
+  // Note: as the MediaItem is the local server in the current architecture,
+  // m3u8 support is not possible.
+  // Some attempt to use direct radio connection and m3u8 option are not
+  // successful till now, deeper search on exoplayer API is necessary.
   @Override
   protected void onPrepareFromMediaId() {
     exoPlayer.setMediaItem(MediaItem.fromUri(radioUri));

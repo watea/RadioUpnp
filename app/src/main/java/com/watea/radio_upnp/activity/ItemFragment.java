@@ -344,8 +344,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     protected void onSearch() {
-      final URL uRL = Radio.getURLFromM3u(url);
-      streamContent = (uRL == null) ? null : new RadioURL(uRL).getStreamContentType();
+      streamContent = new RadioURL(url).getStreamContentType();
     }
 
     @Override

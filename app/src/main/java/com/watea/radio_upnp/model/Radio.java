@@ -36,20 +36,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.service.RadioURL;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -166,31 +160,6 @@ public class Radio {
     return new File(context.getFilesDir().getPath() + "/" + fileName);
   }
 
-  // First URL if m3u, else do nothing
-  @Nullable
-  public static URL getURLFromM3u(@NonNull URL uRL) {
-    if (!uRL.toString().contains(".m3u")) {
-      return uRL;
-    }
-    HttpURLConnection httpURLConnection = null;
-    try (final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-      (httpURLConnection = new RadioURL(uRL).getActualHttpURLConnection()).getInputStream()))) {
-      String result;
-      while ((result = bufferedReader.readLine()) != null) {
-        if (result.startsWith("http://") || result.startsWith("https://")) {
-          return new URL(result);
-        }
-      }
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "Error getting M3U", iOException);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
-    return null;
-  }
-
   // Crop bitmap as a square
   @NonNull
   public static Bitmap crop(@NonNull Bitmap icon) {
@@ -219,11 +188,6 @@ public class Radio {
   @NonNull
   public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
     return Bitmap.createScaledBitmap(bitmap, size, size, true);
-  }
-
-  @Nullable
-  public URL getURLFromM3u() {
-    return getURLFromM3u(url);
   }
 
   @NonNull

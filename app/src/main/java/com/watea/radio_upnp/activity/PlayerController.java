@@ -181,11 +181,12 @@ public class PlayerController {
             // too complex to implement).
             if (isUpnp) {
               MainActivity.setCurrentRadio((Radio) null);
-            } else {
+              setPlayImageButtonVisibility(false, false);
+            } else if (MainActivity.getCurrentRadio() != null) {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
+              setPlayImageButtonVisibility(true, false);
             }
-            setPlayImageButtonVisibility(!isUpnp, false);
             mainActivity.tell(R.string.radio_connection_error);
         }
       }

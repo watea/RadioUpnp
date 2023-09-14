@@ -150,8 +150,7 @@ public class RadioHandler extends AbstractHandler {
     // Create WAN connection
     HttpURLConnection httpURLConnection = null;
     try (OutputStream outputStream = response.getOutputStream()) {
-      // Accept M3U format
-      httpURLConnection = new RadioURL(radio.getURLFromM3u()).getActualHttpURLConnection(
+      httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection(
         connection -> {
           // Default request method GET is used as some radio server handles HEAD too bad
           connection.setRequestProperty("User-Agent", userAgent);
