@@ -68,7 +68,8 @@ public class UpnpWatchdog {
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
           final String currentTransportState =
             actionInvocation.getOutput("CurrentTransportState").getValue().toString();
-          if (currentTransportState.equals("PLAYING")) {
+          if (currentTransportState.equals("TRANSITIONING") ||
+            currentTransportState.equals("PLAYING")) {
             failureCount = 0;
             callback.accept(ReaderState.PLAYING);
           } else {
