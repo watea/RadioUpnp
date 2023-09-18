@@ -71,7 +71,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String ACTION_STOP = "Stop";
   private static final String ACTION_SET_VOLUME = "SetVolume";
   private static final String ACTION_GET_VOLUME = "GetVolume";
-  private static final String INPUT_CURRENT_URI_METADATA = "CurrentURIMetaData";
   private static final String INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
@@ -272,7 +271,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
           final String metadata = getMetaData();
           actionInvocation.setInput("CurrentURI", radioUri.toString());
-          actionInvocation.setInput(INPUT_CURRENT_URI_METADATA, metadata);
+          actionInvocation.setInput("CurrentURIMetaData", metadata);
           Log.d(LOG_TAG, "SetAVTransportURI=> InstanceID: " + instanceId);
           Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURI: " + radioUri);
           Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData: " + metadata);
