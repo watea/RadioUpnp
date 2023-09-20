@@ -67,7 +67,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String ACTION_SET_STATE_VARIABLES = "SetStateVariables";
   private static final String ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
   private static final String ACTION_PLAY = "Play";
-  private static final String ACTION_PAUSE = "Pause";
   private static final String ACTION_STOP = "Stop";
   private static final String ACTION_SET_VOLUME = "SetVolume";
   private static final String ACTION_GET_VOLUME = "GetVolume";
