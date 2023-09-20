@@ -148,8 +148,8 @@ public class RadioURL {
     return getActualHttpURLConnection(null);
   }
 
-  // Handle redirection
-  // Consumer sets connection headers
+  // Handle redirection.
+  // Consumer sets connection headers.
   @NonNull
   public HttpURLConnection getActualHttpURLConnection(
     @Nullable HttpURLConnectionConsumer httpURLConnectionConsumer) throws IOException {
