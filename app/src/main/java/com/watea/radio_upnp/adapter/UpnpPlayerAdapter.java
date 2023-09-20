@@ -64,7 +64,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
-  private static final String ACTION_SET_STATE_VARIABLES = "SetStateVariables";
   private static final String ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
   private static final String ACTION_PLAY = "Play";
   private static final String ACTION_STOP = "Stop";
@@ -93,16 +92,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private final UpnpActionController.UpnpAction actionSetAvTransportUri;
   @Nullable
   private final UpnpActionController.UpnpAction actionGetProtocolInfo;
-  @Nullable
-  private final UpnpActionController.UpnpAction actionSetStateVariables = null;
   @NonNull
   private final UpnpWatchdog upnpWatchdog;
+  @NonNull
+  private final String information; // Not final in further use
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
   private String instanceId = "0";
-  @NonNull
-  private String information;
 
   public UpnpPlayerAdapter(
     @NonNull Context context,
@@ -289,30 +286,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.failure();
         }
       };
-    // TODO: to validate with AVTransport:3 Service Device
-//    action = getAction(avTransportService, ACTION_SET_STATE_VARIABLES, false);
-//    actionSetStateVariables = (action == null) ? null :
-//      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
-//        @Override
-//        public ActionInvocation<?> getActionInvocation() {
-//          final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-//          actionInvocation.setInput("AVTransportUDN", device.getIdentity().getUdn());
-//          actionInvocation.setInput("ServiceType", avTransportService.getServiceType());
-//          actionInvocation.setInput("ServiceId", avTransportService.getServiceId());
-//          actionInvocation.setInput(
-//            "StateVariableValuePairs",
-//            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-//              "<stateVariableValuePairs " +
-//              "xmlns=\"urn:schemas-upnp-org:av:avs\" " +
-//              "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
-//              "xsi:schemaLocation=\"urn:schemas-upnp-org:av:avs\nhttp://www.upnp.org/schemas/av/avs.xsd\">" +
-//              "<stateVariable variableName=\"AVTransportURIMetaData\">" +
-//              getMetaData() +
-//              "</stateVariable>" +
-//              "</stateVariableValuePairs>");
-//          return actionInvocation;
-//        }
-//      };
     action = getAction(connectionManager, ACTION_GET_PROTOCOL_INFO, true);
     actionGetProtocolInfo = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
@@ -451,12 +424,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     return contentType;
   }
 
-  public void onNewInformation(@NonNull String information) {
-    if (actionSetStateVariables != null) {
-      this.information =
-        (information.length() == 0) ? context.getString(R.string.app_name) : information;
-      actionSetStateVariables.schedule();
-    }
+  // For further use
+  public void onNewInformation(@NonNull String ignoredInformation) {
   }
 
   private void onPreparedPlay() {
