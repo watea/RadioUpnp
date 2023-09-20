@@ -94,7 +94,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Nullable
   private final UpnpActionController.UpnpAction actionGetProtocolInfo;
   @Nullable
-  private final UpnpActionController.UpnpAction actionSetStateVariables = null;
+  private final UpnpActionController.UpnpAction actionSetStateVariables;
   @NonNull
   private final UpnpWatchdog upnpWatchdog;
   private int currentVolume;
@@ -290,29 +290,30 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         }
       };
     // TODO: to validate with AVTransport:3 Service Device
-//    action = getAction(avTransportService, ACTION_SET_STATE_VARIABLES, false);
-//    actionSetStateVariables = (action == null) ? null :
-//      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
-//        @Override
-//        public ActionInvocation<?> getActionInvocation() {
-//          final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
-//          actionInvocation.setInput("AVTransportUDN", device.getIdentity().getUdn());
-//          actionInvocation.setInput("ServiceType", avTransportService.getServiceType());
-//          actionInvocation.setInput("ServiceId", avTransportService.getServiceId());
-//          actionInvocation.setInput(
-//            "StateVariableValuePairs",
-//            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-//              "<stateVariableValuePairs " +
-//              "xmlns=\"urn:schemas-upnp-org:av:avs\" " +
-//              "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
-//              "xsi:schemaLocation=\"urn:schemas-upnp-org:av:avs\nhttp://www.upnp.org/schemas/av/avs.xsd\">" +
-//              "<stateVariable variableName=\"AVTransportURIMetaData\">" +
-//              getMetaData() +
-//              "</stateVariable>" +
-//              "</stateVariableValuePairs>");
-//          return actionInvocation;
-//        }
-//      };
+    action = getAction(avTransportService, ACTION_SET_STATE_VARIABLES, false);
+    actionSetStateVariables = (action == null) ? null :
+      new UpnpActionController.UpnpAction(this.upnpActionController, action) {
+        @NonNull
+        @Override
+        public ActionInvocation<?> getActionInvocation() {
+          final ActionInvocation<?> actionInvocation = getActionInvocation(instanceId);
+          actionInvocation.setInput("AVTransportUDN", device.getIdentity().getUdn());
+          actionInvocation.setInput("ServiceType", avTransportService.getServiceType());
+          actionInvocation.setInput("ServiceId", avTransportService.getServiceId());
+          actionInvocation.setInput(
+            "StateVariableValuePairs",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+              "<stateVariableValuePairs " +
+              "xmlns=\"urn:schemas-upnp-org:av:avs\" " +
+              "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
+              "xsi:schemaLocation=\"urn:schemas-upnp-org:av:avs\nhttp://www.upnp.org/schemas/av/avs.xsd\">" +
+              "<stateVariable variableName=\"AVTransportURIMetaData\">" +
+              getMetaData() +
+              "</stateVariable>" +
+              "</stateVariableValuePairs>");
+          return actionInvocation;
+        }
+      };
     action = getAction(connectionManager, ACTION_GET_PROTOCOL_INFO, true);
     actionGetProtocolInfo = (action == null) ? null :
       new UpnpActionController.UpnpAction(this.upnpActionController, action) {
