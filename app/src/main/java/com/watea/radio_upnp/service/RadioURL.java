@@ -164,7 +164,7 @@ public class RadioURL {
       // Set headers
       final URLConnection uRLConnection = uRL.openConnection();
       if (uRLConnection instanceof HttpURLConnection) {
-        httpURLConnection = (HttpURLConnection) uRL.openConnection();
+        httpURLConnection = (HttpURLConnection) uRLConnection;
       } else {
         throw new IOException("getActualHttpURLConnection: URL is not HTTP");
       }
