@@ -57,7 +57,7 @@ public class UpnpWatchdog {
       ((action = avTransportService.getAction(ACTION_GET_TRANSPORT_INFO)) == null)) {
       callback.accept(ReaderState.FAILURE);
     } else {
-      actionWatchdog = new UpnpActionController.UpnpAction(upnpActionController, action) {
+      actionWatchdog = upnpActionController.new UpnpAction(action) {
         @NonNull
         @Override
         public ActionInvocation<?> getActionInvocation() {

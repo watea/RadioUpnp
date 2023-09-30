@@ -107,22 +107,18 @@ public class UpnpActionController {
     androidUpnpService.getControlPoint().execute(actionCallback);
   }
 
-  public static abstract class UpnpAction {
-    private static final String LOG_TAG = UpnpAction.class.getName();
-    @NonNull
-    private final UpnpActionController upnpActionController;
+  public abstract class UpnpAction {
+    private final String LOG_TAG = UpnpAction.class.getName();
     @NonNull
     private final Action<?> action;
 
-    public UpnpAction(
-      @NonNull UpnpActionController upnpActionController, @NonNull Action<?> action) {
-      this.upnpActionController = upnpActionController;
+    public UpnpAction(@NonNull Action<?> action) {
       this.action = action;
     }
 
     public void execute() {
       Log.d(LOG_TAG, "Execute: " + action.getName() + " on: " + getDevice().getDisplayString());
-      upnpActionController.execute(new ActionCallback(getActionInvocation()) {
+      UpnpActionController.this.execute(new ActionCallback(getActionInvocation()) {
         @Override
         public void success(ActionInvocation actionInvocation) {
           Log.d(LOG_TAG,
@@ -146,11 +142,11 @@ public class UpnpActionController {
     }
 
     public void putProtocolInfo(@NonNull List<String> list) {
-      upnpActionController.putProtocolInfo(getDevice(), list);
+      UpnpActionController.this.putProtocolInfo(getDevice(), list);
     }
 
     public void schedule() {
-      upnpActionController.schedule(this);
+      UpnpActionController.this.schedule(this);
     }
 
     @NonNull
@@ -167,12 +163,12 @@ public class UpnpActionController {
 
     // Run next by default
     protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-      upnpActionController.runNextAction();
+      UpnpActionController.this.runNextAction();
     }
 
     // Run next by default
     protected void failure() {
-      upnpActionController.runNextAction();
+      UpnpActionController.this.runNextAction();
     }
   }
 }
