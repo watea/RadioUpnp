@@ -118,29 +118,36 @@ public class RadioURL {
 
   // MIME type
   @Nullable
+  public static String getStreamContentType
+  (@NonNull HttpURLConnection httpURLConnection) throws IOException {
+    String contentType = getMimeType(httpURLConnection);
+    // If we get there, connection has occurred.
+    // Content-Type first asset is MIME type.
+    if (contentType != null) {
+      contentType = contentType.split(";")[0];
+    }
+    Log.d(LOG_TAG, "Connection status/ContentType: " +
+      httpURLConnection.getResponseCode() + "/" +
+      ((contentType == null) ? "No ContentType" : contentType));
+    return contentType;
+  }
+
+  // MIME type
+  @Nullable
   public String getStreamContentType() {
-    String contentType = null;
-    HttpURLConnection httpURLConnection = null;
+    HttpURLConnection actualHttpURLConnection = null;
     try {
-      httpURLConnection = getActualHttpURLConnection();
-      contentType = getMimeType(httpURLConnection);
-      // If we get there, connection has occurred.
-      // Content-Type first asset is MIME type.
-      if (contentType != null) {
-        contentType = contentType.split(";")[0];
-      }
-      Log.d(LOG_TAG, "Connection status/ContentType: " +
-        httpURLConnection.getResponseCode() + "/" +
-        ((contentType == null) ? "No ContentType" : contentType));
+      actualHttpURLConnection = getActualHttpURLConnection();
+      return getStreamContentType(actualHttpURLConnection);
     } catch (IOException iOException) {
       // Fires also in case of timeout
-      Log.i(LOG_TAG, "URL IO exception: " + uRL, iOException);
+      Log.i(LOG_TAG, "getStreamContentType: IOException", iOException);
     } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
+      if (actualHttpURLConnection != null) {
+        actualHttpURLConnection.disconnect();
       }
     }
-    return contentType;
+    return null;
   }
 
   @NonNull
