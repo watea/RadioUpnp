@@ -204,16 +204,18 @@ public class RadioHandler extends AbstractHandler {
           metadataOffset = 0;
           Log.w(LOG_TAG, "Wrong metadata value");
         }
-        handleStreaming(
-          httpURLConnection.getInputStream(),
-          charset.newDecoder(),
-          metadataOffset,
-          outputStream,
-          httpURLConnection.getHeaderField("icy-br"),
-          lockKey);
+        try (InputStream inputStream = httpURLConnection.getInputStream()) {
+          handleStreaming(
+            inputStream,
+            charset.newDecoder(),
+            metadataOffset,
+            outputStream,
+            httpURLConnection.getHeaderField("icy-br"),
+            lockKey);
+        }
       }
-    } catch (Exception exception) {
-      Log.d(LOG_TAG, "handleConnection error", exception);
+    } catch (IOException iOException) {
+      Log.d(LOG_TAG, "handleConnection error", iOException);
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();

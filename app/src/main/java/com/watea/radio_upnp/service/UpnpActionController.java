@@ -53,21 +53,23 @@ public class UpnpActionController {
     this.androidUpnpService = androidUpnpService;
   }
 
+  // Use cache or connect to radio to fetch content type
   @Nullable
   public String getContentType(@NonNull Radio radio) {
-    return contentTypes.get(radio);
+    if (contentTypes.containsKey(radio)) {
+      return contentTypes.get(radio);
+    } else {
+      final String result = new RadioURL(radio.getURL()).getStreamContentType();
+      if (result != null) {
+        contentTypes.put(radio, result);
+      }
+      return result;
+    }
   }
 
   @Nullable
   public List<String> getProtocolInfo(@NonNull Device<?, ?, ?> device) {
     return protocolInfos.get(device);
-  }
-
-  public void fetchContentType(@NonNull Radio radio) {
-    final String contentType = new RadioURL(radio.getURL()).getStreamContentType();
-    if (contentType != null) {
-      contentTypes.put(radio, contentType);
-    }
   }
 
   public synchronized void release(boolean actionsOnly) {

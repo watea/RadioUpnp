@@ -353,16 +353,20 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
     // Launch watchdog
     upnpWatchdog.start();
-    // Fetch content in a new thread
-    new Thread(() -> {
-      if (upnpActionController.getContentType(radio) == null) {
-        upnpActionController.fetchContentType(radio);
-      }
-      // We can now call prepare, only if we are still waiting
-      if (state == PlaybackStateCompat.STATE_BUFFERING) {
-        onPreparedPlay();
-      }
-    }).start();
+    // Do prepare if available
+    if (actionPrepareForConnection != null) {
+      actionPrepareForConnection.schedule();
+    }
+    // Actions for launch
+    if ((actionGetProtocolInfo != null) && (upnpActionController.getProtocolInfo(device) == null)) {
+      actionGetProtocolInfo.schedule();
+    }
+    if (actionSetAvTransportUri != null) {
+      actionSetAvTransportUri.schedule();
+    }
+    if (actionPlay != null) {
+      actionPlay.schedule();
+    }
   }
 
   @Override
@@ -422,22 +426,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   // For further use
   public void onNewInformation(@NonNull String ignoredInformation) {
-  }
-
-  private void onPreparedPlay() {
-    // Do prepare if available
-    if (actionPrepareForConnection != null) {
-      actionPrepareForConnection.schedule();
-    }
-    if ((actionGetProtocolInfo != null) && (upnpActionController.getProtocolInfo(device) == null)) {
-      actionGetProtocolInfo.schedule();
-    }
-    if (actionSetAvTransportUri != null) {
-      actionSetAvTransportUri.schedule();
-    }
-    if (actionPlay != null) {
-      actionPlay.schedule();
-    }
   }
 
   // Create DIDL-Lite metadata
