@@ -465,7 +465,6 @@ public class RadioService
     return null;
   }
 
-
   private void buildNotification() {
     try {
       notificationManager.notify(NOTIFICATION_ID, getNotification());
