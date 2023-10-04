@@ -231,9 +231,10 @@ public class PlayerController {
         // Sync existing MediaSession state with UI
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         if ((mediaMetadataCompat != null) && RadioService.isValid(mediaMetadataCompat)) {
+          // Order matters here for display coherence
+          setCurrentRadio(mediaMetadataCompat);
           mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
           mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
-          setCurrentRadio(mediaMetadataCompat);
         }
         // Nota: no mediaBrowser.subscribe here needed
       }
@@ -365,7 +366,7 @@ public class PlayerController {
   // Must be called on activity pause.
   // Handle services.
   public void onActivityPause() {
-    // Clear radioLibrary
+    // Disconnect
     radios.removeListener(radiosListener);
     MainActivity.removeListener(mainActivityListener);
     // Shared preferences
@@ -386,21 +387,20 @@ public class PlayerController {
     // Should not happen
     if (mediaController == null) {
       mainActivity.tell(R.string.radio_connection_waiting);
-      return;
-    }
-    if ((radio == null) && ((radio = getCurrentRadio()) == null)) {
+    } else if ((radio == null) && ((radio = getCurrentRadio()) == null)) {
       // Should not happen
       Log.e(LOG_TAG, "startReading: internal failure, radio is null");
-      return;
+    } else {
+      final Bundle bundle = new Bundle();
+      if (upnpDeviceIdentity != null) {
+        bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
+      }
+      assert mediaController != null;
+      mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
+      // Information are cleared
+      playInformations.clear();
+      insertInformation("", mainActivity.getString(R.string.no_data));
     }
-    final Bundle bundle = new Bundle();
-    if (upnpDeviceIdentity != null) {
-      bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
-    }
-    mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
-    // Information are cleared
-    playInformations.clear();
-    insertInformation("", mainActivity.getString(R.string.no_data));
   }
 
   private void setDefaultPlayImageButton() {
