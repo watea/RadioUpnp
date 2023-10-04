@@ -200,10 +200,13 @@ public class PlayerController {
           playedRadioInformationTextView.setText(information);
           // Rate in extras
           final Bundle extras = mediaController.getExtras();
-          final String rate = (extras == null) ?
-            null : extras.getString(mainActivity.getString(R.string.key_rate));
-          playedRadioRateTextView.setText(
-            (rate == null) ? "" : rate + mainActivity.getString(R.string.kbs));
+          if (extras != null) {
+            final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
+            if (rate != null) {
+              playedRadioRateTextView.setText(
+                (rate.length() > 0) ? rate + mainActivity.getString(R.string.kbs) : "");
+            }
+          }
           // Fill playlist
           if (information != null) {
             final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());

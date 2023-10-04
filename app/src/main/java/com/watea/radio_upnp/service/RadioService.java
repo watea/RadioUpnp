@@ -254,20 +254,11 @@ public class RadioService
   }
 
   @Override
-  public void onNewInformation(
-    @NonNull final String information,
-    @Nullable final String rate,
-    @NonNull final String lockKey) {
-    // We add current radio information to current media data
-    handler.post(() -> {
-      if (hasLockKey(lockKey) && (radio != null)) {
-        // Rate in extras
-        if (rate != null) {
-          final Bundle extras = mediaController.getExtras();
-          extras.putString(getString(R.string.key_rate), rate);
-          session.setExtras(extras);
-        }
-        // Media information in ARTIST and SUBTITLE
+  public void onNewInformation(@NonNull final String information, @NonNull final String lockKey) {
+    runIfLocked(lockKey, () -> {
+      if (radio != null) {
+        // Media information in ARTIST and SUBTITLE.
+        // Ensure session meta data is tagged to ensure only session based use.
         session.setMetadata(getTaggedMediaMetadataBuilder(radio)
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
           .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
@@ -282,70 +273,84 @@ public class RadioService
     });
   }
 
+  // Should be called at beginning of reading for proper display
+  @Override
+  public void onNewRate(@Nullable final String rate, @NonNull final String lockKey) {
+    // Flush previous information and ensure session meta data is tagged
+    onNewInformation("", lockKey);
+    // We add current rate to current media data
+    runIfLocked(lockKey, () -> {
+      // Rate in extras
+      final Bundle extras = mediaController.getExtras();
+      extras.putString(getString(R.string.key_rate), (rate == null) ? "" : rate);
+      session.setExtras(extras);
+      // Update notification
+      buildNotification();
+    });
+  }
+
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
   public void onPlaybackStateChange(
     @NonNull final PlaybackStateCompat state, @NonNull final String lockKey) {
-    handler.post(() -> {
-      if (hasLockKey(lockKey)) {
-        Log.d(LOG_TAG, "New valid state/lock key received: " + state.getState() + "/" + lockKey);
-        // Report the state to the MediaSession
-        session.setPlaybackState(state);
-        // Manage the started state of this service, and session activity
-        switch (state.getState()) {
-          case PlaybackStateCompat.STATE_PLAYING:
-            // Relaunch now allowed
-            isAllowedToRewind = true;
-          case PlaybackStateCompat.STATE_BUFFERING:
-            startForeground(NOTIFICATION_ID, getNotification());
-            break;
-          case PlaybackStateCompat.STATE_PAUSED:
-            // No relaunch on pause
+    runIfLocked(lockKey, () -> {
+      Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
+      // Report the state to the MediaSession
+      session.setPlaybackState(state);
+      // Manage the started state of this service, and session activity
+      switch (state.getState()) {
+        case PlaybackStateCompat.STATE_PLAYING:
+          // Relaunch now allowed
+          isAllowedToRewind = true;
+        case PlaybackStateCompat.STATE_BUFFERING:
+          startForeground(NOTIFICATION_ID, getNotification());
+          break;
+        case PlaybackStateCompat.STATE_PAUSED:
+          // No relaunch on pause
+          isAllowedToRewind = false;
+          buildNotification();
+          break;
+        case PlaybackStateCompat.STATE_ERROR:
+          // For user convenience, session is kept alive
+          if (playerAdapter != null) {
+            playerAdapter.release();
+          }
+          if (httpServer != null) {
+            httpServer.resetRadioHandlerController();
+          }
+          // Try to relaunch just once
+          if (isAllowedToRewind) {
             isAllowedToRewind = false;
-            buildNotification();
-            break;
-          case PlaybackStateCompat.STATE_ERROR:
-            // For user convenience, session is kept alive
-            if (playerAdapter != null) {
-              playerAdapter.release();
-            }
-            if (httpServer != null) {
-              httpServer.resetRadioHandlerController();
-            }
-            // Try to relaunch just once
-            if (isAllowedToRewind) {
-              isAllowedToRewind = false;
-              handler.postDelayed(() -> {
-                  try {
-                    // Still in error?
-                    if (mediaController.getPlaybackState().getState() ==
-                      PlaybackStateCompat.STATE_ERROR) {
-                      mediaSessionCompatCallback.onRewind();
-                    }
-                  } catch (Exception exception) {
-                    Log.i(LOG_TAG, "Relaunch failed, we stop");
-                    mediaSessionCompatCallback.onStop();
+            handler.postDelayed(() -> {
+                try {
+                  // Still in error?
+                  if (mediaController.getPlaybackState().getState() ==
+                    PlaybackStateCompat.STATE_ERROR) {
+                    mediaSessionCompatCallback.onRewind();
                   }
-                },
-                4000);
-            } else {
-              buildNotification();
-            }
-            break;
-          default:
-            if (playerAdapter != null) {
-              playerAdapter.release();
-            }
-            if (httpServer != null) {
-              httpServer.resetRadioHandlerController();
-            }
-            session.setMetadata(null);
-            session.setActive(false);
-            stopForeground(STOP_FOREGROUND_REMOVE);
-            stopSelf();
-            isAllowedToRewind = false;
-        }
+                } catch (Exception exception) {
+                  Log.i(LOG_TAG, "Relaunch failed, we stop");
+                  mediaSessionCompatCallback.onStop();
+                }
+              },
+              4000);
+          } else {
+            buildNotification();
+          }
+          break;
+        default:
+          if (playerAdapter != null) {
+            playerAdapter.release();
+          }
+          if (httpServer != null) {
+            httpServer.resetRadioHandlerController();
+          }
+          session.setMetadata(null);
+          session.setActive(false);
+          stopForeground(STOP_FOREGROUND_REMOVE);
+          stopSelf();
+          isAllowedToRewind = false;
       }
     });
   }
@@ -370,10 +375,6 @@ public class RadioService
   public void onTaskRemoved(@NonNull Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
     stopSelf();
-  }
-
-  private boolean hasLockKey(@NonNull String lockKey) {
-    return session.isActive() && lockKey.equals(this.lockKey);
   }
 
   @SuppressLint("SwitchIntDef")
@@ -471,6 +472,14 @@ public class RadioService
     } catch (SecurityException securityException) {
       Log.e(LOG_TAG, "Notification not allowed");
     }
+  }
+
+  private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
+    handler.post(() -> {
+      if (session.isActive() && lockKey.equals(this.lockKey)) {
+        runnable.run();
+      }
+    });
   }
 
   // PlayerAdapter from session for actual media controls

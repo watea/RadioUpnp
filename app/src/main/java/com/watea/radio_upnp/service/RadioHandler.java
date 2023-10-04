@@ -143,8 +143,7 @@ public class RadioHandler extends AbstractHandler {
     @NonNull final Radio radio,
     @NonNull final String lockKey) {
     final String method = request.getMethod();
-    Log.d(LOG_TAG,
-      "handleConnection: entering for " + method + " " + radio.getName() + "; " + lockKey);
+    Log.d(LOG_TAG, "handleConnection: " + method + " " + radio.getName() + "; " + lockKey);
     // For further use
     final boolean isGet = (method != null) && method.equals("GET");
     // Create WAN connection
@@ -205,12 +204,14 @@ public class RadioHandler extends AbstractHandler {
           Log.w(LOG_TAG, "Wrong metadata value");
         }
         try (InputStream inputStream = httpURLConnection.getInputStream()) {
+          // Update rate
+          listener.onNewRate(httpURLConnection.getHeaderField("icy-br"), lockKey);
+          // Launch streaming
           handleStreaming(
             inputStream,
             charset.newDecoder(),
             metadataOffset,
             outputStream,
-            httpURLConnection.getHeaderField("icy-br"),
             lockKey);
         }
       }
@@ -231,11 +232,8 @@ public class RadioHandler extends AbstractHandler {
     @NonNull final CharsetDecoder charsetDecoder,
     final int metadataOffset,
     @NonNull final OutputStream outputStream,
-    @Nullable final String rate,
     @NonNull final String lockKey) throws IOException {
-    Log.d(LOG_TAG, "handleStreaming: entering");
-    // Flush information, send rate
-    listener.onNewInformation("", rate, lockKey);
+    Log.d(LOG_TAG, "handleStreaming");
     final byte[] buffer = new byte[1];
     final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
     int metadataBlockBytesRead = 0;
@@ -277,7 +275,7 @@ public class RadioHandler extends AbstractHandler {
             final String information =
               (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
             if (information != null) {
-              listener.onNewInformation(information, rate, lockKey);
+              listener.onNewInformation(information, lockKey);
             }
           }
           metadataBlockBytesRead = 0;
@@ -288,10 +286,10 @@ public class RadioHandler extends AbstractHandler {
   }
 
   public interface Listener {
-    default void onNewInformation(
-      @NonNull String information,
-      @Nullable String rate,
-      @NonNull String lockKey) {
+    default void onNewInformation(@NonNull String information, @NonNull String lockKey) {
+    }
+
+    default void onNewRate(@Nullable String rate, @NonNull String lockKey) {
     }
   }
 
