@@ -80,7 +80,7 @@ public class RadioHandler extends AbstractHandler {
     return uri
       .buildUpon()
       .appendEncodedPath(RadioHandler.class.getSimpleName() + SEPARATOR + radio.hashCode())
-      .appendQueryParameter(PARAMS, radio.hashCode() + SEPARATOR + lockKey)
+      .appendQueryParameter(PARAMS, radio.getId() + SEPARATOR + lockKey)
       .build();
   }
 
