@@ -183,9 +183,6 @@ public class HlsHandler {
 
   // Fetch first found URI
   private void fetchSegmentsURI() throws IOException, URISyntaxException {
-    // Reset data
-    rate = null;
-    segmentsURI = null;
     processURLConnection(
       httpURLConnection,
       testIf(STREAM_INF, (line1, line2) -> {
