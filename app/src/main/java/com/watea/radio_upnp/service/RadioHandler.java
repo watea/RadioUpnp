@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -99,6 +100,7 @@ public class RadioHandler extends AbstractHandler {
     Request baseRequest,
     HttpServletRequest request,
     HttpServletResponse response) {
+    Log.d(LOG_TAG, "handle");
     // Valid request
     if ((baseRequest == null) || (request == null)) {
       Log.d(LOG_TAG, "Unexpected request received: request || baseRequest is null");
@@ -121,9 +123,49 @@ public class RadioHandler extends AbstractHandler {
         Log.i(LOG_TAG, "Unknown radio");
       } else {
         baseRequest.setHandled(true);
-        handleConnection(request, response, radio, lockKey);
+        final String method = request.getMethod();
+        final boolean isGet = (method == null) || method.equals("GET");
+        HlsHandler hlsHandler = null;
+        try (final OutputStream outputStream = response.getOutputStream()) {
+          // Create WAN connection
+          final HttpURLConnection httpURLConnection =
+            new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
+          Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
+          // Process with autocloseable feature
+          final boolean isHls = HlsHandler.isHls(httpURLConnection);
+          if (isHls) {
+            hlsHandler = new HlsHandler(httpURLConnection, this::setHeader, outputStream::flush);
+            try (final InputStream inputStream = hlsHandler.getInputStream()) {
+              new HlsConnectionHandler(
+                hlsHandler,
+                httpURLConnection,
+                isGet,
+                inputStream,
+                outputStream,
+                response,
+                lockKey).handleConnection();
+            }
+          } else {
+            try (final InputStream inputStream = httpURLConnection.getInputStream()) {
+              new RegularConnectionHandler(
+                httpURLConnection,
+                isGet,
+                inputStream,
+                outputStream,
+                response,
+                lockKey).handleConnection();
+            }
+          }
+        } catch (Exception exception) {
+          Log.d(LOG_TAG, "Connection to radio interrupted", exception);
+        } finally {
+          if (hlsHandler != null) {
+            hlsHandler.release();
+          }
+        }
       }
     }
+    Log.d(LOG_TAG, "handle: leaving");
   }
 
   // Must be called
@@ -137,152 +179,11 @@ public class RadioHandler extends AbstractHandler {
     listener = DEFAULT_LISTENER;
   }
 
-  private void handleConnection(
-    @NonNull final HttpServletRequest request,
-    @NonNull final HttpServletResponse response,
-    @NonNull final Radio radio,
-    @NonNull final String lockKey) {
-    final String method = request.getMethod();
-    Log.d(LOG_TAG, "handleConnection: " + method + " " + radio.getName() + "; " + lockKey);
-    // For further use
-    final boolean isGet = (method != null) && method.equals("GET");
-    // Create WAN connection
-    HttpURLConnection httpURLConnection = null;
-    try (OutputStream outputStream = response.getOutputStream()) {
-      httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection(
-        connection -> {
-          // Default request method GET is used as some radio server handles HEAD too bad
-          connection.setRequestProperty("User-Agent", userAgent);
-          // ICY request
-          if (isGet) {
-            connection.setRequestProperty("Icy-Metadata", "1");
-          }
-        });
-      Log.d(LOG_TAG, "Connected to radio URL");
-      // Response to LAN
-      for (String header : httpURLConnection.getHeaderFields().keySet()) {
-        // ICY data not forwarded, as only used here
-        if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
-          final String value = httpURLConnection.getHeaderField(header);
-          if (value != null) {
-            response.setHeader(header, value);
-          }
-        }
-      }
-      final String contentType = controller.getContentType();
-      // contentType defined only for UPnP
-      if (contentType.length() > 0) {
-        // DLNA header, as found in documentation, not sure it is useful (should not)
-        response.setHeader("contentFeatures.dlna.org", "*");
-        response.setHeader("transferMode.dlna.org", "Streaming");
-        // Force ContentType as some devices require it
-        Log.d(LOG_TAG, "UPnP connection; ContentType forced: " + contentType);
-        response.setContentType(contentType);
-      }
-      response.setStatus(HttpServletResponse.SC_OK);
-      response.flushBuffer();
-      Log.d(LOG_TAG, "Response sent to LAN client");
-      if (isGet) {
-        // Try to find charset
-        final String contentEncoding = httpURLConnection.getContentEncoding();
-        final Charset charset = (contentEncoding == null) ?
-          Charset.defaultCharset() : Charset.forName(contentEncoding);
-        // Find metadata place, 0 if undefined
-        int metadataOffset = 0;
-        final List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
-        try {
-          metadataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
-        } catch (NumberFormatException numberFormatException) {
-          Log.w(LOG_TAG, "Malformed header icy-metaint");
-        }
-        if (metadataOffset > 0) {
-          Log.i(LOG_TAG, "Metadata expected at index: " + metadataOffset);
-        } else if (metadataOffset == 0) {
-          Log.i(LOG_TAG, "No metadata expected");
-        } else {
-          metadataOffset = 0;
-          Log.w(LOG_TAG, "Wrong metadata value");
-        }
-        try (InputStream inputStream = httpURLConnection.getInputStream()) {
-          // Update rate
-          listener.onNewRate(httpURLConnection.getHeaderField("icy-br"), lockKey);
-          // Launch streaming
-          handleStreaming(
-            inputStream,
-            charset.newDecoder(),
-            metadataOffset,
-            outputStream,
-            lockKey);
-        }
-      }
-    } catch (IOException iOException) {
-      Log.d(LOG_TAG, "handleConnection error", iOException);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
-    Log.d(LOG_TAG, "handleConnection: leaving");
-  }
-
-  // Forward stream data and handle metadata.
-  // metadataOffset = 0 if no metadata.
-  private void handleStreaming(
-    @NonNull final InputStream inputStream,
-    @NonNull final CharsetDecoder charsetDecoder,
-    final int metadataOffset,
-    @NonNull final OutputStream outputStream,
-    @NonNull final String lockKey) throws IOException {
-    Log.d(LOG_TAG, "handleStreaming");
-    final byte[] buffer = new byte[1];
-    final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
-    int metadataBlockBytesRead = 0;
-    int metadataSize = 0;
-    // Stop if not current controller
-    while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
-      // Only stream data are transferred
-      if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
-        outputStream.write(buffer);
-      } else {
-        // Metadata: look for title information
-        final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
-        // First byte gives size (16 bytes chunks) to read for metadata
-        if (metadataIndex == 0) {
-          metadataSize = buffer[0] * 16;
-          metadataBuffer.clear();
-        } else if (metadataIndex <= METADATA_MAX) {
-          // Other bytes are metadata
-          metadataBuffer.put(buffer[0]);
-        }
-        // End of metadata, extract pattern
-        if (metadataIndex == metadataSize) {
-          CharBuffer metadata = null;
-          metadataBuffer.flip();
-          // Exception blocked on metadata
-          try {
-            metadata = charsetDecoder.decode(metadataBuffer);
-          } catch (Exception exception) {
-            if (BuildConfig.DEBUG) {
-              Log.w(LOG_TAG, "Error decoding metadata", exception);
-            }
-          }
-          if ((metadata != null) && (metadata.length() > 0)) {
-            if (BuildConfig.DEBUG) {
-              Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
-            }
-            final Matcher matcher = PATTERN_ICY.matcher(metadata);
-            // Tell listener
-            final String information =
-              (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
-            if (information != null) {
-              listener.onNewInformation(information, lockKey);
-            }
-          }
-          metadataBlockBytesRead = 0;
-        }
-      }
-    }
-    Log.d(LOG_TAG, "handleStreaming: leaving");
+  private void setHeader(@NonNull URLConnection urlConnection) {
+    // Default request method GET is used as some radio server handles HEAD too bad
+    urlConnection.setRequestProperty("User-Agent", userAgent);
+    // ICY request in any case even if not used
+    urlConnection.setRequestProperty("Icy-Metadata", "1");
   }
 
   public interface Listener {
@@ -303,6 +204,219 @@ public class RadioHandler extends AbstractHandler {
     @NonNull
     default String getContentType() {
       return "";
+    }
+  }
+
+  // ICY data are not processed
+  private class HlsConnectionHandler extends ConnectionHandler {
+    @NonNull
+    private final HlsHandler hlsHandler;
+
+    private HlsConnectionHandler(
+      @NonNull HlsHandler hlsHandler,
+      @NonNull HttpURLConnection httpURLConnection,
+      boolean isGet,
+      @NonNull InputStream inputStream,
+      @NonNull OutputStream outputStream,
+      @NonNull HttpServletResponse response,
+      @NonNull String lockKey) {
+      super(httpURLConnection, isGet, inputStream, outputStream, response, lockKey);
+      this.hlsHandler = hlsHandler;
+    }
+
+    @NonNull
+    @Override
+    protected String getRate() {
+      final String rate = hlsHandler.getRate();
+      return (rate == null) ? super.getRate() : rate.substring(0, rate.length() - 3);
+    }
+  }
+
+  private class RegularConnectionHandler extends ConnectionHandler {
+    RegularConnectionHandler(
+      @NonNull HttpURLConnection httpURLConnection,
+      boolean isGet,
+      @NonNull InputStream inputStream,
+      @NonNull OutputStream outputStream,
+      @NonNull HttpServletResponse response,
+      @NonNull String lockKey) {
+      super(httpURLConnection, isGet, inputStream, outputStream, response, lockKey);
+    }
+
+    @NonNull
+    @Override
+    protected String getRate() {
+      final String rate = httpURLConnection.getHeaderField("icy-br");
+      return (rate == null) ? super.getRate() : rate;
+    }
+
+    @Override
+    protected void onLANConnection() {
+      // Forward headers
+      for (String header : httpURLConnection.getHeaderFields().keySet()) {
+        // ICY data not forwarded, as only used here
+        if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
+          final String value = httpURLConnection.getHeaderField(header);
+          if (value != null) {
+            response.setHeader(header, value);
+          }
+        }
+      }
+    }
+
+    @NonNull
+    @Override
+    protected Charset getCharset() {
+      // Try to find charset
+      final String contentEncoding = httpURLConnection.getContentEncoding();
+      return (contentEncoding == null) ? super.getCharset() : Charset.forName(contentEncoding);
+    }
+
+    @Override
+    protected int getMetadataOffset() {
+      // Try to find metadataOffset
+      final int metadataOffset;
+      final List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
+      try {
+        metadataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
+      } catch (NumberFormatException numberFormatException) {
+        Log.w(LOG_TAG, "Malformed header icy-metaint, no metadata expected");
+        return super.getMetadataOffset();
+      }
+      if (metadataOffset > 0) {
+        Log.i(LOG_TAG, "Metadata expected at index: " + metadataOffset);
+      } else if (metadataOffset == 0) {
+        Log.i(LOG_TAG, "No metadata expected");
+      } else {
+        Log.w(LOG_TAG, "Wrong metadata value");
+      }
+      return Math.max(metadataOffset, super.getMetadataOffset());
+    }
+  }
+
+  private abstract class ConnectionHandler {
+    final byte[] buffer = new byte[1];
+    @NonNull
+    final HttpURLConnection httpURLConnection;
+    final boolean isGet;
+    @NonNull
+    final InputStream inputStream;
+    @NonNull
+    final OutputStream outputStream;
+    @NonNull
+    final HttpServletResponse response;
+    @NonNull
+    final String lockKey;
+
+    private ConnectionHandler(
+      @NonNull HttpURLConnection httpURLConnection,
+      boolean isGet,
+      @NonNull InputStream inputStream,
+      @NonNull OutputStream outputStream,
+      @NonNull HttpServletResponse response,
+      @NonNull String lockKey) {
+      this.httpURLConnection = httpURLConnection;
+      this.isGet = isGet;
+      this.inputStream = inputStream;
+      this.outputStream = outputStream;
+      this.response = response;
+      this.lockKey = lockKey;
+    }
+
+    @NonNull
+    protected String getRate() {
+      return "";
+    }
+
+    protected void onLANConnection() {
+    }
+
+    @NonNull
+    protected Charset getCharset() {
+      return Charset.defaultCharset();
+    }
+
+    protected int getMetadataOffset() {
+      return 0;
+    }
+
+    void handleConnection() throws IOException {
+      // Update rate
+      listener.onNewRate(getRate(), lockKey);
+      // Response to LAN
+      onLANConnection();
+      final String contentType = controller.getContentType();
+      // contentType defined only for UPnP
+      if (contentType.length() > 0) {
+        // DLNA header, as found in documentation, not sure it is useful (should not)
+        response.setHeader("contentFeatures.dlna.org", "*");
+        response.setHeader("transferMode.dlna.org", "Streaming");
+        // Force ContentType as some devices require it
+        Log.d(LOG_TAG, "UPnP connection; ContentType forced: " + contentType);
+        response.setContentType(contentType);
+      }
+      response.setStatus(HttpServletResponse.SC_OK);
+      response.flushBuffer();
+      Log.d(LOG_TAG, "Response sent to LAN client");
+      if (isGet) {
+        // Launch streaming
+        handleStreaming(getCharset().newDecoder(), getMetadataOffset());
+      }
+    }
+
+    // Forward stream data and handle metadata.
+    // metadataOffset = 0 if no metadata.
+    private void handleStreaming(
+      @NonNull final CharsetDecoder charsetDecoder, final int metadataOffset) throws IOException {
+      Log.d(LOG_TAG, "handleStreaming");
+      final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
+      int metadataBlockBytesRead = 0;
+      int metadataSize = 0;
+      // Stop if not current controller
+      while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
+        // Only stream data are transferred
+        if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+          outputStream.write(buffer);
+        } else {
+          // Metadata: look for title information
+          final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+          // First byte gives size (16 bytes chunks) to read for metadata
+          if (metadataIndex == 0) {
+            metadataSize = buffer[0] * 16;
+            metadataBuffer.clear();
+          } else if (metadataIndex <= METADATA_MAX) {
+            // Other bytes are metadata
+            metadataBuffer.put(buffer[0]);
+          }
+          // End of metadata, extract pattern
+          if (metadataIndex == metadataSize) {
+            CharBuffer metadata = null;
+            metadataBuffer.flip();
+            // Exception blocked on metadata
+            try {
+              metadata = charsetDecoder.decode(metadataBuffer);
+            } catch (Exception exception) {
+              if (BuildConfig.DEBUG) {
+                Log.w(LOG_TAG, "Error decoding metadata", exception);
+              }
+            }
+            if ((metadata != null) && (metadata.length() > 0)) {
+              if (BuildConfig.DEBUG) {
+                Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+              }
+              final Matcher matcher = PATTERN_ICY.matcher(metadata);
+              // Tell listener
+              final String information =
+                (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
+              if (information != null) {
+                listener.onNewInformation(information, lockKey);
+              }
+            }
+            metadataBlockBytesRead = 0;
+          }
+        }
+      }
+      Log.d(LOG_TAG, "handleStreaming: leaving");
     }
   }
 }

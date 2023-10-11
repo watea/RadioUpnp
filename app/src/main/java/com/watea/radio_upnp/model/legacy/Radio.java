@@ -38,16 +38,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.service.RadioURL;
-
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -172,31 +166,6 @@ public class Radio {
       toBitmap(strings[4]));
   }
 
-  // First URL if m3u, else do nothing
-  @Nullable
-  public static URL getUrlFromM3u(@NonNull URL uRL) {
-    if (!uRL.toString().endsWith(".m3u")) {
-      return uRL;
-    }
-    HttpURLConnection httpURLConnection = null;
-    try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-      (httpURLConnection = new RadioURL(uRL).getActualHttpURLConnection()).getInputStream()))) {
-      String result;
-      while ((result = bufferedReader.readLine()) != null) {
-        if (result.startsWith("http://") || result.startsWith("https://")) {
-          return new URL(result);
-        }
-      }
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "Error getting M3U", iOException);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
-    return null;
-  }
-
   @NonNull
   private static String marshall(@NonNull String string) {
     return string + SPACER;
@@ -221,11 +190,6 @@ public class Radio {
   private static Bitmap toBitmap(@NonNull String base64String) {
     final byte[] byteArray = Base64.decode(base64String, Base64.NO_WRAP);
     return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
-  }
-
-  @Nullable
-  public URL getUrlFromM3u() {
-    return getUrlFromM3u(url);
   }
 
   @NonNull
