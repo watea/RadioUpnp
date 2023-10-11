@@ -119,7 +119,7 @@ public class HlsHandler {
       int result = currentInputStream.read(b);
       if (result < 0) {
         close();
-        openNextStream();
+        openStream(getNextSegmentIndex());
         return read(b);
       }
       return result;
@@ -148,8 +148,7 @@ public class HlsHandler {
     fetchSegmentsURI();
     // Fetch first segments
     if (fetchSegmentsFile()) {
-      currentActualSegmentURI = actualSegmentURIs.get(0);
-      openStream();
+      openStream(0);
       // Cyclically wakeup (Shannon theorem)
       executor.scheduleAtFixedRate(this::wakeup, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
     }
@@ -193,8 +192,8 @@ public class HlsHandler {
       }));
   }
 
-  // May fail, in this case currentActualSegmentURI = null
-  synchronized private void openNextStream() throws IOException {
+  // May fail, in this case currentInputStream = null
+  synchronized private int getNextSegmentIndex() throws IOException {
     Log.d(LOG_TAG, "openNextStream");
     int index = actualSegmentURIs.indexOf(currentActualSegmentURI);
     int tryIndex = 0;
@@ -203,7 +202,7 @@ public class HlsHandler {
       try {
         wait();
         // Allow caller buffer to be flushed to avoid connection lost (order matters)
-        if (tryIndex++ > 0) {
+        if (tryIndex++ == 1) {
           waitCallback.run();
         }
         // Fetch new data
@@ -215,17 +214,14 @@ public class HlsHandler {
         throw new IOException("openNextStream: error in reading segment URI");
       }
     }
-    if ((index >= 0) && (index < actualSegmentURIs.size() - 1)) {
-      currentActualSegmentURI = actualSegmentURIs.get(++index);
-      openStream();
-    } else {
-      currentActualSegmentURI = null;
-    }
+    return ((index >= 0) && (index < actualSegmentURIs.size() - 1)) ? ++index : DEFAULT;
   }
 
-  private void openStream() throws IOException {
-    assert currentActualSegmentURI != null;
-    currentInputStream = currentActualSegmentURI.toURL().openStream();
+  // Flush currentInputStream if index < 0
+  synchronized private void openStream(int index) throws IOException {
+    currentActualSegmentURI = (index < 0) ? null : actualSegmentURIs.get(index);
+    currentInputStream =
+      (currentActualSegmentURI == null) ? null : currentActualSegmentURI.toURL().openStream();
   }
 
   // Seek URI for segments and all segment data.
