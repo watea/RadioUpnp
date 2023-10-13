@@ -164,7 +164,8 @@ public class HlsHandler {
     return rate;
   }
 
-  // Only InputStream.read(byte[] b) and InputStream.close() method shall be used
+  // Only InputStream.read(byte[] b) and InputStream.close() method shall be used.
+  // Shall only be called once.
   @NonNull
   public InputStream getInputStream() throws IOException, URISyntaxException {
     // Fetch first segments
