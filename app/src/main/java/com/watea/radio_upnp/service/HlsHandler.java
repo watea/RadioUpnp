@@ -192,7 +192,7 @@ public class HlsHandler {
       }));
   }
 
-  // May fail, in this case currentInputStream = null
+  // Returns DEFAULT if fails
   synchronized private int getNextSegmentIndex() throws IOException {
     Log.d(LOG_TAG, "openNextStream");
     int index = actualSegmentURIs.indexOf(currentActualSegmentURI);
