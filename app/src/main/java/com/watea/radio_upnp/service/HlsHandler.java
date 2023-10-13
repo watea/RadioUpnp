@@ -146,12 +146,6 @@ public class HlsHandler {
     this.waitCallback = waitCallback;
     // Fetch first segments URI
     fetchSegmentsURI();
-    // Fetch first segments
-    if (fetchSegmentsFile()) {
-      openStream(0);
-      // Cyclically wakeup (Shannon theorem)
-      executor.scheduleAtFixedRate(this::wakeup, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
-    }
   }
 
   public static boolean isHls(@NonNull HttpURLConnection httpURLConnection) throws IOException {
@@ -176,7 +170,13 @@ public class HlsHandler {
 
   // Only InputStream.read(byte[] b) and InputStream.close() method shall be used
   @NonNull
-  public InputStream getInputStream() {
+  public InputStream getInputStream() throws IOException, URISyntaxException {
+    // Fetch first segments
+    if (fetchSegmentsFile()) {
+      openStream(0);
+      // Cyclically wakeup (Shannon theorem)
+      executor.scheduleAtFixedRate(this::wakeup, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
+    }
     return inputStream;
   }
 

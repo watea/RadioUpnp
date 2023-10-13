@@ -105,6 +105,13 @@ public class DefaultRadios {
       "audio/mp3",
       192),
     new DefaultRadio(
+      "BBC Radio 1",
+      R.drawable.logo_bbc,
+      "http://a.files.bbci.co.uk/media/live/manifesto/audio/simulcast/hls/nonuk/sbr_low/ak/bbc_radio_one.m3u8",
+      "http://bbcworldservice.com",
+      "application/x-mpegURL",
+      192),
+    new DefaultRadio(
       "FIP",
       R.drawable.logo_fip,
       "http://icecast.radiofrance.fr/fip-hifi.aac",
