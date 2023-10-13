@@ -158,7 +158,7 @@ public class HlsHandler {
     executor.shutdown();
   }
 
-  synchronized public void wakeup() {
+  synchronized public void wakeUp() {
     notify();
   }
 
@@ -175,7 +175,7 @@ public class HlsHandler {
     if (fetchSegmentsFile()) {
       openStream(0);
       // Cyclically wakeup (Shannon theorem)
-      executor.scheduleAtFixedRate(this::wakeup, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
+      executor.scheduleAtFixedRate(this::wakeUp, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
     }
     return inputStream;
   }
