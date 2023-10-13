@@ -158,10 +158,6 @@ public class HlsHandler {
     executor.shutdown();
   }
 
-  synchronized public void wakeUp() {
-    notify();
-  }
-
   // rate in b/s
   @Nullable
   public String getRate() {
@@ -178,6 +174,10 @@ public class HlsHandler {
       executor.scheduleAtFixedRate(this::wakeUp, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
     }
     return inputStream;
+  }
+
+  synchronized private void wakeUp() {
+    notify();
   }
 
   // Fetch first found URI
