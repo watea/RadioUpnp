@@ -46,6 +46,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -137,7 +138,7 @@ public class RadioHandler extends AbstractHandler {
             hlsHandler = new HlsHandler(httpURLConnection, this::setHeader, outputStream::flush);
             try (final InputStream inputStream = hlsHandler.getInputStream()) {
               new HlsConnectionHandler(
-                hlsHandler,
+                hlsHandler::getRate,
                 httpURLConnection,
                 isGet,
                 inputStream,
@@ -210,10 +211,10 @@ public class RadioHandler extends AbstractHandler {
   // ICY data are not processed
   private class HlsConnectionHandler extends ConnectionHandler {
     @NonNull
-    private final HlsHandler hlsHandler;
+    private final Supplier<String> rateSupplier;
 
     private HlsConnectionHandler(
-      @NonNull HlsHandler hlsHandler,
+      @NonNull Supplier<String> rateSupplier,
       @NonNull HttpURLConnection httpURLConnection,
       boolean isGet,
       @NonNull InputStream inputStream,
@@ -221,13 +222,13 @@ public class RadioHandler extends AbstractHandler {
       @NonNull HttpServletResponse response,
       @NonNull String lockKey) {
       super(httpURLConnection, isGet, inputStream, outputStream, response, lockKey);
-      this.hlsHandler = hlsHandler;
+      this.rateSupplier = rateSupplier;
     }
 
     @NonNull
     @Override
     protected String getRate() {
-      final String rate = hlsHandler.getRate();
+      final String rate = rateSupplier.get();
       return (rate == null) ? super.getRate() : rate.substring(0, rate.length() - 3);
     }
   }
