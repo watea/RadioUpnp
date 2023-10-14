@@ -451,9 +451,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private String searchContentType(@NonNull String contentType) {
     final List<String> protocolInfos = upnpActionController.getProtocolInfo(device);
     if (protocolInfos != null) {
-      Pattern mimePattern = Pattern.compile("http-get:\\*:(" + contentType + "):.*");
+      final Pattern pattern = Pattern.compile("http-get:\\*:(" + contentType + "):.*");
       for (String protocolInfo : protocolInfos) {
-        Matcher matcher = mimePattern.matcher(protocolInfo);
+        final Matcher matcher = pattern.matcher(protocolInfo);
         if (matcher.find()) {
           return matcher.group(1);
         }
