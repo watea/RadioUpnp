@@ -43,6 +43,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -53,7 +54,6 @@ import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -342,30 +342,26 @@ public class MainActivity
 
   @NonNull
   public Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
-    final FragmentManager fragmentManager = getSupportFragmentManager();
-    final String tag = fragmentClass.getSimpleName();
-    Fragment fragment = fragmentManager.findFragmentByTag(tag);
-    if (fragment == null) {
-      try {
-        fragment = fragmentClass.getConstructor().newInstance();
-      } catch (Exception exception) {
-        // Should not happen
-        Log.e(LOG_TAG, "setFragment: internal failure", exception);
-        throw new RuntimeException();
-      }
-    }
     final Fragment currentFragment = getCurrentFragment();
-    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-    if (currentFragment != null) {
-      fragmentTransaction
-        // First fragment transaction not saved to enable back leaving the app
-        .addToBackStack(null)
-        // Workaround FragmentManager weakness as ScrollView requires only one child
-        .remove(currentFragment)
-        .commit();
-      fragmentTransaction = fragmentManager.beginTransaction();
+    final Fragment fragment;
+    try {
+      fragment = fragmentClass.getConstructor().newInstance();
+    } catch (Exception exception) {
+      // Should not happen
+      Log.e(LOG_TAG, "setFragment: internal failure", exception);
+      throw new RuntimeException();
     }
-    fragmentTransaction.replace(R.id.content_frame, fragment, tag).commit();
+    final FragmentManager fragmentManager = getSupportFragmentManager();
+    // Register back if fragment exists
+    if (currentFragment != null) {
+      fragmentManager
+        .beginTransaction()
+        .remove(currentFragment) // Avoid two ScrollView at same time
+        .addToBackStack(null)
+        .commit();
+    }
+    // Set
+    fragmentManager.beginTransaction().replace(R.id.content_frame, fragment).commit();
     return fragment;
   }
 
@@ -398,6 +394,37 @@ public class MainActivity
     return new Intent(Intent.ACTION_SEND)
       .setType("message/rfc822")
       .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
+  }
+
+  @Override
+  public boolean onCreateOptionsMenu(@NonNull Menu menu) {
+    final MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
+    if (currentFragment == null) {
+      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
+    } else {
+      final int menuId = currentFragment.getMenuId();
+      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
+        getMenuInflater().inflate(menuId, menu);
+        currentFragment.onCreateOptionsMenu(menu);
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    // Pass the event to ActionBarDrawerToggle, if it returns
+    // true, then it has handled the app icon touch event
+    assert getCurrentFragment() != null;
+    return
+      drawerToggle.onOptionsItemSelected(item) ||
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        getCurrentFragment().onOptionsItemSelected(item) ||
+        // If we got here, the user's action was not recognized
+        // Invoke the superclass to handle it
+        super.onOptionsItemSelected(item);
   }
 
   @Override
@@ -493,6 +520,23 @@ public class MainActivity
     if (savedInstanceState == null) {
       setFragment(MainFragment.class);
     }
+    // Back
+    getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+      @Override
+      public void handleOnBackPressed() {
+        final FragmentManager fragmentManager = getSupportFragmentManager();
+        // Avoid two ScrollView at same time
+        final Fragment currentFragment = getCurrentFragment();
+        if (currentFragment != null) {
+          fragmentManager.beginTransaction().remove(currentFragment).commit();
+        }
+        // Back or finish
+        fragmentManager.popBackStack();
+        if (fragmentManager.getBackStackEntryCount() == 0) {
+          finish();
+        }
+      }
+    });
     // Store intent
     newIntent = getIntent();
   }
@@ -567,48 +611,6 @@ public class MainActivity
         outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
       }
     }
-  }
-
-  @Override
-  public boolean onCreateOptionsMenu(@NonNull Menu menu) {
-    final MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
-    if (currentFragment == null) {
-      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
-    } else {
-      final int menuId = currentFragment.getMenuId();
-      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
-        getMenuInflater().inflate(menuId, menu);
-        currentFragment.onCreateOptionsMenu(menu);
-      }
-    }
-    return true;
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    // Pass the event to ActionBarDrawerToggle, if it returns
-    // true, then it has handled the app icon touch event
-    assert getCurrentFragment() != null;
-    return
-      drawerToggle.onOptionsItemSelected(item) ||
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        getCurrentFragment().onOptionsItemSelected(item) ||
-        // If we got here, the user's action was not recognized
-        // Invoke the superclass to handle it
-        super.onOptionsItemSelected(item);
-  }
-
-  @Override
-  public void onBackPressed() {
-    // Workaround FragmentManager weakness as ScrollView requires only one child
-    final FragmentManager fragmentManager = getSupportFragmentManager();
-    final Fragment currentFragment = getCurrentFragment();
-    if ((fragmentManager.getBackStackEntryCount() > 0) && (currentFragment != null)) {
-      fragmentManager.beginTransaction().remove(currentFragment).commit();
-    }
-    super.onBackPressed();
   }
 
   // Add all legacy radio if any, returns true if success

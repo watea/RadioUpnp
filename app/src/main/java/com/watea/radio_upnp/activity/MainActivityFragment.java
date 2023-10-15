@@ -151,7 +151,7 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   protected void onBackPressed() {
-    getMainActivity().onBackPressed();
+    getMainActivity().getOnBackPressedDispatcher().onBackPressed();
   }
 
   protected boolean isActuallyAdded() {
