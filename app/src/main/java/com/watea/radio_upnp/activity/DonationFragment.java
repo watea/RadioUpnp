@@ -23,7 +23,6 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -36,6 +35,7 @@ import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
@@ -160,7 +160,7 @@ public class DonationFragment
     view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
     view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
     // Alert dialog
-    paymentAlertDialogBuilder = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
+    paymentAlertDialogBuilder = new AlertDialog.Builder(getMainActivity(), R.style.AlertDialogStyle)
       .setIcon(android.R.drawable.ic_dialog_alert)
       .setTitle(R.string.donation_alert_dialog_title)
       .setMessage(R.string.donation_alert_dialog_try_again)

@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
@@ -37,6 +36,7 @@ import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -154,7 +154,7 @@ public class SearchFragment extends MainActivityFragment {
     // Adapter
     radiosSearchAdapter = new RadiosSearchAdapter(radiosRecyclerView);
     // Build alert dialog
-    searchAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
+    searchAlertDialog = new AlertDialog.Builder(getMainActivity(), R.style.AlertDialogStyle)
       .setView(searchView)
       .setPositiveButton(
         R.string.action_go,

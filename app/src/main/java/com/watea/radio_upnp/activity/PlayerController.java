@@ -24,10 +24,7 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.ComponentName;
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v4.media.MediaBrowserCompat;
@@ -45,6 +42,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
@@ -81,13 +79,11 @@ public class PlayerController {
   @NonNull
   private final TextView playedRadioRateTextView;
   @NonNull
-  private final AlertDialog playLongPressAlertDialog;
+  private final MainActivity.UserHint playLongPressUserHint;
   @NonNull
-  private final AlertDialog informationPressAlertDialog;
+  private final MainActivity.UserHint informationPressUserHint;
   @NonNull
   private final AlertDialog playlistAlertDialog;
-  @NonNull
-  private final SharedPreferences sharedPreferences;
   @NonNull
   private final SimpleAdapter playlistAdapter;
   @NonNull
@@ -122,9 +118,6 @@ public class PlayerController {
       }
     }
   };
-  private int informationCount = 0;
-  private boolean gotItPlayLongPress;
-  private boolean gotItInformationPress;
   @Nullable
   private MediaControllerCompat mediaController = null;
   // Callback from media control
@@ -260,22 +253,11 @@ public class PlayerController {
     this.mainActivity = mainActivity;
     // Radios list
     radios = MainActivity.getRadios();
-    // Shared preferences
-    sharedPreferences = this.mainActivity.getPreferences(Context.MODE_PRIVATE);
-    gotItPlayLongPress = sharedPreferences.getBoolean(
-      mainActivity.getString(R.string.key_play_long_press_got_it), false);
-    gotItInformationPress = sharedPreferences.getBoolean(
-      mainActivity.getString(R.string.key_information_press_got_it), false);
     // Build alert dialogs
-    playLongPressAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
-      .setMessage(R.string.play_long_press)
-      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItPlayLongPress = true)
-      .create();
-    informationPressAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
-      .setMessage(R.string.information_press)
-      .setPositiveButton(
-        R.string.action_got_it, (dialogInterface, i) -> gotItInformationPress = true)
-      .create();
+    playLongPressUserHint = this.mainActivity
+      .new UserHint(R.string.key_play_long_press_got_it, R.string.play_long_press);
+    informationPressUserHint = this.mainActivity
+      .new UserHint(R.string.key_information_press_got_it, R.string.information_press, 4);
     playlistAdapter = new SimpleAdapter(
       mainActivity,
       playInformations,
@@ -308,9 +290,7 @@ public class PlayerController {
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             mediaController.getTransportControls().pause();
-            if (!gotItPlayLongPress) {
-              playLongPressAlertDialog.show();
-            }
+            playLongPressUserHint.show();
             break;
           case PlaybackStateCompat.STATE_STOPPED:
             mediaController.getTransportControls().stop();
@@ -372,13 +352,6 @@ public class PlayerController {
     // Disconnect
     radios.removeListener(radiosListener);
     MainActivity.removeListener(mainActivityListener);
-    // Shared preferences
-    sharedPreferences
-      .edit()
-      .putBoolean(mainActivity.getString(R.string.key_play_long_press_got_it), gotItPlayLongPress)
-      .putBoolean(
-        mainActivity.getString(R.string.key_information_press_got_it), gotItInformationPress)
-      .apply();
     // Disconnect mediaBrowser
     mediaBrowser.disconnect();
     // Forced suspended connection
@@ -442,10 +415,7 @@ public class PlayerController {
       !information.equals(playInformations.get(playInformations.size() - 1).get(INFORMATION))) {
       insertInformation(date, information);
       // User help for fist valid information after a few time
-      if (!(informationPressAlertDialog.isShowing() || gotItInformationPress) &&
-        (informationCount++ > 4)) {
-        informationPressAlertDialog.show();
-      }
+      informationPressUserHint.show();
     }
   }
 

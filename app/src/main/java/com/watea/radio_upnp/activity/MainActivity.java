@@ -692,4 +692,33 @@ public class MainActivity
     default void onNewCurrentRadio(@Nullable Radio radio) {
     }
   }
+
+  public class UserHint {
+    private final AlertDialog alertDialog;
+    private final int delay;
+    private boolean gotIt;
+    private int count = 0;
+
+    public UserHint(int key, int message, int delay) {
+      this.delay = delay;
+      gotIt = sharedPreferences.getBoolean(getString(key), false);
+      alertDialog = new AlertDialog.Builder(MainActivity.this, R.style.AlertDialogStyle)
+        .setMessage(message)
+        .setPositiveButton(
+          R.string.action_got_it,
+          (dialogInterface, i) ->
+            sharedPreferences.edit().putBoolean(getString(key), gotIt = true).apply())
+        .create();
+    }
+
+    public UserHint(int key, int message) {
+      this(key, message, 0);
+    }
+
+    public void show() {
+      if (!alertDialog.isShowing() && !gotIt && (++count > delay)) {
+        alertDialog.show();
+      }
+    }
+  }
 }

@@ -24,10 +24,8 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -59,12 +57,7 @@ public class MainFragment extends MainActivityFragment {
     }
   };
   private MenuItem preferredMenuItem;
-  private AlertDialog radioLongPressAlertDialog;
-  private AlertDialog dlnaEnableAlertDialog;
-  private AlertDialog preferredRadiosAlertDialog;
-  private int radioClickCount = 0;
-  private boolean isPreferredRadios = false;
-  private boolean gotItRadioLongPress;
+  private MainActivity.UserHint radioLongPressUserHint;
   private final RadiosMainAdapter.Listener radiosMainAdapterListener =
     new RadiosMainAdapter.Listener() {
       @Override
@@ -73,9 +66,7 @@ public class MainFragment extends MainActivityFragment {
           tell(R.string.no_internet);
         } else {
           getMainActivity().startReading(radio);
-          if (!gotItRadioLongPress && (radioClickCount++ > 2)) {
-            radioLongPressAlertDialog.show();
-          }
+          radioLongPressUserHint.show();
         }
       }
 
@@ -94,11 +85,11 @@ public class MainFragment extends MainActivityFragment {
         return true;
       }
     };
-  private boolean gotItDlnaEnable;
-  private boolean gotItPreferredRadios;
+  private MainActivity.UserHint dlnaEnableUserHint;
+  private MainActivity.UserHint preferredRadiosUserHint;
+  private boolean isPreferredRadios = false;
   private RadiosMainAdapter radiosMainAdapter = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
-  private SharedPreferences sharedPreferences;
 
   @Override
   public void onResume() {
@@ -114,15 +105,6 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public void onPause() {
     super.onPause();
-    // Context exists
-    assert getActivity() != null;
-    // Shared preferences
-    sharedPreferences
-      .edit()
-      .putBoolean(getString(R.string.key_radio_long_press_got_it), gotItRadioLongPress)
-      .putBoolean(getString(R.string.key_dlna_enable_got_it), gotItDlnaEnable)
-      .putBoolean(getString(R.string.key_preferred_radios_got_it), gotItPreferredRadios)
-      .apply();
     // Clear resources
     upnpDevicesAdapter.setChosenDeviceListener(null);
     radiosMainAdapter.unset();
@@ -136,9 +118,7 @@ public class MainFragment extends MainActivityFragment {
         isPreferredRadios = !isPreferredRadios;
         radiosMainAdapter.refresh();
         setPreferredMenuItem();
-        if (!gotItPreferredRadios) {
-          preferredRadiosAlertDialog.show();
-        }
+        preferredRadiosUserHint.show();
         return true;
       case R.id.action_dlna:
         upnpDevicesAdapter.removeChosenUpnpDevice();
@@ -165,9 +145,7 @@ public class MainFragment extends MainActivityFragment {
     return v -> wifiTest(() -> {
       if (getMainActivity().upnpSearch()) {
         getMainActivity().onUpnp();
-        if (!gotItDlnaEnable) {
-          dlnaEnableAlertDialog.show();
-        }
+        dlnaEnableUserHint.show();
       }
     });
   }
@@ -214,19 +192,12 @@ public class MainFragment extends MainActivityFragment {
       radiosMainAdapterListener);
     upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
-    radioLongPressAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
-      .setMessage(R.string.radio_long_press)
-      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItRadioLongPress = true)
-      .create();
-    dlnaEnableAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
-      .setMessage(R.string.dlna_enable)
-      .setPositiveButton(R.string.action_got_it, (dialogInterface, i) -> gotItDlnaEnable = true)
-      .create();
-    preferredRadiosAlertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
-      .setMessage(R.string.preferred_radios)
-      .setPositiveButton(
-        R.string.action_got_it, (dialogInterface, i) -> gotItPreferredRadios = true)
-      .create();
+    radioLongPressUserHint = getMainActivity()
+      .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);
+    dlnaEnableUserHint = getMainActivity()
+      .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
+    preferredRadiosUserHint = getMainActivity()
+      .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
   }
 
   @Override
@@ -235,14 +206,6 @@ public class MainFragment extends MainActivityFragment {
     if (savedInstanceState != null) {
       isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
     }
-    // Shared preferences
-    sharedPreferences = getMainActivity().getPreferences(Context.MODE_PRIVATE);
-    gotItRadioLongPress =
-      sharedPreferences.getBoolean(getString(R.string.key_radio_long_press_got_it), false);
-    gotItDlnaEnable =
-      sharedPreferences.getBoolean(getString(R.string.key_dlna_enable_got_it), false);
-    gotItPreferredRadios =
-      sharedPreferences.getBoolean(getString(R.string.key_preferred_radios_got_it), false);
   }
 
   @Override
