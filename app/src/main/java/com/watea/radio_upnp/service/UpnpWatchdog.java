@@ -85,6 +85,7 @@ public class UpnpWatchdog {
         private void logfailure(@NonNull String message) {
           Log.d(LOG_TAG, message);
           if (failureCount++ >= TOLERANCE) {
+            Log.d(LOG_TAG, "Watchdog: timeout!");
             callback.accept(ReaderState.TIMEOUT);
           }
         }

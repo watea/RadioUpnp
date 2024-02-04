@@ -181,11 +181,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.success(actionInvocation);
         }
 
-        @Override
-        protected void failure() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          super.failure();
-        }
+        // Note: failure is not taken into account
       };
     action = getAction(renderingControl, ACTION_SET_VOLUME, false);
     actionSetVolume = (action == null) ? null : this.upnpActionController.new UpnpAction(action) {
@@ -273,6 +269,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         @Override
         protected void success(@NonNull ActionInvocation<?> actionInvocation) {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+          // Now we launch watchdog
+          upnpWatchdog.start();
           super.success(actionInvocation);
         }
 
@@ -351,8 +349,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Override
   protected void onPrepareFromMediaId() {
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
-    // Launch watchdog
-    upnpWatchdog.start();
     // Fetch content in a new thread
     new Thread(() -> {
       if (upnpActionController.getContentType(radio) == null) {
@@ -361,6 +357,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       // We can now call prepare, only if we are still waiting
       if (state == PlaybackStateCompat.STATE_BUFFERING) {
         onPreparedPlay();
+      } else {
+        // Something went wrong
+        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
       }
     }).start();
   }
