@@ -31,9 +31,11 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -238,6 +240,22 @@ public class RadioService
         this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS));
   }
 
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    Log.d(LOG_TAG, "onDestroy");
+    // Stop player to be clean on resources (if not, audio focus is not well handled)
+    if (playerAdapter != null) {
+      playerAdapter.stop();
+    }
+    // Release HTTP service
+    unbindService(httpConnection);
+    // Force disconnection to release resources
+    httpConnection.onServiceDisconnected(null);
+    // Finally session
+    session.release();
+  }
+
   // Not used by app
   @NonNull
   @Override
@@ -304,7 +322,15 @@ public class RadioService
           // Relaunch now allowed
           isAllowedToRewind = true;
         case PlaybackStateCompat.STATE_BUFFERING:
-          startForeground(NOTIFICATION_ID, getNotification());
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+              NOTIFICATION_ID,
+              getNotification(),
+              ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+          } else {
+            startForeground(
+              NOTIFICATION_ID, getNotification());
+          }
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           // No relaunch on pause
@@ -353,22 +379,6 @@ public class RadioService
           isAllowedToRewind = false;
       }
     });
-  }
-
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
-    Log.d(LOG_TAG, "onDestroy");
-    // Stop player to be clean on resources (if not, audio focus is not well handled)
-    if (playerAdapter != null) {
-      playerAdapter.stop();
-    }
-    // Release HTTP service
-    unbindService(httpConnection);
-    // Force disconnection to release resources
-    httpConnection.onServiceDisconnected(null);
-    // Finally session
-    session.release();
   }
 
   @Override
