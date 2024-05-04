@@ -326,10 +326,9 @@ public class RadioService
             startForeground(
               NOTIFICATION_ID,
               getNotification(),
-              ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+              ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST);
           } else {
-            startForeground(
-              NOTIFICATION_ID, getNotification());
+            startForeground(NOTIFICATION_ID, getNotification());
           }
           break;
         case PlaybackStateCompat.STATE_PAUSED:

@@ -58,7 +58,7 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
     boolean onLongClick(@Nullable Uri webPageUri);
   }
 
-  protected class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
+  public class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
     private final int backgroundColor;
 
     protected ViewHolder(@NonNull View itemView) {

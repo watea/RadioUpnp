@@ -246,7 +246,7 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
     void onChosenDeviceChange(@Nullable Bitmap icon);
   }
 
-  protected class ViewHolder extends RecyclerView.ViewHolder {
+  public class ViewHolder extends RecyclerView.ViewHolder {
     private static final int ICON_SIZE = 100;
     @NonNull
     private final Bitmap castIcon;

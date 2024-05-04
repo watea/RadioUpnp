@@ -319,10 +319,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   public void adjustVolume(int direction) {
-    // Do only if nothing done currently
-    if ((actionGetVolume != null) && (volumeDirection == AudioManager.ADJUST_SAME)) {
-      volumeDirection = direction;
-      actionGetVolume.execute();
+    if (actionGetVolume == null) {
+      Log.d(LOG_TAG, "adjustVolume: actionGetVolume is null!");
+    } else {
+      // Do only if nothing done currently
+      if (volumeDirection == AudioManager.ADJUST_SAME) {
+        volumeDirection = direction;
+        actionGetVolume.execute();
+      }
     }
   }
 

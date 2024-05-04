@@ -76,7 +76,7 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
     notifyDataSetChanged();
   }
 
-  protected class ViewHolder extends RadiosAdapter.ViewHolder {
+  public class ViewHolder extends RadiosAdapter.ViewHolder {
     @NonNull
     private final CheckBox checkBox;
 

@@ -77,22 +77,12 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     }
 
     @Override
-    public boolean isLongPressDragEnabled() {
-      return true;
-    }
-
-    @Override
-    public boolean isItemViewSwipeEnabled() {
-      return true;
-    }
-
-    @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
       ((Radios) radios).remove(viewHolder.getAbsoluteAdapterPosition());
     }
   }
 
-  protected class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
+  public class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
     @NonNull
     private final ImageButton preferredImageButton;
 
