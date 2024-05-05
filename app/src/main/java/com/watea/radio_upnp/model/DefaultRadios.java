@@ -58,14 +58,14 @@ public class DefaultRadios {
     new DefaultRadio(
       "EUROPE1",
       R.drawable.logo_europe1,
-      "http://ais-live.cloud-services.paris:8000/europe1.mp3",
+      "http://europe1.lmn.fm/europe1.mp3",
       "https://www.europe1.fr/",
       "audio/mp3",
       192),
     new DefaultRadio(
       "RFM",
       R.drawable.logo_rfm,
-      "http://ais-live.cloud-services.paris:8000/rfm.mp3",
+      "http://rfm.lmn.fm/rfm.mp3",
       "http://www.rfm.fr/",
       "audio/mp3",
       192),
@@ -79,7 +79,7 @@ public class DefaultRadios {
     new DefaultRadio(
       "EUROPE2",
       R.drawable.logo_europe2,
-      "http://ais-live.cloud-services.paris/europe2.mp3",
+      "http://europe2.lmn.fm/europe2.mp3",
       "https://www.europe2.fr/",
       "audio/mp3",
       192),
@@ -103,13 +103,6 @@ public class DefaultRadios {
       "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service",
       "http://bbcworldservice.com",
       "audio/mp3",
-      192),
-    new DefaultRadio(
-      "BBC Radio 1",
-      R.drawable.logo_bbc,
-      "http://a.files.bbci.co.uk/media/live/manifesto/audio/simulcast/hls/nonuk/sbr_low/ak/bbc_radio_one.m3u8",
-      "http://bbcworldservice.com",
-      "application/x-mpegURL",
       192),
     new DefaultRadio(
       "FIP",

@@ -97,7 +97,7 @@ public class UpnpWatchdog {
     if (actionWatchdog == null) {
       Log.d(LOG_TAG, "Watchdog start failed: actionWatchdog is null");
     } else {
-      executor.scheduleAtFixedRate(actionWatchdog::execute, 0, DELAY, TimeUnit.MILLISECONDS);
+      executor.scheduleWithFixedDelay(actionWatchdog::execute, 0, DELAY, TimeUnit.MILLISECONDS);
     }
   }
 

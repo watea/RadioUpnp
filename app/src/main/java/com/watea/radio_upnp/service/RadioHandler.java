@@ -348,7 +348,7 @@ public class RadioHandler extends AbstractHandler {
       onLANConnection();
       final String contentType = controller.getContentType();
       // contentType defined only for UPnP
-      if (contentType.length() > 0) {
+      if (!contentType.isEmpty()) {
         // DLNA header, as found in documentation, not sure it is useful (should not)
         response.setHeader("contentFeatures.dlna.org", "*");
         response.setHeader("transferMode.dlna.org", "Streaming");

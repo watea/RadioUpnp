@@ -172,7 +172,7 @@ public class HlsHandler {
     if (fetchSegmentsFile()) {
       openStream(0);
       // Cyclically wakeup (Shannon theorem)
-      executor.scheduleAtFixedRate(this::wakeUp, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
+      executor.scheduleWithFixedDelay(this::wakeUp, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
     }
     return inputStream;
   }

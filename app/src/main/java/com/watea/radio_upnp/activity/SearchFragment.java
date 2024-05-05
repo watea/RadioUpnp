@@ -184,13 +184,13 @@ public class SearchFragment extends MainActivityFragment {
           // As stated, may fail
           try {
             final String id = extractValue(station, "station_id");
-            if (id.length() > 0) {
+            if (id.isEmpty()) {
+              Log.i(LOG_TAG, "Error in data; DAR_FM_PLAYLIST_REQUEST extraction");
+            } else {
               final Map<String, String> radioData = new Hashtable<>();
               radioData.put(DAR_FM_ID, id);
               radioData.put(DAR_FM_NAME, extractValue(station, "callsign"));
               new DarFmDetailSearcher(radioData);
-            } else {
-              Log.i(LOG_TAG, "Error in data; DAR_FM_PLAYLIST_REQUEST extraction");
             }
           } catch (Exception exception) {
             Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST extraction", exception);

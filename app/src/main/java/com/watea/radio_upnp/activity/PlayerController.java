@@ -197,7 +197,7 @@ public class PlayerController {
             final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
             if (rate != null) {
               playedRadioRateTextView.setText(
-                (rate.length() > 0) ? rate + mainActivity.getString(R.string.kbs) : "");
+                !rate.isEmpty() ? rate + mainActivity.getString(R.string.kbs) : "");
             }
           }
           // Fill playlist

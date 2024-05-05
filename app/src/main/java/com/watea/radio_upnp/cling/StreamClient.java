@@ -147,7 +147,7 @@ public class StreamClient
         }
         responseMessage.setHeaders(headers);
         // -- Body --
-        if ((content == null) || (content.length <= 0)) {
+        if ((content == null) || (content.length == 0)) {
           Log.d(LOG_TAG, "Response did not contain entity body");
         } else {
           if (responseMessage.isContentTypeMissingOrText()) {

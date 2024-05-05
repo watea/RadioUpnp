@@ -81,7 +81,7 @@ public class JettyServletContainer implements ServletContainerAdapter {
     Log.i(LOG_TAG, "Registering UPnP servlet under context path: " + contextPath);
     final ServletContextHandler servletHandler =
       new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-    if ((contextPath != null) && (contextPath.length() > 0)) {
+    if ((contextPath != null) && (!contextPath.isEmpty())) {
       servletHandler.setContextPath(contextPath);
     }
     servletHandler.addServlet(new ServletHolder(servlet), "/*");

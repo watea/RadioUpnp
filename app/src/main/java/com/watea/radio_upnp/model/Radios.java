@@ -190,7 +190,8 @@ public class Radios extends Vector<Radio> {
     try {
       final Radio radio = new Radio(jSONObject);
       if (!avoidDuplicate ||
-        stream().map(Radio::getURL).noneMatch(uRL -> radio.getURL().equals(uRL))) {
+        stream().map(Radio::getURL).noneMatch(
+          uRL -> radio.getURL().toString().equals(uRL.toString()))) {
         result = add(radio, isToWrite);
       }
     } catch (JSONException jSONException) {

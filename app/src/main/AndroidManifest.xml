@@ -42,7 +42,8 @@
         android:requestLegacyExternalStorage="true"
         android:theme="@style/BaseAppTheme"
         android:usesCleartextTraffic="true"
-        tools:ignore="AllowBackup,GoogleAppIndexingWarning">
+        android:enableOnBackInvokedCallback="true"
+        tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnusedAttribute">
 
         <activity
             android:name="com.watea.radio_upnp.activity.MainActivity"
