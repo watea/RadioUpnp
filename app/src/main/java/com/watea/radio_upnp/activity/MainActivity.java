@@ -427,14 +427,17 @@ public class MainActivity
         super.onOptionsItemSelected(item);
   }
 
+  // Is called also when coming back after a "Back" exit
   @Override
   @SuppressLint("InflateParams")
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // Fetch preferences
     sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    // Init radios
-    radios = new Radios(this);
+    // Init radios only if needed; a session may still be there with a radioId
+    if (radios == null) {
+      radios = new Radios(this);
+    }
     if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
       if (radios.addAll(DefaultRadios.get(this, RADIO_ICON_SIZE))) {
         // Robustness: store immediately to avoid bad user experience in case of app crash

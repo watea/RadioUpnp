@@ -80,10 +80,8 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   private final MainActivity.Listener mainActivityListener = new MainActivity.Listener() {
     @Override
     public void onNewCurrentRadio(@Nullable Radio radio) {
-      final int previousCurrentRadioIndex = currentRadioIndex;
-      currentRadioIndex = getIndexOf(radio);
-      notifyItemChanged(previousCurrentRadioIndex);
       notifyItemChanged(currentRadioIndex);
+      notifyItemChanged(currentRadioIndex = getIndexOf(radio));
     }
   };
 

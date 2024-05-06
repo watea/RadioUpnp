@@ -228,9 +228,11 @@ public class PlayerController {
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         if ((mediaMetadataCompat != null) && RadioService.isValid(mediaMetadataCompat)) {
           // Order matters here for display coherence
-          setCurrentRadio(mediaMetadataCompat);
           mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
           mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
+        } else {
+          // Reset current radio as session is not valid any more
+          MainActivity.setCurrentRadio((Radio) null);
         }
         // Nota: no mediaBrowser.subscribe here needed
       }
@@ -238,7 +240,6 @@ public class PlayerController {
       @Override
       public void onConnectionSuspended() {
         if (mediaController != null) {
-          MainActivity.setCurrentRadio((Radio) null);
           mediaController.unregisterCallback(mediaControllerCallback);
         }
       }
@@ -333,11 +334,10 @@ public class PlayerController {
 
   // Must be called on activity resume
   public void onActivityResume() {
-    // Reset start state
-    mainActivityListener.onNewCurrentRadio(null);
     // Connect to other components
     radios.addListener(radiosListener);
     MainActivity.addListener(mainActivityListener);
+    mainActivityListener.onNewCurrentRadio(MainActivity.getCurrentRadio());
     // Launch RadioService, may fail if already called and connection not ended
     try {
       mediaBrowser.connect();

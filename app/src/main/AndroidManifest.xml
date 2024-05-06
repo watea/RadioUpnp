@@ -43,7 +43,7 @@
         android:theme="@style/BaseAppTheme"
         android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true"
-        tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnusedAttribute">
+        tools:ignore="AllowBackup,GoogleAppIndexingWarning">
 
         <activity
             android:name="com.watea.radio_upnp.activity.MainActivity"
