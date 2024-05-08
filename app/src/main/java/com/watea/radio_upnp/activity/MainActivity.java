@@ -205,12 +205,8 @@ public class MainActivity
     return currentRadio;
   }
 
-  public static void setCurrentRadio(@NonNull String radioId) {
-    setCurrentRadio(radios.getRadioFrom(radioId));
-  }
-
-  public static void setCurrentRadio(@Nullable Radio radio) {
-    currentRadio = radio;
+  public static void setCurrentRadio(@Nullable String radioId) {
+    currentRadio = (radioId == null) ? null : radios.getRadioFrom(radioId);
     listeners.forEach(listener -> listener.onNewCurrentRadio(currentRadio));
   }
 

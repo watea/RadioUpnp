@@ -158,12 +158,13 @@ public class PlayerController {
           case PlaybackStateCompat.STATE_BUFFERING:
           case PlaybackStateCompat.STATE_CONNECTING:
             assert mediaController != null;
-            setCurrentRadio(mediaController.getMetadata());
+            MainActivity.setCurrentRadio(
+              mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
             setPlayImageButtonVisibility(true, true);
             break;
           case PlaybackStateCompat.STATE_NONE:
           case PlaybackStateCompat.STATE_STOPPED:
-            MainActivity.setCurrentRadio((Radio) null);
+            MainActivity.setCurrentRadio(null);
             setPlayImageButtonVisibility(false, false);
             break;
           default:
@@ -173,7 +174,7 @@ public class PlayerController {
             // (as it would require a Radio Service safe context,
             // too complex to implement).
             if (isUpnp) {
-              MainActivity.setCurrentRadio((Radio) null);
+              MainActivity.setCurrentRadio(null);
               setPlayImageButtonVisibility(false, false);
             } else if (MainActivity.getCurrentRadio() != null) {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
@@ -232,7 +233,7 @@ public class PlayerController {
           mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
         } else {
           // Reset current radio as session is not valid any more
-          MainActivity.setCurrentRadio((Radio) null);
+          MainActivity.setCurrentRadio(null);
         }
         // Nota: no mediaBrowser.subscribe here needed
       }
@@ -393,11 +394,6 @@ public class PlayerController {
   @Nullable
   private Radio getCurrentRadio() {
     return (mediaController == null) ? null : MainActivity.getCurrentRadio();
-  }
-
-  private static void setCurrentRadio(@NonNull MediaMetadataCompat mediaMetadataCompat) {
-    MainActivity.setCurrentRadio(
-      mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
   }
 
   private void addInformation(@NonNull String date, @NonNull String information) {

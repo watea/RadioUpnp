@@ -503,10 +503,6 @@ public class RadioService
       if (playerAdapter != null) {
         playerAdapter.stop();
       }
-      // Synchronize session data
-      session.setActive(true);
-      session.setExtras(extras);
-      lockKey = UUID.randomUUID().toString();
       // Try to retrieve radio
       try {
         radio = radios.getRadioFrom(mediaId);
@@ -518,18 +514,31 @@ public class RadioService
         abort("onPrepareFromMediaId: radioLibrary error; " + exception);
         return;
       }
+      final String identity = extras.getString(getString(R.string.key_upnp_device));
+      final Device<?, ?, ?> chosenDevice = (identity == null) ? null : getChosenDevice(identity);
+      assert httpServer != null;
+      final Uri serverUri = httpServer.getUri(RadioService.this);
+      // UPnP not accepted if environment not OK: force STOP
+      if ((identity != null) &&
+        ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
+        abort("onPrepareFromMediaId: can't process UPnP device");
+        return;
+      }
+      // Synchronize session data
+      session.setActive(true);
+      session.setExtras(extras);
+      lockKey = UUID.randomUUID().toString();
       // Tag metadata with package name to enable session discrepancy
       session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
-      if (extras.containsKey(getString(R.string.key_upnp_device))) {
-        final String identity = extras.getString(getString(R.string.key_upnp_device));
-        final Device<?, ?, ?> chosenDevice = (identity == null) ? null : getChosenDevice(identity);
-        assert httpServer != null;
-        final Uri serverUri = httpServer.getUri(RadioService.this);
-        // UPnP not accepted if environment not OK: force STOP
-        if ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null)) {
-          abort("onPrepareFromMediaId: can't process UPnP device");
-          return;
-        }
+      if (identity == null) {
+        playerAdapter = new LocalPlayerAdapter(
+          RadioService.this,
+          RadioService.this,
+          radio,
+          lockKey,
+          RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
+        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
+      } else {
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
@@ -540,14 +549,6 @@ public class RadioService
           chosenDevice,
           upnpActionController);
         session.setPlaybackToRemote(volumeProviderCompat);
-      } else {
-        playerAdapter = new LocalPlayerAdapter(
-          RadioService.this,
-          RadioService.this,
-          radio,
-          lockKey,
-          RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
-        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       }
       // Set controller for HTTP handler
       httpServer.setRadioHandlerController(new RadioHandler.Controller() {
@@ -567,10 +568,10 @@ public class RadioService
       });
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
-      MainActivity.setCurrentRadio((Radio) null);
       if (playerAdapter.prepareFromMediaId()) {
         startService(new Intent(RadioService.this, RadioService.class));
       } else {
+        playerAdapter.stop();
         Log.d(LOG_TAG, "onPrepareFromMediaId: playerAdapter.prepareFromMediaId failed");
       }
     }
