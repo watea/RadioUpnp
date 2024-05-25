@@ -52,11 +52,13 @@ android {
 }
 
 repositories {
+    // cling
     maven {
-        // cling
         url "http://4thline.org/m2/"
         allowInsecureProtocol = true
     }
+    // KSOAP
+    maven { url 'https://oss.sonatype.org/content/repositories/ksoap2-android-releases/' }
 }
 
 dependencies {
@@ -92,6 +94,10 @@ dependencies {
     implementation 'org.slf4j:slf4j-log4j12:2.0.6'
     // Playstore
     implementation 'com.android.billingclient:billing:6.2.1'
+    // SSDP
+    implementation 'io.resourcepool:ssdp-client:2.5.1'
+    // KSOAP
+    implementation 'com.google.code.ksoap2-android:ksoap2-android:3.6.1'
 }
 
 configurations.implementation {

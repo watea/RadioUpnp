@@ -89,6 +89,7 @@ public class URLService {
           // Nothing to do
       }
     }
+    consumer.endParseAccept(this);
   }
 
   @NonNull
@@ -111,5 +112,7 @@ public class URLService {
 
     default void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     }
+
+    void endParseAccept(@NonNull URLService uRLService);
   }
 }

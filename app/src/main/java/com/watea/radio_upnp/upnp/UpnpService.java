@@ -2,6 +2,8 @@ package com.watea.radio_upnp.upnp;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
@@ -25,8 +27,18 @@ public class UpnpService {
     .serviceType(DEVICE)
     .build();
   private final Set<Device> devices = new HashSet<>();
+  private final Callback callback;
 
-  public void SearchAll() {
+  public UpnpService(@NonNull Callback callback) {
+    this.callback = callback;
+  }
+
+  @NonNull
+  public Set<Device> getDevices() {
+    return devices;
+  }
+
+  public void searchAll() {
     ssdpClient.discoverServices(discoverMediaRenderer, new DiscoveryListener() {
       @Override
       public void onServiceDiscovered(SsdpService service) {
@@ -34,7 +46,12 @@ public class UpnpService {
         Log.d(LOG_TAG, "onServiceDiscovered: found service:" + service.getServiceType());
         Log.d(LOG_TAG, "onServiceDiscovered: found service:" + service.getOriginalResponse().toString());
         try {
-          devices.add(new Device(service));
+          // Callback adds device when fully hydrated
+          // TODO sauf les icones??
+          new Device(service, device -> {
+            devices.add((Device) device);
+            callback.onNewDevice((Device) device);
+          });
         } catch (IOException | XmlPullParserException exception) {
           Log.d(LOG_TAG, "onServiceDiscovered: ", exception);
         }
@@ -43,10 +60,13 @@ public class UpnpService {
       @Override
       public void onServiceAnnouncement(SsdpServiceAnnouncement announcement) {
         Log.d(LOG_TAG, "onServiceAnnouncement: Service announced something:" + announcement);
-        final String serialNumber = announcement.getSerialNumber();
+        final String remoteIP = announcement.getRemoteIp().toString();
         for (Device device : devices) {
-          if (serialNumber.equals(device.getSerialNumber())) {
+          // Try to match
+          // TODO à tester sinon servicetype et serialnumber
+          if (remoteIP.equals(device.getSsdpService().getRemoteIp().toString())) {
             devices.remove(device);
+            callback.onRemoveDevice(device);
             break;
           }
         }
@@ -57,5 +77,10 @@ public class UpnpService {
         Log.d(LOG_TAG, "DiscoveryListener.onFailed:", ex);
       }
     });
+  }
+
+  public interface Callback {
+    void onNewDevice(@NonNull Device device);
+    void onRemoveDevice(@NonNull Device device);
   }
 }

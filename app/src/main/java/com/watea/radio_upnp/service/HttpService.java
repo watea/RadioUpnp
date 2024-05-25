@@ -79,9 +79,9 @@ public class HttpService extends Service {
     // Set HTTP server
     UpnpService.setHttpServer(httpServer = new HttpServer());
     // Now we can bind to UPnP service
-    if (!bindService(new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-    }
+//    if (!bindService(new Intent(this, UpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+//      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+//    }
   }
 
   @Override
