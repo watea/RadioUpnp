@@ -73,7 +73,7 @@ import com.watea.radio_upnp.service.HttpService;
 import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Service;
-import com.watea.radio_upnp.upnp.SoapRequest;
+import com.watea.radio_upnp.upnp.UpnpRequest;
 import com.watea.radio_upnp.upnp.UpnpService;
 
 import org.fourthline.cling.android.AndroidUpnpService;
@@ -551,11 +551,17 @@ public class MainActivity
       @Override
       public void onNewDevice(@NonNull Device device) {
         Service service = device.getService("urn:upnp-org:serviceId:AVTransport");
-        SoapRequest soapRequest = new SoapRequest();
+        UpnpRequest soapRequest = new UpnpRequest();
         try {
           soapRequest.call(
             service.getActualControlURI().toString(),
-            "GetTransportInfo");
+            "urn:schemas-upnp-org:service:AVTransport:1",
+            "GetTransportInfo",
+            new Hashtable<String, String>() {
+              {
+                put("InsatnceId", "0");
+              }
+            });
         } catch (URISyntaxException e) {
           throw new RuntimeException(e);
         }

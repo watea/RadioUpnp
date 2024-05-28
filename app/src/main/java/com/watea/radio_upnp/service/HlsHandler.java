@@ -87,8 +87,6 @@ public class HlsHandler {
   private static final int DEFAULT = -1;
   private static final int CONNECT_DEFAULT_PAUSE = 6000; // ms
   @NonNull
-  private final Callback waitCallback;
-  @NonNull
   private final HttpURLConnection httpURLConnection;
   @NonNull
   private final Consumer<URLConnection> headerSetter;
@@ -135,15 +133,12 @@ public class HlsHandler {
   @Nullable
   private String rate = null;
 
-  // waitCallback allows caller to flush buffer before waiting for data (if not connection may be lost)
   public HlsHandler(
     @NonNull HttpURLConnection httpURLConnection,
-    @NonNull Consumer<URLConnection> headerSetter,
-    @NonNull Callback waitCallback)
+    @NonNull Consumer<URLConnection> headerSetter)
     throws IOException, URISyntaxException {
     this.httpURLConnection = httpURLConnection;
     this.headerSetter = headerSetter;
-    this.waitCallback = waitCallback;
     // Fetch first segments URI
     fetchSegmentsURI();
   }
@@ -197,15 +192,10 @@ public class HlsHandler {
   synchronized private int getNextSegmentIndex() throws IOException {
     Log.d(LOG_TAG, "openNextStream");
     int index = actualSegmentURIs.indexOf(currentActualSegmentURI);
-    int tryIndex = 0;
     // Wait if last segment
     while ((index >= 0) && (index == actualSegmentURIs.size() - 1)) {
       try {
         wait();
-        // Allow caller buffer to be flushed to avoid connection lost (order matters)
-        if (tryIndex++ == 1) {
-          waitCallback.run();
-        }
         // Fetch new data
         index = fetchSegmentsFile() ? actualSegmentURIs.indexOf(currentActualSegmentURI) : DEFAULT;
       } catch (InterruptedException interruptedException) {
@@ -302,10 +292,6 @@ public class HlsHandler {
         line2 = bufferedReader.readLine();
       }
     }
-  }
-
-  public interface Callback {
-    void run() throws IOException;
   }
 
   private interface Predicate {

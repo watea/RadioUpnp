@@ -60,7 +60,7 @@ import io.resourcepool.ssdp.model.SsdpService;
 public class Device extends Asset {
   private static final String LOG_TAG = Device.class.getName();
   private static final String XML_TAG = "device";
-  private static final String DEVICE_LIST = "devicelist";
+  private static final String DEVICE_LIST = "deviceList";
   private final SsdpService ssdpService;
   private final Set<Service> services = new HashSet<>();
   private final Set<Device> embeddedDevices = new HashSet<>();

@@ -98,6 +98,8 @@ dependencies {
     implementation 'io.resourcepool:ssdp-client:2.5.1'
     // KSOAP
     implementation 'com.google.code.ksoap2-android:ksoap2-android:3.6.1'
+    // NanoHTTPD
+    implementation 'org.nanohttpd:nanohttpd:2.2.0'
 }
 
 configurations.implementation {
