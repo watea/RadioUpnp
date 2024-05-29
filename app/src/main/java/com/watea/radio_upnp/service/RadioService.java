@@ -106,7 +106,7 @@ public class RadioService
   };
   private MediaSessionCompat session;
   private Radios radios;
-  private final NanoHttpServer nanoHttpServer = new NanoHttpServer(this);
+  private NanoHttpServer nanoHttpServer;
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Nullable
     private HttpService.Binder httpServiceBinder = null;
@@ -173,6 +173,7 @@ public class RadioService
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Launch HTTP server
+    nanoHttpServer = new NanoHttpServer(this);
     try {
       nanoHttpServer.start();
     } catch (IOException iOException) {
@@ -212,9 +213,9 @@ public class RadioService
     // Radio library access
     radios = MainActivity.getRadios();
     // Bind to HTTP service
-    if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-    }
+//    if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
+//      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+//    }
     // Prepare notification
     actionPause = new NotificationCompat.Action(
       R.drawable.ic_pause_white_24dp,
@@ -253,9 +254,9 @@ public class RadioService
       playerAdapter.stop();
     }
     // Release HTTP service
-    unbindService(httpConnection);
+    //unbindService(httpConnection);
     // Force disconnection to release resources
-    httpConnection.onServiceDisconnected(null);
+    //httpConnection.onServiceDisconnected(null);
     // Finally session
     session.release();
   }

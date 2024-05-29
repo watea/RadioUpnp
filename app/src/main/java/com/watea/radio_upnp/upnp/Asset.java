@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
-import java.net.URL;
 
 public abstract class Asset implements URLService.Consumer {
   protected final Callback callback;
@@ -17,7 +16,8 @@ public abstract class Asset implements URLService.Consumer {
 
   // Default is no callback
   protected Asset() {
-    this(asset -> {});
+    this(asset -> {
+    });
   }
 
   @Override

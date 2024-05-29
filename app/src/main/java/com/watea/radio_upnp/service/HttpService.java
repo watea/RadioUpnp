@@ -89,9 +89,9 @@ public class HttpService extends Service {
     super.onDestroy();
     Log.d(LOG_TAG, "onDestroy");
     // Release UPnP service
-    unbindService(upnpConnection);
+    //unbindService(upnpConnection);
     // Force disconnection to release resources
-    upnpConnection.onServiceDisconnected(null);
+    //upnpConnection.onServiceDisconnected(null);
     // Release server
     httpServer.stop();
   }

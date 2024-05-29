@@ -150,7 +150,9 @@ public class RadioHandler implements NanoHttpServer.Handler {
           }
           final NanoHTTPD.Response response = NanoHTTPD.newChunkedResponse(
             NanoHTTPD.Response.Status.OK,
-            connectionHandler.getMimeType(),
+            // Force ContentType as some UPnP devices require it
+            controller.getContentType().isEmpty() ?
+              httpURLConnection.getContentType() : controller.getContentType(),
             connectionHandler.getInputStream());
           // Update rate
           listener.onNewRate(connectionHandler.getRate(), lockKey);
@@ -301,7 +303,6 @@ public class RadioHandler implements NanoHttpServer.Handler {
   }
 
   private abstract class ConnectionHandler {
-    final byte[] buffer = new byte[1];
     @NonNull
     final HttpURLConnection httpURLConnection;
     final boolean isGet;
@@ -321,17 +322,10 @@ public class RadioHandler implements NanoHttpServer.Handler {
       this.lockKey = lockKey;
     }
 
-    // Force ContentType as some UPnP devices require it
-    // TODO: à revoir?
-    @NonNull
-    public String getMimeType() {
-      return controller.getContentType().isEmpty() ?
-        httpURLConnection.getContentType() : controller.getContentType();
-    }
-
     @NonNull
     public InputStream getInputStream() {
       return new InputStream() {
+        final byte[] buffer = new byte[1];
         final CharsetDecoder charsetDecoder = getCharset().newDecoder();
         final int metadataOffset = getMetadataOffset();
         final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
@@ -341,7 +335,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
         @Override
         public int read() throws IOException {
           if (isGet) {
-            while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
+            while (true/*lockKey.equals(controller.getKey())*/ && (inputStream.read(buffer) > 0)) {
               // Only stream data are transferred
               if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
                 return buffer[0] & 0xFF;
