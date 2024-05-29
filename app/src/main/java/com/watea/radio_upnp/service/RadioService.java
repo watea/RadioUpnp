@@ -69,6 +69,7 @@ import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.RemoteDevice;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -105,7 +106,7 @@ public class RadioService
   };
   private MediaSessionCompat session;
   private Radios radios;
-  private HttpService.HttpServer httpServer = null;
+  private final NanoHttpServer nanoHttpServer = new NanoHttpServer(this);
   private final ServiceConnection httpConnection = new ServiceConnection() {
     @Nullable
     private HttpService.Binder httpServiceBinder = null;
@@ -113,10 +114,8 @@ public class RadioService
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       httpServiceBinder = (HttpService.Binder) service;
-      // Retrieve HTTP server
-      httpServer = httpServiceBinder.getHttpServer();
       // Bind to RadioHandler
-      httpServer.bindRadioHandler(RadioService.this);
+      //nanoHttpServer.bindRadioHandler(RadioService.this);
       // Bind to UPnP service
       httpServiceBinder.addUpnpConnection(upnpConnection);
     }
@@ -127,8 +126,7 @@ public class RadioService
       if (httpServiceBinder != null) {
         httpServiceBinder.removeUpnpConnection(upnpConnection);
       }
-      // Unbind HTTP server
-      httpServer = null;
+
     }
   };
   private PlayerAdapter playerAdapter = null;
@@ -174,6 +172,12 @@ public class RadioService
   public void onCreate() {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
+    // Launch HTTP server
+    try {
+      nanoHttpServer.start();
+    } catch (IOException iOException) {
+      Log.d(LOG_TAG, "HTTP server creation fails", iOException);
+    }
     // Create a new MediaSession and controller...
     session = new MediaSessionCompat(this, LOG_TAG);
     mediaController = session.getController();
@@ -341,8 +345,8 @@ public class RadioService
           if (playerAdapter != null) {
             playerAdapter.release();
           }
-          if (httpServer != null) {
-            httpServer.resetRadioHandlerController();
+          if (nanoHttpServer != null) {
+            nanoHttpServer.resetRadioHandlerController();
           }
           // Try to relaunch just once
           if (isAllowedToRewind) {
@@ -368,8 +372,8 @@ public class RadioService
           if (playerAdapter != null) {
             playerAdapter.release();
           }
-          if (httpServer != null) {
-            httpServer.resetRadioHandlerController();
+          if (nanoHttpServer != null) {
+            nanoHttpServer.resetRadioHandlerController();
           }
           session.setMetadata(null);
           session.setActive(false);
@@ -516,8 +520,8 @@ public class RadioService
       }
       final String identity = extras.getString(getString(R.string.key_upnp_device));
       final Device<?, ?, ?> chosenDevice = (identity == null) ? null : getChosenDevice(identity);
-      assert httpServer != null;
-      final Uri serverUri = httpServer.getUri(RadioService.this);
+      assert nanoHttpServer != null;
+      final Uri serverUri = nanoHttpServer.getUri();
       // UPnP not accepted if environment not OK: force STOP
       if ((identity != null) &&
         ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
@@ -536,7 +540,7 @@ public class RadioService
           RadioService.this,
           radio,
           lockKey,
-          RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
+          RadioHandler.getHandledUri(nanoHttpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       } else {
         playerAdapter = new UpnpPlayerAdapter(
@@ -545,13 +549,13 @@ public class RadioService
           radio,
           lockKey,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
-          httpServer.createLogoFile(RadioService.this, radio),
+          nanoHttpServer.createLogoFile(RadioService.this, radio),
           chosenDevice,
           upnpActionController);
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Set controller for HTTP handler
-      httpServer.setRadioHandlerController(new RadioHandler.Controller() {
+      nanoHttpServer.setRadioHandlerController(new RadioHandler.Controller() {
         @NonNull
         @Override
         public String getKey() {

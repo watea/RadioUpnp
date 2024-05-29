@@ -71,10 +71,6 @@ import com.watea.radio_upnp.model.UpnpDevice;
 import com.watea.radio_upnp.model.legacy.RadioLibrary;
 import com.watea.radio_upnp.service.HttpService;
 import com.watea.radio_upnp.service.NetworkProxy;
-import com.watea.radio_upnp.upnp.Device;
-import com.watea.radio_upnp.upnp.Service;
-import com.watea.radio_upnp.upnp.UpnpRequest;
-import com.watea.radio_upnp.upnp.UpnpService;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
@@ -85,7 +81,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -546,33 +541,33 @@ public class MainActivity
 
 //    SoapRequest soapRequest = new SoapRequest();
 //    soapRequest.call();
-
-    UpnpService upnpService = new UpnpService(new UpnpService.Callback() {
-      @Override
-      public void onNewDevice(@NonNull Device device) {
-        Service service = device.getService("urn:upnp-org:serviceId:AVTransport");
-        UpnpRequest soapRequest = new UpnpRequest();
-        try {
-          soapRequest.call(
-            service.getActualControlURI().toString(),
-            "urn:schemas-upnp-org:service:AVTransport:1",
-            "GetTransportInfo",
-            new Hashtable<String, String>() {
-              {
-                put("InsatnceId", "0");
-              }
-            });
-        } catch (URISyntaxException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public void onRemoveDevice(@NonNull Device device) {
-
-      }
-    });
-    upnpService.searchAll();
+//
+//    UpnpService upnpService = new UpnpService(new UpnpService.Callback() {
+//      @Override
+//      public void onNewDevice(@NonNull Device device) {
+//        Service service = device.getService("urn:upnp-org:serviceId:AVTransport");
+//        UpnpRequest soapRequest = new UpnpRequest();
+//        try {
+//          soapRequest.call(
+//            service.getActualControlURI().toString(),
+//            "urn:schemas-upnp-org:service:AVTransport:1",
+//            "GetTransportInfo",
+//            new Hashtable<String, String>() {
+//              {
+//                put("InsatnceId", "0");
+//              }
+//            });
+//        } catch (URISyntaxException e) {
+//          throw new RuntimeException(e);
+//        }
+//      }
+//
+//      @Override
+//      public void onRemoveDevice(@NonNull Device device) {
+//
+//      }
+//    });
+//    upnpService.searchAll();
   }
 
   @Override

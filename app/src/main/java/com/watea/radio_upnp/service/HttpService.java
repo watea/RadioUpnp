@@ -116,7 +116,7 @@ public class HttpService extends Service {
       resourceHandler.setResourceBase(getFilesDir().getPath());
       // Add the ResourceHandler to the server
       handlers.addHandler(resourceHandler);
-      handlers.addHandler(radioHandler);
+      //handlers.addHandler(radioHandler);
     }
 
     // Return logo file Uri; a jpeg file

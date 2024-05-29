@@ -1,19 +1,15 @@
 package com.watea.radio_upnp.service;
 
 import android.content.Context;
-import android.net.DhcpInfo;
-import android.net.wifi.WifiManager;
+import android.net.Uri;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.Radio;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -21,54 +17,16 @@ import java.util.Set;
 import fi.iki.elonen.NanoHTTPD;
 
 public class NanoHttpServer extends NanoHTTPD {
-  private static final int TIMEOUT_RECEPTION_REPONSE = 10;
-  private static final String ROOT = "/"; // Répertoire racine
-  private static final String PATH = "/"; // Chemin vers le fichier image
+  private final Context context;
   private final Set<Handler> handlers = new HashSet<>();
+  private final RadioHandler radioHandler;
 
-  public NanoHttpServer() throws IOException {
-    super(8080);
-    // Récupérer le chemin du fichier demandé
-    // Remplacer "/monfichier.html" par le chemin réel de votre fichier
-    // L'utilisateur demande le fichier spécifié
-    // Vous pouvez lire le contenu du fichier et le renvoyer ici
-    // Exemple : lire le contenu du fichier monfichier.html
-    // Fichier non trouvé
-    Handler resourceHandler = iHTTPSession -> {
-      // Récupérer le chemin du fichier demandé
-      String uri = iHTTPSession.getUri();
-      // Remplacer "/monfichier.html" par le chemin réel de votre fichier
-      String cheminFichier = "/monfichier.html";
-
-      if (uri.equals(cheminFichier)) {
-        // L'utilisateur demande le fichier spécifié
-        // Vous pouvez lire le contenu du fichier et le renvoyer ici
-        // Exemple : lire le contenu du fichier monfichier.html
-        String contenuFichier = "Contenu du fichier monfichier.html";
-        return newFixedLengthResponse(Response.Status.OK, "text/html", contenuFichier);
-      } else {
-        // Fichier non trouvé
-        return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Fichier non trouvé");
-      }
-    };
-    handlers.add(resourceHandler);
-    start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
-  }
-
-  public String getMonAdresseIP() {
-    try {
-      for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
-        NetworkInterface intf = en.nextElement();
-        for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
-          InetAddress inetAddress = enumIpAddr.nextElement();
-          if (!inetAddress.isLoopbackAddress())
-            return inetAddress.getHostAddress();
-        }
-      }
-    } catch (SocketException e) {
-      e.printStackTrace();
-    }
-    return null;
+  public NanoHttpServer(@NonNull Context context) {
+    super(0);
+    this.context = context;
+    radioHandler = new RadioHandler(this.context.getString(R.string.app_name));
+    handlers.add(radioHandler);
+    //handlers.add(new ResourceHandler());
   }
 
   // First non null response is taken
@@ -81,37 +39,31 @@ public class NanoHttpServer extends NanoHTTPD {
       .orElse(null);
   }
 
-  private InetAddress getAddressBroadcast(@NonNull Context context) throws UnknownHostException {
-    WifiManager WiFiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-    DhcpInfo dhcp = WiFiManager.getDhcpInfo();
-
-    int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
-    byte[] quads = new byte[4];
-    for (int k = 0; k < 4; k++)
-      quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
-    return InetAddress.getByAddress(quads);
+  public void start() throws IOException {
+    start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
   }
 
-  private DatagramPacket envoyerTrameUDP(@NonNull Context context, String requete, int port) throws Exception {
-    DatagramSocket socket = new DatagramSocket(port);
-    socket.setBroadcast(true);
-    InetAddress broadcastAdress = getAddressBroadcast(context);
-    DatagramPacket packet = new DatagramPacket(requete.getBytes(), requete.length(), broadcastAdress, port);
-    socket.send(packet);
+  @Nullable
+  public Uri getUri() {
+    return new NetworkProxy(context).getUri(getListeningPort());
+  }
 
-    byte[] buf = new byte[1024];
-    packet = new DatagramPacket(buf, buf.length);
-    socket.setSoTimeout(TIMEOUT_RECEPTION_REPONSE);
+  @NonNull
+  public Uri getLoopbackUri() {
+    return NetworkProxy.getLoopbackUri(getListeningPort());
+  }
 
-    String monAdresse = getMonAdresseIP();
-    socket.receive(packet);
-    while (packet.getAddress().getHostAddress().contains(monAdresse)) {
-      socket.receive(packet);
-    }
+  public void resetRadioHandlerController() {
+    radioHandler.resetController();
+  }
 
-    socket.close();
+  public Uri createLogoFile(RadioService radioService, Radio radio) {
+    // TODO
+    return null;
+  }
 
-    return packet;
+  public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
+    radioHandler.setController(radioHandlerController);
   }
 
   public interface Handler {

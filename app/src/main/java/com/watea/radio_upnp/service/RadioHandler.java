@@ -69,7 +69,6 @@ public class RadioHandler implements NanoHttpServer.Handler {
   private Controller controller = DEFAULT_CONTROLLER;
 
   public RadioHandler(@NonNull String userAgent) {
-    super();
     this.userAgent = userAgent;
   }
 
