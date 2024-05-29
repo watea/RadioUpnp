@@ -74,6 +74,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
 
   // Add ID and lock key to given URI as query parameter.
   // Don't use several query parameters to avoid encoding troubles.
+  // TODO: à revoir
   @NonNull
   public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
@@ -102,8 +103,12 @@ public class RadioHandler implements NanoHttpServer.Handler {
       return null;
     }
     // Request must contain a query with radio ID and lock key
-    final String radioId = params.get(RADIO_ID);
-    final String lockKey = params.get(KEY);
+    // TODO: essayer avec params
+    final String stringParams = params.get(PARAMS);
+    final String[] stringsParams = (stringParams == null) ?
+      new String[0] : stringParams.split(SEPARATOR);
+    final String radioId = (stringsParams.length > 0) ? stringsParams[0] : null;
+    final String lockKey = (stringsParams.length > 1) ? stringsParams[1] : null;
     if ((radioId == null) || (lockKey == null)) {
       return null;
     } else {
