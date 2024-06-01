@@ -74,26 +74,10 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer:1.3.1'
     // apache
     implementation 'org.apache.commons:commons-io:1.3.2'
-    // cling, only 2.1.1 works on Android
-    //noinspection GradleDependency
-    implementation 'org.fourthline.cling:cling-core:2.1.1'
-    //noinspection GradleDependency
-    implementation 'org.seamless:seamless-util:1.1.1'
-    //noinspection GradleDependency
-    implementation 'org.seamless:seamless-http:1.1.1'
-    //noinspection GradleDependency
-    implementation 'org.seamless:seamless-xml:1.1.1'
-    // jetty
-    //noinspection GradleDependency
-    implementation 'org.eclipse.jetty:jetty-server:9.3.30.v20211001'
-    //noinspection GradleDependency
-    implementation 'org.eclipse.jetty:jetty-servlet:9.3.30.v20211001'
-    //noinspection GradleDependency
-    implementation 'org.eclipse.jetty:jetty-client:9.3.30.v20211001'
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12
     implementation 'org.slf4j:slf4j-log4j12:2.0.6'
     // Playstore
-    implementation 'com.android.billingclient:billing:6.2.1'
+    implementation 'com.android.billingclient:billing:7.0.0'
     // SSDP
     implementation 'io.resourcepool:ssdp-client:2.5.1'
     // KSOAP

@@ -43,7 +43,8 @@
         android:theme="@style/BaseAppTheme"
         android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true"
-        tools:ignore="AllowBackup,GoogleAppIndexingWarning">
+        tools:ignore="AllowBackup,GoogleAppIndexingWarning"
+        tools:targetApi="tiramisu">
 
         <activity
             android:name="com.watea.radio_upnp.activity.MainActivity"
@@ -72,20 +73,6 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
-
-        <service
-            android:name="com.watea.radio_upnp.service.HttpService"
-            android:description="@string/http_service_description"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
-
-        <service
-            android:name="com.watea.radio_upnp.cling.UpnpService"
-            android:description="@string/upnp_service_description"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
 
         <!--
          MediaSession, prior to API 21, uses a broadcast receiver to communicate with a

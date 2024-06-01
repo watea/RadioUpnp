@@ -71,6 +71,7 @@ import com.watea.radio_upnp.model.UpnpDevice;
 import com.watea.radio_upnp.model.legacy.RadioLibrary;
 import com.watea.radio_upnp.service.HttpService;
 import com.watea.radio_upnp.service.NetworkProxy;
+import com.watea.radio_upnp.upnp.UpnpService;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.model.message.header.DeviceTypeHeader;
@@ -125,7 +126,7 @@ public class MainActivity
   private RadioGardenController radioGardenController;
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
-  private AndroidUpnpService androidUpnpService = null;
+  private UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
@@ -554,7 +555,7 @@ public class MainActivity
 //            "GetTransportInfo",
 //            new Hashtable<String, String>() {
 //              {
-//                put("InsatnceId", "0");
+//                put("InstanceId", "0");
 //              }
 //            });
 //        } catch (URISyntaxException e) {

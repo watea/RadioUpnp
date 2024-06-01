@@ -64,6 +64,7 @@ import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.model.UpnpDevice;
+import com.watea.radio_upnp.upnp.UpnpService;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.model.meta.Device;
@@ -87,49 +88,21 @@ public class RadioService
   private NotificationManagerCompat notificationManager;
   private UpnpActionController upnpActionController = null;
   private Radio radio = null;
-  private AndroidUpnpService androidUpnpService = null;
-  private final ServiceConnection upnpConnection = new ServiceConnection() {
-    @Override
-    public void onServiceConnected(ComponentName componentName, IBinder service) {
-      androidUpnpService = (AndroidUpnpService) service;
-      upnpActionController = new UpnpActionController(androidUpnpService);
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-      androidUpnpService = null;
-      if (upnpActionController != null) {
-        upnpActionController.release(false);
-        upnpActionController = null;
-      }
-    }
-  };
   private MediaSessionCompat session;
   private Radios radios;
   private NanoHttpServer nanoHttpServer;
-  private final ServiceConnection httpConnection = new ServiceConnection() {
-    @Nullable
-    private HttpService.Binder httpServiceBinder = null;
-
-    @Override
-    public void onServiceConnected(ComponentName componentName, IBinder service) {
-      httpServiceBinder = (HttpService.Binder) service;
-      // Bind to RadioHandler
-      //nanoHttpServer.bindRadioHandler(RadioService.this);
-      // Bind to UPnP service
-      httpServiceBinder.addUpnpConnection(upnpConnection);
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-      // Unbind UPnP service
-      if (httpServiceBinder != null) {
-        httpServiceBinder.removeUpnpConnection(upnpConnection);
-      }
-
-    }
-  };
   private PlayerAdapter playerAdapter = null;
+  private final UpnpService upnpService = new UpnpService(new UpnpService.Callback() {
+    @Override
+    public void onNewDevice(@NonNull Device device) {
+
+    }
+
+    @Override
+    public void onRemoveDevice(@NonNull Device device) {
+
+    }
+  });
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
       @Override
@@ -550,7 +523,7 @@ public class RadioService
           radio,
           lockKey,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
-          nanoHttpServer.createLogoFile(RadioService.this, radio),
+          nanoHttpServer.createLogoFile(radio),
           chosenDevice,
           upnpActionController);
         session.setPlaybackToRemote(volumeProviderCompat);

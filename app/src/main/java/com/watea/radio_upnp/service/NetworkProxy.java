@@ -83,7 +83,7 @@ public class NetworkProxy {
   }
 
   @Nullable
-  private String getIpAddress() {
+  public String getIpAddress() {
     if (connectivityManager != null) {
       final LinkProperties linkProperties =
         connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());

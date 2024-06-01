@@ -2,6 +2,7 @@ package com.watea.radio_upnp.service;
 
 import android.content.Context;
 import android.net.Uri;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,16 +18,27 @@ import java.util.Set;
 import fi.iki.elonen.NanoHTTPD;
 
 public class NanoHttpServer extends NanoHTTPD {
+  private static final String LOG_TAG = NanoHttpServer.class.getName();
   private final Context context;
   private final Set<Handler> handlers = new HashSet<>();
   private final RadioHandler radioHandler;
+  private final ResourceHandler resourceHandler;
 
   public NanoHttpServer(@NonNull Context context) {
     super(0);
     this.context = context;
     radioHandler = new RadioHandler(this.context.getString(R.string.app_name));
+    // RadioHandler
     handlers.add(radioHandler);
-    //handlers.add(new ResourceHandler());
+    // ResourceHandler
+    final Uri uri = getUri();
+    if (uri == null) {
+      Log.d(LOG_TAG, "NanoHttpServer fails to create Uri");
+      resourceHandler = null;
+    } else {
+      resourceHandler = new ResourceHandler(uri);
+      //handlers.add(new ResourceHandler(uri));
+    }
   }
 
   // First non null response is taken
@@ -57,13 +69,13 @@ public class NanoHttpServer extends NanoHTTPD {
     radioHandler.resetController();
   }
 
-  public Uri createLogoFile(RadioService radioService, Radio radio) {
-    // TODO
-    return null;
-  }
-
   public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
     radioHandler.setController(radioHandlerController);
+  }
+
+  @Nullable
+  public Uri createLogoFile(@NonNull Radio radio) {
+    return resourceHandler.createLogoFile(radio);
   }
 
   public interface Handler {
