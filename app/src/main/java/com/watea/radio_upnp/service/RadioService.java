@@ -63,12 +63,9 @@ import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.model.UpnpDevice;
-import com.watea.radio_upnp.upnp.UpnpService;
-
-import org.fourthline.cling.android.AndroidUpnpService;
-import org.fourthline.cling.model.meta.Device;
-import org.fourthline.cling.model.meta.RemoteDevice;
+import com.watea.radio_upnp.upnp.ActionController;
+import com.watea.radio_upnp.upnp.AndroidUpnpService;
+import com.watea.radio_upnp.upnp.Device;
 
 import java.io.IOException;
 import java.util.List;
@@ -86,23 +83,24 @@ public class RadioService
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
   private NotificationManagerCompat notificationManager;
-  private UpnpActionController upnpActionController = null;
+  private ActionController actionController = null;
   private Radio radio = null;
   private MediaSessionCompat session;
   private Radios radios;
   private NanoHttpServer nanoHttpServer;
   private PlayerAdapter playerAdapter = null;
-  private final UpnpService upnpService = new UpnpService(new UpnpService.Callback() {
+  private AndroidUpnpService.UpnpService upnpService = null;
+  private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
-    public void onNewDevice(@NonNull Device device) {
-
+    public void onServiceConnected(ComponentName name, IBinder service) {
+      upnpService = (AndroidUpnpService.UpnpService) service;
     }
 
     @Override
-    public void onRemoveDevice(@NonNull Device device) {
-
+    public void onServiceDisconnected(ComponentName name) {
+      upnpService = null;
     }
-  });
+  };
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
       @Override
@@ -185,10 +183,11 @@ public class RadioService
     }
     // Radio library access
     radios = MainActivity.getRadios();
-    // Bind to HTTP service
-//    if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
-//      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
-//    }
+    // Bind to UPnP service
+    if (!bindService(
+      new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
+    }
     // Prepare notification
     actionPause = new NotificationCompat.Action(
       R.drawable.ic_pause_white_24dp,
@@ -432,25 +431,8 @@ public class RadioService
   }
 
   @Nullable
-  private Device<?, ?, ?> getChosenDevice(@NonNull String identity) {
-    if (androidUpnpService == null) {
-      return null;
-    }
-    for (RemoteDevice remoteDevice : androidUpnpService.getRegistry().getRemoteDevices()) {
-      if (UpnpDevice.getIdentity(remoteDevice).equals(identity)) {
-        return remoteDevice;
-      }
-      // Embedded devices?
-      final RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
-      if (remoteDevices != null) {
-        for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
-          if (UpnpDevice.getIdentity(embeddedRemoteDevice).equals(identity)) {
-            return embeddedRemoteDevice;
-          }
-        }
-      }
-    }
-    return null;
+  private Device getChosenDevice(@NonNull String identity) {
+    return (upnpService == null) ? null : upnpService.getDevice(identity);
   }
 
   private void buildNotification() {
@@ -474,8 +456,8 @@ public class RadioService
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Ensure robustness
-      if (upnpActionController != null) {
-        upnpActionController.release(true);
+      if (actionController != null) {
+        actionController.release(true);
       }
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
@@ -493,12 +475,12 @@ public class RadioService
         return;
       }
       final String identity = extras.getString(getString(R.string.key_upnp_device));
-      final Device<?, ?, ?> chosenDevice = (identity == null) ? null : getChosenDevice(identity);
+      final Device chosenDevice = (identity == null) ? null : getChosenDevice(identity);
       assert nanoHttpServer != null;
       final Uri serverUri = nanoHttpServer.getUri();
       // UPnP not accepted if environment not OK: force STOP
       if ((identity != null) &&
-        ((chosenDevice == null) || (upnpActionController == null) || (serverUri == null))) {
+        ((chosenDevice == null) || (actionController == null) || (serverUri == null))) {
         abort("onPrepareFromMediaId: can't process UPnP device");
         return;
       }
@@ -525,7 +507,7 @@ public class RadioService
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
           nanoHttpServer.createLogoFile(radio),
           chosenDevice,
-          upnpActionController);
+          actionController);
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Set controller for HTTP handler

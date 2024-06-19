@@ -14,21 +14,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-public abstract class UpnpRequest {
+public abstract class Request {
   private static final String SOAP_ACTION_SHARP = "#";
   private final Service service;
   private final String action;
-  private final Map<String, String> propertyMap;
+  private final Map<String, String> properties;
   private final List<SoapPrimitive> result = new Vector<>();
   private final SoapFault soapFault = new SoapFault();
 
-  public UpnpRequest(
+  public Request(
     @NonNull Service service,
     @NonNull String action,
-    @NonNull Map<String, String> propertyMap) {
+    @NonNull Map<String, String> properties) {
     this.service = service;
     this.action = action;
-    this.propertyMap = propertyMap;
+    this.properties = properties;
     soapFault.faultstring = "Result is null";
   }
 
@@ -36,13 +36,14 @@ public abstract class UpnpRequest {
     final String serviceType = service.getServiceType();
     // Build soapObject
     final SoapObject soapObject = new SoapObject(serviceType, action);
-    propertyMap.forEach(soapObject::addProperty);
+    properties.forEach(soapObject::addProperty);
     // Build envelope
     final SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
     envelope.setOutputSoapObject(soapObject);
     // Build httpTransportSE
     final HttpTransportSE httpTransportSE =
       new HttpTransportSE(service.getActualControlURI().toString());
+    // TODO
     //httpTransportSE.debug = true;
     try {
       httpTransportSE.call(serviceType + SOAP_ACTION_SHARP + action, envelope);

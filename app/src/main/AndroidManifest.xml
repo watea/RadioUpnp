@@ -74,6 +74,13 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name="com.watea.radio_upnp.upnp.AndroidUpnpService"
+            android:description="@string/upnp_service_description"
+            android:enabled="true"
+            android:exported="false" />
+        <!--android:foregroundServiceType="connectedDevice" /-->
+
         <!--
          MediaSession, prior to API 21, uses a broadcast receiver to communicate with a
          media session. It does not have to be this broadcast receiver, but it must

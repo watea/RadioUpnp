@@ -1,5 +1,6 @@
 package com.watea.radio_upnp.upnp;
 
+import android.graphics.Bitmap;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -61,17 +62,24 @@ public class Device extends Asset {
   private static final String LOG_TAG = Device.class.getName();
   private static final String XML_TAG = "device";
   private static final String DEVICE_LIST = "deviceList";
+  private static final String SERVICE_NAME_SPACE = "urn:upnp-org:serviceId:";
+  private static final String MODEL_NAME = "modelName";
+  private static final String MODEL_NUMBER = "modelNumber";
+  private static final String UDN = "UDN";
   private final SsdpService ssdpService;
   private final Set<Service> services = new HashSet<>();
   private final Set<Device> embeddedDevices = new HashSet<>();
   private final AtomicReference<Device> currentDevice = new AtomicReference<>();
+  private String modelName = null;
+  private String modelNumber = null;
+  private String uUID = null;
+  private boolean isEmbeddedDevices = false;
+  private boolean isParseComplete;
   private final Callback isCompleteCallback = asset -> {
     if (isComplete()) {
       callback.onComplete(this);
     }
   };
-  private boolean isEmbeddedDevices = false;
-  private boolean isParseComplete;
 
   public Device(
     @NonNull SsdpService ssdpService,
@@ -88,6 +96,11 @@ public class Device extends Asset {
     return embeddedDevices;
   }
 
+  @Nullable
+  public Device getEmbeddedDevice(@NonNull String uUID) {
+    return embeddedDevices.stream().filter(device -> device.hasUUID(uUID)).findAny().orElse(null);
+  }
+
   @NonNull
   public Set<Service> getServices() {
     return services;
@@ -99,6 +112,11 @@ public class Device extends Asset {
       .filter(service -> service.getServiceId().equals(serviceId))
       .findAny()
       .orElse(null);
+  }
+
+  @Nullable
+  public Service getShortService(@NonNull String serviceId) {
+    return getService(SERVICE_NAME_SPACE + serviceId);
   }
 
   @Override
@@ -118,10 +136,23 @@ public class Device extends Asset {
   }
 
   @Override
-  public void endAccept (@NonNull URLService urlService, @NonNull String currentTag) {
+  public void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     switch (currentTag) {
       case DEVICE_LIST:
         isEmbeddedDevices = false;
+        break;
+      case MODEL_NAME:
+        modelName = urlService.getTag(MODEL_NAME);
+        break;
+      case MODEL_NUMBER:
+        modelNumber = urlService.getTag(MODEL_NUMBER);
+        break;
+      case UDN:
+        uUID = urlService.getTag(UDN);
+        // Extract UUID
+        if (uUID != null) {
+          uUID = uUID.replace("uuid:", "");
+        }
         break;
       case Service.XML_TAG:
         final String serviceType = urlService.getTag(Service.SERVICE_TYPE);
@@ -138,12 +169,14 @@ public class Device extends Asset {
         } else {
           try {
             currentDevice.get().services.add(new Service(
+              this,
               urlService.getURL(),
               serviceType,
               serviceId,
               descriptionURL,
               controlURL,
               isCompleteCallback));
+            Log.d(LOG_TAG, "Add service: " + serviceType + " to " + getDisplayString());
           } catch
           (IOException | XmlPullParserException | URISyntaxException exception) {
             Log.d(LOG_TAG, "endAccept: service could not be created: " + serviceType, exception);
@@ -169,14 +202,31 @@ public class Device extends Asset {
     isCompleteCallback.onComplete(this);
   }
 
+  @Override
+  public boolean isComplete() {
+    return
+      isParseComplete &&
+        (services.stream().allMatch(Asset::isComplete) ||
+          embeddedDevices.stream().allMatch(Asset::isComplete));
+  }
+
   @NonNull
   public SsdpService getSsdpService() {
     return ssdpService;
   }
 
-  @NonNull
+  @Nullable
   public String getSerialNumber() {
     return ssdpService.getSerialNumber();
+  }
+
+  @Nullable
+  public String getUUID() {
+    return uUID;
+  }
+
+  public boolean hasUUID(@NonNull String uUID) {
+    return uUID.equals(this.uUID);
   }
 
   @Override
@@ -187,11 +237,18 @@ public class Device extends Asset {
     return ssdpService.equals(that.getSsdpService());
   }
 
-  @Override
-  public boolean isComplete() {
-    return
-      isParseComplete &&
-        (services.stream().allMatch(Asset::isComplete) ||
-          embeddedDevices.stream().allMatch(Asset::isComplete));
+  @NonNull
+  public String getDisplayString() {
+    return modelName + ":" + modelNumber;
+  }
+
+  public void searchIcon(@NonNull Runnable callback) {
+    //TODO
+  }
+
+  @Nullable
+  public Bitmap getIcon() {
+    //TODO
+    return null;
   }
 }

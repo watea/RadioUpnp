@@ -3,6 +3,7 @@ package com.watea.radio_upnp.upnp;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -36,6 +37,7 @@ public class Service extends Asset {
   public static final String CONTROL_URL = "controlURL";
   private static final String LOG_TAG = Service.class.getName();
   private final AtomicReference<Action> currentAction = new AtomicReference<>();
+  private final Device device;
   private final URL baseURL;
   private final String serviceType;
   private final String serviceId;
@@ -44,6 +46,7 @@ public class Service extends Asset {
   private final Set<Action> actions = new HashSet<>();
 
   public Service(
+    @NonNull Device device,
     @NonNull URL baseURL,
     @NonNull String serviceType,
     @NonNull String serviceId,
@@ -52,6 +55,7 @@ public class Service extends Asset {
     @NonNull Device.Callback callback)
     throws IOException, XmlPullParserException, URISyntaxException {
     super(callback);
+    this.device = device;
     this.baseURL = baseURL;
     this.serviceType = serviceType;
     this.serviceId = serviceId;
@@ -62,11 +66,10 @@ public class Service extends Asset {
   }
 
   @Override
-  public void startAccept(@NonNull URLService urlService, @NonNull String currentTag)
-    throws XmlPullParserException, IOException {
+  public void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     // Process Action, if any
     if (currentTag.equals(Action.XML_NAME)) {
-      currentAction.set(new Action());
+      currentAction.set(new Action(this));
     }
     final Action action = currentAction.get();
     if (action != null) {
@@ -99,6 +102,11 @@ public class Service extends Asset {
     if (isComplete()) {
       callback.onComplete(this);
     }
+  }
+
+  @NonNull
+  public Device getDevice() {
+    return device;
   }
 
   @Override
@@ -139,5 +147,10 @@ public class Service extends Asset {
   @NonNull
   public Set<Action> getActions() {
     return actions;
+  }
+
+  @Nullable
+  public Action getAction(@NonNull String actionName) {
+    return actions.stream().filter(action -> action.hasName(actionName)).findFirst().orElse(null);
   }
 }

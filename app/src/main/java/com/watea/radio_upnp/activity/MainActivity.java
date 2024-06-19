@@ -23,8 +23,6 @@
 
 package com.watea.radio_upnp.activity;
 
-import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.RENDERER_DEVICE_TYPE;
-
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
@@ -67,35 +65,27 @@ import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.DefaultRadios;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.model.UpnpDevice;
 import com.watea.radio_upnp.model.legacy.RadioLibrary;
-import com.watea.radio_upnp.service.HttpService;
 import com.watea.radio_upnp.service.NetworkProxy;
-import com.watea.radio_upnp.upnp.UpnpService;
-
-import org.fourthline.cling.android.AndroidUpnpService;
-import org.fourthline.cling.model.message.header.DeviceTypeHeader;
-import org.fourthline.cling.registry.Registry;
-import org.fourthline.cling.registry.RegistryListener;
+import com.watea.radio_upnp.upnp.AndroidUpnpService;
+import com.watea.radio_upnp.upnp.Device;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+// TODO vérifier les . dans commantaires plusieurs lignes (attention find in file que partiel)
+// TODO uniformiser noms des vues
 public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
-  private static final int SEARCH_TIMEOUT = 10;
   private static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
@@ -108,8 +98,6 @@ public class MainActivity
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  private static final DeviceTypeHeader RENDERER_DEVICE_TYPE_HEADER =
-    new DeviceTypeHeader(RENDERER_DEVICE_TYPE);
   private static final List<Listener> listeners = new Vector<>();
   private static Radios radios = null;
   private static Radio currentRadio = null;
@@ -118,34 +106,28 @@ public class MainActivity
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
   private AlertDialog upnpAlertDialog;
+  private View devicesDefaultView;
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
   private SharedPreferences sharedPreferences;
-  private ImportController importController;
+  // TODO
+  //private ImportController importController;
   private RadioGardenController radioGardenController;
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
-  private UpnpService upnpService = null;
+  private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
-      androidUpnpService = (AndroidUpnpService) service;
-      if (androidUpnpService != null) {
-        // Registry is defined
-        final Registry registry = androidUpnpService.getRegistry();
-        // Add local export device
-        importController.addExportService(registry);
+      upnpService = (AndroidUpnpService.UpnpService) service;
+      if (upnpService != null) {
         // Add all devices to the list we already know about
         upnpDevicesAdapter.resetRemoteDevices();
-        final Collection<RegistryListener> registryListeners = Arrays.asList(
-          importController.getRegistryListener(), upnpDevicesAdapter.getRegistryListener());
-        registry.getRemoteDevices().forEach(remoteDevice ->
-          registryListeners.forEach(registryListener ->
-            registryListener.remoteDeviceAdded(registry, remoteDevice)));
+        upnpService.getDevices().forEach(upnpDevicesAdapter::onDeviceAdd);
         // Get ready for future device advertisements
-        registryListeners.forEach(registry::addListener);
+        upnpService.addListener(upnpDevicesAdapter);
         // Ask for devices
         upnpSearch();
       }
@@ -153,33 +135,13 @@ public class MainActivity
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-      if (androidUpnpService != null) {
+      if (upnpService != null) {
         // Clear UPnP stuff
-        final Registry registry = androidUpnpService.getRegistry();
-        new ArrayList<>(registry.getListeners()).forEach(registry::removeListener);
-        androidUpnpService = null;
+        upnpService.clearListeners();
+        upnpService = null;
       }
       // No more devices
       upnpDevicesAdapter.resetRemoteDevices();
-    }
-  };
-  private final ServiceConnection httpConnection = new ServiceConnection() {
-    @Nullable
-    private HttpService.Binder httpServiceBinder = null;
-
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-      httpServiceBinder = (HttpService.Binder) service;
-      // Bind to UPnP service
-      httpServiceBinder.addUpnpConnection(upnpConnection);
-    }
-
-    // Nothing to do here
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-      if (httpServiceBinder != null) {
-        httpServiceBinder.removeUpnpConnection(upnpConnection);
-      }
     }
   };
   private Intent newIntent = null;
@@ -230,8 +192,8 @@ public class MainActivity
   }
 
   @Nullable
-  public AndroidUpnpService getAndroidUpnpService() {
-    return androidUpnpService;
+  public AndroidUpnpService.UpnpService getUpnpService() {
+    return upnpService;
   }
 
   @NonNull
@@ -249,7 +211,8 @@ public class MainActivity
         radioGardenController.launchRadioGarden(gotItRadioGarden);
         break;
       case R.id.action_import:
-        importController.showAlertDialog();
+        // TODO
+        //importController.showAlertDialog();
         break;
       case R.id.action_about:
         aboutAlertDialog.show();
@@ -304,23 +267,19 @@ public class MainActivity
   }
 
   public boolean upnpSearch() {
-    return upnpSearch(RENDERER_DEVICE_TYPE_HEADER);
-  }
-
-  public boolean upnpSearch(@NonNull DeviceTypeHeader deviceTypeHeader) {
-    if (androidUpnpService == null) {
+    if (upnpService == null) {
       tell(R.string.service_not_available);
       return false;
     }
-    androidUpnpService.getControlPoint().search(deviceTypeHeader, SEARCH_TIMEOUT);
+    upnpService.search();
     return true;
   }
 
   public void onUpnpReset() {
-    if (androidUpnpService == null) {
+    if (upnpService == null) {
       tell(R.string.service_not_available);
     } else {
-      androidUpnpService.getRegistry().removeAllRemoteDevices();
+      upnpService.getDevices().clear();
       upnpDevicesAdapter.resetRemoteDevices();
       tell(R.string.dlna_search_reset);
     }
@@ -328,13 +287,13 @@ public class MainActivity
 
   // radio is null for current
   public void startReading(@Nullable Radio radio) {
-    final UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
+    final Device chosenDevice = upnpDevicesAdapter.getChosenDevice();
     playerController.startReading(
       radio,
-      ((androidUpnpService != null) &&
-        (chosenUpnpDevice != null) &&
+      ((upnpService != null) &&
+        (chosenDevice != null) &&
         networkProxy.hasWifiIpAddress()) ?
-        chosenUpnpDevice.getIdentity() : null);
+        chosenDevice.getUUID() : null);
   }
 
   @NonNull
@@ -458,14 +417,22 @@ public class MainActivity
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       (savedInstanceState == null) ?
         null : savedInstanceState.getString(getString(R.string.key_selected_device)),
-      (upnpDevice, isChosen) -> {
-        if (isChosen) {
-          startReading(null);
-          tell(getResources().getString(R.string.dlna_selection) + upnpDevice);
-        } else {
-          tell(R.string.no_dlna_selection);
+      new UpnpDevicesAdapter.Listener() {
+        @Override
+        public void onRowClick(@NonNull Device device, boolean isChosen) {
+          if (isChosen) {
+            startReading(null);
+            tell(getResources().getString(R.string.dlna_selection) + device);
+          } else {
+            tell(R.string.no_dlna_selection);
+          }
+          upnpAlertDialog.dismiss();
         }
-        upnpAlertDialog.dismiss();
+
+        @Override
+        public void onCountChange(boolean isEmpty) {
+          devicesDefaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
+        }
       });
     // Inflate view
     setContentView(R.layout.activity_main);
@@ -479,7 +446,8 @@ public class MainActivity
     // Radio Garden
     radioGardenController = new RadioGardenController(this);
     // Import function
-    importController = new ImportController(this);
+    // TODO
+    //importController = new ImportController(this);
     // Set navigation drawer toggle (according to documentation)
     drawerToggle = new ActionBarDrawerToggle(
       this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
@@ -508,9 +476,11 @@ public class MainActivity
         .show();
     }
     // Specific UPnP devices dialog
-    final RecyclerView upnpRecyclerView = new RecyclerView(this);
+    final RecyclerView upnpRecyclerView =
+      (RecyclerView) getLayoutInflater().inflate(R.layout.content_upnp, null);
     upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpRecyclerView.setAdapter(upnpDevicesAdapter);
+    devicesDefaultView = upnpRecyclerView.findViewById(R.id.view_devices_default);
     upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
       .setView(upnpRecyclerView)
       .create();
@@ -577,10 +547,10 @@ public class MainActivity
     Log.d(LOG_TAG, "onPause");
     // Shared preferences
     storeBooleanPreference(R.string.key_radio_garden_got_it, gotItRadioGarden);
-    // Release HTTP service
-    unbindService(httpConnection);
+    // Release UPnP service
+    unbindService(upnpConnection);
     // Force disconnection to release resources
-    httpConnection.onServiceDisconnected(null);
+    upnpConnection.onServiceDisconnected(null);
     // Clear PlayerController call
     playerController.onActivityPause();
     Log.d(LOG_TAG, "onPause done!");
@@ -598,9 +568,10 @@ public class MainActivity
     Log.d(LOG_TAG, "onResume");
     // Fetch preferences
     gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden_got_it), false);
-    // Bind to HTTP service
-    if (!bindService(new Intent(this, HttpService.class), httpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; HttpService not bound");
+    // Bind to UPnP service
+    if (!bindService(
+      new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     // Radio Garden share?
     if (newIntent != null) {
@@ -636,9 +607,9 @@ public class MainActivity
     }
     // May not exist
     if (upnpDevicesAdapter != null) {
-      UpnpDevice chosenUpnpDevice = upnpDevicesAdapter.getChosenUpnpDevice();
-      if (chosenUpnpDevice != null) {
-        outState.putString(getString(R.string.key_selected_device), chosenUpnpDevice.getIdentity());
+      Device chosenDevice = upnpDevicesAdapter.getChosenDevice();
+      if (chosenDevice != null) {
+        outState.putString(getString(R.string.key_selected_device), chosenDevice.getUUID());
       }
     }
   }

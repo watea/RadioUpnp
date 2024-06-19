@@ -23,8 +23,6 @@
 
 package com.watea.radio_upnp.adapter;
 
-import static com.watea.radio_upnp.adapter.UpnpPlayerAdapter.AV_TRANSPORT_SERVICE_ID;
-
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -44,26 +42,21 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.model.UpnpDevice;
-
-import org.fourthline.cling.model.meta.RemoteDevice;
-import org.fourthline.cling.model.meta.RemoteService;
-import org.fourthline.cling.model.meta.Service;
-import org.fourthline.cling.model.types.ServiceId;
-import org.fourthline.cling.registry.DefaultRegistryListener;
-import org.fourthline.cling.registry.Registry;
-import org.fourthline.cling.registry.RegistryListener;
+import com.watea.radio_upnp.upnp.AndroidUpnpService;
+import com.watea.radio_upnp.upnp.Device;
 
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 
-public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder> {
+public class UpnpDevicesAdapter
+  extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
+  implements AndroidUpnpService.Listener {
   private static final String LOG_TAG = UpnpDevicesAdapter.class.getName();
-  private static final UpnpDevice DUMMY_DEVICE = new UpnpDevice(null);
   private static final Handler handler = new Handler(Looper.getMainLooper());
-  private final List<UpnpDevice> upnpDevices = new Vector<>();
+  private final List<Device> devices = new Vector<>();
   @NonNull
-  private final RowClickListener rowClickListener;
+  private final Listener listener;
   @Nullable
   private ChosenDeviceListener chosenDeviceListener = null;
   @Nullable
@@ -71,9 +64,9 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
 
   public UpnpDevicesAdapter(
     @Nullable String chosenUpnpDeviceIdentity,
-    @NonNull RowClickListener rowClickListener) {
+    @NonNull Listener listener) {
     this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
-    this.rowClickListener = rowClickListener;
+    this.listener = listener;
     resetRemoteDevices();
   }
 
@@ -91,131 +84,120 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
-    viewHolder.setView(upnpDevices.get(i));
+    viewHolder.setView(devices.get(i));
   }
 
   @Override
   public int getItemCount() {
-    return upnpDevices.size();
+    return devices.size();
   }
 
   // Null if device no longer online
   @Nullable
-  public UpnpDevice getChosenUpnpDevice() {
-    for (UpnpDevice upnpDevice : upnpDevices) {
-      String identity = upnpDevice.getIdentity();
+  public Device getChosenDevice() {
+    for (Device device : devices) {
+      final String identity = device.getUUID();
       if ((identity != null) && identity.equals(chosenUpnpDeviceIdentity)) {
-        return upnpDevice;
+        return device;
       }
     }
     return null;
   }
 
-  private void setChosenUpnpDevice(@Nullable UpnpDevice upnpDevice) {
-    chosenUpnpDeviceIdentity = (upnpDevice == null) ? null : upnpDevice.getIdentity();
-    notifyChange();
+  @Override
+  public void onDeviceAdd(@NonNull Device device) {
+    // This device?
+    if (addIf(device)) {
+      return;
+    }
+    // Embedded devices?
+    final Set<Device> devices = device.getEmbeddedDevices();
+    if (!devices.isEmpty()) {
+      Log.d(LOG_TAG, "EmbeddedDevices found: " + devices.size());
+      //noinspection ResultOfMethodCallIgnored
+      devices.stream().anyMatch(this::addIf);
+    }
   }
 
-  @NonNull
-  public RegistryListener getRegistryListener() {
-    return new DefaultRegistryListener() {
-      @Override
-      public void remoteDeviceAdded(Registry registry, RemoteDevice remoteDevice) {
-        // This device?
-        if (add(remoteDevice)) {
-          return;
-        }
-        // Embedded devices?
-        final RemoteDevice[] remoteDevices = remoteDevice.getEmbeddedDevices();
-        if (remoteDevices != null) {
-          Log.d(LOG_TAG, "EmbeddedRemoteDevices found: " + remoteDevices.length);
-          for (RemoteDevice embeddedRemoteDevice : remoteDevices) {
-            if (add(embeddedRemoteDevice)) {
-              return;
-            }
-          }
-        }
-      }
-
-      @Override
-      public void remoteDeviceRemoved(Registry registry, RemoteDevice remoteDevice) {
-        Log.d(LOG_TAG, "RemoteDevice and embedded removed: " + remoteDevice.getDisplayString());
-        // This device?
-        handler.post(() -> remove(remoteDevice));
-        // Embedded devices?
-        for (RemoteDevice embeddedRemoteDevice : remoteDevice.getEmbeddedDevices()) {
-          handler.post(() -> remove(embeddedRemoteDevice));
-        }
-      }
-
-      // Returns true if AV_TRANSPORT_SERVICE_ID is found
-      private boolean add(final RemoteDevice remoteDevice) {
-        Log.d(LOG_TAG, "RemoteDevice found: " + remoteDevice.getDisplayString());
-        final RemoteService[] remoteServices = remoteDevice.getServices();
-        Log.d(LOG_TAG, "> RemoteServices found: " + remoteServices.length);
-        for (Service<?, ?> service : remoteServices) {
-          final ServiceId serviceId = service.getServiceId();
-          Log.d(LOG_TAG, ">> RemoteService: " + serviceId);
-          if (serviceId.equals(AV_TRANSPORT_SERVICE_ID)) {
-            Log.d(LOG_TAG, ">>> UPnP reader found!");
-            handler.post(() -> addOrReplace(remoteDevice));
-            return true;
-          }
-        }
-        return false;
-      }
-    };
+  @Override
+  public void onDeviceRemove(@NonNull Device device) {
+    Log.d(LOG_TAG, "Device and embedded removed: " + device.getDisplayString());
+    // This device?
+    handler.post(() -> remove(device));
+    // Embedded devices?
+    handler.post(() -> device.getEmbeddedDevices().forEach(this::remove));
   }
 
   public void removeChosenUpnpDevice() {
     setChosenUpnpDevice(null);
   }
 
+  @SuppressLint("NotifyDataSetChanged")
   public void resetRemoteDevices() {
-    upnpDevices.clear();
-    setDummyDeviceForWaiting();
-    notifyChange();
+    devices.clear();
+    listener.onCountChange(true);
+    tellChosenDevice();
+    notifyDataSetChanged();
   }
 
   @Nullable
   public Bitmap getChosenUpnpDeviceIcon() {
-    UpnpDevice upnpDevice = getChosenUpnpDevice();
-    return (upnpDevice == null) ? null : upnpDevice.getIcon();
+    final Device device = getChosenDevice();
+    return (device == null) ? null : device.getIcon();
   }
 
-  // Replace if already here
-  private void addOrReplace(@NonNull RemoteDevice remoteDevice) {
-    clean(remoteDevice);
-    // Remove dummy device if any
-    if (isWaiting()) {
-      upnpDevices.clear();
+  private void setChosenUpnpDevice(@Nullable Device device) {
+    final Device chosenDevice = getChosenDevice();
+    if (chosenDevice != null) {
+      notifyChange(chosenDevice);
     }
-    final UpnpDevice upnpDevice = new UpnpDevice(remoteDevice);
-    upnpDevices.add(upnpDevice);
-    notifyChange();
+    if (device == null) {
+      chosenUpnpDeviceIdentity = null;
+    } else {
+      chosenUpnpDeviceIdentity = device.getUUID();
+      notifyChange(device);
+    }
+    tellChosenDevice();
+  }
+
+  private void notifyChange(@NonNull Device device) {
+    notifyItemChanged(devices.indexOf(device));
+  }
+
+  // Returns true if AV_TRANSPORT_SERVICE_ID is found.
+  // Add device in this case.
+  private boolean addIf(final Device device) {
+    if (device.getShortService(UpnpPlayerAdapter.getAvtransportId()) == null) {
+      return false;
+    } else {
+      Log.d(LOG_TAG, "UPnP reader found!");
+      handler.post(() -> add(device));
+      return true;
+    }
+  }
+
+  private void add(@NonNull Device device) {
+    devices.add(device);
+    listener.onCountChange(false);
+    notifyItemInserted(devices.indexOf(device));
     // Wait for icon (searched asynchronously)
-    if (upnpDevice.isFullyHydrated()) {
-      upnpDevice.searchIcon(() -> {
-        if (upnpDevices.contains(upnpDevice)) {
-          notifyItemChanged(upnpDevices.indexOf(upnpDevice));
-          if (upnpDevice == getChosenUpnpDevice()) {
-            tellChosenDevice();
-          }
+    device.searchIcon(() -> {
+      if (devices.contains(device)) {
+        notifyItemChanged(devices.indexOf(device));
+        if (device == getChosenDevice()) {
+          tellChosenDevice();
         }
-      });
-    }
+      }
+    });
   }
 
-  private void remove(@NonNull RemoteDevice remoteDevice) {
-    clean(remoteDevice);
-    if (upnpDevices.isEmpty()) {
-      setDummyDeviceForWaiting();
+  private void remove(@NonNull Device device) {
+    final int position = devices.indexOf(device);
+    if (position >= 0) {
+      devices.remove(device);
+      listener.onCountChange(devices.isEmpty());
+      notifyItemRemoved(position);
     }
-    notifyChange();
-  }
-
-  private void clean(@NonNull RemoteDevice remoteDevice) {
-    upnpDevices.removeIf(upnpDevice -> upnpDevice.hasRemoteDevice(remoteDevice));
   }
 
   private void tellChosenDevice() {
@@ -224,22 +206,10 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
     }
   }
 
-  @SuppressLint("NotifyDataSetChanged")
-  private void notifyChange() {
-    tellChosenDevice();
-    notifyDataSetChanged();
-  }
+  public interface Listener {
+    void onRowClick(@NonNull Device device, boolean isChosen);
 
-  private void setDummyDeviceForWaiting() {
-    upnpDevices.add(DUMMY_DEVICE);
-  }
-
-  private boolean isWaiting() {
-    return upnpDevices.contains(DUMMY_DEVICE);
-  }
-
-  public interface RowClickListener {
-    void onRowClick(@NonNull UpnpDevice upnpDevice, boolean isChosen);
+    void onCountChange(boolean isEmpty);
   }
 
   public interface ChosenDeviceListener {
@@ -258,18 +228,19 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
     private final View view;
     private final int defaultColor;
     private final int selectedColor;
-    @NonNull
-    private UpnpDevice upnpDevice = DUMMY_DEVICE;
+    @Nullable
+    private Device device;
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
       view = itemView;
       view.setOnClickListener(v -> {
+        assert device != null;
         setChosenUpnpDevice(
           ((chosenUpnpDeviceIdentity == null) ||
-            !chosenUpnpDeviceIdentity.equals(upnpDevice.getIdentity())) ?
-            upnpDevice : null);
-        rowClickListener.onRowClick(upnpDevice, (getChosenUpnpDevice() != null));
+            !chosenUpnpDeviceIdentity.equals(device.getUUID())) ?
+            device : null);
+        listener.onRowClick(device, (getChosenDevice() != null));
       });
       upnpDeviceNameTextView = view.findViewById(R.id.row_upnp_device_name_text_view);
       progressBar = view.findViewById(R.id.progress_bar);
@@ -278,18 +249,11 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
       castIcon = BitmapFactory.decodeResource(view.getResources(), R.drawable.ic_cast_blue);
     }
 
-    private void setView(@NonNull UpnpDevice upnpDevice) {
-      this.upnpDevice = upnpDevice;
-      // Waiting message not accessible
-      view.setEnabled(!isWaiting() && upnpDevice.isFullyHydrated());
-      // Dummy device for waiting message
-      if (isWaiting()) {
-        upnpDeviceNameTextView.setText(R.string.device_no_device_yet);
-      } else {
-        upnpDeviceNameTextView.setText(upnpDevice.toString());
-      }
+    private void setView(@NonNull Device device) {
+      this.device = device;
+      upnpDeviceNameTextView.setText(device.getDisplayString());
       // Icon
-      Bitmap bitmap = upnpDevice.getIcon();
+      Bitmap bitmap = device.getIcon();
       bitmap = (bitmap == null) ? castIcon : bitmap;
       bitmap = Bitmap.createScaledBitmap(bitmap, ICON_SIZE, ICON_SIZE, true);
       upnpDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
@@ -297,7 +261,7 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
       // Selected item
       upnpDeviceNameTextView.setTextColor(
         (chosenUpnpDeviceIdentity != null) &&
-          chosenUpnpDeviceIdentity.equals(upnpDevice.getIdentity()) ?
+          chosenUpnpDeviceIdentity.equals(device.getUUID()) ?
           selectedColor : defaultColor);
       // Wait
       progressBar.setVisibility(view.isEnabled() ? View.INVISIBLE : View.VISIBLE);

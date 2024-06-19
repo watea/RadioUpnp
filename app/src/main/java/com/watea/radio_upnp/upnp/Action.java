@@ -3,6 +3,7 @@ package com.watea.radio_upnp.upnp;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -11,9 +12,15 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Action extends Asset {
   public static final String XML_NAME = "action";
   private static final String LOG_TAG = Action.class.getName();
+  private final Service service;
   private final Set<Argument> arguments = new HashSet<>();
   private final AtomicReference<Argument> currentArgument = new AtomicReference<>();
-  private String name;
+  @Nullable
+  private String name = null;
+
+  public Action(@NonNull Service service) {
+    this.service = service;
+  }
 
   @Override
   public void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
@@ -57,9 +64,18 @@ public class Action extends Asset {
     return name;
   }
 
+  public boolean hasName(@NonNull String name) {
+    return name.equals(this.name);
+  }
+
   @Override
   public boolean isComplete() {
     return (name != null);
+  }
+
+  @NonNull
+  public Service getService() {
+    return service;
   }
 
   public static class Argument extends Asset {

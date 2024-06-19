@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.service;
+package com.watea.radio_upnp.upnp;
 
 import android.util.Log;
 
@@ -29,27 +29,26 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.service.RadioURL;
 
-import org.fourthline.cling.android.AndroidUpnpService;
-import org.fourthline.cling.controlpoint.ActionCallback;
-import org.fourthline.cling.model.action.ActionInvocation;
-import org.fourthline.cling.model.message.UpnpResponse;
-import org.fourthline.cling.model.meta.Action;
-import org.fourthline.cling.model.meta.Device;
+import org.ksoap2.SoapFault;
+import org.ksoap2.serialization.SoapPrimitive;
 
+import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-public class UpnpActionController {
+public class ActionController {
   @NonNull
   private final AndroidUpnpService androidUpnpService;
   private final Map<Radio, String> contentTypes = new Hashtable<>();
-  private final Map<Device<?, ?, ?>, List<String>> protocolInfos = new Hashtable<>();
+  private final Map<Device, List<String>> protocolInfos = new Hashtable<>();
   private final List<UpnpAction> upnpActions = new Vector<>();
 
-  public UpnpActionController(@NonNull AndroidUpnpService androidUpnpService) {
+  public ActionController(@NonNull AndroidUpnpService androidUpnpService) {
     this.androidUpnpService = androidUpnpService;
   }
 
@@ -59,7 +58,7 @@ public class UpnpActionController {
   }
 
   @Nullable
-  public List<String> getProtocolInfo(@NonNull Device<?, ?, ?> device) {
+  public List<String> getProtocolInfo(@NonNull Device device) {
     return protocolInfos.get(device);
   }
 
@@ -94,7 +93,7 @@ public class UpnpActionController {
     }
   }
 
-  private void putProtocolInfo(@NonNull Device<?, ?, ?> device, @NonNull List<String> list) {
+  private void putProtocolInfo(@NonNull Device device, @NonNull List<String> list) {
     protocolInfos.put(device, list);
   }
 
@@ -104,72 +103,71 @@ public class UpnpActionController {
     }
   }
 
-  private void execute(@NonNull ActionCallback actionCallback) {
-    androidUpnpService.getControlPoint().execute(actionCallback);
-  }
-
   public abstract class UpnpAction {
     private final String LOG_TAG = UpnpAction.class.getName();
-    @NonNull
-    private final Action<?> action;
+    private final Action action;
+    private final Map<String, String> arguments = new Hashtable<>();
 
-    public UpnpAction(@NonNull Action<?> action) {
+    public UpnpAction(@NonNull Action action) {
       this.action = action;
     }
 
+    public UpnpAction(@NonNull Action action, @NonNull String instanceId) {
+      this(action);
+      addArgument("InstanceId", instanceId);
+    }
+
+    public UpnpAction addArgument(@NonNull String name, @NonNull String value) {
+      arguments.put(name, value);
+      return this;
+    }
+
     public void execute() {
-      Log.d(LOG_TAG, "Execute: " + action.getName() + " on: " + getDevice().getDisplayString());
-      UpnpActionController.this.execute(new ActionCallback(getActionInvocation()) {
+      final Request request = new Request(
+        action.getService(),
+        action.getName(),
+        arguments) {
         @Override
-        public void success(ActionInvocation actionInvocation) {
-          Log.d(LOG_TAG,
-            "Successfully called UPnP action: " + actionInvocation.getAction().getName());
-          UpnpAction.this.success(actionInvocation);
+        public void onSuccess(@NonNull List<SoapPrimitive> result) {
+          Log.d(LOG_TAG, "Successfully called UPnP action: " + action.getName());
+          UpnpAction.this.success(result);
         }
 
         @Override
-        public void failure(
-          ActionInvocation actionInvocation, UpnpResponse operation, String defaultMsg) {
-          Log.d(LOG_TAG,
-            "UPnP error: " + actionInvocation.getAction().getName() + " => " + defaultMsg);
+        public void onFailure(@NonNull SoapFault soapFault) {
+          Log.d(LOG_TAG, "UPnP error: " + action.getName() + " => " + soapFault);
           UpnpAction.this.failure();
         }
-      });
+      };
+      Log.d(LOG_TAG, "Execute: " + action.getName() + " on: " + getDevice().getDisplayString());
+      try {
+        request.call();
+      } catch (URISyntaxException URISyntaxException) {
+        request.onFailure(new SoapFault());
+      }
     }
 
     @NonNull
-    public Device<?, ?, ?> getDevice() {
+    public Device getDevice() {
       return action.getService().getDevice();
     }
 
     public void putProtocolInfo(@NonNull List<String> list) {
-      UpnpActionController.this.putProtocolInfo(getDevice(), list);
+      ActionController.this.putProtocolInfo(getDevice(), list);
     }
 
     public void schedule() {
-      UpnpActionController.this.schedule(this);
+      ActionController.this.schedule(this);
     }
-
-    @NonNull
-    protected ActionInvocation<?> getActionInvocation(@Nullable String instanceId) {
-      final ActionInvocation<?> actionInvocation = new ActionInvocation<>(action);
-      if (instanceId != null) {
-        actionInvocation.setInput("InstanceID", instanceId);
-      }
-      return actionInvocation;
-    }
-
-    @NonNull
-    protected abstract ActionInvocation<?> getActionInvocation();
 
     // Run next by default
-    protected void success(@NonNull ActionInvocation<?> actionInvocation) {
-      UpnpActionController.this.runNextAction();
+    protected void success(@NonNull List<SoapPrimitive> result) {
+      ActionController.this.runNextAction();
     }
 
     // Run next by default
     protected void failure() {
-      UpnpActionController.this.runNextAction();
+      ActionController.this.runNextAction();
     }
   }
 }
