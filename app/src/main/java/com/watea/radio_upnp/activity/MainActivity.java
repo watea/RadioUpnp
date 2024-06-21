@@ -431,7 +431,9 @@ public class MainActivity
 
         @Override
         public void onCountChange(boolean isEmpty) {
-          devicesDefaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
+          if (devicesDefaultView != null) {
+            devicesDefaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
+          }
         }
       });
     // Inflate view
@@ -476,13 +478,13 @@ public class MainActivity
         .show();
     }
     // Specific UPnP devices dialog
-    final RecyclerView upnpRecyclerView =
-      (RecyclerView) getLayoutInflater().inflate(R.layout.content_upnp, null);
+    final View contentUpnp = getLayoutInflater().inflate(R.layout.content_upnp, null);
+    final RecyclerView upnpRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpRecyclerView.setAdapter(upnpDevicesAdapter);
     devicesDefaultView = upnpRecyclerView.findViewById(R.id.view_devices_default);
     upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
-      .setView(upnpRecyclerView)
+      .setView(contentUpnp)
       .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);

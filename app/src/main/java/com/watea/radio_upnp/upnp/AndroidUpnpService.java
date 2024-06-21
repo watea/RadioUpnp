@@ -28,9 +28,9 @@ public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:1";
   private static final String SERVICE = "urn:schemas-upnp-org:ServiceId:AVTransport:1";
-  private static final int DELAY = 5000; // ms
+  private static final int DELAY = 60000; // ms
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-  private final Binder binder = new Binder();
+  private final Binder binder = new UpnpService();
   private final SsdpClient ssdpClient = SsdpClient.create();
   private final DiscoveryRequest discoveryRequestAll = SsdpRequest.discoverAll();
   private final DiscoveryRequest discoverMediaRenderer = SsdpRequest.builder()

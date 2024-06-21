@@ -57,7 +57,8 @@
     <string name="icon_url">Icon URL (<b>SEARCH ICON</b> to fetch), or <b>BROWSE</b></string>
     <string name="icon_url_example">https://www.my_cloud.com/icons/my_icon.png</string>
     <string name="radio_definition_error">Radio definition not well formed</string>
-    <string name="device_no_device_yet">No device found yet, please wait&#8230;</string>
+    <string name="device_no_device_yet">No device found yet.</string>
+    <string name="please_wait">Please wait&#8230;</string>
     <string name="live_streaming">Live streaming</string>
     <string name="no_icon_found">Icon search in Icon URL or Web page URL failed!</string>
     <string name="no_local_icon">No valid local icon found</string>
