@@ -42,9 +42,9 @@ public class AndroidUpnpService extends android.app.Service {
   private final Set<Listener> listeners = new HashSet<>();
   private final DiscoveryListener discoveryListener = new DiscoveryListener() {
     public void onServiceDiscovered(SsdpService service) {
-      Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: found service: " + service);
-      Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: found service: " + service.getServiceType());
-      Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: found service: " + service.getOriginalResponse().toString());
+      Log.d(LOG_TAG, "Found SsdpService: " + service);
+      Log.d(LOG_TAG, "Found SsdpService: " + service.getServiceType());
+      Log.d(LOG_TAG, "Found SsdpService: " + service.getOriginalResponse().toString());
       try {
         // Callback adds device when fully hydrated
         // TODO sauf les icones??
@@ -66,7 +66,7 @@ public class AndroidUpnpService extends android.app.Service {
 
     @Override
     public void onServiceAnnouncement(SsdpServiceAnnouncement announcement) {
-      Log.d(LOG_TAG, "DiscoveryListener.onServiceAnnouncement: Service announced something: " + announcement);
+      Log.d(LOG_TAG, "SsdpServiceAnnouncement: " + announcement);
       final String uUID = announcement.getSerialNumber();
       final boolean isAlive = (announcement.getStatus() != SsdpServiceAnnouncement.Status.BYEBYE);
       devices.stream()
