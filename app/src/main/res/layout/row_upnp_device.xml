@@ -21,20 +21,11 @@
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
-
-    <TextView
-        android:id="@+id/row_upnp_device_name_text_view"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="start|center_vertical"
-        android:drawablePadding="@dimen/app_horizontal_margin"
-        android:gravity="center_vertical"
-        android:padding="@dimen/app_vertical_margin"
-        android:textStyle="bold" />
-
-</LinearLayout>
+    android:layout_gravity="start|center_vertical"
+    android:drawablePadding="@dimen/app_horizontal_margin"
+    android:gravity="center_vertical"
+    android:padding="@dimen/app_vertical_margin"
+    android:textStyle="bold" />

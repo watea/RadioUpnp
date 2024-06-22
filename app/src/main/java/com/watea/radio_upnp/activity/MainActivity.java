@@ -125,11 +125,9 @@ public class MainActivity
       if (upnpService != null) {
         // Add all devices to the list we already know about
         upnpDevicesAdapter.resetRemoteDevices();
-        upnpService.getDevices().forEach(upnpDevicesAdapter::onDeviceAdd);
+        upnpService.getAliveDevices().forEach(upnpDevicesAdapter::onDeviceAdd);
         // Get ready for future device advertisements
         upnpService.addListener(upnpDevicesAdapter);
-        // Ask for devices
-        upnpSearch();
       }
     }
 
@@ -264,15 +262,6 @@ public class MainActivity
 
   public void tell(@NonNull String message) {
     Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG).show();
-  }
-
-  public boolean upnpSearch() {
-    if (upnpService == null) {
-      tell(R.string.service_not_available);
-      return false;
-    }
-    upnpService.search();
-    return true;
   }
 
   public void onUpnpReset() {
@@ -431,9 +420,7 @@ public class MainActivity
 
         @Override
         public void onCountChange(boolean isEmpty) {
-          if (devicesDefaultView != null) {
-            devicesDefaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
-          }
+          devicesDefaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
         }
       });
     // Inflate view
@@ -482,7 +469,7 @@ public class MainActivity
     final RecyclerView upnpRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpRecyclerView.setAdapter(upnpDevicesAdapter);
-    devicesDefaultView = upnpRecyclerView.findViewById(R.id.view_devices_default);
+    devicesDefaultView = contentUpnp.findViewById(R.id.view_devices_default);
     upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
       .setView(contentUpnp)
       .create();

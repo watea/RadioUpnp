@@ -33,7 +33,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -67,7 +66,6 @@ public class UpnpDevicesAdapter
     @NonNull Listener listener) {
     this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
     this.listener = listener;
-    resetRemoteDevices();
   }
 
   public void setChosenDeviceListener(@Nullable ChosenDeviceListener chosenDeviceListener) {
@@ -221,11 +219,7 @@ public class UpnpDevicesAdapter
     @NonNull
     private final Bitmap castIcon;
     @NonNull
-    private final TextView upnpDeviceNameTextView;
-    @NonNull
-    private final ProgressBar progressBar;
-    @NonNull
-    private final View view;
+    private final TextView textView;
     private final int defaultColor;
     private final int selectedColor;
     @Nullable
@@ -233,8 +227,8 @@ public class UpnpDevicesAdapter
 
     ViewHolder(@NonNull View itemView) {
       super(itemView);
-      view = itemView;
-      view.setOnClickListener(v -> {
+      textView = (TextView) itemView;
+      textView.setOnClickListener(v -> {
         assert device != null;
         setChosenUpnpDevice(
           ((chosenUpnpDeviceIdentity == null) ||
@@ -242,29 +236,24 @@ public class UpnpDevicesAdapter
             device : null);
         listener.onRowClick(device, (getChosenDevice() != null));
       });
-      upnpDeviceNameTextView = view.findViewById(R.id.row_upnp_device_name_text_view);
-      progressBar = view.findViewById(R.id.progress_bar);
-      defaultColor = upnpDeviceNameTextView.getCurrentTextColor();
-      selectedColor = ContextCompat.getColor(view.getContext(), R.color.dark_blue);
-      castIcon = BitmapFactory.decodeResource(view.getResources(), R.drawable.ic_cast_blue);
+      defaultColor = textView.getCurrentTextColor();
+      selectedColor = ContextCompat.getColor(textView.getContext(), R.color.dark_blue);
+      castIcon = BitmapFactory.decodeResource(textView.getResources(), R.drawable.ic_cast_blue);
     }
 
     private void setView(@NonNull Device device) {
       this.device = device;
-      upnpDeviceNameTextView.setText(device.getDisplayString());
+      textView.setText(device.getDisplayString());
       // Icon
       Bitmap bitmap = device.getIcon();
       bitmap = (bitmap == null) ? castIcon : bitmap;
       bitmap = Bitmap.createScaledBitmap(bitmap, ICON_SIZE, ICON_SIZE, true);
-      upnpDeviceNameTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(
-        new BitmapDrawable(view.getResources(), bitmap), null, null, null);
+      textView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+        new BitmapDrawable(textView.getResources(), bitmap), null, null, null);
       // Selected item
-      upnpDeviceNameTextView.setTextColor(
-        (chosenUpnpDeviceIdentity != null) &&
-          chosenUpnpDeviceIdentity.equals(device.getUUID()) ?
+      textView.setTextColor(
+        (chosenUpnpDeviceIdentity != null) && chosenUpnpDeviceIdentity.equals(device.getUUID()) ?
           selectedColor : defaultColor);
-      // Wait
-      progressBar.setVisibility(view.isEnabled() ? View.INVISIBLE : View.VISIBLE);
     }
   }
 }

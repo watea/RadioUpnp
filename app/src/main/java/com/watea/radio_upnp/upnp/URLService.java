@@ -57,7 +57,7 @@ public class URLService {
     String encoding = uRLConnection.getContentEncoding();
     encoding = (encoding == null) ? "UTF-8" : encoding;
     content = IOUtils.toString(getInputStream(), encoding);
-    Log.d(LOG_TAG, "fetchContent: " + content);
+    Log.d(LOG_TAG, "fetchContent:\n" + content);
     return this;
   }
 

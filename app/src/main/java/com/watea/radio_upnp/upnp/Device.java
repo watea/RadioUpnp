@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashSet;
@@ -66,13 +67,17 @@ public class Device extends Asset {
   private static final String MODEL_NAME = "modelName";
   private static final String MODEL_NUMBER = "modelNumber";
   private static final String UDN = "UDN";
+  @NonNull
   private final SsdpService ssdpService;
+  @Nullable
+  private final Device superDevice;
   private final Set<Service> services = new HashSet<>();
   private final Set<Device> embeddedDevices = new HashSet<>();
   private final AtomicReference<Device> currentDevice = new AtomicReference<>();
   private String modelName = null;
   private String modelNumber = null;
   private String uUID = null;
+  private boolean isAlive = true;
   private boolean isEmbeddedDevices = false;
   private boolean isParseComplete;
   private final Callback isCompleteCallback = asset -> {
@@ -86,9 +91,25 @@ public class Device extends Asset {
     @NonNull Callback callback) throws IOException, XmlPullParserException {
     super(callback);
     this.ssdpService = ssdpService;
+    this.superDevice = null;
     // Fetch content
     // TODO: ajouter icon
     hydrate(new URLService(new URL(ssdpService.getLocation())));
+  }
+
+  // Embedded device
+  public Device(
+    @NonNull Device device) {
+    this.ssdpService = device.ssdpService;
+    this.superDevice = device;
+  }
+
+  public void setAlive(boolean alive) {
+    isAlive = alive;
+  }
+
+  public boolean isAlive() {
+    return isAlive;
   }
 
   @NonNull
@@ -120,15 +141,13 @@ public class Device extends Asset {
   }
 
   @Override
-  public void startAccept(@NonNull URLService urlService, @NonNull String currentTag)
-    throws XmlPullParserException, IOException {
+  public void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     switch (currentTag) {
       case DEVICE_LIST:
         isEmbeddedDevices = true;
         break;
       case XML_TAG:
-        currentDevice.set(
-          isEmbeddedDevices ? new Device(ssdpService, isCompleteCallback) : Device.this);
+        currentDevice.set(isEmbeddedDevices ? new Device(this) : this);
         break;
       default:
         // Nothing to do
@@ -142,17 +161,13 @@ public class Device extends Asset {
         isEmbeddedDevices = false;
         break;
       case MODEL_NAME:
-        modelName = urlService.getTag(MODEL_NAME);
+        currentDevice.get().modelName = urlService.getTag(MODEL_NAME);
         break;
       case MODEL_NUMBER:
-        modelNumber = urlService.getTag(MODEL_NUMBER);
+        currentDevice.get().modelNumber = urlService.getTag(MODEL_NUMBER);
         break;
       case UDN:
-        uUID = urlService.getTag(UDN);
-        // Extract UUID
-        if (uUID != null) {
-          uUID = uUID.replace("uuid:", "");
-        }
+        currentDevice.get().uUID = urlService.getTag(UDN);
         break;
       case Service.XML_TAG:
         final String serviceType = urlService.getTag(Service.SERVICE_TYPE);
@@ -206,6 +221,7 @@ public class Device extends Asset {
   public boolean isComplete() {
     return
       isParseComplete &&
+        !services.isEmpty() &&
         (services.stream().allMatch(Asset::isComplete) ||
           embeddedDevices.stream().allMatch(Asset::isComplete));
   }
@@ -225,8 +241,16 @@ public class Device extends Asset {
     return uUID;
   }
 
-  public boolean hasUUID(@NonNull String uUID) {
-    return uUID.equals(this.uUID);
+  public boolean hasRemoteInetAddress(@NonNull InetAddress inetAddress) {
+    return inetAddress.equals(ssdpService.getRemoteIp());
+  }
+
+  public boolean hasUUID(@Nullable String uUID) {
+    return (this.uUID != null) && this.uUID.equals(uUID);
+  }
+
+  public boolean hasUUID(@NonNull Device device) {
+    return hasUUID(device.uUID);
   }
 
   @Override
@@ -239,7 +263,7 @@ public class Device extends Asset {
 
   @NonNull
   public String getDisplayString() {
-    return modelName + ":" + modelNumber;
+    return modelName + ((modelNumber == null) ? "" : (": " + modelNumber));
   }
 
   public void searchIcon(@NonNull Runnable callback) {
