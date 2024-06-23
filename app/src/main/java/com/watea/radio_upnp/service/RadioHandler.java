@@ -43,7 +43,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -124,17 +123,25 @@ public class RadioHandler implements NanoHttpServer.Handler {
       final HttpURLConnection httpURLConnection =
         new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
       Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
-      // Process with autocloseable feature
       final boolean isHls = HlsHandler.isHls(httpURLConnection);
-      hlsHandler = isHls ? new HlsHandler(httpURLConnection, this::setHeader) : null;
+      // Reset rate
+      final String directRate = httpURLConnection.getHeaderField("icy-br");
+      listener.onNewRate((isHls || (directRate == null)) ? "" : directRate, lockKey);
+      // Build hlsHandler
+      hlsHandler = isHls ?
+        new HlsHandler(
+          httpURLConnection,
+          this::setHeader,
+          rate ->
+            listener.onNewRate((rate == null) ? "" : rate.substring(0, rate.length() - 3), lockKey))
+        : null;
       final ConnectionHandler connectionHandler = isHls ?
         new HlsConnectionHandler(
-          hlsHandler::getRate,
           httpURLConnection,
           isGet,
           hlsHandler.getInputStream(),
           lockKey) :
-        new RegularConnectionHandler(
+        new ConnectionHandler(
           httpURLConnection,
           isGet,
           httpURLConnection.getInputStream(),
@@ -154,9 +161,6 @@ public class RadioHandler implements NanoHttpServer.Handler {
         response.addHeader("contentFeatures.dlna.org", "*");
         response.addHeader("transferMode.dlna.org", "Streaming");
       }
-      // Update rate
-      // TODO doit etre asynchrone pour HlsHandler
-      listener.onNewRate(connectionHandler.getRate(), lockKey);
       return response;
     } catch (Exception exception) {
       Log.d(LOG_TAG, "handle: unable to build response", exception);
@@ -195,90 +199,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
     }
   }
 
-  // ICY data are not processed
-  private class HlsConnectionHandler extends ConnectionHandler {
-    @NonNull
-    private final Supplier<String> rateSupplier;
-
-    private HlsConnectionHandler(
-      @NonNull Supplier<String> rateSupplier,
-      @NonNull HttpURLConnection httpURLConnection,
-      boolean isGet,
-      @NonNull InputStream inputStream,
-      @NonNull String lockKey) {
-      super(httpURLConnection, isGet, inputStream, lockKey);
-      this.rateSupplier = rateSupplier;
-    }
-
-    @NonNull
-    @Override
-    protected String getRate() {
-      final String rate = rateSupplier.get();
-      return (rate == null) ? super.getRate() : rate.substring(0, rate.length() - 3);
-    }
-  }
-
-  private class RegularConnectionHandler extends ConnectionHandler {
-    RegularConnectionHandler(
-      @NonNull HttpURLConnection httpURLConnection,
-      boolean isGet,
-      @NonNull InputStream inputStream,
-      @NonNull String lockKey) {
-      super(httpURLConnection, isGet, inputStream, lockKey);
-    }
-
-    @NonNull
-    @Override
-    protected String getRate() {
-      final String rate = httpURLConnection.getHeaderField("icy-br");
-      return (rate == null) ? super.getRate() : rate;
-    }
-
-    @Override
-    protected void onLANConnection(@NonNull NanoHTTPD.Response response) {
-      // Forward headers
-      for (String header : httpURLConnection.getHeaderFields().keySet()) {
-        // ICY data not forwarded, as only used here
-        if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
-          final String value = httpURLConnection.getHeaderField(header);
-          if (value != null) {
-            response.addHeader(header, value);
-          }
-        }
-      }
-    }
-
-    @NonNull
-    @Override
-    protected Charset getCharset() {
-      // Try to find charset
-      final String contentEncoding = httpURLConnection.getContentEncoding();
-      return (contentEncoding == null) ? super.getCharset() : Charset.forName(contentEncoding);
-    }
-
-    @Override
-    protected int getMetadataOffset() {
-      // Try to find metadataOffset
-      final int metadataOffset;
-      final List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
-      try {
-        metadataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
-      } catch (NumberFormatException numberFormatException) {
-        Log.w(LOG_TAG, "Malformed header icy-metaint, no metadata expected");
-        return super.getMetadataOffset();
-      }
-      if (metadataOffset > 0) {
-        Log.i(LOG_TAG, "Metadata expected at index: " + metadataOffset);
-      } else if (metadataOffset == 0) {
-        Log.i(LOG_TAG, "No metadata expected");
-      } else {
-        Log.w(LOG_TAG, "Wrong metadata value");
-      }
-      return Math.max(metadataOffset, super.getMetadataOffset());
-    }
-  }
-
-  private abstract class ConnectionHandler {
+  private class ConnectionHandler {
     @NonNull
     final HttpURLConnection httpURLConnection;
     final boolean isGet;
@@ -370,19 +291,69 @@ public class RadioHandler implements NanoHttpServer.Handler {
       };
     }
 
-    @NonNull
-    protected String getRate() {
-      return "";
+    protected void onLANConnection(@NonNull NanoHTTPD.Response response) {
+      // Forward headers
+      for (String header : httpURLConnection.getHeaderFields().keySet()) {
+        // ICY data not forwarded, as only used here
+        if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
+          final String value = httpURLConnection.getHeaderField(header);
+          if (value != null) {
+            response.addHeader(header, value);
+          }
+        }
+      }
     }
 
+    @NonNull
+    protected Charset getCharset() {
+      // Try to find charset
+      final String contentEncoding = httpURLConnection.getContentEncoding();
+      return (contentEncoding == null) ?
+        Charset.defaultCharset() : Charset.forName(contentEncoding);
+    }
+
+    protected int getMetadataOffset() {
+      // Try to find metadataOffset
+      final int metadataOffset;
+      final List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
+      try {
+        metadataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
+      } catch (NumberFormatException numberFormatException) {
+        Log.w(LOG_TAG, "Malformed header icy-metaint, no metadata expected");
+        return 0;
+      }
+      if (metadataOffset > 0) {
+        Log.i(LOG_TAG, "Metadata expected at index: " + metadataOffset);
+      } else if (metadataOffset == 0) {
+        Log.i(LOG_TAG, "No metadata expected");
+      } else {
+        Log.w(LOG_TAG, "Wrong metadata value");
+      }
+      return Math.max(metadataOffset, 0);
+    }
+  }
+
+  // ICY data are not processed
+  private class HlsConnectionHandler extends ConnectionHandler {
+    private HlsConnectionHandler(
+      @NonNull HttpURLConnection httpURLConnection,
+      boolean isGet,
+      @NonNull InputStream inputStream,
+      @NonNull String lockKey) {
+      super(httpURLConnection, isGet, inputStream, lockKey);
+    }
+
+    @Override
     protected void onLANConnection(@NonNull NanoHTTPD.Response response) {
     }
 
+    @Override
     @NonNull
     protected Charset getCharset() {
       return Charset.defaultCharset();
     }
 
+    @Override
     protected int getMetadataOffset() {
       return 0;
     }

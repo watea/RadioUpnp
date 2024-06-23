@@ -91,6 +91,8 @@ public class HlsHandler {
   @NonNull
   private final Consumer<URLConnection> headerSetter;
   @NonNull
+  private final Consumer<String> rateListener;
+  @NonNull
   private final List<URI> actualSegmentURIs = new Vector<>();
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   private int targetDuration = CONNECT_DEFAULT_PAUSE; // ms
@@ -130,15 +132,15 @@ public class HlsHandler {
       }
     }
   };
-  @Nullable
-  private String rate = null;
 
   public HlsHandler(
     @NonNull HttpURLConnection httpURLConnection,
-    @NonNull Consumer<URLConnection> headerSetter)
+    @NonNull Consumer<URLConnection> headerSetter,
+    @NonNull Consumer<String> rateListener)
     throws IOException, URISyntaxException {
     this.httpURLConnection = httpURLConnection;
     this.headerSetter = headerSetter;
+    this.rateListener = rateListener;
     // Fetch first segments URI
     fetchSegmentsURI();
   }
@@ -151,12 +153,6 @@ public class HlsHandler {
   // Must be called on release
   public void release() {
     executor.shutdown();
-  }
-
-  // rate in b/s
-  @Nullable
-  public String getRate() {
-    return rate;
   }
 
   // Only InputStream.read(byte[] b) and InputStream.close() method shall be used.
@@ -181,7 +177,7 @@ public class HlsHandler {
     processURLConnection(
       httpURLConnection,
       testIf(STREAM_INF, (line1, line2) -> {
-        rate = findStringFor(BANDWITH, line1);
+        rateListener.accept(findStringFor(BANDWITH, line1)); // Rate in b/s
         segmentsURI = new URI(line2);
         actualSegmentsURI = httpURLConnection.getURL().toURI().resolve(segmentsURI);
         return true;
