@@ -155,10 +155,14 @@ public class RadioHandler implements NanoHttpServer.Handler {
         response.addHeader("transferMode.dlna.org", "Streaming");
       }
       // Update rate
+      // TODO doit etre asynchrone pour HlsHandler
       listener.onNewRate(connectionHandler.getRate(), lockKey);
       return response;
     } catch (Exception exception) {
       Log.d(LOG_TAG, "handle: unable to build response", exception);
+      if (hlsHandler != null) {
+        hlsHandler.release();
+      }
     }
     return null;
   }
