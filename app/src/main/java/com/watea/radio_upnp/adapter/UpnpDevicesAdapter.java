@@ -126,6 +126,16 @@ public class UpnpDevicesAdapter
     handler.post(() -> device.getEmbeddedDevices().forEach(this::remove));
   }
 
+  @Override
+  public void onIcon(@NonNull Device device) {
+    if (devices.contains(device)) {
+      notifyItemChanged(devices.indexOf(device));
+      if (device == getChosenDevice()) {
+        tellChosenDevice();
+      }
+    }
+  }
+
   public void removeChosenUpnpDevice() {
     setChosenUpnpDevice(null);
   }
@@ -178,15 +188,6 @@ public class UpnpDevicesAdapter
     devices.add(device);
     listener.onCountChange(false);
     notifyItemInserted(devices.indexOf(device));
-    // Wait for icon (searched asynchronously)
-    device.searchIcon(() -> {
-      if (devices.contains(device)) {
-        notifyItemChanged(devices.indexOf(device));
-        if (device == getChosenDevice()) {
-          tellChosenDevice();
-        }
-      }
-    });
   }
 
   private void remove(@NonNull Device device) {

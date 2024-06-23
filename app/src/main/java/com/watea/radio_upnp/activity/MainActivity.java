@@ -411,7 +411,7 @@ public class MainActivity
         public void onRowClick(@NonNull Device device, boolean isChosen) {
           if (isChosen) {
             startReading(null);
-            tell(getResources().getString(R.string.dlna_selection) + device);
+            tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
           } else {
             tell(R.string.no_dlna_selection);
           }

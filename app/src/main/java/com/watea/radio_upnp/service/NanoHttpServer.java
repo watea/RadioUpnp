@@ -24,10 +24,13 @@ public class NanoHttpServer extends NanoHTTPD {
   private final RadioHandler radioHandler;
   private final ResourceHandler resourceHandler;
 
-  public NanoHttpServer(@NonNull Context context) {
+  public NanoHttpServer(
+    @NonNull Context context,
+    @NonNull RadioHandler.Listener radioHandlerListener) {
     super(0);
     this.context = context;
-    radioHandler = new RadioHandler(this.context.getString(R.string.app_name));
+    radioHandler =
+      new RadioHandler(this.context.getString(R.string.app_name), radioHandlerListener);
     // RadioHandler
     handlers.add(radioHandler);
     // ResourceHandler

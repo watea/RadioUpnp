@@ -35,22 +35,15 @@ import org.ksoap2.SoapFault;
 import org.ksoap2.serialization.SoapPrimitive;
 
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
 public class ActionController {
-  @NonNull
-  private final AndroidUpnpService androidUpnpService;
   private final Map<Radio, String> contentTypes = new Hashtable<>();
   private final Map<Device, List<String>> protocolInfos = new Hashtable<>();
   private final List<UpnpAction> upnpActions = new Vector<>();
-
-  public ActionController(@NonNull AndroidUpnpService androidUpnpService) {
-    this.androidUpnpService = androidUpnpService;
-  }
 
   @Nullable
   public String getContentType(@NonNull Radio radio) {
@@ -105,6 +98,7 @@ public class ActionController {
 
   public abstract class UpnpAction {
     private final String LOG_TAG = UpnpAction.class.getName();
+    @NonNull
     private final Action action;
     private final Map<String, String> arguments = new Hashtable<>();
 

@@ -52,7 +52,7 @@ public class Service extends Asset {
     @NonNull String serviceId,
     @NonNull String descriptionURL,
     @NonNull String controlURL,
-    @NonNull Device.Callback callback)
+    @NonNull Callback callback)
     throws IOException, XmlPullParserException, URISyntaxException {
     super(callback);
     this.device = device;

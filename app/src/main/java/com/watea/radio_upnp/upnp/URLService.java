@@ -24,6 +24,7 @@ import java.util.Map;
 
 public class URLService {
   private static final String LOG_TAG = URLService.class.getName();
+  @NonNull
   final URLConnection uRLConnection;
   private final Map<String, String> tags = new Hashtable<>();
   @Nullable
@@ -62,7 +63,7 @@ public class URLService {
   }
 
   // Calls consumer on START_TAG, END_TAG.
-  // XML contents may be handeld with getTag, clearTags
+  // XML contents may be handeld with getTag, clearTags.
   public void parseXml(@NonNull Consumer consumer) throws XmlPullParserException, IOException {
     final XmlPullParserFactory xmlPullParserFactory = XmlPullParserFactory.newInstance();
     xmlPullParserFactory.setNamespaceAware(true);
@@ -97,17 +98,12 @@ public class URLService {
     return uRLConnection.getURL();
   }
 
-
   private InputStream getInputStream() throws IOException {
     return uRLConnection.getInputStream();
   }
 
-  /**
-   * @noinspection unused
-   */
   public interface Consumer {
-    default void startAccept(@NonNull URLService uRLService, @NonNull String currentTag)
-      throws XmlPullParserException, IOException {
+    default void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     }
 
     default void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {

@@ -9,7 +9,7 @@ import androidx.annotation.Nullable;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
-import java.net.InetAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashSet;
@@ -67,6 +67,10 @@ public class Device extends Asset {
   private static final String MODEL_NAME = "modelName";
   private static final String MODEL_NUMBER = "modelNumber";
   private static final String UDN = "UDN";
+  private static final String ICON = "icon";
+  private static final String WIDTH = "width";
+  private static final String HEIGHT = "height";
+  private static final String URL = "url";
   @NonNull
   private final SsdpService ssdpService;
   @Nullable
@@ -74,17 +78,24 @@ public class Device extends Asset {
   private final Set<Service> services = new HashSet<>();
   private final Set<Device> embeddedDevices = new HashSet<>();
   private final AtomicReference<Device> currentDevice = new AtomicReference<>();
+  @NonNull
+  private final URL location;
+  @Nullable
   private String modelName = null;
+  @Nullable
   private String modelNumber = null;
+  @Nullable
   private String uUID = null;
   private boolean isAlive = true;
   private boolean isEmbeddedDevices = false;
   private boolean isParseComplete;
-  private final Callback isCompleteCallback = asset -> {
+  private final Asset.Callback isCompleteCallback = asset -> {
     if (isComplete()) {
       callback.onComplete(this);
     }
   };
+  @Nullable
+  private Bitmap icon = null;
 
   public Device(
     @NonNull SsdpService ssdpService,
@@ -92,9 +103,8 @@ public class Device extends Asset {
     super(callback);
     this.ssdpService = ssdpService;
     this.superDevice = null;
-    // Fetch content
-    // TODO: ajouter icon
-    hydrate(new URLService(new URL(ssdpService.getLocation())));
+    location = new URL(ssdpService.getLocation());
+    hydrate(new URLService(location));
   }
 
   // Embedded device
@@ -102,14 +112,19 @@ public class Device extends Asset {
     @NonNull Device device) {
     this.ssdpService = device.ssdpService;
     this.superDevice = device;
+    this.location = device.location;
+  }
+
+  public boolean isAlive() {
+    return isAlive;
   }
 
   public void setAlive(boolean alive) {
     isAlive = alive;
   }
 
-  public boolean isAlive() {
-    return isAlive;
+  public boolean isEmbeddedDevice() {
+    return (superDevice != null);
   }
 
   @NonNull
@@ -198,6 +213,22 @@ public class Device extends Asset {
           }
         }
         break;
+      case ICON:
+        final String stringWidth = urlService.getTag(WIDTH);
+        final String stringHeigth = urlService.getTag(HEIGHT);
+        final String stringUrl = urlService.getTag(URL);
+        if ((stringWidth != null) && (stringHeigth != null) && (stringUrl != null)) {
+          final int width = Integer.parseInt(stringWidth);
+          final int height = Integer.parseInt(stringHeigth);
+          if ((icon == null) || (icon.getWidth() < width) && (icon.getHeight() < height)) {
+            try {
+              fetchIcon(new URI(stringUrl));
+            } catch (Exception exception) {
+              Log.d(LOG_TAG, "endAccept: fail to fetch icon", exception);
+            }
+          }
+        }
+        break;
       case XML_TAG:
         final Device device = currentDevice.get();
         // Embedded device?
@@ -232,17 +263,8 @@ public class Device extends Asset {
   }
 
   @Nullable
-  public String getSerialNumber() {
-    return ssdpService.getSerialNumber();
-  }
-
-  @Nullable
   public String getUUID() {
     return uUID;
-  }
-
-  public boolean hasRemoteInetAddress(@NonNull InetAddress inetAddress) {
-    return inetAddress.equals(ssdpService.getRemoteIp());
   }
 
   public boolean hasUUID(@Nullable String uUID) {
@@ -256,7 +278,7 @@ public class Device extends Asset {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if ((o == null) || (getClass() != o.getClass())) return false;
     final Device that = (Device) o;
     return ssdpService.equals(that.getSsdpService());
   }
@@ -266,13 +288,19 @@ public class Device extends Asset {
     return modelName + ((modelNumber == null) ? "" : (": " + modelNumber));
   }
 
-  public void searchIcon(@NonNull Runnable callback) {
-    //TODO
-  }
-
   @Nullable
   public Bitmap getIcon() {
-    //TODO
-    return null;
+    return icon;
+  }
+
+  private void fetchIcon(@NonNull URI uRI) throws IOException, URISyntaxException {
+    icon = new URLService(location, uRI).getBitmap();
+    if (icon != null) {
+      ((Device.Callback) callback).onIcon(this);
+    }
+  }
+
+  public interface Callback extends Asset.Callback {
+    void onIcon(@NonNull Device device);
   }
 }

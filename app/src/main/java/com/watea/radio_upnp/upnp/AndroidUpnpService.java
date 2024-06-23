@@ -41,24 +41,32 @@ public class AndroidUpnpService extends android.app.Service {
   private final Set<Device> devices = new CopyOnWriteArraySet<>();
   private final Set<Listener> listeners = new HashSet<>();
   private final DiscoveryListener discoveryListener = new DiscoveryListener() {
+    private final Device.Callback deviceCallback = new Device.Callback() {
+      @Override
+      public void onIcon(@NonNull Device device) {
+        listeners.forEach(listener -> listener.onIcon(device));
+      }
+
+      @Override
+      public void onComplete(@NonNull Asset asset) {
+        final Device device = (Device) asset;
+        final String displayString = device.getDisplayString();
+        Log.d(LOG_TAG, "Device found: " + displayString);
+        // Reject if already known
+        if (devices.stream().noneMatch(device::hasUUID)) {
+          Log.d(LOG_TAG, "Device added: " + displayString);
+          devices.add(device);
+          listeners.forEach(listener -> listener.onDeviceAdd(device));
+        }
+      }
+    };
+
     public void onServiceDiscovered(SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
       Log.d(LOG_TAG, "Found SsdpService: " + service.getServiceType());
       Log.d(LOG_TAG, "Found SsdpService: " + service.getOriginalResponse().toString());
       try {
-        // Callback adds device when fully hydrated
-        // TODO sauf les icones??
-        new Device(service, asset -> {
-          final Device device = (Device) asset;
-          final String displayString = device.getDisplayString();
-          Log.d(LOG_TAG, "Device found: " + displayString);
-          // Reject if already known
-          if (devices.stream().noneMatch(device::hasUUID)) {
-            Log.d(LOG_TAG, "Device added: " + displayString);
-            devices.add(device);
-            listeners.forEach(listener -> listener.onDeviceAdd(device));
-          }
-        });
+        new Device(service, deviceCallback);
       } catch (IOException | XmlPullParserException exception) {
         Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
       }
@@ -109,14 +117,12 @@ public class AndroidUpnpService extends android.app.Service {
     return binder;
   }
 
-  public void searchAll() {
-    ssdpClient.discoverServices(discoverMediaRenderer, discoveryListener);
-  }
-
   public interface Listener {
     void onDeviceAdd(@NonNull Device device);
 
     void onDeviceRemove(@NonNull Device device);
+
+    void onIcon(@NonNull Device device);
   }
 
   public class UpnpService extends android.os.Binder {

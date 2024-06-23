@@ -82,13 +82,22 @@ public class RadioService
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
+  private final ActionController actionController = new ActionController();
   private NotificationManagerCompat notificationManager;
-  private ActionController actionController = null;
   private Radio radio = null;
   private MediaSessionCompat session;
   private Radios radios;
   private NanoHttpServer nanoHttpServer;
   private PlayerAdapter playerAdapter = null;
+  private final VolumeProviderCompat volumeProviderCompat =
+    new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
+      @Override
+      public void onAdjustVolume(int direction) {
+        if (playerAdapter != null) {
+          playerAdapter.adjustVolume(direction);
+        }
+      }
+    };
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
@@ -101,15 +110,6 @@ public class RadioService
       upnpService = null;
     }
   };
-  private final VolumeProviderCompat volumeProviderCompat =
-    new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
-      @Override
-      public void onAdjustVolume(int direction) {
-        if (playerAdapter != null) {
-          playerAdapter.adjustVolume(direction);
-        }
-      }
-    };
   private boolean isAllowedToRewind = false;
   private String lockKey = null;
   private NotificationCompat.Action actionPause;
@@ -144,7 +144,7 @@ public class RadioService
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Launch HTTP server
-    nanoHttpServer = new NanoHttpServer(this);
+    nanoHttpServer = new NanoHttpServer(this, this);
     try {
       nanoHttpServer.start();
     } catch (IOException iOException) {
@@ -456,9 +456,7 @@ public class RadioService
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Ensure robustness
-      if (actionController != null) {
-        actionController.release(true);
-      }
+      actionController.release(true);
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
         playerAdapter.stop();
@@ -480,7 +478,7 @@ public class RadioService
       final Uri serverUri = nanoHttpServer.getUri();
       // UPnP not accepted if environment not OK: force STOP
       if ((identity != null) &&
-        ((chosenDevice == null) || (actionController == null) || (serverUri == null))) {
+        ((chosenDevice == null) || (serverUri == null))) {
         abort("onPrepareFromMediaId: can't process UPnP device");
         return;
       }

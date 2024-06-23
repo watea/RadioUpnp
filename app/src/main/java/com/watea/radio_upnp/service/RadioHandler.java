@@ -58,18 +58,19 @@ public class RadioHandler implements NanoHttpServer.Handler {
   private static final String SEPARATOR = "_";
   private static final Controller DEFAULT_CONTROLLER = new Controller() {
   };
-  private static final Listener DEFAULT_LISTENER = new Listener() {
-  };
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
   @NonNull
-  private Listener listener = DEFAULT_LISTENER;
+  private final Listener listener;
   @NonNull
   private Controller controller = DEFAULT_CONTROLLER;
+  @Nullable
+  private HlsHandler hlsHandler;
 
-  public RadioHandler(@NonNull String userAgent) {
+  public RadioHandler(@NonNull String userAgent, @NonNull Listener listener) {
     this.userAgent = userAgent;
+    this.listener = listener;
   }
 
   // Add ID and lock key to given URI as query parameter.
@@ -95,11 +96,10 @@ public class RadioHandler implements NanoHttpServer.Handler {
 
   @Override
   public NanoHTTPD.Response handle(@NonNull NanoHTTPD.IHTTPSession iHTTPSession) {
-    Log.d(LOG_TAG, "handle");
     final NanoHTTPD.Method method = iHTTPSession.getMethod();
     final Map<String, String> params = iHTTPSession.getParms();
     if ((method == null) || (params == null)) {
-      Log.d(LOG_TAG, "Unexpected request received: parameters are null");
+      Log.d(LOG_TAG, "handle: unexpected request received: parameters are null");
       return null;
     }
     // Request must contain a query with radio ID and lock key
@@ -110,85 +110,57 @@ public class RadioHandler implements NanoHttpServer.Handler {
     final String radioId = (stringsParams.length > 0) ? stringsParams[0] : null;
     final String lockKey = (stringsParams.length > 1) ? stringsParams[1] : null;
     if ((radioId == null) || (lockKey == null)) {
+      Log.d(LOG_TAG, "handle: unexpected request received: radio parameters are null");
       return null;
-    } else {
-      final Radio radio = MainActivity.getRadios().getRadioFrom(radioId);
-      if (radio == null) {
-        Log.d(LOG_TAG, "Unknown radio");
-        return null;
-      } else {
-        HlsHandler hlsHandler = null;
-        final boolean isGet = (method == NanoHTTPD.Method.GET);
-
-        try {
-
-          // Create WAN connection
-          final HttpURLConnection httpURLConnection =
-            new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
-          Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
-          // Process with autocloseable feature
-          final boolean isHls = HlsHandler.isHls(httpURLConnection);
-          ConnectionHandler connectionHandler;
-          if (isHls) {
-            hlsHandler = new HlsHandler(httpURLConnection, this::setHeader);
-            try (final InputStream inputStream = hlsHandler.getInputStream()) {
-              connectionHandler = new HlsConnectionHandler(
-                hlsHandler::getRate,
-                httpURLConnection,
-                isGet,
-                inputStream,
-                lockKey);
-            }
-          } else {
-            try (final InputStream inputStream = httpURLConnection.getInputStream()) {
-              connectionHandler = new RegularConnectionHandler(
-                httpURLConnection,
-                isGet,
-                inputStream,
-                lockKey);
-            }
-          }
-          final NanoHTTPD.Response response = NanoHTTPD.newChunkedResponse(
-            NanoHTTPD.Response.Status.OK,
-            // Force ContentType as some UPnP devices require it
-            controller.getContentType().isEmpty() ?
-              httpURLConnection.getContentType() : controller.getContentType(),
-            connectionHandler.getInputStream());
-          // Update rate
-          listener.onNewRate(connectionHandler.getRate(), lockKey);
-          // Response to LAN
-          connectionHandler.onLANConnection(response);
-          final String contentType = controller.getContentType();
-          // contentType defined only for UPnP
-          if (!contentType.isEmpty()) {
-            // DLNA header, as found in documentation, not sure it is useful (should not)
-            response.addHeader("contentFeatures.dlna.org", "*");
-            response.addHeader("transferMode.dlna.org", "Streaming");
-          }
-          Log.d(LOG_TAG, "Leaving normally");
-          return response;
-        } catch (Exception exception) {
-          Log.d(LOG_TAG, "Connection to radio interrupted", exception);
-        } finally {
-          if (hlsHandler != null) {
-            hlsHandler.release();
-          }
-        }
-      }
     }
-    Log.d(LOG_TAG, "handle: leaving not normally");
+    final Radio radio = MainActivity.getRadios().getRadioFrom(radioId);
+    if (radio == null) {
+      Log.d(LOG_TAG, "handle: unknown radio");
+      return null;
+    }
+    final boolean isGet = (method == NanoHTTPD.Method.GET);
+    try {
+      // Create WAN connection
+      final HttpURLConnection httpURLConnection =
+        new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
+      Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
+      // Process with autocloseable feature
+      final boolean isHls = HlsHandler.isHls(httpURLConnection);
+      hlsHandler = isHls ? new HlsHandler(httpURLConnection, this::setHeader) : null;
+      final ConnectionHandler connectionHandler = isHls ?
+        new HlsConnectionHandler(
+          hlsHandler::getRate,
+          httpURLConnection,
+          isGet,
+          hlsHandler.getInputStream(),
+          lockKey) :
+        new RegularConnectionHandler(
+          httpURLConnection,
+          isGet,
+          httpURLConnection.getInputStream(),
+          lockKey);
+      // Build response
+      final NanoHTTPD.Response response = NanoHTTPD.newChunkedResponse(
+        NanoHTTPD.Response.Status.OK,
+        // Force ContentType as some UPnP devices require it
+        controller.getContentType().isEmpty() ?
+          httpURLConnection.getContentType() : controller.getContentType(),
+        connectionHandler.getInputStream());
+      connectionHandler.onLANConnection(response);
+      final String contentType = controller.getContentType();
+      // contentType defined only for UPnP
+      if (!contentType.isEmpty()) {
+        // DLNA header, as found in documentation, not sure it is useful (should not)
+        response.addHeader("contentFeatures.dlna.org", "*");
+        response.addHeader("transferMode.dlna.org", "Streaming");
+      }
+      // Update rate
+      listener.onNewRate(connectionHandler.getRate(), lockKey);
+      return response;
+    } catch (Exception exception) {
+      Log.d(LOG_TAG, "handle: unable to build response", exception);
+    }
     return null;
-  }
-
-  // Must be called
-  public void bind(@NonNull Listener listener) {
-    this.listener = listener;
-  }
-
-  // Must be called to close
-  public void unBind() {
-    resetController();
-    listener = DEFAULT_LISTENER;
   }
 
   private void setHeader(@NonNull URLConnection urlConnection) {
@@ -335,7 +307,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
         @Override
         public int read() throws IOException {
           if (isGet) {
-            while (true/*lockKey.equals(controller.getKey())*/ && (inputStream.read(buffer) > 0)) {
+            while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
               // Only stream data are transferred
               if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
                 return buffer[0] & 0xFF;
@@ -381,6 +353,15 @@ public class RadioHandler implements NanoHttpServer.Handler {
           }
           // Done!
           return -1;
+        }
+
+        @Override
+        public void close() throws IOException {
+          super.close();
+          inputStream.close();
+          if (hlsHandler != null) {
+            hlsHandler.release();
+          }
         }
       };
     }
