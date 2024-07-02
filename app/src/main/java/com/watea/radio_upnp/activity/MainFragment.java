@@ -143,8 +143,8 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> wifiTest(() -> {
-        getMainActivity().onUpnp();
-        dlnaEnableUserHint.show();
+      getMainActivity().onUpnp();
+      dlnaEnableUserHint.show();
     });
   }
 

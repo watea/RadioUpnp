@@ -27,9 +27,9 @@ import fi.iki.elonen.NanoHTTPD;
 
 public class CopyHandler implements NanoHttpServer.Handler {
   private static final int TIMEOUT_RECEPTION_REPONSE = 10;
-  private final Context context;
   private static final String ROOT = "/"; // Répertoire racine
   private static final String PATH = "/"; // Chemin vers le fichier image
+  private final Context context;
 
   public CopyHandler(@NonNull Context context) {
     this.context = context;
@@ -49,6 +49,25 @@ public class CopyHandler implements NanoHttpServer.Handler {
       e.printStackTrace();
     }
     return null;
+  }
+
+  @Override
+  public NanoHTTPD.Response handle(@NonNull NanoHTTPD.IHTTPSession iHTTPSession) {
+    // Récupérer le chemin du fichier demandé
+    String uri = iHTTPSession.getUri();
+    // Remplacer "/monfichier.html" par le chemin réel de votre fichier
+    String cheminFichier = "/monfichier.html";
+
+    if (uri.equals(cheminFichier)) {
+      // L'utilisateur demande le fichier spécifié
+      // Vous pouvez lire le contenu du fichier et le renvoyer ici
+      // Exemple : lire le contenu du fichier monfichier.html
+      String contenuFichier = "Contenu du fichier monfichier.html";
+      return newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/html", contenuFichier);
+    } else {
+      // Fichier non trouvé
+      return newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "text/plain", "Fichier non trouvé");
+    }
   }
 
   private InetAddress getAddressBroadcast(@NonNull Context context) throws UnknownHostException {
@@ -82,24 +101,5 @@ public class CopyHandler implements NanoHttpServer.Handler {
     socket.close();
 
     return packet;
-  }
-
-  @Override
-  public NanoHTTPD.Response handle(@NonNull NanoHTTPD.IHTTPSession iHTTPSession) {
-    // Récupérer le chemin du fichier demandé
-    String uri = iHTTPSession.getUri();
-    // Remplacer "/monfichier.html" par le chemin réel de votre fichier
-    String cheminFichier = "/monfichier.html";
-
-    if (uri.equals(cheminFichier)) {
-      // L'utilisateur demande le fichier spécifié
-      // Vous pouvez lire le contenu du fichier et le renvoyer ici
-      // Exemple : lire le contenu du fichier monfichier.html
-      String contenuFichier = "Contenu du fichier monfichier.html";
-      return newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/html", contenuFichier);
-    } else {
-      // Fichier non trouvé
-      return newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "text/plain", "Fichier non trouvé");
-    }
   }
 }

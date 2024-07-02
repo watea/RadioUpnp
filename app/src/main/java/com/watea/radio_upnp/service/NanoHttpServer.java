@@ -2,7 +2,6 @@ package com.watea.radio_upnp.service;
 
 import android.content.Context;
 import android.net.Uri;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,12 +26,6 @@ public class NanoHttpServer extends NanoHTTPD {
   @NonNull
   private final ResourceHandler resourceHandler = new ResourceHandler();
 
-  private static int findFreePort() throws IOException {
-    try (ServerSocket socket = new ServerSocket(0)) {
-      return socket.getLocalPort();
-    }
-  }
-
   public NanoHttpServer(
     @NonNull Context context,
     @NonNull RadioHandler.Listener radioHandlerListener) throws IOException {
@@ -42,6 +35,12 @@ public class NanoHttpServer extends NanoHTTPD {
       new RadioHandler(this.context.getString(R.string.app_name), radioHandlerListener);
     handlers.add(radioHandler);
     handlers.add(resourceHandler);
+  }
+
+  private static int findFreePort() throws IOException {
+    try (ServerSocket socket = new ServerSocket(0)) {
+      return socket.getLocalPort();
+    }
   }
 
   // First non null response is taken

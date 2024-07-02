@@ -41,8 +41,7 @@ public class ResourceHandler implements NanoHttpServer.Handler {
   // Creates bitmap, returns name of target
   @Nullable
   public String createLogoFile(@NonNull Radio radio) {
-    uri = LOGO_FILE + radio.getId() + ".jpg";
     bitmap = Bitmap.createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
-    return uri;
+    return uri = LOGO_FILE + radio.getId() + ".jpg";
   }
 }
