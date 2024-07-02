@@ -51,10 +51,7 @@ import fi.iki.elonen.NanoHTTPD;
 public class RadioHandler implements NanoHttpServer.Handler {
   private static final String LOG_TAG = RadioHandler.class.getName();
   private static final int METADATA_MAX = 256;
-  private static final String PARAMS = "params";
   private static final String KEY = "key";
-  private static final String RADIO_ID = "radio_id";
-  private static final String SEPARATOR = "_";
   private static final Controller DEFAULT_CONTROLLER = new Controller() {
   };
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
@@ -72,15 +69,14 @@ public class RadioHandler implements NanoHttpServer.Handler {
     this.listener = listener;
   }
 
-  // Add ID and lock key to given URI as query parameter.
-  // Don't use several query parameters to avoid encoding troubles.
-  // TODO: à revoir
+  // Add ID and lock key to given URI as query parameter
+  // TODO: essayer appendParam en positionnant l'encoding correctement
   @NonNull
   public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
       .buildUpon()
-      .appendEncodedPath(RadioHandler.class.getSimpleName() + SEPARATOR + radio.hashCode())
-      .appendQueryParameter(PARAMS, radio.getId() + SEPARATOR + lockKey)
+      .appendEncodedPath(radio.getId())
+      .appendQueryParameter(KEY, lockKey)
       .build();
   }
 
@@ -96,23 +92,19 @@ public class RadioHandler implements NanoHttpServer.Handler {
   @Override
   public NanoHTTPD.Response handle(@NonNull NanoHTTPD.IHTTPSession iHTTPSession) {
     final NanoHTTPD.Method method = iHTTPSession.getMethod();
+    final String uri = iHTTPSession.getUri();
     final Map<String, String> params = iHTTPSession.getParms();
-    if ((method == null) || (params == null)) {
+    if ((method == null) || (uri == null) || (params == null)) {
       Log.d(LOG_TAG, "handle: unexpected request received: parameters are null");
       return null;
     }
     // Request must contain a query with radio ID and lock key
-    // TODO: essayer avec params
-    final String stringParams = params.get(PARAMS);
-    final String[] stringsParams = (stringParams == null) ?
-      new String[0] : stringParams.split(SEPARATOR);
-    final String radioId = (stringsParams.length > 0) ? stringsParams[0] : null;
-    final String lockKey = (stringsParams.length > 1) ? stringsParams[1] : null;
-    if ((radioId == null) || (lockKey == null)) {
-      Log.d(LOG_TAG, "handle: unexpected request received: radio parameters are null");
+    final String lockKey = params.get(KEY);
+    if (lockKey == null) {
+      Log.d(LOG_TAG, "handle: unexpected request received: lockKey is null");
       return null;
     }
-    final Radio radio = MainActivity.getRadios().getRadioFrom(radioId);
+    final Radio radio = MainActivity.getRadios().getRadioFrom(uri.replace("/", ""));
     if (radio == null) {
       Log.d(LOG_TAG, "handle: unknown radio");
       return null;

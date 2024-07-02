@@ -35,9 +35,10 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.upnp.Action;
-import com.watea.radio_upnp.upnp.ActionController;
+import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Service;
+import com.watea.radio_upnp.upnp.UpnpAction;
 import com.watea.radio_upnp.upnp.Watchdog;
 
 import org.ksoap2.serialization.SoapPrimitive;
@@ -70,7 +71,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private final Device device;
   @NonNull
-  private final ActionController actionController;
+  private final AndroidUpnpService.ActionController actionController;
   @Nullable
   private final Uri logoUri;
   @NonNull
@@ -88,10 +89,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private String instanceId = "0";
 
-  public static String getAvtransportId() {
-    return AV_TRANSPORT_SERVICE_ID;
-  }
-
   public UpnpPlayerAdapter(
     @NonNull Context context,
     @NonNull Listener listener,
@@ -100,7 +97,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull Device device,
-    @NonNull ActionController actionController) {
+    @NonNull AndroidUpnpService.ActionController actionController) {
     super(context, listener, radio, lockKey, radioUri);
     this.device = device;
     this.actionController = actionController;
@@ -112,24 +109,30 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     connectionManager = Objects.requireNonNull(device.getShortService(CONNECTION_MANAGER_ID));
     renderingControl = Objects.requireNonNull(device.getShortService(RENDERING_CONTROL_ID));
     // Watchdog test if reader is actually playing
-    watchdog = new Watchdog(
-      this.actionController,
-      avTransportService,
-      readerState -> changeAndNotifyState(
-        (readerState == Watchdog.ReaderState.PLAYING) ?
-          PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR));
+    watchdog = new Watchdog(this.actionController, avTransportService) {
+      @Override
+      public void onEvent(@NonNull ReaderState readerState) {
+        changeAndNotifyState(
+          (readerState == Watchdog.ReaderState.PLAYING) ?
+            PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR);
+      }
+    };
+  }
+
+  public static String getAvtransportId() {
+    return AV_TRANSPORT_SERVICE_ID;
   }
 
   @Override
   public void adjustVolume(int direction) {
-    final ActionController.UpnpAction upnpAction = getActionGetVolume();
+    final UpnpAction upnpAction = getActionGetVolume();
     if (upnpAction == null) {
       Log.d(LOG_TAG, "adjustVolume: scheduleActionGetVolume() is null!");
     } else {
       // Do only if nothing done currently
       if (volumeDirection == AudioManager.ADJUST_SAME) {
         volumeDirection = direction;
-        upnpAction.execute();
+        upnpAction.execute(true);
       }
     }
   }
@@ -157,7 +160,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Override
   protected void onPrepareFromMediaId() {
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
-    // Fetch content in a new thread
+    // Process in own thread (not in calling thread)
     new Thread(() -> {
       if (actionController.getContentType(radio) == null) {
         actionController.fetchContentType(radio);
@@ -230,12 +233,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private void scheduleActionPlay() {
     final Action action = avTransportService.getAction(ACTION_PLAY); // TODO comment traiter null si obligatoire?
     if (action != null) {
-      this.actionController.new UpnpAction(action, instanceId) {
+      new UpnpAction(action, actionController, instanceId) {
         // Actual Playing state is tested by Watchdog, so nothing to do in case of success
         @Override
-        protected void failure() {
+        protected void onFailure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          super.failure();
+          super.onFailure();
         }
       }
         .addArgument("Speed", "1")
@@ -246,11 +249,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private void scheduleActionStop() {
     final Action action = avTransportService.getAction(ACTION_STOP);
     if (action != null) {
-      this.actionController.new UpnpAction(action, instanceId) {
+      new UpnpAction(action, actionController, instanceId) {
         @Override
-        protected void failure() {
+        protected void onFailure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          super.failure();
+          super.onFailure();
         }
       }.schedule();
     }
@@ -259,16 +262,16 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private void scheduleActionPrepareForConnection() {
     final Action action = connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION);
     if (action != null) {
-      this.actionController.new UpnpAction(action) {
+      new UpnpAction(action, actionController) {
         @Override
-        protected void success(@NonNull List<SoapPrimitive> result) {
-          // TODO
-//            final ActionArgumentValue instanceIdArgument =
-//              actionInvocation.getOutput("AVTransportID");
-//            if (instanceIdArgument != null) {
-//              instanceId = instanceIdArgument.getValue().toString();
-//            }
-          super.success(result);
+        protected void onSuccess() {
+          final SoapPrimitive aVTransportID = getPropertyInfo("AVTransportID");
+          if (aVTransportID == null) {
+            Log.d(LOG_TAG, "Unable to find instanceId");
+          } else {
+            instanceId = aVTransportID.getValue().toString();
+          }
+          super.onSuccess();
         }
         // Note: failure is not taken into account
       }
@@ -280,50 +283,56 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     }
   }
 
+  // On calling thread
   private void executeActionSetVolume() {
     final Action action = renderingControl.getAction(ACTION_SET_VOLUME);
     if (action != null) {
-      this.actionController.new UpnpAction(action, instanceId) {
+      Log.d(LOG_TAG, "Volume required: " + currentVolume);
+      new UpnpAction(action, actionController, instanceId) {
         @Override
-        protected void success(@NonNull List<SoapPrimitive> result) {
+        protected void onSuccess() {
           volumeDirection = AudioManager.ADJUST_SAME;
           Log.d(LOG_TAG, "Volume set!");
         }
         // Note: failure is not taken into account
       }
-        .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume))
         .addArgument(INPUT_CHANNEL, INPUT_MASTER)
-        .execute();
-      Log.d(LOG_TAG, "Volume required: " + currentVolume);
+        .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume))
+        .execute(false);
     }
   }
 
   @Nullable
-  private ActionController.UpnpAction getActionGetVolume() {
+  private UpnpAction getActionGetVolume() {
     final Action action = renderingControl.getAction(ACTION_GET_VOLUME);
     return (action == null) ? null :
-      this.actionController.new UpnpAction(action, instanceId) {
+      new UpnpAction(action, actionController, instanceId) {
         @Override
-        protected void success(@NonNull List<SoapPrimitive> result) {
-          // TODO
-//            currentVolume =
-//              Integer.parseInt(actionInvocation.getOutput("CurrentVolume").getValue().toString());
-          switch (volumeDirection) {
-            case AudioManager.ADJUST_LOWER:
-              currentVolume = Math.max(0, --currentVolume);
-              executeActionSetVolume();
-              break;
-            case AudioManager.ADJUST_RAISE:
-              currentVolume++;
-              executeActionSetVolume();
-              break;
-            default:
-              // Nothing to do
+        protected void onSuccess() {
+          final SoapPrimitive soapPrimitive = getPropertyInfo("CurrentVolume");
+          if (soapPrimitive != null) {
+            try {
+              currentVolume = Integer.parseInt(soapPrimitive.getValue().toString());
+              switch (volumeDirection) {
+                case AudioManager.ADJUST_LOWER:
+                  currentVolume = Math.max(0, --currentVolume);
+                  executeActionSetVolume();
+                  break;
+                case AudioManager.ADJUST_RAISE:
+                  currentVolume++;
+                  executeActionSetVolume();
+                  break;
+                default:
+                  // Nothing to do
+              }
+            } catch (Exception exception) {
+              Log.d(LOG_TAG, "Unable to set volume", exception);
+            }
           }
         }
 
         @Override
-        protected void failure() {
+        protected void onFailure() {
           // No more action
           volumeDirection = AudioManager.ADJUST_SAME;
         }
@@ -334,55 +343,52 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private void scheduleActionSetAvTransportUri() {
     final Action action = avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI);
     if (action != null) {
-      final String metadata = getMetaData();
-      this.actionController.new UpnpAction(action, instanceId) {
+      new UpnpAction(action, actionController, instanceId) {
         @Override
-        protected void success(@NonNull List<SoapPrimitive> result) {
+        protected void onSuccess() {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           // Now we launch watchdog
           watchdog.start(instanceId);
-          super.success(result);
+          super.onSuccess();
         }
 
         @Override
-        protected void failure() {
+        protected void onFailure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          super.failure();
+          // TODO: remplacer par la suppression des actions pour ce device
+          super.onFailure();
         }
       }
         .addArgument("CurrentURI", radioUri.toString())
-        .addArgument("CurrentURIMetaData", metadata)
+        .addArgument("CurrentURIMetaData", getMetaData())
         .schedule();
-      Log.d(LOG_TAG, "SetAVTransportURI=> InstanceID: " + instanceId);
-      Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURI: " + radioUri);
-      Log.d(LOG_TAG, "SetAVTransportURI=> CurrentURIMetaData: " + metadata);
     }
   }
 
   private void scheduleActionGetProtocolInfo() {
     final Action action = connectionManager.getAction(ACTION_GET_PROTOCOL_INFO);
     if (action != null) {
-      this.actionController.new UpnpAction(action) {
+      new UpnpAction(action, actionController) {
         @Override
-        protected void success(@NonNull List<SoapPrimitive> result) {
-          final List<String> protocolInfos = new Vector<>();
-          //TODO
-//            for (String protocolInfo : actionInvocation.getOutput("Sink").toString().split(",")) {
-//              if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
-//                Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
-//                protocolInfos.add(protocolInfo);
-//              }
-//            }
-          if (!protocolInfos.isEmpty()) {
+        protected void onSuccess() {
+          final SoapPrimitive sink = getPropertyInfo("Sink");
+          if (sink != null) {
+            final List<String> protocolInfos = new Vector<>();
+            for (String protocolInfo : sink.getValue().toString().split(",")) {
+              if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
+                Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
+                protocolInfos.add(protocolInfo);
+              }
+            }
             putProtocolInfo(protocolInfos);
           }
-          super.success(result);
+          super.onSuccess();
         }
 
         @Override
-        protected void failure() {
+        protected void onFailure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          super.failure();
+          super.onFailure();
         }
       }.schedule();
     }
@@ -412,7 +418,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<res duration=\"0:00:00\" protocolInfo=\"" +
       PROTOCOL_INFO_HEADER + getContentType() + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
-      "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
+      //TODO "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "</item>" +
       "</DIDL-Lite>";
   }

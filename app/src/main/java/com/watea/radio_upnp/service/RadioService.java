@@ -63,7 +63,6 @@ import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
@@ -82,7 +81,6 @@ public class RadioService
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
-  private final ActionController actionController = new ActionController();
   private NotificationManagerCompat notificationManager;
   private Radio radio = null;
   private MediaSessionCompat session;
@@ -226,9 +224,9 @@ public class RadioService
       playerAdapter.stop();
     }
     // Release HTTP service
-    //unbindService(httpConnection);
-    // Force disconnection to release resources
-    //httpConnection.onServiceDisconnected(null);
+    nanoHttpServer.stop();
+    // Release UPnP service
+    unbindService(upnpConnection);
     // Finally session
     session.release();
   }
@@ -456,7 +454,7 @@ public class RadioService
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Ensure robustness
-      actionController.release(true);
+      upnpService.getActionController().release(true);
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
         playerAdapter.stop();
@@ -505,7 +503,7 @@ public class RadioService
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
           nanoHttpServer.createLogoFile(radio),
           chosenDevice,
-          actionController);
+          upnpService.getActionController());
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Set controller for HTTP handler

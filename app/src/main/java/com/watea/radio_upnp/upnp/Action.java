@@ -61,6 +61,7 @@ public class Action extends Asset {
 
   @NonNull
   public String getName() {
+    assert name != null;
     return name;
   }
 

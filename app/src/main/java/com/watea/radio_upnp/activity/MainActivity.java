@@ -498,36 +498,6 @@ public class MainActivity
     });
     // Store intent
     newIntent = getIntent();
-
-//    SoapRequest soapRequest = new SoapRequest();
-//    soapRequest.call();
-//
-//    UpnpService upnpService = new UpnpService(new UpnpService.Callback() {
-//      @Override
-//      public void onNewDevice(@NonNull Device device) {
-//        Service service = device.getService("urn:upnp-org:serviceId:AVTransport");
-//        UpnpRequest soapRequest = new UpnpRequest();
-//        try {
-//          soapRequest.call(
-//            service.getActualControlURI().toString(),
-//            "urn:schemas-upnp-org:service:AVTransport:1",
-//            "GetTransportInfo",
-//            new Hashtable<String, String>() {
-//              {
-//                put("InstanceId", "0");
-//              }
-//            });
-//        } catch (URISyntaxException e) {
-//          throw new RuntimeException(e);
-//        }
-//      }
-//
-//      @Override
-//      public void onRemoveDevice(@NonNull Device device) {
-//
-//      }
-//    });
-//    upnpService.searchAll();
   }
 
   @Override

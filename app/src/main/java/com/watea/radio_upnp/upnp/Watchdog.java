@@ -29,32 +29,28 @@ import androidx.annotation.NonNull;
 
 import org.ksoap2.serialization.SoapPrimitive;
 
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
-public class Watchdog {
+public abstract class Watchdog {
   private static final String LOG_TAG = Watchdog.class.getName();
   private static final int DELAY = 5000; // ms
   private static final int TOLERANCE = 2;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-  private final ActionController actionController;
-  private final Consumer<ReaderState> callback;
+  @NonNull
+  private final AndroidUpnpService.ActionController actionController;
   private final Action action;
   private int failureCount = 0;
 
   public Watchdog(
-    @NonNull ActionController actionController,
-    @NonNull Service avTransportService,
-    @NonNull Consumer<ReaderState> callback) {
+    @NonNull AndroidUpnpService.ActionController actionController,
+    @NonNull Service avTransportService) {
     this.actionController = actionController;
-    this.callback = callback;
     action = avTransportService.getAction(ACTION_GET_TRANSPORT_INFO);
     if (action == null) {
-      callback.accept(ReaderState.FAILURE);
+      onEvent(ReaderState.FAILURE);
     }
   }
 
@@ -71,23 +67,25 @@ public class Watchdog {
     executor.shutdown();
   }
 
+  public abstract void onEvent(@NonNull ReaderState readerState);
+
   private void executeActionWatchdog(@NonNull String instanceId) {
-    actionController.new UpnpAction(action, instanceId) {
+    new UpnpAction(action, actionController, instanceId) {
       @Override
-      protected void success(@NonNull List<SoapPrimitive> result) {
-//        final String currentTransportState =
-//          actionInvocation.getOutput("CurrentTransportState").getValue().toString();
-//        if (currentTransportState.equals("TRANSITIONING") ||
-//          currentTransportState.equals("PLAYING")) {
-//          failureCount = 0;
-//          callback.accept(ReaderState.PLAYING);
-//        } else {
-//          logfailure("Watchdog; state is not PLAYING: " + currentTransportState);
-//        }
+      protected void onSuccess() {
+        final SoapPrimitive currentTransportState = getPropertyInfo("CurrentTransportState");
+        if ((currentTransportState != null) &&
+          (currentTransportState.getValue().toString().equals("TRANSITIONING") ||
+            currentTransportState.getValue().toString().equals("PLAYING"))) {
+          failureCount = 0;
+          onEvent(ReaderState.PLAYING);
+        } else {
+          logfailure("Watchdog; state is not PLAYING: " + currentTransportState);
+        }
       }
 
       @Override
-      protected void failure() {
+      protected void onFailure() {
         logfailure("Watchdog: no answer");
       }
 
@@ -95,10 +93,10 @@ public class Watchdog {
         Log.d(LOG_TAG, message);
         if (failureCount++ >= TOLERANCE) {
           Log.d(LOG_TAG, "Watchdog: timeout!");
-          callback.accept(ReaderState.TIMEOUT);
+          onEvent(ReaderState.TIMEOUT);
         }
       }
-    };
+    }.execute(true);
   }
 
   public enum ReaderState {
