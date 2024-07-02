@@ -11,6 +11,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -21,27 +22,26 @@ public class NanoHttpServer extends NanoHTTPD {
   private static final String LOG_TAG = NanoHttpServer.class.getName();
   private final Context context;
   private final Set<Handler> handlers = new HashSet<>();
+  @NonNull
   private final RadioHandler radioHandler;
-  private final ResourceHandler resourceHandler;
+  @NonNull
+  private final ResourceHandler resourceHandler = new ResourceHandler();
+
+  private static int findFreePort() throws IOException {
+    try (ServerSocket socket = new ServerSocket(0)) {
+      return socket.getLocalPort();
+    }
+  }
 
   public NanoHttpServer(
     @NonNull Context context,
-    @NonNull RadioHandler.Listener radioHandlerListener) {
-    super(0);
+    @NonNull RadioHandler.Listener radioHandlerListener) throws IOException {
+    super(findFreePort());
     this.context = context;
     radioHandler =
       new RadioHandler(this.context.getString(R.string.app_name), radioHandlerListener);
-    // RadioHandler
     handlers.add(radioHandler);
-    // ResourceHandler
-    final Uri uri = getUri();
-    if (uri == null) {
-      Log.d(LOG_TAG, "NanoHttpServer fails to create Uri");
-      resourceHandler = null;
-    } else {
-      resourceHandler = new ResourceHandler(uri);
-      //handlers.add(new ResourceHandler(uri));
-    }
+    handlers.add(resourceHandler);
   }
 
   // First non null response is taken
@@ -78,7 +78,9 @@ public class NanoHttpServer extends NanoHTTPD {
 
   @Nullable
   public Uri createLogoFile(@NonNull Radio radio) {
-    return resourceHandler.createLogoFile(radio);
+    final Uri uri = getUri();
+    assert uri != null;
+    return uri.buildUpon().appendEncodedPath(resourceHandler.createLogoFile(radio)).build();
   }
 
   public interface Handler {

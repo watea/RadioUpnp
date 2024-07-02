@@ -30,7 +30,7 @@ public class ContentProvider {
           contentTypes.put(radio, contentType);
         }
         callback.run();
-      });
+      }).start();
     } else {
       callback.run();
     }

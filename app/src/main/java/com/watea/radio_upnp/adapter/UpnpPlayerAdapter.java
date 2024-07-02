@@ -47,8 +47,6 @@ import org.ksoap2.serialization.SoapPrimitive;
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
@@ -157,6 +155,38 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     return actions;
   }
 
+  // Special handling for MIME type
+  @Override
+  @NonNull
+  public String getContentType() {
+    String contentType = contentProvider.getContentType(radio);
+    // Default value
+    if (contentType == null) {
+      contentType = DEFAULT_CONTENT_TYPE;
+    }
+    // First choice: contentType
+    String result = contentProvider.getContentType(device, contentType);
+    if (result != null) {
+      return result;
+    }
+    // Second choice: MIME subtype
+    final String HEAD_EXP = "[a-z]*/";
+    result =
+      contentProvider.getContentType(device, HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
+    if (result != null) {
+      return result;
+    }
+    // AAC special case
+    if (contentType.contains("aac")) {
+      result = contentProvider.getContentType(device, AUDIO_CONTENT_TYPE + "mp4");
+      if (result != null) {
+        return result;
+      }
+    }
+    // Default case
+    return contentType;
+  }
+
   @Override
   protected boolean isRemote() {
     return true;
@@ -202,38 +232,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Override
   protected void onRelease() {
     watchdog.kill();
-  }
-
-  // Special handling for MIME type
-  @Override
-  @NonNull
-  public String getContentType() {
-    final String HEAD_EXP = "[a-z]*/";
-    String contentType = contentProvider.getContentType(radio);
-    // Default value
-    if (contentType == null) {
-      contentType = DEFAULT_CONTENT_TYPE;
-    }
-    // First choice: contentType
-    String result = contentProvider.getContentType(device, contentType);
-    if (result != null) {
-      return result;
-    }
-    // Second choice: MIME subtype
-    result =
-      contentProvider.getContentType(device, HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
-    if (result != null) {
-      return result;
-    }
-    // AAC special case
-    if (contentType.contains("aac")) {
-      result = contentProvider.getContentType(device, AUDIO_CONTENT_TYPE + "mp4");
-      if (result != null) {
-        return result;
-      }
-    }
-    // Default case
-    return contentType;
   }
 
   // For further use
@@ -418,7 +416,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<res duration=\"0:00:00\" protocolInfo=\"" +
       PROTOCOL_INFO_HEADER + getContentType() + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
-      //TODO "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
+      "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "</item>" +
       "</DIDL-Lite>";
   }

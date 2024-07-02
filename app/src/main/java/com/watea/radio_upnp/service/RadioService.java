@@ -158,8 +158,8 @@ public class RadioService
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Launch HTTP server
-    nanoHttpServer = new NanoHttpServer(this, this);
     try {
+      nanoHttpServer = new NanoHttpServer(this, this);
       nanoHttpServer.start();
     } catch (IOException iOException) {
       Log.d(LOG_TAG, "HTTP server creation fails", iOException);
@@ -240,7 +240,9 @@ public class RadioService
       playerAdapter.stop();
     }
     // Release HTTP service
-    nanoHttpServer.stop();
+    if (nanoHttpServer != null) {
+      nanoHttpServer.stop();
+    }
     // Release UPnP service
     unbindService(upnpConnection);
     // Finally session
@@ -486,13 +488,14 @@ public class RadioService
         abort("onPrepareFromMediaId: radioLibrary error; " + exception);
         return;
       }
+      // Catch catastrophic failure
+      if (nanoHttpServer == null) {
+        abort("onPrepareFromMediaId: nanoHttpServer is null");
+      }
       final String identity = extras.getString(getString(R.string.key_upnp_device));
       final Device chosenDevice = (identity == null) ? null : getChosenDevice(identity);
-      assert nanoHttpServer != null;
-      final Uri serverUri = nanoHttpServer.getUri();
       // UPnP not accepted if environment not OK: force STOP
-      if ((identity != null) &&
-        ((chosenDevice == null) || (serverUri == null))) {
+      if ((identity != null) && (chosenDevice == null)) {
         abort("onPrepareFromMediaId: can't process UPnP device");
         return;
       }
@@ -512,12 +515,14 @@ public class RadioService
           RadioHandler.getHandledUri(nanoHttpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       } else {
+        final Uri serverUri = nanoHttpServer.getUri();
+        assert serverUri != null;
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
           radio,
           lockKey,
-          RadioHandler.getHandledUri(serverUri, radio, lockKey),
+          RadioHandler.getHandledUri(nanoHttpServer.getUri(), radio, lockKey),
           nanoHttpServer.createLogoFile(radio),
           chosenDevice,
           actionController,
