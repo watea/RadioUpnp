@@ -40,12 +40,12 @@ public abstract class Watchdog {
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   @NonNull
-  private final AndroidUpnpService.ActionController actionController;
+  private final ActionController actionController;
   private final Action action;
   private int failureCount = 0;
 
   public Watchdog(
-    @NonNull AndroidUpnpService.ActionController actionController,
+    @NonNull ActionController actionController,
     @NonNull Service avTransportService) {
     this.actionController = actionController;
     action = avTransportService.getAction(ACTION_GET_TRANSPORT_INFO);

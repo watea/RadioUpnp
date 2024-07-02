@@ -1,7 +1,5 @@
 package com.watea.radio_upnp.upnp;
 
-import android.graphics.Bitmap;
-
 import androidx.annotation.NonNull;
 
 import org.xmlpull.v1.XmlPullParserException;

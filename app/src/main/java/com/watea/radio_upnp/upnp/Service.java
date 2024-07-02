@@ -104,14 +104,14 @@ public class Service extends Asset {
     }
   }
 
-  @NonNull
-  public Device getDevice() {
-    return device;
-  }
-
   @Override
   protected boolean isComplete() {
     return !actions.isEmpty() && actions.stream().allMatch(Action::isComplete);
+  }
+
+  @NonNull
+  public Device getDevice() {
+    return device;
   }
 
   @NonNull

@@ -8,18 +8,11 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.RadioURL;
-
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
@@ -129,66 +122,6 @@ public class AndroidUpnpService extends android.app.Service {
     void onDeviceRemove(@NonNull Device device);
 
     void onIcon(@NonNull Device device);
-  }
-
-  public static class ActionController {
-    private final Map<Radio, String> contentTypes = new Hashtable<>();
-    private final Map<Device, List<String>> protocolInfos = new Hashtable<>();
-    private final List<UpnpAction> upnpActions = new Vector<>();
-
-    @Nullable
-    public String getContentType(@NonNull Radio radio) {
-      return contentTypes.get(radio);
-    }
-
-    @Nullable
-    public List<String> getProtocolInfo(@NonNull Device device) {
-      return protocolInfos.get(device);
-    }
-
-    // Can't be called on main thread
-    public void fetchContentType(@NonNull Radio radio) {
-      final String contentType = new RadioURL(radio.getURL()).getStreamContentType();
-      if (contentType != null) {
-        contentTypes.put(radio, contentType);
-      }
-    }
-
-    public synchronized void release(boolean actionsOnly) {
-      if (!actionsOnly) {
-        contentTypes.clear();
-        protocolInfos.clear();
-      }
-      upnpActions.clear();
-    }
-
-    public synchronized void runNextAction() {
-      if (!upnpActions.isEmpty()) {
-        upnpActions.remove(0);
-        pullAction(false);
-      }
-    }
-
-    public synchronized void schedule(@NonNull UpnpAction upnpAction) {
-      upnpActions.add(upnpAction);
-      // First action? => Start new thread
-      if (upnpActions.size() == 1) {
-        pullAction(true);
-      }
-    }
-
-    // Do nothing if list is empty
-    public void putProtocolInfo(@NonNull Device device, @NonNull List<String> list) {
-      if (!list.isEmpty()) {
-        protocolInfos.put(device, list);
-      }
-    }
-
-    private void pullAction(boolean isOnOwnThread) {
-      if (!upnpActions.isEmpty()) {
-        upnpActions.get(0).execute(isOnOwnThread);
-      }
-    }
   }
 
   public class UpnpService extends android.os.Binder {

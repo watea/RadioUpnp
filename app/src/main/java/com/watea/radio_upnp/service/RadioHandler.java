@@ -53,6 +53,17 @@ public class RadioHandler implements NanoHttpServer.Handler {
   private static final int METADATA_MAX = 256;
   private static final String KEY = "key";
   private static final Controller DEFAULT_CONTROLLER = new Controller() {
+    @NonNull
+    @Override
+    public String getKey() {
+      return "";
+    }
+
+    @NonNull
+    @Override
+    public String getContentType() {
+      return "";
+    }
   };
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
@@ -70,7 +81,6 @@ public class RadioHandler implements NanoHttpServer.Handler {
   }
 
   // Add ID and lock key to given URI as query parameter
-  // TODO: essayer appendParam en positionnant l'encoding correctement
   @NonNull
   public static Uri getHandledUri(@NonNull Uri uri, @NonNull Radio radio, @NonNull String lockKey) {
     return uri
@@ -139,20 +149,16 @@ public class RadioHandler implements NanoHttpServer.Handler {
           httpURLConnection.getInputStream(),
           lockKey);
       // Build response
+      final String contentType = controller.getContentType();
       final NanoHTTPD.Response response = NanoHTTPD.newChunkedResponse(
         NanoHTTPD.Response.Status.OK,
         // Force ContentType as some UPnP devices require it
-        controller.getContentType().isEmpty() ?
-          httpURLConnection.getContentType() : controller.getContentType(),
+        contentType.isEmpty() ? httpURLConnection.getContentType() : contentType,
         connectionHandler.getInputStream());
+      // DLNA header, as found in documentation, not sure it is useful (should not)
+      response.addHeader("contentFeatures.dlna.org", "*");
+      response.addHeader("transferMode.dlna.org", "Streaming");
       connectionHandler.onLANConnection(response);
-      final String contentType = controller.getContentType();
-      // contentType defined only for UPnP
-      if (!contentType.isEmpty()) {
-        // DLNA header, as found in documentation, not sure it is useful (should not)
-        response.addHeader("contentFeatures.dlna.org", "*");
-        response.addHeader("transferMode.dlna.org", "Streaming");
-      }
       return response;
     } catch (Exception exception) {
       Log.d(LOG_TAG, "handle: unable to build response", exception);
@@ -180,15 +186,11 @@ public class RadioHandler implements NanoHttpServer.Handler {
 
   public interface Controller {
     @NonNull
-    default String getKey() {
-      return "";
-    }
+    String getKey();
 
-    // Only for UPnP
+    // Empty if unknown
     @NonNull
-    default String getContentType() {
-      return "";
-    }
+    String getContentType();
   }
 
   private class ConnectionHandler {

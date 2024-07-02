@@ -218,6 +218,12 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     }
   }
 
+  // Default is unknown
+  @NonNull
+  public String getContentType() {
+    return "";
+  }
+
   protected abstract boolean isRemote();
 
   protected abstract void onPrepareFromMediaId();

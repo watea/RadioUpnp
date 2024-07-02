@@ -63,6 +63,7 @@ import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
+import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
@@ -97,6 +98,8 @@ public class RadioService
       }
     };
   private AndroidUpnpService.UpnpService upnpService = null;
+  private final ActionController actionController = new ActionController();
+  private final ContentProvider contentProvider = new ContentProvider();
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
@@ -454,7 +457,7 @@ public class RadioService
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       // Ensure robustness
-      upnpService.getActionController().release(true);
+      upnpService.getActionController().release();
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
         playerAdapter.stop();
@@ -503,7 +506,8 @@ public class RadioService
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
           nanoHttpServer.createLogoFile(radio),
           chosenDevice,
-          upnpService.getActionController());
+          actionController,
+          contentProvider);
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Set controller for HTTP handler
@@ -517,9 +521,7 @@ public class RadioService
         @NonNull
         @Override
         public String getContentType() {
-          return (playerAdapter instanceof UpnpPlayerAdapter) ?
-            ((UpnpPlayerAdapter) playerAdapter).getContentType() :
-            RadioHandler.Controller.super.getContentType();
+          return playerAdapter.getContentType();
         }
       });
       // Start service, must be done while activity has foreground

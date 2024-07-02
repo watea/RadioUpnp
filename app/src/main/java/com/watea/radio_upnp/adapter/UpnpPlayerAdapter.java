@@ -34,8 +34,9 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.service.ContentProvider;
 import com.watea.radio_upnp.upnp.Action;
-import com.watea.radio_upnp.upnp.AndroidUpnpService;
+import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
@@ -71,7 +72,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private final Device device;
   @NonNull
-  private final AndroidUpnpService.ActionController actionController;
+  private final ActionController actionController;
+  @NonNull
+  private final ContentProvider contentProvider;
   @Nullable
   private final Uri logoUri;
   @NonNull
@@ -97,10 +100,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull Device device,
-    @NonNull AndroidUpnpService.ActionController actionController) {
+    @NonNull ActionController actionController,
+    @NonNull ContentProvider contentProvider) {
     super(context, listener, radio, lockKey, radioUri);
     this.device = device;
     this.actionController = actionController;
+    this.contentProvider = contentProvider;
     this.logoUri = logoUri;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
@@ -160,19 +165,22 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @Override
   protected void onPrepareFromMediaId() {
     changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
-    // Process in own thread (not in calling thread)
-    new Thread(() -> {
-      if (actionController.getContentType(radio) == null) {
-        actionController.fetchContentType(radio);
-      }
-      // We can now call prepare, only if we are still waiting
+    // First we need to know radio content type
+    contentProvider.fetchContentType(radio, () -> {
       if (state == PlaybackStateCompat.STATE_BUFFERING) {
-        onPreparedPlay();
+        // Do prepare if action available
+        scheduleActionPrepareForConnection();
+        // Fetch ProtocolInfo if not available
+        if (contentProvider.hasProtocolInfo(device)) {
+          scheduleActionGetProtocolInfo();
+        }
+        scheduleActionSetAvTransportUri();
+        scheduleActionPlay();
       } else {
         // Something went wrong
         changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
       }
-    }).start();
+    });
   }
 
   @Override
@@ -197,27 +205,29 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   // Special handling for MIME type
+  @Override
   @NonNull
   public String getContentType() {
     final String HEAD_EXP = "[a-z]*/";
-    String contentType = actionController.getContentType(radio);
+    String contentType = contentProvider.getContentType(radio);
     // Default value
     if (contentType == null) {
       contentType = DEFAULT_CONTENT_TYPE;
     }
     // First choice: contentType
-    String result = searchContentType(contentType);
+    String result = contentProvider.getContentType(device, contentType);
     if (result != null) {
       return result;
     }
     // Second choice: MIME subtype
-    result = searchContentType(HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
+    result =
+      contentProvider.getContentType(device, HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
     if (result != null) {
       return result;
     }
     // AAC special case
     if (contentType.contains("aac")) {
-      result = searchContentType(AUDIO_CONTENT_TYPE + "mp4");
+      result = contentProvider.getContentType(device, AUDIO_CONTENT_TYPE + "mp4");
       if (result != null) {
         return result;
       }
@@ -380,7 +390,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
                 protocolInfos.add(protocolInfo);
               }
             }
-            putProtocolInfo(protocolInfos);
+            contentProvider.putProtocolInfo(action.getDevice(), protocolInfos);
           }
           super.onSuccess();
         }
@@ -392,16 +402,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         }
       }.schedule();
     }
-  }
-
-  private void onPreparedPlay() {
-    // Do prepare if available
-    scheduleActionPrepareForConnection();
-    if (actionController.getProtocolInfo(device) == null) {
-      scheduleActionGetProtocolInfo();
-    }
-    scheduleActionSetAvTransportUri();
-    scheduleActionPlay();
   }
 
   // Create DIDL-Lite metadata
@@ -421,20 +421,5 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       //TODO "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "</item>" +
       "</DIDL-Lite>";
-  }
-
-  @Nullable
-  private String searchContentType(@NonNull String contentType) {
-    final List<String> protocolInfos = actionController.getProtocolInfo(device);
-    if (protocolInfos != null) {
-      final Pattern pattern = Pattern.compile("http-get:\\*:(" + contentType + "):.*");
-      for (String protocolInfo : protocolInfos) {
-        final Matcher matcher = pattern.matcher(protocolInfo);
-        if (matcher.find()) {
-          return matcher.group(1);
-        }
-      }
-    }
-    return null;
   }
 }

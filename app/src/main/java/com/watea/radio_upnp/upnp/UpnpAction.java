@@ -41,20 +41,20 @@ public abstract class UpnpAction {
   @NonNull
   private final Action action;
   @NonNull
-  private final AndroidUpnpService.ActionController actionController;
+  private final ActionController actionController;
   private final List<String[]> arguments = new Vector<>();
   private final Set<PropertyInfo> propertyInfos = new HashSet<>();
 
   public UpnpAction(
     @NonNull Action action,
-    @NonNull AndroidUpnpService.ActionController actionController) {
+    @NonNull ActionController actionController) {
     this.action = action;
     this.actionController = actionController;
   }
 
   public UpnpAction(
     @NonNull Action action,
-    @NonNull AndroidUpnpService.ActionController actionController,
+    @NonNull ActionController actionController,
     @NonNull String instanceId) {
     this(action, actionController);
     addArgument("InstanceId", instanceId);
@@ -76,7 +76,8 @@ public abstract class UpnpAction {
   }
 
   public void execute(boolean isOnOwnThread) {
-    Log.d(LOG_TAG, "execute: " + action.getName() + " on: " + getDevice().getDisplayString());
+    Log.d(
+      LOG_TAG, "execute: " + action.getName() + " on: " + action.getDevice().getDisplayString());
     final Request request = new Request(action.getService(), action.getName(), arguments) {
       @Override
       public void onSuccess(@NonNull Set<PropertyInfo> result) {
@@ -96,15 +97,6 @@ public abstract class UpnpAction {
     } else {
       request.call();
     }
-  }
-
-  @NonNull
-  public Device getDevice() {
-    return action.getService().getDevice();
-  }
-
-  public void putProtocolInfo(@NonNull List<String> list) {
-    actionController.putProtocolInfo(getDevice(), list);
   }
 
   public void schedule() {

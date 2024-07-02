@@ -79,6 +79,11 @@ public class Action extends Asset {
     return service;
   }
 
+  @NonNull
+  public Device getDevice() {
+    return service.getDevice();
+  }
+
   public static class Argument extends Asset {
     private static final String XML_NAME = "argument";
     private String name = null;
