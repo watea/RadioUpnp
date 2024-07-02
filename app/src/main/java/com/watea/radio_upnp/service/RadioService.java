@@ -82,6 +82,8 @@ public class RadioService
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
+  private final ActionController actionController = new ActionController();
+  private final ContentProvider contentProvider = new ContentProvider();
   private NotificationManagerCompat notificationManager;
   private Radio radio = null;
   private MediaSessionCompat session;
@@ -98,8 +100,6 @@ public class RadioService
       }
     };
   private AndroidUpnpService.UpnpService upnpService = null;
-  private final ActionController actionController = new ActionController();
-  private final ContentProvider contentProvider = new ContentProvider();
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
@@ -113,6 +113,19 @@ public class RadioService
   };
   private boolean isAllowedToRewind = false;
   private String lockKey = null;
+  private final RadioHandler.Controller radioHandlerController = new RadioHandler.Controller() {
+    @NonNull
+    @Override
+    public String getKey() {
+      return lockKey;
+    }
+
+    @NonNull
+    @Override
+    public String getContentType() {
+      return playerAdapter.getContentType();
+    }
+  };
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
   private NotificationCompat.Action actionPlay;
@@ -489,6 +502,7 @@ public class RadioService
       lockKey = UUID.randomUUID().toString();
       // Tag metadata with package name to enable session discrepancy
       session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
+      // Set playerAdapter
       if (identity == null) {
         playerAdapter = new LocalPlayerAdapter(
           RadioService.this,
@@ -511,19 +525,7 @@ public class RadioService
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Set controller for HTTP handler
-      nanoHttpServer.setRadioHandlerController(new RadioHandler.Controller() {
-        @NonNull
-        @Override
-        public String getKey() {
-          return lockKey;
-        }
-
-        @NonNull
-        @Override
-        public String getContentType() {
-          return playerAdapter.getContentType();
-        }
-      });
+      nanoHttpServer.setRadioHandlerController(radioHandlerController);
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
