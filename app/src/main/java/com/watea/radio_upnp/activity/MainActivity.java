@@ -23,17 +23,24 @@
 
 package com.watea.radio_upnp.activity;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
@@ -47,7 +54,9 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -65,13 +74,15 @@ import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.DefaultRadios;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.model.legacy.RadioLibrary;
 import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -87,6 +98,8 @@ public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
   private static final int RADIO_ICON_SIZE = 300;
+  private static final int PERMISSION_REQUEST_CODE = 1;
+
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new Hashtable<Class<? extends Fragment>, Integer>() {
@@ -395,10 +408,6 @@ public class MainActivity
       } else {
         Log.e(LOG_TAG, "Internal failure; unable to init radios");
       }
-    } else if (sharedPreferences.getBoolean(getString(R.string.key_legacy_processed), true)) {
-      // Legacy support; this code should be removed after some time....
-      // Robustness: store immediately to avoid bad user experience in case of app crash.
-      storeBooleanPreference(R.string.key_legacy_processed, !processLegacy());
     }
     // Init connexion
     networkProxy = new NetworkProxy(this);
@@ -543,6 +552,18 @@ public class MainActivity
   }
 
   @Override
+  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    if (requestCode == PERMISSION_REQUEST_CODE) {
+      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        copyFileToDownloads("source_file_path", "example_file_copied.pdf");
+      } else {
+        // Permission denied, handle accordingly
+      }
+    }
+  }
+
+  @Override
   protected void onPostCreate(Bundle savedInstanceState) {
     super.onPostCreate(savedInstanceState);
     // Sync the toggle state after onRestoreInstanceState has occurred
@@ -573,27 +594,59 @@ public class MainActivity
     }
   }
 
-  // Add all legacy radio if any, returns true if success
-  private boolean processLegacy() {
-    final RadioLibrary radioLibrary = new RadioLibrary(this);
-    radioLibrary.getAllRadioIds().forEach(radioId -> {
-      final com.watea.radio_upnp.model.legacy.Radio legacyRadio = radioLibrary.getFrom(radioId);
-      // Robustness: something went wrong?
-      if (legacyRadio != null) {
-        // Robustness: catch any exception
-        try {
-          radios.add(new Radio(
-              legacyRadio.getName(),
-              legacyRadio.getIcon(),
-              legacyRadio.getURL(),
-              legacyRadio.getWebPageURL()),
-            false);
-        } catch (Exception exception) {
-          Log.e(LOG_TAG, "Internal failure; reading legacy radio: " + legacyRadio.getName());
+  private void requestPermission() {
+    if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) &&
+      (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+        PackageManager.PERMISSION_GRANTED)) {
+      ActivityCompat.requestPermissions(
+        this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+    }
+  }
+
+  private void copyFileToDownloads(String sourceFilePath, String fileName) {
+    File sourceFile = new File(sourceFilePath);
+
+    if (!sourceFile.exists()) {
+      // Handle file not existing
+      return;
+    }
+
+    try (FileInputStream fis = new FileInputStream(sourceFile)) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+        values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
+        values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+
+        Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+        if (uri != null) {
+          try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = fis.read(buffer)) > 0) {
+              os.write(buffer, 0, length);
+            }
+          }
+        }
+      } else {
+        File destinationDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File destinationFile = new File(destinationDir, fileName);
+
+        if (!destinationDir.exists()) {
+          destinationDir.mkdirs();
+        }
+
+        try (FileOutputStream fos = new FileOutputStream(destinationFile)) {
+          byte[] buffer = new byte[1024];
+          int length;
+          while ((length = fis.read(buffer)) > 0) {
+            fos.write(buffer, 0, length);
+          }
         }
       }
-    });
-    return radios.write();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   private void storeBooleanPreference(int key, boolean value) {
