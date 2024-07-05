@@ -161,7 +161,6 @@ public class Radios extends Vector<Radio> {
   public boolean write() {
     try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
       fileOutputStream.write(toString().getBytes());
-      fileOutputStream.flush();
     } catch (IOException iOException) {
       Log.e("TAG", "write: IOException fired", iOException);
       return false;

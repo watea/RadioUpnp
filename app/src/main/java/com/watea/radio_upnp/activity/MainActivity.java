@@ -79,13 +79,8 @@ import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.file.Files;
 import java.util.Calendar;
 import java.util.Hashtable;
 import java.util.List;
@@ -157,6 +152,7 @@ public class MainActivity
   };
   private Intent newIntent = null;
   private NetworkProxy networkProxy = null;
+  private RequestedExport requestedExport = RequestedExport.CSV;
 
   @NonNull
   public static Bitmap iconResize(@NonNull Bitmap bitmap) {
@@ -202,11 +198,6 @@ public class MainActivity
     context.startActivity(intent);
   }
 
-  @Nullable
-  public AndroidUpnpService.UpnpService getUpnpService() {
-    return upnpService;
-  }
-
   @NonNull
   public Bitmap getDefaultIcon() {
     return BitmapFactory.decodeResource(getResources(), R.drawable.ic_radio_gray);
@@ -225,14 +216,23 @@ public class MainActivity
         // TODO
         //importController.showAlertDialog();
         break;
+      case R.id.action_export:
+        requestedExport = RequestedExport.JSON;
+        if (noRequestPermission()) {
+          exportJson();
+        }
+        break;
+      case R.id.action_export_csv:
+        requestedExport = RequestedExport.CSV;
+        if (noRequestPermission()) {
+          exportCsv();
+        }
+        break;
       case R.id.action_about:
         aboutAlertDialog.show();
         break;
       case R.id.action_log:
         sendLogcatMail();
-        break;
-      case R.id.action_export:
-        dumpRadios();
         break;
       default:
         // Shall not fail to find!
@@ -552,13 +552,20 @@ public class MainActivity
   }
 
   @Override
-  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+  public void onRequestPermissionsResult(
+    int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     if (requestCode == PERMISSION_REQUEST_CODE) {
       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-        copyFileToDownloads("source_file_path", "example_file_copied.pdf");
+        switch (requestedExport) {
+          case CSV:
+            exportCsv();
+            break;
+          case JSON:
+            exportJson();
+        }
       } else {
-        // Permission denied, handle accordingly
+        Log.d(LOG_TAG, "Copy permissions denied!");
       }
     }
   }
@@ -594,59 +601,50 @@ public class MainActivity
     }
   }
 
-  private void requestPermission() {
-    if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) &&
+  private boolean noRequestPermission() {
+    if ((Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) &&
       (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
         PackageManager.PERMISSION_GRANTED)) {
       ActivityCompat.requestPermissions(
         this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+      return false;
     }
+    return true;
   }
 
-  private void copyFileToDownloads(String sourceFilePath, String fileName) {
-    File sourceFile = new File(sourceFilePath);
-
-    if (!sourceFile.exists()) {
-      // Handle file not existing
-      return;
-    }
-
-    try (FileInputStream fis = new FileInputStream(sourceFile)) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
-        values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
-        values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
-
-        Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-        if (uri != null) {
-          try (OutputStream os = getContentResolver().openOutputStream(uri)) {
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = fis.read(buffer)) > 0) {
-              os.write(buffer, 0, length);
-            }
-          }
-        }
-      } else {
-        File destinationDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File destinationFile = new File(destinationDir, fileName);
-
-        if (!destinationDir.exists()) {
-          destinationDir.mkdirs();
-        }
-
-        try (FileOutputStream fos = new FileOutputStream(destinationFile)) {
-          byte[] buffer = new byte[1024];
-          int length;
-          while ((length = fis.read(buffer)) > 0) {
-            fos.write(buffer, 0, length);
-          }
+  // Returns name of created file
+  private String copyFileToDownloads(
+    @NonNull byte[] input,
+    @NonNull String fileType,
+    @NonNull String mimeType) throws IOException {
+    final String fileName = getString(R.string.app_name) + "." + fileType;
+    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+      final ContentValues values = new ContentValues();
+      values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+      values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
+      values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+      final Uri uri =
+        getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+      if (uri != null) {
+        try (FileOutputStream fileOutputStream =
+               (FileOutputStream) getContentResolver().openOutputStream(uri)) {
+          assert fileOutputStream != null;
+          fileOutputStream.write(input);
         }
       }
-    } catch (IOException e) {
-      e.printStackTrace();
+    } else {
+      final File destinationDir =
+        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+      final File destinationFile = new File(destinationDir, fileName);
+      if (destinationDir.exists() || destinationDir.mkdirs()) {
+        try (FileOutputStream fileOutputStream = new FileOutputStream(destinationFile)) {
+          fileOutputStream.write(input);
+        }
+      } else {
+        Log.d(LOG_TAG, "copyFileToDownloads: unable to find directory");
+      }
     }
+    return fileName;
   }
 
   private void storeBooleanPreference(int key, boolean value) {
@@ -680,15 +678,17 @@ public class MainActivity
     navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
   }
 
-  private void dumpRadios() {
-    final File dumpFile = new File(getExternalFilesDir(null), "radios.csv");
+  private void export(
+    @NonNull byte[] input,
+    @NonNull String fileType,
+    @NonNull String mimeType) {
     final AlertDialog.Builder alertDialogBuilder =
       new AlertDialog.Builder(this, R.style.AlertDialogStyle)
         // Restore checked item
         .setOnDismissListener(dialogInterface -> checkNavigationMenu());
-    try (Writer writer = new OutputStreamWriter(Files.newOutputStream(dumpFile.toPath()))) {
-      writer.write(radios.export());
-      alertDialogBuilder.setMessage(R.string.export_done);
+    try {
+      alertDialogBuilder.setMessage(
+        R.string.export_done + copyFileToDownloads(input, fileType, mimeType));
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "dumpRadios: internal failure", iOException);
       alertDialogBuilder.setMessage(R.string.dump_error);
@@ -696,10 +696,20 @@ public class MainActivity
     alertDialogBuilder.create().show();
   }
 
+  private void exportCsv() {
+    export(radios.export().getBytes(), "csv", "text/csv");
+  }
+
+  private void exportJson() {
+    export(radios.toString().getBytes(), "json", "application/json");
+  }
+
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
   }
+
+  private enum RequestedExport {JSON, CSV}
 
   public interface Listener {
     default void onNewCurrentRadio(@Nullable Radio radio) {

@@ -97,7 +97,7 @@
     <string name="import_no_import">Import failed: no data found!</string>
     <string name="no_data">No playlist data found</string>
     <string name="dump_error">Error: local export file could not be generated</string>
-    <string name="export_done">Export file "radios.csv" created.\nInternal Storage: Android/data/com.watea.radio_upnp/files</string>
+    <string name="export_done">Export file created in download directory: </string>
     <string name="radio_garden_radio_added">Radio Garden radio added!</string>
     <string name="try_to_add_from_radio_garden">Try to add from Radio Garden.\nMay take some time, please wait&#8230;</string>
     <string name="play_store_not_installed">Play Store not available.\nRadio Garden cannot be installed!</string>
@@ -118,6 +118,7 @@
     <string name="title_log">Report</string>
     <string name="title_import">Import</string>
     <string name="title_export">Export</string>
+    <string name="title_export_csv">Export .csv</string>
     <string name="title_radio_garden">Radio Garden</string>
     <string name="title_search">Search</string>
     <string name="action_play">Play</string>
