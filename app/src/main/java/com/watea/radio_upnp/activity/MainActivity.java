@@ -49,8 +49,11 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -78,9 +81,14 @@ import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
+import org.json.JSONArray;
+
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Calendar;
 import java.util.Hashtable;
 import java.util.List;
@@ -93,7 +101,12 @@ public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
   private static final int RADIO_ICON_SIZE = 300;
-  private static final int PERMISSION_REQUEST_CODE = 1;
+  private static final int CSV_EXPORT_PERMISSION_REQUEST_CODE = 1;
+  private static final int JSON_EXPORT_PERMISSION_REQUEST_CODE = 2;
+  private static final String CSV = "csv";
+  private static final String MIME_CSV = "text/csv";
+  private static final String JSON = "json";
+  private static final String MIME_JSON = "application/json";
 
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
@@ -119,8 +132,6 @@ public class MainActivity
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
   private SharedPreferences sharedPreferences;
-  // TODO
-  //private ImportController importController;
   private RadioGardenController radioGardenController;
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
@@ -152,7 +163,8 @@ public class MainActivity
   };
   private Intent newIntent = null;
   private NetworkProxy networkProxy = null;
-  private RequestedExport requestedExport = RequestedExport.CSV;
+  private ActivityResultLauncher<Intent> openDocumentLauncher;
+
 
   @NonNull
   public static Bitmap iconResize(@NonNull Bitmap bitmap) {
@@ -213,18 +225,15 @@ public class MainActivity
         radioGardenController.launchRadioGarden(gotItRadioGarden);
         break;
       case R.id.action_import:
-        // TODO
-        //importController.showAlertDialog();
+        importJson();
         break;
       case R.id.action_export:
-        requestedExport = RequestedExport.JSON;
-        if (noRequestPermission()) {
+        if (noRequestPermission(JSON_EXPORT_PERMISSION_REQUEST_CODE)) {
           exportJson();
         }
         break;
       case R.id.action_export_csv:
-        requestedExport = RequestedExport.CSV;
-        if (noRequestPermission()) {
+        if (noRequestPermission(CSV_EXPORT_PERMISSION_REQUEST_CODE)) {
           exportCsv();
         }
         break;
@@ -444,8 +453,17 @@ public class MainActivity
     // Radio Garden
     radioGardenController = new RadioGardenController(this);
     // Import function
-    // TODO
-    //importController = new ImportController(this);
+    openDocumentLauncher = registerForActivityResult(
+      new ActivityResultContracts.StartActivityForResult(),
+      result -> {
+        if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+          final Uri uri = result.getData().getData();
+          if (uri != null) {
+            importJsonFrom(result.getData().getData());
+          }
+        }
+      }
+    );
     // Set navigation drawer toggle (according to documentation)
     drawerToggle = new ActionBarDrawerToggle(
       this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
@@ -514,7 +532,10 @@ public class MainActivity
     super.onPause();
     Log.d(LOG_TAG, "onPause");
     // Shared preferences
-    storeBooleanPreference(R.string.key_radio_garden_got_it, gotItRadioGarden);
+    sharedPreferences
+      .edit()
+      .putBoolean(getString(R.string.key_radio_garden_got_it), gotItRadioGarden)
+      .apply();
     // Release UPnP service
     unbindService(upnpConnection);
     // Force disconnection to release resources
@@ -555,17 +576,16 @@ public class MainActivity
   public void onRequestPermissionsResult(
     int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    if (requestCode == PERMISSION_REQUEST_CODE) {
-      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-        switch (requestedExport) {
-          case CSV:
-            exportCsv();
-            break;
-          case JSON:
-            exportJson();
-        }
-      } else {
-        Log.d(LOG_TAG, "Copy permissions denied!");
+    if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+      switch (requestCode) {
+        case JSON_EXPORT_PERMISSION_REQUEST_CODE:
+          exportJson();
+          break;
+        case CSV_EXPORT_PERMISSION_REQUEST_CODE:
+          exportCsv();
+          break;
+        default:
+          Log.d(LOG_TAG, "Internal failure: unknown permission result");
       }
     }
   }
@@ -601,15 +621,25 @@ public class MainActivity
     }
   }
 
-  private boolean noRequestPermission() {
+  private boolean noRequestPermission(int requestCode) {
     if ((Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) &&
-      (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-        PackageManager.PERMISSION_GRANTED)) {
+      (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        != PackageManager.PERMISSION_GRANTED)) {
       ActivityCompat.requestPermissions(
-        this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+        this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, requestCode);
       return false;
     }
     return true;
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.Q)
+  @Nullable
+  private Uri insertContentResolverUri(@NonNull String fileName, @NonNull String mimeType) {
+    final ContentValues values = new ContentValues();
+    values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+    values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
+    values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+    return getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
   }
 
   // Returns name of created file
@@ -619,13 +649,10 @@ public class MainActivity
     @NonNull String mimeType) throws IOException {
     final String fileName = getString(R.string.app_name) + "." + fileType;
     if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
-      final ContentValues values = new ContentValues();
-      values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
-      values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
-      values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
-      final Uri uri =
-        getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-      if (uri != null) {
+      final Uri uri = insertContentResolverUri(fileName, mimeType);
+      if (uri == null) {
+        Log.d(LOG_TAG, "copyFileToDownloads: unable to find uri");
+      } else {
         try (FileOutputStream fileOutputStream =
                (FileOutputStream) getContentResolver().openOutputStream(uri)) {
           assert fileOutputStream != null;
@@ -645,10 +672,6 @@ public class MainActivity
       }
     }
     return fileName;
-  }
-
-  private void storeBooleanPreference(int key, boolean value) {
-    sharedPreferences.edit().putBoolean(getString(key), value).apply();
   }
 
   private void sendLogcatMail() {
@@ -688,28 +711,57 @@ public class MainActivity
         .setOnDismissListener(dialogInterface -> checkNavigationMenu());
     try {
       alertDialogBuilder.setMessage(
-        R.string.export_done + copyFileToDownloads(input, fileType, mimeType));
+        getString(R.string.export_done) + copyFileToDownloads(input, fileType, mimeType));
     } catch (IOException iOException) {
-      Log.e(LOG_TAG, "dumpRadios: internal failure", iOException);
+      Log.e(LOG_TAG, "export: internal failure", iOException);
       alertDialogBuilder.setMessage(R.string.dump_error);
     }
     alertDialogBuilder.create().show();
   }
 
   private void exportCsv() {
-    export(radios.export().getBytes(), "csv", "text/csv");
+    export(radios.export().getBytes(), CSV, MIME_CSV);
   }
 
   private void exportJson() {
-    export(radios.toString().getBytes(), "json", "application/json");
+    export(radios.toString().getBytes(), JSON, MIME_JSON);
+  }
+
+  private void importJsonFrom(@NonNull Uri uri) {
+    try (InputStream inputStream = getContentResolver().openInputStream(uri);
+         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+      final StringBuilder stringBuilder = new StringBuilder();
+      String line;
+      while ((line = reader.readLine()) != null) {
+        stringBuilder.append(line);
+      }
+      radios.addFrom(new JSONArray(stringBuilder.toString()));
+      tell(R.string.import_successful);
+    } catch (Exception exception) {
+      Log.d(LOG_TAG, "importJsonFrom: exception", exception);
+      tell(R.string.import_failed);
+    }
+  }
+
+  private void importJson() {
+    new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+      .setTitle(R.string.title_import)
+      .setIcon(R.drawable.ic_baseline_exit_to_app_black_24dp)
+      .setMessage(R.string.import_message)
+      .setPositiveButton(R.string.action_go, (dialog, which) ->
+        openDocumentLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT)
+          .addCategory(Intent.CATEGORY_OPENABLE)
+          .setType(MIME_JSON)))
+      // Restore checked item
+      .setOnDismissListener(dialogInterface -> this.checkNavigationMenu())
+      .create()
+      .show();
   }
 
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
   }
-
-  private enum RequestedExport {JSON, CSV}
 
   public interface Listener {
     default void onNewCurrentRadio(@Nullable Radio radio) {
