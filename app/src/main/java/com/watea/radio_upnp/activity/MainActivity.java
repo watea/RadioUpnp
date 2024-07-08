@@ -103,11 +103,11 @@ public class MainActivity
   private static final int RADIO_ICON_SIZE = 300;
   private static final int CSV_EXPORT_PERMISSION_REQUEST_CODE = 1;
   private static final int JSON_EXPORT_PERMISSION_REQUEST_CODE = 2;
+  private static final int JSON_IMPORT_PERMISSION_REQUEST_CODE = 3;
   private static final String CSV = "csv";
   private static final String MIME_CSV = "text/csv";
   private static final String JSON = "json";
   private static final String MIME_JSON = "application/json";
-
   private static final String LOG_TAG = MainActivity.class.getName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new Hashtable<Class<? extends Fragment>, Integer>() {
@@ -164,7 +164,6 @@ public class MainActivity
   private Intent newIntent = null;
   private NetworkProxy networkProxy = null;
   private ActivityResultLauncher<Intent> openDocumentLauncher;
-
 
   @NonNull
   public static Bitmap iconResize(@NonNull Bitmap bitmap) {
@@ -225,15 +224,20 @@ public class MainActivity
         radioGardenController.launchRadioGarden(gotItRadioGarden);
         break;
       case R.id.action_import:
-        importJson();
+        if (noRequestPermission(
+          Manifest.permission.READ_EXTERNAL_STORAGE, JSON_EXPORT_PERMISSION_REQUEST_CODE)) {
+          importJson();
+        }
         break;
       case R.id.action_export:
-        if (noRequestPermission(JSON_EXPORT_PERMISSION_REQUEST_CODE)) {
+        if (noRequestPermission(
+          Manifest.permission.WRITE_EXTERNAL_STORAGE, JSON_EXPORT_PERMISSION_REQUEST_CODE)) {
           exportJson();
         }
         break;
       case R.id.action_export_csv:
-        if (noRequestPermission(CSV_EXPORT_PERMISSION_REQUEST_CODE)) {
+        if (noRequestPermission(
+          Manifest.permission.WRITE_EXTERNAL_STORAGE, CSV_EXPORT_PERMISSION_REQUEST_CODE)) {
           exportCsv();
         }
         break;
@@ -584,6 +588,9 @@ public class MainActivity
         case CSV_EXPORT_PERMISSION_REQUEST_CODE:
           exportCsv();
           break;
+        case JSON_IMPORT_PERMISSION_REQUEST_CODE:
+          importJson();
+          break;
         default:
           Log.d(LOG_TAG, "Internal failure: unknown permission result");
       }
@@ -621,12 +628,11 @@ public class MainActivity
     }
   }
 
-  private boolean noRequestPermission(int requestCode) {
+  private boolean noRequestPermission(@NonNull String permission, int requestCode) {
     if ((Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) &&
-      (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+      (ContextCompat.checkSelfPermission(this, permission)
         != PackageManager.PERMISSION_GRANTED)) {
-      ActivityCompat.requestPermissions(
-        this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, requestCode);
+      ActivityCompat.requestPermissions(this, new String[]{permission}, requestCode);
       return false;
     }
     return true;
@@ -751,7 +757,7 @@ public class MainActivity
       .setPositiveButton(R.string.action_go, (dialog, which) ->
         openDocumentLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT)
           .addCategory(Intent.CATEGORY_OPENABLE)
-          .setType(MIME_JSON)))
+          .setType("*/*")))
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.checkNavigationMenu())
       .create()
