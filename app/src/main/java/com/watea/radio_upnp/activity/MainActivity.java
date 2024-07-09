@@ -393,8 +393,8 @@ public class MainActivity
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         getCurrentFragment().onOptionsItemSelected(item) ||
-        // If we got here, the user's action was not recognized
-        // Invoke the superclass to handle it
+        // If we got here, the user's action was not recognized.
+        // Invoke the superclass to handle it.
         super.onOptionsItemSelected(item);
   }
 
@@ -592,7 +592,7 @@ public class MainActivity
           importJson();
           break;
         default:
-          Log.d(LOG_TAG, "Internal failure: unknown permission result");
+          Log.e(LOG_TAG, "Internal failure; unknown permission result");
       }
     }
   }
@@ -657,7 +657,7 @@ public class MainActivity
     if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
       final Uri uri = insertContentResolverUri(fileName, mimeType);
       if (uri == null) {
-        Log.d(LOG_TAG, "copyFileToDownloads: unable to find uri");
+        Log.e(LOG_TAG, "copyFileToDownloads: unable to find uri");
       } else {
         try (FileOutputStream fileOutputStream =
                (FileOutputStream) getContentResolver().openOutputStream(uri)) {
@@ -674,7 +674,7 @@ public class MainActivity
           fileOutputStream.write(input);
         }
       } else {
-        Log.d(LOG_TAG, "copyFileToDownloads: unable to find directory");
+        Log.e(LOG_TAG, "copyFileToDownloads: unable to find directory");
       }
     }
     return fileName;
@@ -744,7 +744,7 @@ public class MainActivity
       radios.addFrom(new JSONArray(stringBuilder.toString()));
       tell(R.string.import_successful);
     } catch (Exception exception) {
-      Log.d(LOG_TAG, "importJsonFrom: exception", exception);
+      Log.e(LOG_TAG, "importJsonFrom: exception", exception);
       tell(R.string.import_failed);
     }
   }

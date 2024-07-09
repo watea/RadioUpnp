@@ -162,7 +162,7 @@ public class Radios extends Vector<Radio> {
     try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
       fileOutputStream.write(toString().getBytes());
     } catch (IOException iOException) {
-      Log.e("TAG", "write: IOException fired", iOException);
+      Log.e(LOG_TAG, "write: internal failure", iOException);
       return false;
     }
     return true;

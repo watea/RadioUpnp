@@ -130,7 +130,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   public void adjustVolume(int direction) {
     final UpnpAction upnpAction = getActionGetVolume();
     if (upnpAction == null) {
-      Log.d(LOG_TAG, "adjustVolume: scheduleActionGetVolume() is null!");
+      Log.e(LOG_TAG, "adjustVolume: scheduleActionGetVolume() is null!");
     } else {
       // Do only if nothing done currently
       if (volumeDirection == AudioManager.ADJUST_SAME) {
@@ -275,7 +275,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         protected void onSuccess() {
           final SoapPrimitive aVTransportID = getPropertyInfo("AVTransportID");
           if (aVTransportID == null) {
-            Log.d(LOG_TAG, "Unable to find instanceId");
+            Log.e(LOG_TAG, "Unable to find instanceId");
           } else {
             instanceId = aVTransportID.getValue().toString();
           }
@@ -334,7 +334,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
                   // Nothing to do
               }
             } catch (Exception exception) {
-              Log.d(LOG_TAG, "Unable to set volume", exception);
+              Log.e(LOG_TAG, "Unable to set volume", exception);
             }
           }
         }

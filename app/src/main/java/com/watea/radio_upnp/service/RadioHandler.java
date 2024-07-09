@@ -116,7 +116,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
     }
     final Radio radio = MainActivity.getRadios().getRadioFrom(uri.replace("/", ""));
     if (radio == null) {
-      Log.d(LOG_TAG, "handle: unknown radio");
+      Log.e(LOG_TAG, "handle: unknown radio");
       return null;
     }
     final boolean isGet = (method == NanoHTTPD.Method.GET);
@@ -161,7 +161,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
       connectionHandler.onLANConnection(response);
       return response;
     } catch (Exception exception) {
-      Log.d(LOG_TAG, "handle: unable to build response", exception);
+      Log.e(LOG_TAG, "handle: unable to build response", exception);
       if (hlsHandler != null) {
         hlsHandler.release();
       }
@@ -317,9 +317,9 @@ public class RadioHandler implements NanoHttpServer.Handler {
         return 0;
       }
       if (metadataOffset > 0) {
-        Log.i(LOG_TAG, "Metadata expected at index: " + metadataOffset);
+        Log.d(LOG_TAG, "Metadata expected at index: " + metadataOffset);
       } else if (metadataOffset == 0) {
-        Log.i(LOG_TAG, "No metadata expected");
+        Log.d(LOG_TAG, "No metadata expected");
       } else {
         Log.w(LOG_TAG, "Wrong metadata value");
       }

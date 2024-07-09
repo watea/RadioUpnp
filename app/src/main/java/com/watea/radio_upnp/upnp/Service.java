@@ -89,7 +89,7 @@ public class Service extends Asset {
         if (action.isComplete()) {
           actions.add(action);
         } else {
-          Log.d(LOG_TAG, "enAccept: try to add an incomplete Action to: " + serviceType);
+          Log.e(LOG_TAG, "enAccept: try to add an incomplete Action to: " + serviceType);
         }
         currentAction.set(null);
       }

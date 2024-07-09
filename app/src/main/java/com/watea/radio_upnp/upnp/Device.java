@@ -195,7 +195,7 @@ public class Device extends Asset {
           (serviceId == null) ||
           (descriptionURL == null) ||
           (controlURL == null)) {
-          Log.d(LOG_TAG, "endAccept: incomplete service parameters");
+          Log.e(LOG_TAG, "endAccept: incomplete service parameters");
         } else {
           try {
             currentDevice.get().services.add(new Service(
@@ -209,7 +209,7 @@ public class Device extends Asset {
             Log.d(LOG_TAG, "Add service: " + serviceType + " to " + getDisplayString());
           } catch
           (IOException | XmlPullParserException | URISyntaxException exception) {
-            Log.d(LOG_TAG, "endAccept: service could not be created: " + serviceType, exception);
+            Log.e(LOG_TAG, "endAccept: service could not be created: " + serviceType, exception);
           }
         }
         break;
@@ -224,7 +224,7 @@ public class Device extends Asset {
             try {
               fetchIcon(new URI(stringUrl));
             } catch (Exception exception) {
-              Log.d(LOG_TAG, "endAccept: fail to fetch icon", exception);
+              Log.e(LOG_TAG, "endAccept: fail to fetch icon", exception);
             }
           }
         }

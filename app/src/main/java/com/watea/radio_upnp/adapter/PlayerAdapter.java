@@ -104,7 +104,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     this.radioUri = radioUri;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     if (audioManager == null) {
-      Log.e(LOG_TAG, "AudioManager is null");
+      Log.e(LOG_TAG, "Internal failure: audioManager is null");
     }
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
@@ -242,7 +242,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   protected void changeAndNotifyState(int newState) {
     Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + lockKey);
     if (state == newState) {
-      Log.i(LOG_TAG, "=> no change");
+      Log.d(LOG_TAG, "=> no change");
     } else {
       state = newState;
       listener.onPlaybackStateChange(

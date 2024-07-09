@@ -18,7 +18,6 @@ import java.util.Set;
 import fi.iki.elonen.NanoHTTPD;
 
 public class NanoHttpServer extends NanoHTTPD {
-  private static final String LOG_TAG = NanoHttpServer.class.getName();
   private final Context context;
   private final Set<Handler> handlers = new HashSet<>();
   @NonNull

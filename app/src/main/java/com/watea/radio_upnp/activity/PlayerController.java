@@ -247,7 +247,7 @@ public class PlayerController {
 
       @Override
       public void onConnectionFailed() {
-        Log.i(LOG_TAG, "Connection to RadioService failed");
+        Log.d(LOG_TAG, "Connection to RadioService failed");
       }
     };
 
@@ -302,7 +302,7 @@ public class PlayerController {
             break;
           default:
             // Should not happen
-            Log.i(LOG_TAG, "Internal failure, no action to perform on play button");
+            Log.e(LOG_TAG, "Internal failure, no action to perform on play button");
         }
       }
     });
@@ -343,7 +343,7 @@ public class PlayerController {
     try {
       mediaBrowser.connect();
     } catch (IllegalStateException illegalStateException) {
-      Log.d(LOG_TAG, "onActivityResume: mediaBrowser.connect() failed", illegalStateException);
+      Log.e(LOG_TAG, "onActivityResume: mediaBrowser.connect() failed", illegalStateException);
     }
   }
 

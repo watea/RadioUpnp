@@ -185,7 +185,7 @@ public class SearchFragment extends MainActivityFragment {
           try {
             final String id = extractValue(station, "station_id");
             if (id.isEmpty()) {
-              Log.i(LOG_TAG, "Error in data; DAR_FM_PLAYLIST_REQUEST extraction");
+              Log.d(LOG_TAG, "Error in data; DAR_FM_PLAYLIST_REQUEST extraction");
             } else {
               final Map<String, String> radioData = new Hashtable<>();
               radioData.put(DAR_FM_ID, id);
@@ -193,11 +193,11 @@ public class SearchFragment extends MainActivityFragment {
               new DarFmDetailSearcher(radioData);
             }
           } catch (Exception exception) {
-            Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST extraction", exception);
+            Log.d(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST extraction", exception);
           }
         }
       } catch (IOException iOException) {
-        Log.i(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST search", iOException);
+        Log.d(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST search", iOException);
       }
     }).start();
   }
@@ -225,9 +225,9 @@ public class SearchFragment extends MainActivityFragment {
         // Order matters
         icon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
       } catch (MalformedURLException malformedURLException) {
-        Log.i(LOG_TAG, "Error performing icon search", malformedURLException);
+        Log.d(LOG_TAG, "Error performing icon search", malformedURLException);
       } catch (IOException iOException) {
-        Log.i(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOException);
+        Log.d(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOException);
       }
     }
 
@@ -239,7 +239,7 @@ public class SearchFragment extends MainActivityFragment {
       try {
         webPage = new URL(radioData.get(DAR_FM_WEB_PAGE));
       } catch (MalformedURLException malformedURLException) {
-        Log.i(LOG_TAG, "No web page found for " + radioName);
+        Log.d(LOG_TAG, "No web page found for " + radioName);
       }
       try {
         radiosSearchAdapter.add(new Radio(
@@ -250,7 +250,7 @@ public class SearchFragment extends MainActivityFragment {
         // Order matters
         defaultFrameLayout.setVisibility(View.INVISIBLE);
       } catch (MalformedURLException malformedURLException) {
-        Log.i(LOG_TAG, "Error adding radio: " + radioName, malformedURLException);
+        Log.d(LOG_TAG, "Error adding radio: " + radioName, malformedURLException);
         tell(R.string.dar_fm_failure);
       }
     }

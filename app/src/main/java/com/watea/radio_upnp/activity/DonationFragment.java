@@ -239,7 +239,7 @@ public class DonationFragment
     switch (responseCode) {
       case BillingClient.BillingResponseCode.OK:
       case BillingClient.BillingResponseCode.USER_CANCELED:
-        Log.i(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
+        Log.d(LOG_TAG, location + ": " + responseCode + "/" + debugMessage);
         break;
       case BillingClient.BillingResponseCode.SERVICE_DISCONNECTED:
       case BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE:

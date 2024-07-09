@@ -116,8 +116,8 @@ public abstract class ItemFragment extends MainActivityFragment {
         return false;
       }
     } else {
-      // If we got here, the user's action was not recognized
-      // Invoke the superclass to handle it
+      // If we got here, the user's action was not recognized.
+      // Invoke the superclass to handle it.
       return super.onOptionsItemSelected(item);
     }
     return true;
@@ -181,7 +181,7 @@ public abstract class ItemFragment extends MainActivityFragment {
                 setRadioIcon(bitmap);
               }
             } catch (FileNotFoundException fileNotFoundException) {
-              Log.i(LOG_TAG, "Error performing icon local search", fileNotFoundException);
+              Log.d(LOG_TAG, "Error performing icon local search", fileNotFoundException);
             }
           }
         }

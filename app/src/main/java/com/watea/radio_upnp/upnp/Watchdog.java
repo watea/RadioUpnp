@@ -56,7 +56,7 @@ public abstract class Watchdog {
 
   public void start(@NonNull String instanceId) {
     if (action == null) {
-      Log.d(LOG_TAG, "Watchdog start failed: actionWatchdog is null");
+      Log.e(LOG_TAG, "Watchdog start failed: actionWatchdog is null");
     } else {
       executor.scheduleWithFixedDelay(
         () -> executeActionWatchdog(instanceId), 0, DELAY, TimeUnit.MILLISECONDS);

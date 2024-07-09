@@ -64,7 +64,7 @@ public class RadioURL {
       sSLContext.init(
         null, new TrustManager[]{new EasyX509TrustManager()}, new java.security.SecureRandom());
     } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
-      Log.e(LOG_TAG, "Error handling SSL connection", exception);
+      Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
     }
     sSLSocketFactory = (sSLContext == null) ? null : sSLContext.getSocketFactory();
   }
@@ -111,7 +111,7 @@ public class RadioURL {
         }
       }
     } catch (Exception exception) {
-      Log.i(LOG_TAG, "Error performing icon web site search", exception);
+      Log.d(LOG_TAG, "Error performing icon web site search", exception);
     }
     return result;
   }
@@ -141,7 +141,7 @@ public class RadioURL {
       return getStreamContentType(actualHttpURLConnection);
     } catch (IOException iOException) {
       // Fires also in case of timeout
-      Log.i(LOG_TAG, "getStreamContentType: IOException", iOException);
+      Log.d(LOG_TAG, "getStreamContentType: IOException", iOException);
     } finally {
       if (actualHttpURLConnection != null) {
         actualHttpURLConnection.disconnect();
@@ -200,13 +200,13 @@ public class RadioURL {
   @Nullable
   public Bitmap getBitmap() {
     if (uRL == null) {
-      Log.i(LOG_TAG, "getBitmap: decoding image on null URL");
+      Log.e(LOG_TAG, "getBitmap: decoding image on null URL");
       return null;
     }
     try {
       return BitmapFactory.decodeStream(uRL.openConnection().getInputStream());
     } catch (Exception exception) {
-      Log.i(LOG_TAG, "getBitmap: error decoding image on " + uRL, exception);
+      Log.d(LOG_TAG, "getBitmap: error decoding image on " + uRL, exception);
       return null;
     }
   }

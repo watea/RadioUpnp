@@ -162,7 +162,7 @@ public class RadioService
       nanoHttpServer = new NanoHttpServer(this, this);
       nanoHttpServer.start();
     } catch (IOException iOException) {
-      Log.d(LOG_TAG, "HTTP server creation fails", iOException);
+      Log.e(LOG_TAG, "HTTP server creation fails", iOException);
     }
     // Create a new MediaSession and controller...
     session = new MediaSessionCompat(this, LOG_TAG);
@@ -193,7 +193,7 @@ public class RadioService
       notificationManager.createNotificationChannel(notificationChannel);
       Log.d(LOG_TAG, "New channel created");
     } else {
-      Log.i(LOG_TAG, "Existing channel reused");
+      Log.d(LOG_TAG, "Existing channel reused");
     }
     // Radio library access
     radios = MainActivity.getRadios();
@@ -348,7 +348,7 @@ public class RadioService
                     mediaSessionCompatCallback.onRewind();
                   }
                 } catch (Exception exception) {
-                  Log.i(LOG_TAG, "Relaunch failed, we stop");
+                  Log.d(LOG_TAG, "Relaunch failed, we stop");
                   mediaSessionCompatCallback.onStop();
                 }
               },
@@ -392,14 +392,14 @@ public class RadioService
         new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
       // When notification is deleted (when playback is paused and notification can be
-      // deleted) fire MediaButtonPendingIntent with ACTION_STOP
+      // deleted), fire MediaButtonPendingIntent with ACTION_STOP
       .setDeleteIntent(
         MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
       // Show controls on lock screen even when user hides sensitive content
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
     final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
     if (mediaMetadataCompat == null) {
-      Log.e(LOG_TAG, "getNotification: internal failure; no metadata defined for radio");
+      Log.e(LOG_TAG, "Internal failure; no metadata defined for radio");
     } else {
       final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
       builder
@@ -455,7 +455,7 @@ public class RadioService
     try {
       notificationManager.notify(NOTIFICATION_ID, getNotification());
     } catch (SecurityException securityException) {
-      Log.e(LOG_TAG, "Notification not allowed");
+      Log.e(LOG_TAG, "Internal failure; notification not allowed");
     }
   }
 
@@ -569,7 +569,7 @@ public class RadioService
     @Override
     public void onStop() {
       if (playerAdapter == null) {
-        Log.d(LOG_TAG, "onStop: but playerAdapter is null!");
+        Log.e(LOG_TAG, "onStop: but playerAdapter is null!");
       } else {
         playerAdapter.stop();
         playerAdapter = null;

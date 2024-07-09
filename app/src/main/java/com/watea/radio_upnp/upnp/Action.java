@@ -47,7 +47,7 @@ public class Action extends Asset {
         if (argument.isComplete()) {
           arguments.add(argument);
         } else {
-          Log.d(LOG_TAG, "endAccept: try to add an incomplete Argument to " + name);
+          Log.e(LOG_TAG, "endAccept: try to add an incomplete Argument to " + name);
         }
         currentArgument.set(null);
       }
