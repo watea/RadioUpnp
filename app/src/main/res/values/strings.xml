@@ -93,6 +93,7 @@
     <string name="import_message">[GO!] asks for .json file; content will be imported.</string>
     <string name="import_successful">Import successful!</string>
     <string name="import_failed">Import failed!</string>
+    <string name="import_no_data">Import done; no data added!</string>
     <string name="no_data">No playlist data found</string>
     <string name="dump_error">Error: local export file could not be generated</string>
     <string name="export_done">Export file created in download directory: </string>

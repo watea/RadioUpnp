@@ -95,7 +95,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-// TODO vérifier les . dans commantaires plusieurs lignes (attention find in file que partiel)
 // TODO uniformiser noms des vues
 public class MainActivity
   extends AppCompatActivity
@@ -741,8 +740,8 @@ public class MainActivity
       while ((line = reader.readLine()) != null) {
         stringBuilder.append(line);
       }
-      radios.addFrom(new JSONArray(stringBuilder.toString()));
-      tell(R.string.import_successful);
+      tell(radios.addFrom(new JSONArray(stringBuilder.toString())) ?
+        R.string.import_successful : R.string.import_no_data);
     } catch (Exception exception) {
       Log.e(LOG_TAG, "importJsonFrom: exception", exception);
       tell(R.string.import_failed);
