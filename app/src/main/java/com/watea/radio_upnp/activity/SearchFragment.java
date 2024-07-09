@@ -146,7 +146,7 @@ public class SearchFragment extends MainActivityFragment {
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
-    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
+    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     final View searchView =
       getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
     nameEditText = searchView.findViewById(R.id.name_edit_text);

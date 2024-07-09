@@ -95,7 +95,7 @@ public class ModifyFragment extends MainActivityFragment {
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
-    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
+    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapter
     radiosModifyAdapter = new RadiosModifyAdapter(radiosRecyclerView, radiosModifyAdapterListener);
   }

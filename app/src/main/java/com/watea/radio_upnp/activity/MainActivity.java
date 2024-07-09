@@ -95,7 +95,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-// TODO uniformiser noms des vues
 public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
@@ -496,10 +495,10 @@ public class MainActivity
     }
     // Specific UPnP devices dialog
     final View contentUpnp = getLayoutInflater().inflate(R.layout.content_upnp, null);
-    final RecyclerView upnpRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
-    upnpRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-    upnpRecyclerView.setAdapter(upnpDevicesAdapter);
-    devicesDefaultView = contentUpnp.findViewById(R.id.view_devices_default);
+    final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
+    devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+    devicesRecyclerView.setAdapter(upnpDevicesAdapter);
+    devicesDefaultView = contentUpnp.findViewById(R.id.devices_default_linear_layout);
     upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
       .setView(contentUpnp)
       .create();

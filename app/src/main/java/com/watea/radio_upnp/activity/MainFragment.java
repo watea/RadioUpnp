@@ -182,7 +182,7 @@ public class MainFragment extends MainActivityFragment {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
     radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
-    defaultFrameLayout = view.findViewById(R.id.view_radios_default);
+    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapters (order matters!)
     radiosMainAdapter = new RadiosMainAdapter(
       () -> isPreferredRadios ? MainActivity.getRadios().getPreferred() : MainActivity.getRadios(),
