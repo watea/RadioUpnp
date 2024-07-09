@@ -43,6 +43,7 @@ import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.ConsumeParams;
 import com.android.billingclient.api.ConsumeResponseListener;
+import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
@@ -178,7 +179,7 @@ public class DonationFragment
     // BillingClient, new each time
     assert getContext() != null;
     billingClient = BillingClient.newBuilder(getContext())
-      .enablePendingPurchases()
+      .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
       .setListener(this)
       .build();
     billingClient.startConnection(new BillingClientStateListener() {
