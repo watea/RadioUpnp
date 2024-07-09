@@ -47,6 +47,7 @@ import org.ksoap2.serialization.SoapPrimitive;
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
+import java.util.function.Function;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
@@ -238,10 +239,28 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   public void onNewInformation(@NonNull String ignoredInformation) {
   }
 
-  private void scheduleActionPlay() {
-    final Action action = avTransportService.getAction(ACTION_PLAY); // TODO comment traiter null si obligatoire?
+  private void scheduleMandatoryAction(
+    @Nullable Action action, @NonNull Function<Action, UpnpAction> function) {
+    if (action == null) {
+      // Shall not happen
+      Log.e(LOG_TAG, "scheduleMandatoryAction: mandatory UPnP action not found");
+      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+    } else {
+      function.apply(action).schedule();
+    }
+  }
+
+  private void scheduleOptionalAction(
+    @Nullable Action action, @NonNull Function<Action, UpnpAction> function) {
     if (action != null) {
-      new UpnpAction(action, actionController, instanceId) {
+      function.apply(action).schedule();
+    }
+  }
+
+  private void scheduleActionPlay() {
+    scheduleMandatoryAction(
+      avTransportService.getAction(ACTION_PLAY),
+      action -> new UpnpAction(action, actionController, instanceId) {
         // Actual Playing state is tested by Watchdog, so nothing to do in case of success
         @Override
         protected void onFailure() {
@@ -249,28 +268,25 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           super.onFailure();
         }
       }
-        .addArgument("Speed", "1")
-        .schedule();
-    }
+        .addArgument("Speed", "1"));
   }
 
   private void scheduleActionStop() {
-    final Action action = avTransportService.getAction(ACTION_STOP);
-    if (action != null) {
-      new UpnpAction(action, actionController, instanceId) {
+    scheduleMandatoryAction(
+      avTransportService.getAction(ACTION_STOP),
+      action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onFailure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
-      }.schedule();
-    }
+      });
   }
 
   private void scheduleActionPrepareForConnection() {
-    final Action action = connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION);
-    if (action != null) {
-      new UpnpAction(action, actionController) {
+    scheduleOptionalAction(
+      connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION),
+      action -> new UpnpAction(action, actionController) {
         @Override
         protected void onSuccess() {
           final SoapPrimitive aVTransportID = getPropertyInfo("AVTransportID");
@@ -286,9 +302,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         .addArgument("RemoteProtocolInfo", DEFAULT_PROTOCOL_INFO)
         .addArgument("PeerConnectionManager", "")
         .addArgument("PeerConnectionID", "-1")
-        .addArgument("Direction", "Input")
-        .schedule();
-    }
+        .addArgument("Direction", "Input"));
   }
 
   // On calling thread
@@ -349,13 +363,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   private void scheduleActionSetAvTransportUri() {
-    final Action action = avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI);
-    if (action != null) {
-      new UpnpAction(action, actionController, instanceId) {
+    scheduleMandatoryAction(
+      avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
+      action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
-          // Now we launch watchdog
+          // Now instanceId is known, we launch watchdog
           watchdog.start(instanceId);
           super.onSuccess();
         }
@@ -363,20 +377,19 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         @Override
         protected void onFailure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
-          // TODO: remplacer par la suppression des actions pour ce device
+          // Release other UPnP actions on this device
+          actionController.release(action.getDevice());
           super.onFailure();
         }
       }
         .addArgument("CurrentURI", radioUri.toString())
-        .addArgument("CurrentURIMetaData", getMetaData())
-        .schedule();
-    }
+        .addArgument("CurrentURIMetaData", getMetaData()));
   }
 
   private void scheduleActionGetProtocolInfo() {
-    final Action action = connectionManager.getAction(ACTION_GET_PROTOCOL_INFO);
-    if (action != null) {
-      new UpnpAction(action, actionController) {
+    scheduleMandatoryAction(
+      connectionManager.getAction(ACTION_GET_PROTOCOL_INFO),
+      action -> new UpnpAction(action, actionController) {
         @Override
         protected void onSuccess() {
           final SoapPrimitive sink = getPropertyInfo("Sink");
@@ -398,8 +411,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
-      }.schedule();
-    }
+      });
   }
 
   // Create DIDL-Lite metadata

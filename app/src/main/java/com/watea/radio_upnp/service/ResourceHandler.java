@@ -15,7 +15,6 @@ import java.io.ByteArrayOutputStream;
 import fi.iki.elonen.NanoHTTPD;
 
 public class ResourceHandler implements NanoHttpServer.Handler {
-  private static final String LOGO_FILE = "logo";
   private static final int REMOTE_LOGO_SIZE = 300;
   @Nullable
   private Bitmap bitmap = null;
@@ -42,6 +41,6 @@ public class ResourceHandler implements NanoHttpServer.Handler {
   @Nullable
   public String createLogoFile(@NonNull Radio radio) {
     bitmap = Bitmap.createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
-    return uri = LOGO_FILE + radio.getId() + ".jpg";
+    return uri = "logo" + radio.getId() + ".jpg";
   }
 }

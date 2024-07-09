@@ -12,6 +12,10 @@ public class ActionController {
     upnpActions.clear();
   }
 
+  public synchronized void release(@NonNull Device device) {
+    upnpActions.removeIf(upnpAction -> upnpAction.hasDevice(device));
+  }
+
   public synchronized void runNextAction() {
     if (!upnpActions.isEmpty()) {
       upnpActions.remove(0);

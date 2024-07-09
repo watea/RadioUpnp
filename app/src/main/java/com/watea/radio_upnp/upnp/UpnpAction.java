@@ -103,6 +103,10 @@ public abstract class UpnpAction {
     actionController.schedule(this);
   }
 
+  public boolean hasDevice(@NonNull Device device) {
+    return action.getDevice().equals(device);
+  }
+
   // Run next by default
   protected void onSuccess() {
     actionController.runNextAction();
