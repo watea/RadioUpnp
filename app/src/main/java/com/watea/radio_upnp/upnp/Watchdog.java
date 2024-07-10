@@ -73,10 +73,10 @@ public abstract class Watchdog {
     new UpnpAction(action, actionController, instanceId) {
       @Override
       protected void onSuccess() {
-        final SoapPrimitive currentTransportState = getPropertyInfo("CurrentTransportState");
+        final String currentTransportState = getResponse("CurrentTransportState");
         if ((currentTransportState != null) &&
-          (currentTransportState.getValue().toString().equals("TRANSITIONING") ||
-            currentTransportState.getValue().toString().equals("PLAYING"))) {
+          (currentTransportState.equals("TRANSITIONING") ||
+            currentTransportState.equals("PLAYING"))) {
           failureCount = 0;
           onEvent(ReaderState.PLAYING);
         } else {

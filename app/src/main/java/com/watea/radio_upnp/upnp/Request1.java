@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 
-public abstract class Request {
+public abstract class Request1 {
   private static final String SOAP_ACTION_SHARP = "#";
   private final String LOG_TAG = Request.class.getName();
   private final Service service;
@@ -26,7 +26,7 @@ public abstract class Request {
   private final List<String[]> properties = new Vector<>();
 
   // properties must have 2 String; not checked here
-  public Request(
+  public Request1(
     @NonNull Service service,
     @NonNull String action,
     @NonNull List<String[]> properties) {

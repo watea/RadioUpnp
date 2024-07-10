@@ -202,7 +202,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         // Do prepare if action available
         scheduleActionPrepareForConnection();
         // Fetch ProtocolInfo if not available
-        if (contentProvider.hasProtocolInfo(device)) {
+        if (!contentProvider.hasProtocolInfo(device)) {
           scheduleActionGetProtocolInfo();
         }
         scheduleActionSetAvTransportUri();
@@ -289,11 +289,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       action -> new UpnpAction(action, actionController) {
         @Override
         protected void onSuccess() {
-          final SoapPrimitive aVTransportID = getPropertyInfo("AVTransportID");
+          final String aVTransportID = getResponse("AVTransportID");
           if (aVTransportID == null) {
             Log.e(LOG_TAG, "Unable to find instanceId");
           } else {
-            instanceId = aVTransportID.getValue().toString();
+            instanceId = aVTransportID;
           }
           super.onSuccess();
         }
@@ -331,10 +331,10 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
-          final SoapPrimitive soapPrimitive = getPropertyInfo("CurrentVolume");
-          if (soapPrimitive != null) {
+          final String response = getResponse("CurrentVolume");
+          if (response != null) {
             try {
-              currentVolume = Integer.parseInt(soapPrimitive.getValue().toString());
+              currentVolume = Integer.parseInt(response);
               switch (volumeDirection) {
                 case AudioManager.ADJUST_LOWER:
                   currentVolume = Math.max(0, --currentVolume);
@@ -392,10 +392,10 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       action -> new UpnpAction(action, actionController) {
         @Override
         protected void onSuccess() {
-          final SoapPrimitive sink = getPropertyInfo("Sink");
+          final String sink = getResponse("Sink");
           if (sink != null) {
             final List<String> protocolInfos = new Vector<>();
-            for (String protocolInfo : sink.getValue().toString().split(",")) {
+            for (String protocolInfo : sink.split(",")) {
               if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
                 Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
                 protocolInfos.add(protocolInfo);

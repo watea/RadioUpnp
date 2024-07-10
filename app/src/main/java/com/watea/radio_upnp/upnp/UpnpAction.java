@@ -28,11 +28,12 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.ksoap2.serialization.PropertyInfo;
 import org.ksoap2.serialization.SoapPrimitive;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
@@ -42,8 +43,8 @@ public abstract class UpnpAction {
   private final Action action;
   @NonNull
   private final ActionController actionController;
-  private final List<String[]> arguments = new Vector<>();
-  private final Set<PropertyInfo> propertyInfos = new HashSet<>();
+  private final List<UpnpAction.Argument> arguments = new Vector<>();
+  private final Map<String, String> responses = new HashMap<>();
 
   public UpnpAction(
     @NonNull Action action,
@@ -61,17 +62,12 @@ public abstract class UpnpAction {
   }
 
   @Nullable
-  public SoapPrimitive getPropertyInfo(@NonNull String Name) {
-    return propertyInfos.stream().
-      filter(propertyInfo ->
-        propertyInfo.getName().equals(Name) && propertyInfo.getValue() instanceof SoapPrimitive)
-      .findFirst()
-      .map(propertyInfo -> (SoapPrimitive) propertyInfo.getValue())
-      .orElse(null);
+  public String getResponse(@NonNull String Name) {
+    return responses.get(Name);
   }
 
   public UpnpAction addArgument(@NonNull String name, @NonNull String value) {
-    arguments.add(new String[]{name, value});
+    arguments.add(new Argument(name, value));
     return this;
   }
 
@@ -80,9 +76,9 @@ public abstract class UpnpAction {
       LOG_TAG, "execute: " + action.getName() + " on: " + action.getDevice().getDisplayString());
     final Request request = new Request(action.getService(), action.getName(), arguments) {
       @Override
-      public void onSuccess(@NonNull Set<PropertyInfo> result) {
+      public void onSuccess(@NonNull Map<String, String> responses) {
         Log.d(LOG_TAG, "Successfully called UPnP action: " + action.getName());
-        propertyInfos.addAll(result);
+        UpnpAction.this.responses.putAll(responses);
         UpnpAction.this.onSuccess();
       }
 
@@ -115,5 +111,26 @@ public abstract class UpnpAction {
   // Run next by default
   protected void onFailure() {
     actionController.runNextAction();
+  }
+
+  public static class Argument {
+    @NonNull
+    private final String key;
+    @NonNull
+    private final String value;
+
+    public Argument(@NonNull String key, @NonNull String value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    @NonNull
+    public String getKey() {
+      return key;
+    }
+    @NonNull
+    public String getValue() {
+      return value;
+    }
   }
 }
