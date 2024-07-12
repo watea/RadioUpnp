@@ -101,6 +101,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
 
   @Override
   public NanoHTTPD.Response handle(@NonNull NanoHTTPD.IHTTPSession iHTTPSession) {
+    Log.d(LOG_TAG, "handle: entering");
     final NanoHTTPD.Method method = iHTTPSession.getMethod();
     final String uri = iHTTPSession.getUri();
     final Map<String, String> params = iHTTPSession.getParms();
@@ -111,12 +112,12 @@ public class RadioHandler implements NanoHttpServer.Handler {
     // Request must contain a query with radio ID and lock key
     final String lockKey = params.get(KEY);
     if (lockKey == null) {
-      Log.d(LOG_TAG, "handle: unexpected request received: lockKey is null");
+      Log.d(LOG_TAG, "handle: leaving, unexpected request received: lockKey is null");
       return null;
     }
     final Radio radio = MainActivity.getRadios().getRadioFrom(uri.replace("/", ""));
     if (radio == null) {
-      Log.e(LOG_TAG, "handle: unknown radio");
+      Log.d(LOG_TAG, "handle: leaving, unknown radio");
       return null;
     }
     final boolean isGet = (method == NanoHTTPD.Method.GET);
@@ -149,16 +150,20 @@ public class RadioHandler implements NanoHttpServer.Handler {
           httpURLConnection.getInputStream(),
           lockKey);
       // Build response
-      final String contentType = controller.getContentType();
-      final NanoHTTPD.Response response = NanoHTTPD.newChunkedResponse(
-        NanoHTTPD.Response.Status.OK,
-        // Force ContentType as some UPnP devices require it
-        contentType.isEmpty() ? httpURLConnection.getContentType() : contentType,
-        connectionHandler.getInputStream());
+      String contentType = controller.getContentType();
+      // Force ContentType as some UPnP devices require it
+      if (contentType.isEmpty()) {
+        contentType = httpURLConnection.getContentType();
+      }
+      final NanoHTTPD.Response response = isGet ?
+        NanoHTTPD.newChunkedResponse(
+          NanoHTTPD.Response.Status.OK, contentType, connectionHandler.getInputStream()) :
+        NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, contentType, "");
       // DLNA header, as found in documentation, not sure it is useful (should not)
       response.addHeader("contentFeatures.dlna.org", "*");
       response.addHeader("transferMode.dlna.org", "Streaming");
       connectionHandler.onLANConnection(response);
+      Log.d(LOG_TAG, "handle: leaving with response: " + response);
       return response;
     } catch (Exception exception) {
       Log.e(LOG_TAG, "handle: unable to build response", exception);
@@ -166,6 +171,7 @@ public class RadioHandler implements NanoHttpServer.Handler {
         hlsHandler.release();
       }
     }
+    Log.e(LOG_TAG, "handle: leaving with null");
     return null;
   }
 

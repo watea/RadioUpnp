@@ -42,8 +42,6 @@ import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 import com.watea.radio_upnp.upnp.Watchdog;
 
-import org.ksoap2.serialization.SoapPrimitive;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;

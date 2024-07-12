@@ -27,8 +27,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import org.ksoap2.serialization.SoapPrimitive;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;

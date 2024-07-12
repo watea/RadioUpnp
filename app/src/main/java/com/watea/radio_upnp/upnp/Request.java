@@ -26,7 +26,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 public abstract class Request {
   private final String LOG_TAG = Request.class.getName();
-  private final String ENVELOPE_NAMESPACE = "http://schemas.xmlsoap.org/soap/envelope/";
   @NonNull
   private final Service service;
   @NonNull
@@ -43,6 +42,12 @@ public abstract class Request {
     this.properties.addAll(properties);
   }
 
+  @NonNull
+  private static String getElementValue(Element parent, String tagName) {
+    final NodeList nodeList = parent.getElementsByTagName(tagName);
+    return (nodeList.getLength() > 0) ? nodeList.item(0).getTextContent() : "";
+  }
+
   public void call() {
     final URL url;
     try {
@@ -54,6 +59,7 @@ public abstract class Request {
     final HttpURLConnection httpURLConnection;
     final String serviceType = service.getServiceType();
     try {
+      Log.d(LOG_TAG, "call: " + action + " URL => " + url.toString());
       httpURLConnection = (HttpURLConnection) url.openConnection();
       httpURLConnection.setRequestMethod("POST");
       httpURLConnection.setRequestProperty("Content-Type", "text/xml; charset=\"utf-8\"");
@@ -66,47 +72,57 @@ public abstract class Request {
     try (OutputStreamWriter writer = new OutputStreamWriter(httpURLConnection.getOutputStream())) {
       writer.write(getSoapBody(serviceType).toString());
       writer.flush();
-      Log.d(LOG_TAG, "call: action => " + action);
-    } catch (IOException ioException) {
-      onFailure("SOAP request exception", ioException.toString());
-      return;
-    }
-    // Read the response
-    try (InputStream responseStream = httpURLConnection.getInputStream()) {
+      // Read the response
+      final int responseCode = httpURLConnection.getResponseCode();
+      // Success/Failure range
+      final boolean isFailure = (responseCode < 200) || (responseCode >= 300);
+      final InputStream responseStream =
+        isFailure ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream();
+      if (responseStream == null) {
+        onFailure("SOAP connection error", "No response stream available");
+        return;
+      }
       final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
       factory.setNamespaceAware(true); // Necessary!!
       final DocumentBuilder builder = factory.newDocumentBuilder();
       final Document document = builder.parse(responseStream);
+      responseStream.close();
       httpURLConnection.disconnect();
-      // Fault?
-      final NodeList faultNode = document.getElementsByTagNameNS(ENVELOPE_NAMESPACE, "Fault");
-      if (faultNode.getLength() > 0) {
+      // Get the action response element
+      if (isFailure) {
+        final NodeList responseNodes = document.getElementsByTagName("s:Fault");
         // Get the first element
-        final Element faultElement = (Element) faultNode.item(0);
-        // TODO: à tester
-        final NodeList detailNodes = faultElement.getElementsByTagName("detail");
+        final Element element =
+          (responseNodes.getLength() > 0) ? (Element) responseNodes.item(0) : null;
+        if (element == null) {
+          onFailure("SOAP response error", "No failure element available");
+          return;
+        }
+        final NodeList detailNodes = element.getElementsByTagName("detail");
         onFailure(
-          faultElement.getAttribute("faultcode"),
-          faultElement.getAttribute("faultstring") + " [" + getFaultDetail(detailNodes) + "]");
+          getElementValue(element, "faultcode"),
+          getElementValue(element, "faultstring"),
+          getFaultDetail(detailNodes));
         return;
       }
-      // Get the action response element
       final NodeList responseNodes =
         document.getElementsByTagNameNS(serviceType, action + "Response");
+      // Get the first element
+      final Node node = (responseNodes.getLength() > 0) ? responseNodes.item(0) : null;
+      if (node == null) {
+        onFailure("SOAP response error", "No response element available");
+        return;
+      }
       final Map<String, String> responses = new HashMap<>();
-      if (responseNodes.getLength() > 0) {
-        // Get the first element
-        final Node node = responseNodes.item(0);
-        // Get the child elements
-        final NodeList childNodes = node.getChildNodes();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-          final Node childNode = childNodes.item(i);
-          if (childNode.getNodeType() == Node.ELEMENT_NODE) {
-            final String key = ((Element) childNode).getTagName();
-            final String value = childNode.getTextContent();
-            responses.put(key, value);
-            Log.d(LOG_TAG, "call: response item => " + key + ": " + value);
-          }
+      // Get the child elements
+      final NodeList childNodes = node.getChildNodes();
+      for (int i = 0; i < childNodes.getLength(); i++) {
+        final Node childNode = childNodes.item(i);
+        if (childNode.getNodeType() == Node.ELEMENT_NODE) {
+          final String key = ((Element) childNode).getTagName();
+          final String value = childNode.getTextContent();
+          responses.put(key, value);
+          Log.d(LOG_TAG, "call: response item => " + key + ": " + value);
         }
       }
       onSuccess(responses);
@@ -117,49 +133,52 @@ public abstract class Request {
 
   public abstract void onSuccess(@NonNull Map<String, String> responses);
 
-  public abstract void onFailure(@NonNull String faultCode, @NonNull String faultString);
+  public abstract void onFailure(
+    @NonNull String faultCode, @NonNull String faultString, @NonNull String faultDetail);
+
+  public void onFailure(@NonNull String faultCode, @NonNull String faultString) {
+    onFailure(faultCode, faultString, "No");
+  }
 
   private @NonNull StringBuilder getSoapBody(@NonNull String serviceType) {
     final StringBuilder soapBody = new StringBuilder();
     soapBody.append(
-        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-          "<s:Envelope xmlns:s=\"" + ENVELOPE_NAMESPACE + "\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">\n" +
-          "  <s:Body>\n" +
-          "    <u:")
+        "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" +
+          "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+          "<s:Body>" +
+          "<u:")
       .append(action)
       .append(" xmlns:u=\"")
       .append(serviceType)
-      .append("\">\n");
+      .append("\">");
     for (UpnpAction.Argument upnpActionArgument : properties) {
-      soapBody.append("      <")
+      soapBody.append("<")
         .append(upnpActionArgument.getKey())
         .append(">")
         .append(upnpActionArgument.getValue())
         .append("</")
         .append(upnpActionArgument.getKey())
-        .append(">\n");
+        .append(">");
       Log.d(LOG_TAG, "call: action property => " + upnpActionArgument.getKey() + "/" + upnpActionArgument.getValue());
     }
     soapBody
-      .append("    </u:").append(action)
-      .append(">\n")
-      .append("  </s:Body>\n")
+      .append("</u:")
+      .append(action)
+      .append(">")
+      .append("</s:Body>")
       .append("</s:Envelope>");
     return soapBody;
   }
 
   @NonNull
   private String getFaultDetail(@NonNull NodeList detailNodes) {
-    StringBuilder result = new StringBuilder();
-    for (int i = 0; i < detailNodes.getLength(); i++) {
-      final Element detailElement = (Element) detailNodes.item(i);
-      result
-        .append("(")
-        .append(detailElement.getTagName())
-        .append("/")
-        .append(detailElement.getTextContent())
-        .append(")");
+    if (detailNodes.getLength() > 0) {
+      final Element element = (Element) detailNodes.item(0);
+      final String ERROR_CODE = "errorCode";
+      final String ERROR_DESCRIPTION = "errorDescription";
+      return "(" + ERROR_CODE + ": " + getElementValue(element, ERROR_CODE) + ") (" + ERROR_DESCRIPTION + ": " + getElementValue(element, ERROR_DESCRIPTION) + ")";
+    } else {
+      return "No details";
     }
-    return result.toString();
   }
 }

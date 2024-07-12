@@ -28,13 +28,9 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.ksoap2.serialization.SoapPrimitive;
-
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Vector;
 
 public abstract class UpnpAction {
@@ -58,7 +54,7 @@ public abstract class UpnpAction {
     @NonNull ActionController actionController,
     @NonNull String instanceId) {
     this(action, actionController);
-    addArgument("InstanceId", instanceId);
+    addArgument("InstanceID", instanceId);
   }
 
   @Nullable
@@ -83,8 +79,9 @@ public abstract class UpnpAction {
       }
 
       @Override
-      public void onFailure(@NonNull String faultCode, @NonNull String faultString) {
-        Log.d(LOG_TAG, "UPnP error: " + action.getName() + "/" + faultCode + "/" + faultString);
+      public void onFailure(
+        @NonNull String faultCode, @NonNull String faultString, @NonNull String faultDetail) {
+        Log.d(LOG_TAG, "Failed to call UPnP action: " + action.getName() + " => " + faultCode + "/" + faultString + "/" + faultDetail);
         UpnpAction.this.onFailure();
       }
     };
@@ -128,6 +125,7 @@ public abstract class UpnpAction {
     public String getKey() {
       return key;
     }
+
     @NonNull
     public String getValue() {
       return value;
