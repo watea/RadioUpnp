@@ -1,15 +1,10 @@
 package com.watea.radio_upnp.service;
 
-
-import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
-import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.model.Radio;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,23 +29,19 @@ public class HttpServer {
   @NonNull
   private final ServerSocket serverSocket;
   private final Set<Handler> handlers = new HashSet<>();
-  @NonNull
-  private final RadioHandler radioHandler;
-  @NonNull
-  private final ResourceHandler resourceHandler = new ResourceHandler();
-  @NonNull
-  private final Context context;
   private boolean isRunning = false;
 
-  public HttpServer(
-    @NonNull Context context,
-    @NonNull RadioHandler.Listener radioHandlerListener) throws IOException {
+  public HttpServer() throws IOException {
     serverSocket = new ServerSocket(0);
-    this.context = context;
-    radioHandler =
-      new RadioHandler(this.context.getString(R.string.app_name), radioHandlerListener);
-    handlers.add(radioHandler);
-    handlers.add(resourceHandler);
+  }
+
+  @NonNull
+  private static byte[] getBytes(@NonNull String string) {
+    return string.getBytes(StandardCharsets.UTF_8);
+  }
+
+  public void addHandler(@NonNull Handler handler) {
+    handlers.add(handler);
   }
 
   public void start() {
@@ -78,52 +69,31 @@ public class HttpServer {
     isRunning = false;
   }
 
-  @Nullable
-  public Uri getUri() {
-    return new NetworkProxy(context).getUri(getListeningPort());
-  }
-
-  @NonNull
-  public Uri getLoopbackUri() {
-    return NetworkProxy.getLoopbackUri(getListeningPort());
-  }
-
-  public void resetRadioHandlerController() {
-    radioHandler.resetController();
-  }
-
-  public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
-    radioHandler.setController(radioHandlerController);
-  }
-
-  @Nullable
-  public Uri createLogoFile(@NonNull Radio radio) {
-    final Uri uri = getUri();
-    assert uri != null;
-    return uri.buildUpon().appendEncodedPath(resourceHandler.createLogoFile(radio)).build();
+  public int getListeningPort() {
+    return serverSocket.getLocalPort();
   }
 
   private void handleClient(@NonNull Socket socket) {
     try (final BufferedReader reader =
            new BufferedReader(new InputStreamReader(socket.getInputStream()));
-         final OutputStream outputStream = socket.getOutputStream()) {
+         final OutputStream responseStream = socket.getOutputStream()) {
       // Parse the request
       final Request request = parseRequest(reader);
       if (request == null) {
-        outputStream.write(BAD_REQUEST.getBytes(StandardCharsets.UTF_8));
+        responseStream.write(getBytes(BAD_REQUEST));
       } else {
-        final Response response = new Response(outputStream);
+        final Response response = new Response(responseStream);
         for (Handler handler : handlers) {
-          handler.handle(request, response, outputStream);
+          handler.handle(request, response, responseStream);
           if (response.isClientHandled()) {
             break;
           }
         }
         if (!response.isClientHandled()) {
-          outputStream.write(NOT_FOUND.getBytes(StandardCharsets.UTF_8));
+          responseStream.write(getBytes(NOT_FOUND));
         }
       }
-      outputStream.flush();
+      responseStream.flush();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "handleClient: failed!", iOException);
     }
@@ -150,10 +120,6 @@ public class HttpServer {
       }
     }
     return request;
-  }
-
-  private int getListeningPort() {
-    return serverSocket.getLocalPort();
   }
 
   public interface Handler {
@@ -229,10 +195,9 @@ public class HttpServer {
     public void send() throws IOException {
       outputStream.write(OK.getBytes(StandardCharsets.UTF_8));
       for (String key : headers.keySet()) {
-        outputStream.write(
-          (key + SEPARATOR + headers.get(key) + END).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(getBytes(key + SEPARATOR + headers.get(key) + END));
       }
-      outputStream.write(END.getBytes(StandardCharsets.UTF_8));
+      outputStream.write(getBytes(END));
       isClientHandled = true;
     }
 

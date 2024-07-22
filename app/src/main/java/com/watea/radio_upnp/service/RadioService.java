@@ -88,7 +88,7 @@ public class RadioService
   private Radio radio = null;
   private MediaSessionCompat session;
   private Radios radios;
-  private HttpServer httpServer;
+  private RadioHttpServer radioHttpServer;
   private PlayerAdapter playerAdapter = null;
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
@@ -159,8 +159,8 @@ public class RadioService
     Log.d(LOG_TAG, "onCreate");
     // Launch HTTP server
     try {
-      httpServer = new HttpServer(this, this);
-      httpServer.start();
+      radioHttpServer = new RadioHttpServer(this, this);
+      radioHttpServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation fails", iOException);
     }
@@ -240,8 +240,8 @@ public class RadioService
       playerAdapter.stop();
     }
     // Release HTTP service
-    if (httpServer != null) {
-      httpServer.stop();
+    if (radioHttpServer != null) {
+      radioHttpServer.stop();
     }
     // Release UPnP service
     unbindService(upnpConnection);
@@ -334,8 +334,8 @@ public class RadioService
           if (playerAdapter != null) {
             playerAdapter.release();
           }
-          if (httpServer != null) {
-            httpServer.resetRadioHandlerController();
+          if (radioHttpServer != null) {
+            radioHttpServer.resetRadioHandlerController();
           }
           // Try to relaunch just once
           if (isAllowedToRewind) {
@@ -361,8 +361,8 @@ public class RadioService
           if (playerAdapter != null) {
             playerAdapter.release();
           }
-          if (httpServer != null) {
-            httpServer.resetRadioHandlerController();
+          if (radioHttpServer != null) {
+            radioHttpServer.resetRadioHandlerController();
           }
           session.setMetadata(null);
           session.setActive(false);
@@ -489,7 +489,7 @@ public class RadioService
         return;
       }
       // Catch catastrophic failure
-      if (httpServer == null) {
+      if (radioHttpServer == null) {
         abort("onPrepareFromMediaId: nanoHttpServer is null");
       }
       final String identity = extras.getString(getString(R.string.key_upnp_device));
@@ -512,25 +512,25 @@ public class RadioService
           RadioService.this,
           radio,
           lockKey,
-          RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
+          RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       } else {
-        final Uri serverUri = httpServer.getUri();
+        final Uri serverUri = radioHttpServer.getUri();
         assert serverUri != null;
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
           radio,
           lockKey,
-          RadioHandler.getHandledUri(httpServer.getUri(), radio, lockKey),
-          httpServer.createLogoFile(radio),
+          RadioHandler.getHandledUri(radioHttpServer.getUri(), radio, lockKey),
+          radioHttpServer.createLogoFile(radio),
           chosenDevice,
           actionController,
           contentProvider);
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Set controller for HTTP handler
-      httpServer.setRadioHandlerController(radioHandlerController);
+      radioHttpServer.setRadioHandlerController(radioHandlerController);
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
