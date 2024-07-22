@@ -135,7 +135,7 @@ public class RadioHandler implements HttpServer.Handler {
             listener.onNewRate((rate == null) ? "" : rate.substring(0, rate.length() - 3), lockKey))
         : null;
     } catch (URISyntaxException uRISyntaxException) {
-      Log.e(LOG_TAG, "HlsHandler failed to be be created", uRISyntaxException);
+      Log.e(LOG_TAG, "handle: hlsHandler failed to be be created", uRISyntaxException);
       return;
     }
     try (final InputStream inputStream =
