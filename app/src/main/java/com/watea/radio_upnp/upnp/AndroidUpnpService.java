@@ -149,7 +149,7 @@ public class AndroidUpnpService extends android.app.Service {
         devices.stream().filter(device -> device.hasUUID(uUID)).findAny().orElse(null);
       // Embedded devices?
       if (result == null) {
-        for (Device device : devices) {
+        for (final Device device : devices) {
           final Device embeddedDevice = device.getEmbeddedDevice(uUID);
           if (embeddedDevice != null) {
             return embeddedDevice;

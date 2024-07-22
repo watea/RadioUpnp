@@ -83,7 +83,7 @@ public class HttpServer {
         responseStream.write(getBytes(BAD_REQUEST));
       } else {
         final Response response = new Response(responseStream);
-        for (Handler handler : handlers) {
+        for (final Handler handler : handlers) {
           handler.handle(request, response, responseStream);
           if (response.isClientHandled()) {
             break;
@@ -194,7 +194,7 @@ public class HttpServer {
 
     public void send() throws IOException {
       outputStream.write(OK.getBytes(StandardCharsets.UTF_8));
-      for (String key : headers.keySet()) {
+      for (final String key : headers.keySet()) {
         outputStream.write(getBytes(key + SEPARATOR + headers.get(key) + END));
       }
       outputStream.write(getBytes(END));
