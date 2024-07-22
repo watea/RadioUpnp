@@ -98,10 +98,10 @@ public class RadioHandler implements HttpServer.Handler {
   }
 
   @Override
-  public void handle
-    (@NonNull HttpServer.Request request,
-     @NonNull HttpServer.Response response,
-     @NonNull OutputStream responseStream) throws IOException {
+  public void handle(
+    @NonNull HttpServer.Request request,
+    @NonNull HttpServer.Response response,
+    @NonNull OutputStream responseStream) throws IOException {
     Log.d(LOG_TAG, "handle: entering");
     final String method = request.getMethod();
     final String path = request.getPath();
@@ -134,32 +134,39 @@ public class RadioHandler implements HttpServer.Handler {
           rate ->
             listener.onNewRate((rate == null) ? "" : rate.substring(0, rate.length() - 3), lockKey))
         : null;
-      final ConnectionHandler connectionHandler = isHls ?
-        new HlsConnectionHandler(
-          httpURLConnection,
-          isGet,
-          hlsHandler.getInputStream(),
-          lockKey) :
-        new ConnectionHandler(
-          httpURLConnection,
-          isGet,
-          httpURLConnection.getInputStream(),
-          lockKey);
-      // Build response
-      String contentType = controller.getContentType();
-      // Force ContentType as some UPnP devices require it
-      if (contentType.isEmpty()) {
-        contentType = httpURLConnection.getContentType();
+      try (final InputStream inputStream =
+             isHls ? hlsHandler.getInputStream() : httpURLConnection.getInputStream()) {
+        final ConnectionHandler connectionHandler = isHls ?
+          new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey) {
+            @Override
+            @NonNull
+            protected Charset getCharset() {
+              return Charset.defaultCharset();
+            }
+
+            // ICY data are not processed
+            @Override
+            protected int getMetadataOffset() {
+              return 0;
+            }
+          } :
+          new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey);
+        // Build response
+        String contentType = controller.getContentType();
+        // Force ContentType as some UPnP devices require it
+        if (contentType.isEmpty()) {
+          contentType = httpURLConnection.getContentType();
+        }
+        // DLNA header, as found in documentation, not sure it is useful (should not)
+        response.addHeader(HttpServer.Response.CONTENT_TYPE, contentType);
+        response.addHeader("contentFeatures.dlna.org", "*");
+        response.addHeader("transferMode.dlna.org", "Streaming");
+        response.send();
+        if (isGet) {
+          connectionHandler.handle(responseStream);
+        }
+        Log.d(LOG_TAG, "handle: leaving with response");
       }
-      // DLNA header, as found in documentation, not sure it is useful (should not)
-      response.addHeader(HttpServer.Response.CONTENT_TYPE, contentType);
-      response.addHeader("contentFeatures.dlna.org", "*");
-      response.addHeader("transferMode.dlna.org", "Streaming");
-      response.send();
-      if (isGet) {
-        connectionHandler.handle(responseStream);
-      }
-      Log.d(LOG_TAG, "handle: leaving with response");
     } catch (Exception exception) {
       Log.e(LOG_TAG, "handle: unable to build response", exception);
       if (hlsHandler != null) {
@@ -262,15 +269,6 @@ public class RadioHandler implements HttpServer.Handler {
           }
         }
       }
-
-//        @Override
-//        public void close() throws IOException {
-//          super.close();
-//          inputStream.close();
-//          if (hlsHandler != null) {
-//            hlsHandler.release();
-//          }
-//        }
     }
 
     @NonNull
@@ -299,28 +297,6 @@ public class RadioHandler implements HttpServer.Handler {
         Log.w(LOG_TAG, "Wrong metadata value");
       }
       return Math.max(metadataOffset, 0);
-    }
-  }
-
-  // ICY data are not processed
-  private class HlsConnectionHandler extends ConnectionHandler {
-    private HlsConnectionHandler(
-      @NonNull HttpURLConnection httpURLConnection,
-      boolean isGet,
-      @NonNull InputStream inputStream,
-      @NonNull String lockKey) {
-      super(httpURLConnection, isGet, inputStream, lockKey);
-    }
-
-    @Override
-    @NonNull
-    protected Charset getCharset() {
-      return Charset.defaultCharset();
-    }
-
-    @Override
-    protected int getMetadataOffset() {
-      return 0;
     }
   }
 }
