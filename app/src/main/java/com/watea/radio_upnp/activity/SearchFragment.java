@@ -56,7 +56,7 @@ import java.util.Hashtable;
 import java.util.Map;
 
 public class SearchFragment extends MainActivityFragment {
-  private static final String LOG_TAG = SearchFragment.class.getName();
+  private static final String LOG_TAG = SearchFragment.class.getSimpleName();
   private static final String DAR_FM_API = "http://api.dar.fm/";
   private static final String DAR_FM_PLAYLIST_REQUEST = DAR_FM_API + "playlist.php?q=@callsign%20";
   private static final String DAR_FM_PAGESIZE = "&pagesize=50";

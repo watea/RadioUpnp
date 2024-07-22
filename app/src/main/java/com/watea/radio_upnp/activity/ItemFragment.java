@@ -58,7 +58,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 public abstract class ItemFragment extends MainActivityFragment {
-  private static final String LOG_TAG = ItemFragment.class.getName();
+  private static final String LOG_TAG = ItemFragment.class.getSimpleName();
   protected EditText nameEditText;
   protected EditText urlEditText;
   protected EditText webPageEditText;

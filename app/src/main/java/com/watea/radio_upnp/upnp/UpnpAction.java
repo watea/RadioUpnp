@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.Vector;
 
 public abstract class UpnpAction {
-  private final String LOG_TAG = UpnpAction.class.getName();
+  private final String LOG_TAG = UpnpAction.class.getSimpleName();
   @NonNull
   private final Action action;
   @NonNull

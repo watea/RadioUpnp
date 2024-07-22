@@ -32,7 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public abstract class Watchdog {
-  private static final String LOG_TAG = Watchdog.class.getName();
+  private static final String LOG_TAG = Watchdog.class.getSimpleName();
   private static final int DELAY = 5000; // ms
   private static final int TOLERANCE = 2;
   private static final String ACTION_GET_TRANSPORT_INFO = "GetTransportInfo";

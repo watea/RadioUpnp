@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 public class DonationFragment
   extends MainActivityFragment
   implements ConsumeResponseListener, PurchasesUpdatedListener {
-  private static final String LOG_TAG = DonationFragment.class.getName();
+  private static final String LOG_TAG = DonationFragment.class.getSimpleName();
   private static final Uri LIBERAPAY_URI = Uri.parse("https://liberapay.com/watea/donate");
   private static final Uri PAYPAL_URI = Uri.parse("https://paypal.me/frwatea?country.x=FR&locale.x=fr_FR");
   private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L; // 1s

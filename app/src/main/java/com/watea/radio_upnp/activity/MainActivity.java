@@ -106,7 +106,7 @@ public class MainActivity
   private static final String MIME_CSV = "text/csv";
   private static final String JSON = "json";
   private static final String MIME_JSON = "application/json";
-  private static final String LOG_TAG = MainActivity.class.getName();
+  private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new Hashtable<Class<? extends Fragment>, Integer>() {
       {

@@ -49,7 +49,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
 public class RadioURL {
-  private static final String LOG_TAG = RadioURL.class.getName();
+  private static final String LOG_TAG = RadioURL.class.getSimpleName();
   private static final Pattern ICON_PATTERN =
     Pattern.compile(".*(https?:/(/[-A-Za-z\\d+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
   private static final int CONNECTION_TRY = 3;

@@ -35,6 +35,7 @@ import com.watea.radio_upnp.model.Radio;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
@@ -42,14 +43,11 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import fi.iki.elonen.NanoHTTPD;
-
-public class RadioHandler implements NanoHttpServer.Handler {
-  private static final String LOG_TAG = RadioHandler.class.getName();
+public class RadioHandler implements HttpServer.Handler {
+  private static final String LOG_TAG = RadioHandler.class.getSimpleName();
   private static final int METADATA_MAX = 256;
   private static final String KEY = "key";
   private static final Controller DEFAULT_CONTROLLER = new Controller() {
@@ -100,27 +98,25 @@ public class RadioHandler implements NanoHttpServer.Handler {
   }
 
   @Override
-  public NanoHTTPD.Response handle(@NonNull NanoHTTPD.IHTTPSession iHTTPSession) {
+  public void handle
+    (@NonNull HttpServer.Request request,
+     @NonNull HttpServer.Response response,
+     @NonNull OutputStream responseStream) throws IOException {
     Log.d(LOG_TAG, "handle: entering");
-    final NanoHTTPD.Method method = iHTTPSession.getMethod();
-    final String uri = iHTTPSession.getUri();
-    final Map<String, String> params = iHTTPSession.getParms();
-    if ((method == null) || (uri == null) || (params == null)) {
-      Log.d(LOG_TAG, "handle: unexpected request received: parameters are null");
-      return null;
-    }
+    final String method = request.getMethod();
+    final String path = request.getPath();
     // Request must contain a query with radio ID and lock key
-    final String lockKey = params.get(KEY);
+    final String lockKey = request.getParams(KEY);
     if (lockKey == null) {
       Log.d(LOG_TAG, "handle: leaving, unexpected request received: lockKey is null");
-      return null;
+      return;
     }
-    final Radio radio = MainActivity.getRadios().getRadioFrom(uri.replace("/", ""));
+    final Radio radio = MainActivity.getRadios().getRadioFrom(path.replace("/", ""));
     if (radio == null) {
       Log.d(LOG_TAG, "handle: leaving, unknown radio");
-      return null;
+      return;
     }
-    final boolean isGet = (method == NanoHTTPD.Method.GET);
+    final boolean isGet = (method.equals("GET"));
     try {
       // Create WAN connection
       final HttpURLConnection httpURLConnection =
@@ -155,24 +151,21 @@ public class RadioHandler implements NanoHttpServer.Handler {
       if (contentType.isEmpty()) {
         contentType = httpURLConnection.getContentType();
       }
-      final NanoHTTPD.Response response = isGet ?
-        NanoHTTPD.newChunkedResponse(
-          NanoHTTPD.Response.Status.OK, contentType, connectionHandler.getInputStream()) :
-        NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, contentType, "");
       // DLNA header, as found in documentation, not sure it is useful (should not)
+      response.addHeader(HttpServer.Response.CONTENT_TYPE, contentType);
       response.addHeader("contentFeatures.dlna.org", "*");
       response.addHeader("transferMode.dlna.org", "Streaming");
-      connectionHandler.onLANConnection(response);
-      Log.d(LOG_TAG, "handle: leaving with response: " + response);
-      return response;
+      response.send();
+      if (isGet) {
+        connectionHandler.handle(responseStream);
+      }
+      Log.d(LOG_TAG, "handle: leaving with response");
     } catch (Exception exception) {
       Log.e(LOG_TAG, "handle: unable to build response", exception);
       if (hlsHandler != null) {
         hlsHandler.release();
       }
     }
-    Log.e(LOG_TAG, "handle: leaving with null");
-    return null;
   }
 
   private void setHeader(@NonNull URLConnection urlConnection) {
@@ -219,89 +212,65 @@ public class RadioHandler implements NanoHttpServer.Handler {
       this.lockKey = lockKey;
     }
 
-    @NonNull
-    public InputStream getInputStream() {
-      return new InputStream() {
-        final byte[] buffer = new byte[1];
-        final CharsetDecoder charsetDecoder = getCharset().newDecoder();
-        final int metadataOffset = getMetadataOffset();
-        final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
-        int metadataBlockBytesRead = 0;
-        int metadataSize = 0;
-
-        @Override
-        public int read() throws IOException {
-          if (isGet) {
-            while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
-              // Only stream data are transferred
-              if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
-                return buffer[0] & 0xFF;
-              } else {
-                // Metadata: look for title information
-                final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
-                // First byte gives size (16 bytes chunks) to read for metadata
-                if (metadataIndex == 0) {
-                  metadataSize = buffer[0] * 16;
-                  metadataBuffer.clear();
-                } else if (metadataIndex <= METADATA_MAX) {
-                  // Other bytes are metadata
-                  metadataBuffer.put(buffer[0]);
-                }
-                // End of metadata, extract pattern
-                if (metadataIndex == metadataSize) {
-                  CharBuffer metadata = null;
-                  metadataBuffer.flip();
-                  // Exception blocked on metadata
-                  try {
-                    metadata = charsetDecoder.decode(metadataBuffer);
-                  } catch (Exception exception) {
-                    if (BuildConfig.DEBUG) {
-                      Log.w(LOG_TAG, "Error decoding metadata", exception);
-                    }
-                  }
-                  if ((metadata != null) && (metadata.length() > 0)) {
-                    if (BuildConfig.DEBUG) {
-                      Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
-                    }
-                    final Matcher matcher = PATTERN_ICY.matcher(metadata);
-                    // Tell listener
-                    final String information =
-                      (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
-                    if (information != null) {
-                      listener.onNewInformation(information, lockKey);
-                    }
-                  }
-                  metadataBlockBytesRead = 0;
-                }
+    public void handle(@NonNull OutputStream outputStream) throws IOException {
+      final byte[] buffer = new byte[1];
+      final CharsetDecoder charsetDecoder = getCharset().newDecoder();
+      final int metadataOffset = getMetadataOffset();
+      final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
+      int metadataBlockBytesRead = 0;
+      int metadataSize = 0;
+      while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
+        // Only stream data are transferred
+        if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+          outputStream.write(buffer[0]);
+        } else {
+          // Metadata: look for title information
+          final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+          // First byte gives size (16 bytes chunks) to read for metadata
+          if (metadataIndex == 0) {
+            metadataSize = buffer[0] * 16;
+            metadataBuffer.clear();
+          } else if (metadataIndex <= METADATA_MAX) {
+            // Other bytes are metadata
+            metadataBuffer.put(buffer[0]);
+          }
+          // End of metadata, extract pattern
+          if (metadataIndex == metadataSize) {
+            CharBuffer metadata = null;
+            metadataBuffer.flip();
+            // Exception blocked on metadata
+            try {
+              metadata = charsetDecoder.decode(metadataBuffer);
+            } catch (Exception exception) {
+              if (BuildConfig.DEBUG) {
+                Log.w(LOG_TAG, "Error decoding metadata", exception);
               }
             }
-          }
-          // Done!
-          return -1;
-        }
-
-        @Override
-        public void close() throws IOException {
-          super.close();
-          inputStream.close();
-          if (hlsHandler != null) {
-            hlsHandler.release();
-          }
-        }
-      };
-    }
-
-    protected void onLANConnection(@NonNull NanoHTTPD.Response response) {
-      // Forward headers
-      for (String header : httpURLConnection.getHeaderFields().keySet()) {
-        // ICY data not forwarded, as only used here
-        if ((header != null) && !header.toLowerCase().startsWith("icy-")) {
-          final String value = httpURLConnection.getHeaderField(header);
-          if (value != null) {
-            response.addHeader(header, value);
+            if ((metadata != null) && (metadata.length() > 0)) {
+              if (BuildConfig.DEBUG) {
+                Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+              }
+              final Matcher matcher = PATTERN_ICY.matcher(metadata);
+              // Tell listener
+              final String information =
+                (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
+              if (information != null) {
+                listener.onNewInformation(information, lockKey);
+              }
+            }
+            metadataBlockBytesRead = 0;
           }
         }
       }
+
+//        @Override
+//        public void close() throws IOException {
+//          super.close();
+//          inputStream.close();
+//          if (hlsHandler != null) {
+//            hlsHandler.release();
+//          }
+//        }
     }
 
     @NonNull
@@ -341,10 +310,6 @@ public class RadioHandler implements NanoHttpServer.Handler {
       @NonNull InputStream inputStream,
       @NonNull String lockKey) {
       super(httpURLConnection, isGet, inputStream, lockKey);
-    }
-
-    @Override
-    protected void onLANConnection(@NonNull NanoHTTPD.Response response) {
     }
 
     @Override

@@ -25,7 +25,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 public abstract class Request {
-  private final String LOG_TAG = Request.class.getName();
+  private final String LOG_TAG = Request.class.getSimpleName();
   @NonNull
   private final Service service;
   @NonNull

@@ -60,7 +60,7 @@ import io.resourcepool.ssdp.model.SsdpService;
 //    <presentationURL>URL for presentation</presentationURL>
 //  </device>
 public class Device extends Asset {
-  private static final String LOG_TAG = Device.class.getName();
+  private static final String LOG_TAG = Device.class.getSimpleName();
   private static final String XML_TAG = "device";
   private static final String DEVICE_LIST = "deviceList";
   private static final String SERVICE_NAME_SPACE = "urn:upnp-org:serviceId:";

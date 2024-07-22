@@ -74,7 +74,7 @@ import java.util.regex.Pattern;
 //  }
 // Channel: http://radio.garden/api/ara/content/listen/{channelId}/channel.mp3
 public class RadioGardenController {
-  private static final String LOG_TAG = RadioGardenController.class.getName();
+  private static final String LOG_TAG = RadioGardenController.class.getSimpleName();
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static final String MARKET = "market://details?id=";
   private static final String RADIO_GARDEN_PACKAGE = "com.jonathanpuckey.radiogarden";

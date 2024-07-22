@@ -48,7 +48,7 @@ import java.util.Vector;
 import java.util.function.Function;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
-  private static final String LOG_TAG = UpnpPlayerAdapter.class.getName();
+  private static final String LOG_TAG = UpnpPlayerAdapter.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
   private static final String RENDERING_CONTROL_ID = "RenderingControl";
   private static final String CONNECTION_MANAGER_ID = "ConnectionManager";
@@ -412,22 +412,27 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       });
   }
 
+  @NonNull
+  private String moveToSoap(@NonNull String string) {
+    return string.replace("<", "&lt;").replace(">", "&gt;");
+  }
+
   // Create DIDL-Lite metadata
   @NonNull
   private String getMetaData() {
-    return "<DIDL-Lite " +
+    return moveToSoap("<DIDL-Lite " +
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
-      "<item id=\"" + radio.hashCode() + "\" parentID=\"0\" restricted=\"1\">" +
+      "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
       "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
       "<dc:title>" + radio.getName() + "</dc:title>" +
       "<upnp:artist>" + information + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
+      "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "<res duration=\"0:00:00\" protocolInfo=\"" +
       PROTOCOL_INFO_HEADER + getContentType() + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
-      "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "</item>" +
-      "</DIDL-Lite>";
+      "</DIDL-Lite>");
   }
 }

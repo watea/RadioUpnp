@@ -35,7 +35,7 @@ public class Service extends Asset {
   public static final String SERVICE_ID = "serviceId";
   public static final String SCPDURL = "SCPDURL";
   public static final String CONTROL_URL = "controlURL";
-  private static final String LOG_TAG = Service.class.getName();
+  private static final String LOG_TAG = Service.class.getSimpleName();
   private final AtomicReference<Action> currentAction = new AtomicReference<>();
   private final Device device;
   private final URL baseURL;

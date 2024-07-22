@@ -25,7 +25,7 @@ import io.resourcepool.ssdp.model.SsdpService;
 import io.resourcepool.ssdp.model.SsdpServiceAnnouncement;
 
 public class AndroidUpnpService extends android.app.Service {
-  private static final String LOG_TAG = AndroidUpnpService.class.getName();
+  private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:1";
   private final Binder binder = new UpnpService();
   private final SsdpClient ssdpClient = SsdpClient.create();

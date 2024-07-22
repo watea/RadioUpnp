@@ -39,7 +39,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class DefaultRadios {
-  private static final String LOG_TAG = DefaultRadios.class.getName();
+  private static final String LOG_TAG = DefaultRadios.class.getSimpleName();
   private static final List<DefaultRadio> DEFAULT_RADIOS = Arrays.asList(
     new DefaultRadio(
       "FRANCE INTER",

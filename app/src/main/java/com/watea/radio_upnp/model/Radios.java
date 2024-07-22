@@ -45,7 +45,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class Radios extends Vector<Radio> {
-  private static final String LOG_TAG = Radios.class.getName();
+  private static final String LOG_TAG = Radios.class.getSimpleName();
   private static final String FILE = Radios.class.getSimpleName();
   private final List<Listener> listeners = new Vector<>();
   @NonNull

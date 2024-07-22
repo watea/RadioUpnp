@@ -78,7 +78,7 @@ bbc_radio_one-audio=96000-264869365.ts
 bbc_radio_one-audio=96000-264869366.ts
 */
 public class HlsHandler {
-  private static final String LOG_TAG = HlsHandler.class.getName();
+  private static final String LOG_TAG = HlsHandler.class.getSimpleName();
   private static final String BANDWITH = "BANDWIDTH=";
   private static final String STREAM_INF = "#EXT-X-STREAM-INF:";
   private static final String EXTINF = "#EXTINF:";

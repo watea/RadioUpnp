@@ -38,7 +38,7 @@ import com.watea.radio_upnp.model.Radio;
 import java.net.URL;
 
 public class ItemModifyFragment extends ItemFragment {
-  private static final String LOG_TAG = ItemModifyFragment.class.getName();
+  private static final String LOG_TAG = ItemModifyFragment.class.getSimpleName();
   private Radio radio = null;
 
   // Must be called before creation

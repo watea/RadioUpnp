@@ -74,7 +74,7 @@ import java.util.UUID;
 public class RadioService
   extends MediaBrowserServiceCompat
   implements PlayerAdapter.Listener, RadioHandler.Listener {
-  private static final String LOG_TAG = RadioService.class.getName();
+  private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
   private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
   private static final int NOTIFICATION_ID = 9;
@@ -88,7 +88,7 @@ public class RadioService
   private Radio radio = null;
   private MediaSessionCompat session;
   private Radios radios;
-  private NanoHttpServer nanoHttpServer;
+  private HttpServer httpServer;
   private PlayerAdapter playerAdapter = null;
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
@@ -159,8 +159,8 @@ public class RadioService
     Log.d(LOG_TAG, "onCreate");
     // Launch HTTP server
     try {
-      nanoHttpServer = new NanoHttpServer(this, this);
-      nanoHttpServer.start();
+      httpServer = new HttpServer(this, this);
+      httpServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation fails", iOException);
     }
@@ -240,8 +240,8 @@ public class RadioService
       playerAdapter.stop();
     }
     // Release HTTP service
-    if (nanoHttpServer != null) {
-      nanoHttpServer.stop();
+    if (httpServer != null) {
+      httpServer.stop();
     }
     // Release UPnP service
     unbindService(upnpConnection);
@@ -334,8 +334,8 @@ public class RadioService
           if (playerAdapter != null) {
             playerAdapter.release();
           }
-          if (nanoHttpServer != null) {
-            nanoHttpServer.resetRadioHandlerController();
+          if (httpServer != null) {
+            httpServer.resetRadioHandlerController();
           }
           // Try to relaunch just once
           if (isAllowedToRewind) {
@@ -361,8 +361,8 @@ public class RadioService
           if (playerAdapter != null) {
             playerAdapter.release();
           }
-          if (nanoHttpServer != null) {
-            nanoHttpServer.resetRadioHandlerController();
+          if (httpServer != null) {
+            httpServer.resetRadioHandlerController();
           }
           session.setMetadata(null);
           session.setActive(false);
@@ -489,7 +489,7 @@ public class RadioService
         return;
       }
       // Catch catastrophic failure
-      if (nanoHttpServer == null) {
+      if (httpServer == null) {
         abort("onPrepareFromMediaId: nanoHttpServer is null");
       }
       final String identity = extras.getString(getString(R.string.key_upnp_device));
@@ -512,25 +512,25 @@ public class RadioService
           RadioService.this,
           radio,
           lockKey,
-          RadioHandler.getHandledUri(nanoHttpServer.getLoopbackUri(), radio, lockKey));
+          RadioHandler.getHandledUri(httpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       } else {
-        final Uri serverUri = nanoHttpServer.getUri();
+        final Uri serverUri = httpServer.getUri();
         assert serverUri != null;
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
           radio,
           lockKey,
-          RadioHandler.getHandledUri(nanoHttpServer.getUri(), radio, lockKey),
-          nanoHttpServer.createLogoFile(radio),
+          RadioHandler.getHandledUri(httpServer.getUri(), radio, lockKey),
+          httpServer.createLogoFile(radio),
           chosenDevice,
           actionController,
           contentProvider);
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Set controller for HTTP handler
-      nanoHttpServer.setRadioHandlerController(radioHandlerController);
+      httpServer.setRadioHandlerController(radioHandlerController);
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {

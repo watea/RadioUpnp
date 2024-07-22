@@ -51,7 +51,7 @@ import java.util.Vector;
 public class UpnpDevicesAdapter
   extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
   implements AndroidUpnpService.Listener {
-  private static final String LOG_TAG = UpnpDevicesAdapter.class.getName();
+  private static final String LOG_TAG = UpnpDevicesAdapter.class.getSimpleName();
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private final List<Device> devices = new Vector<>();
   @NonNull

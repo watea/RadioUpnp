@@ -53,7 +53,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   protected static final String AUDIO_CONTENT_TYPE = "audio/";
   protected static final String DEFAULT_CONTENT_TYPE = AUDIO_CONTENT_TYPE + "mpeg";
   protected static final String APPLICATION_CONTENT_TYPE = "application/";
-  private static final String LOG_TAG = PlayerAdapter.class.getName();
+  private static final String LOG_TAG = PlayerAdapter.class.getSimpleName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =

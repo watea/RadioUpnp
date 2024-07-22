@@ -50,7 +50,7 @@ import java.net.URL;
 public class Radio {
   @NonNull
   public static final Radio DUMMY_RADIO;
-  private static final String LOG_TAG = Radio.class.getName();
+  private static final String LOG_TAG = Radio.class.getSimpleName();
   private static final String SPACER = ";";
   public static final String EXPORT_HEAD =
     export("name") + export("url") + export("webPageUrl") + export("isPreferred");
