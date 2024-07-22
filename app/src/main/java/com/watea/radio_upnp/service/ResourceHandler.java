@@ -37,12 +37,13 @@ public class ResourceHandler implements HttpServer.Handler {
       return;
     }
     Log.d(LOG_TAG, "handle: accepted " + requestedPath);
-    final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
-    final byte[] imageData = byteArrayOutputStream.toByteArray();
-    response.addHeader(HttpServer.Response.CONTENT_TYPE, "image/jpeg");
-    response.addHeader(HttpServer.Response.CONTENT_LENGTH, String.valueOf(imageData.length));
-    response.send();
-    responseStream.write(imageData);
+    try (final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+      bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+      final byte[] imageData = byteArrayOutputStream.toByteArray();
+      response.addHeader(HttpServer.Response.CONTENT_TYPE, "image/jpeg");
+      response.addHeader(HttpServer.Response.CONTENT_LENGTH, String.valueOf(imageData.length));
+      response.send();
+      responseStream.write(imageData);
+    }
   }
 }

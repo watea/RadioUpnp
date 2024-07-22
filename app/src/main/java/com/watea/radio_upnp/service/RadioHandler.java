@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URISyntaxException;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -70,8 +71,6 @@ public class RadioHandler implements HttpServer.Handler {
   private final Listener listener;
   @NonNull
   private Controller controller = DEFAULT_CONTROLLER;
-  @Nullable
-  private HlsHandler hlsHandler;
 
   public RadioHandler(@NonNull String userAgent, @NonNull Listener listener) {
     this.userAgent = userAgent;
@@ -117,16 +116,17 @@ public class RadioHandler implements HttpServer.Handler {
       return;
     }
     final boolean isGet = (method.equals("GET"));
+    // Create WAN connection
+    final HttpURLConnection httpURLConnection =
+      new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
+    Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
+    final boolean isHls = HlsHandler.isHls(httpURLConnection);
+    // Reset rate
+    final String directRate = httpURLConnection.getHeaderField("icy-br");
+    listener.onNewRate((isHls || (directRate == null)) ? "" : directRate, lockKey);
+    // Build hlsHandler
+    final HlsHandler hlsHandler;
     try {
-      // Create WAN connection
-      final HttpURLConnection httpURLConnection =
-        new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
-      Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
-      final boolean isHls = HlsHandler.isHls(httpURLConnection);
-      // Reset rate
-      final String directRate = httpURLConnection.getHeaderField("icy-br");
-      listener.onNewRate((isHls || (directRate == null)) ? "" : directRate, lockKey);
-      // Build hlsHandler
       hlsHandler = isHls ?
         new HlsHandler(
           httpURLConnection,
@@ -134,44 +134,47 @@ public class RadioHandler implements HttpServer.Handler {
           rate ->
             listener.onNewRate((rate == null) ? "" : rate.substring(0, rate.length() - 3), lockKey))
         : null;
-      try (final InputStream inputStream =
-             isHls ? hlsHandler.getInputStream() : httpURLConnection.getInputStream()) {
-        final ConnectionHandler connectionHandler = isHls ?
-          new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey) {
-            @Override
-            @NonNull
-            protected Charset getCharset() {
-              return Charset.defaultCharset();
-            }
+    } catch (URISyntaxException uRISyntaxException) {
+      Log.e(LOG_TAG, "HlsHandler failed to be be created", uRISyntaxException);
+      return;
+    }
+    try (final InputStream inputStream =
+           isHls ? hlsHandler.getInputStream() : httpURLConnection.getInputStream()) {
+      final ConnectionHandler connectionHandler = isHls ?
+        new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey) {
+          @Override
+          @NonNull
+          protected Charset getCharset() {
+            return Charset.defaultCharset();
+          }
 
-            // ICY data are not processed
-            @Override
-            protected int getMetadataOffset() {
-              return 0;
-            }
-          } :
-          new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey);
-        // Build response
-        String contentType = controller.getContentType();
-        // Force ContentType as some UPnP devices require it
-        if (contentType.isEmpty()) {
-          contentType = httpURLConnection.getContentType();
-        }
-        // DLNA header, as found in documentation, not sure it is useful (should not)
-        response.addHeader(HttpServer.Response.CONTENT_TYPE, contentType);
-        response.addHeader("contentFeatures.dlna.org", "*");
-        response.addHeader("transferMode.dlna.org", "Streaming");
-        response.send();
-        if (isGet) {
-          connectionHandler.handle(responseStream);
-        }
-        Log.d(LOG_TAG, "handle: leaving with response");
+          // ICY data are not processed
+          @Override
+          protected int getMetadataOffset() {
+            return 0;
+          }
+        } :
+        new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey);
+      // Build response
+      String contentType = controller.getContentType();
+      // Force ContentType as some UPnP devices require it
+      if (contentType.isEmpty()) {
+        contentType = httpURLConnection.getContentType();
       }
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "handle: unable to build response", exception);
-      if (hlsHandler != null) {
-        hlsHandler.release();
+      // DLNA header, as found in documentation, not sure it is useful (should not)
+      response.addHeader(HttpServer.Response.CONTENT_TYPE, contentType);
+      response.addHeader("contentFeatures.dlna.org", "*");
+      response.addHeader("transferMode.dlna.org", "Streaming");
+      response.send();
+      if (isGet) {
+        connectionHandler.handle(responseStream);
       }
+      Log.d(LOG_TAG, "handle: leaving with response");
+    } catch (URISyntaxException uRISyntaxException) {
+      Log.e(LOG_TAG, "handle: failed to get input stream", uRISyntaxException);
+    }
+    if (hlsHandler != null) {
+      hlsHandler.release();
     }
   }
 
