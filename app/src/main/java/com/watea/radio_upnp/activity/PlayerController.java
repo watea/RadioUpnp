@@ -49,19 +49,12 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioService;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Hashtable;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Vector;
 
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getSimpleName();
-  private static final String DATE = "date";
-  private static final String INFORMATION = "information";
   @NonNull
   private final ImageButton playImageButton;
   @NonNull
@@ -85,10 +78,8 @@ public class PlayerController {
   @NonNull
   private final AlertDialog playlistAlertDialog;
   @NonNull
-  private final SimpleAdapter playlistAdapter;
-  @NonNull
   private final MainActivity mainActivity;
-  private final List<Map<String, String>> playInformations = new Vector<>();
+  private final List<Map<String, String>> playInformations = new ArrayList<>();
   @NonNull
   private final MediaBrowserCompat mediaBrowser;
   @NonNull
@@ -201,13 +192,8 @@ public class PlayerController {
                 !rate.isEmpty() ? rate + mainActivity.getString(R.string.kbs) : "");
             }
           }
-          // Fill playlist
-          if (information != null) {
-            final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-            addInformation(
-              dateFormat.format(Calendar.getInstance().getTime()),
-              information.toString());
-          }
+          // User help for fist valid information after a few time
+          informationPressUserHint.show();
         }
       }
 
@@ -260,18 +246,32 @@ public class PlayerController {
       .new UserHint(R.string.key_play_long_press_got_it, R.string.play_long_press);
     informationPressUserHint = this.mainActivity
       .new UserHint(R.string.key_information_press_got_it, R.string.information_press, 4);
-    playlistAdapter = new SimpleAdapter(
+    final SimpleAdapter playlistAdapter = new SimpleAdapter(
       mainActivity,
       playInformations,
       R.layout.row_playlist,
-      new String[]{DATE, INFORMATION},
+      new String[]{RadioService.DATE, RadioService.INFORMATION},
       new int[]{R.id.row_playlist_date_text_view, R.id.row_playlist_information_text_view});
     playlistAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
       .setAdapter(playlistAdapter, null)
       .create();
     // Create view
     albumArtImageView = view.findViewById(R.id.album_art_image_view);
-    albumArtImageView.setOnClickListener(v -> playlistAlertDialog.show());
+    albumArtImageView.setOnClickListener(v -> {
+      // Should not happen
+      if (mediaController == null) {
+        this.mainActivity.tell(R.string.radio_connection_waiting);
+      } else {
+        playInformations.clear();
+        playInformations.addAll(RadioService.getPlaylist(
+          mediaController.getMetadata().getString(RadioService.PLAYLIST)));
+        if (playInformations.isEmpty()) {
+          this.mainActivity.tell(R.string.radio_no_playlist);
+        } else {
+          playlistAlertDialog.show();
+        }
+      }
+    });
     playedRadioLinearLayout = view.findViewById(R.id.played_radio_linear_layout);
     playedRadioNameTextView = view.findViewById(R.id.played_radio_name_text_view);
     playedRadioNameTextView.setSelected(true); // For scrolling
@@ -374,9 +374,6 @@ public class PlayerController {
       }
       assert mediaController != null;
       mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
-      // Information are cleared
-      playInformations.clear();
-      insertInformation("", mainActivity.getString(R.string.no_data));
     }
   }
 
@@ -394,33 +391,6 @@ public class PlayerController {
   @Nullable
   private Radio getCurrentRadio() {
     return (mediaController == null) ? null : MainActivity.getCurrentRadio();
-  }
-
-  private void addInformation(@NonNull String date, @NonNull String information) {
-    // No empty data
-    if (information.isEmpty()) {
-      return;
-    }
-    // Reset default if any
-    if ((playInformations.size() == 1) &&
-      mainActivity.getString(R.string.no_data).equals(playInformations.get(0).get(INFORMATION))) {
-      playInformations.clear();
-    }
-    // Insert if new
-    if (playInformations.isEmpty() ||
-      !information.equals(playInformations.get(playInformations.size() - 1).get(INFORMATION))) {
-      insertInformation(date, information);
-      // User help for fist valid information after a few time
-      informationPressUserHint.show();
-    }
-  }
-
-  private void insertInformation(@NonNull String date, @NonNull String information) {
-    final Map<String, String> informationMap = new Hashtable<>();
-    informationMap.put(DATE, date);
-    informationMap.put(INFORMATION, information);
-    playInformations.add(informationMap);
-    playlistAdapter.notifyDataSetChanged();
   }
 
   private void setPreferredButton(boolean isPreferred) {

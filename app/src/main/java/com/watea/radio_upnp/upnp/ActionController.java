@@ -2,11 +2,11 @@ package com.watea.radio_upnp.upnp;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 public class ActionController {
-  private final List<UpnpAction> upnpActions = new Vector<>();
+  private final List<UpnpAction> upnpActions = new ArrayList<>();
 
   public synchronized void release() {
     upnpActions.clear();

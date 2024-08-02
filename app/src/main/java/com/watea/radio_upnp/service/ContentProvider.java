@@ -6,15 +6,15 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.upnp.Device;
 
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ContentProvider {
-  private final Map<Radio, String> contentTypes = new Hashtable<>();
-  private final Map<Device, List<String>> protocolInfos = new Hashtable<>();
+  private final Map<Radio, String> contentTypes = new HashMap<>();
+  private final Map<Device, List<String>> protocolInfos = new HashMap<>();
 
   @Nullable
   public String getContentType(@NonNull Radio radio) {

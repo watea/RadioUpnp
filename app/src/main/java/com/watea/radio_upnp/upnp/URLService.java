@@ -18,13 +18,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Map;
 
 public class URLService {
   @NonNull
   final URLConnection uRLConnection;
-  private final Map<String, String> tags = new Hashtable<>();
+  private final Map<String, String> tags = new HashMap<>();
   @Nullable
   private String content = null;
 

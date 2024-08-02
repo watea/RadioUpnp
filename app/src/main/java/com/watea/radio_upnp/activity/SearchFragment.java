@@ -52,7 +52,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Map;
 
 public class SearchFragment extends MainActivityFragment {
@@ -187,7 +187,7 @@ public class SearchFragment extends MainActivityFragment {
             if (id.isEmpty()) {
               Log.d(LOG_TAG, "Error in data; DAR_FM_PLAYLIST_REQUEST extraction");
             } else {
-              final Map<String, String> radioData = new Hashtable<>();
+              final Map<String, String> radioData = new HashMap<>();
               radioData.put(DAR_FM_ID, id);
               radioData.put(DAR_FM_NAME, extractValue(station, "callsign"));
               new DarFmDetailSearcher(radioData);

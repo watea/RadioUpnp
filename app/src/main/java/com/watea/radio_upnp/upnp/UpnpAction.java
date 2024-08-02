@@ -28,10 +28,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 public abstract class UpnpAction {
   private final String LOG_TAG = UpnpAction.class.getSimpleName();
@@ -39,7 +39,7 @@ public abstract class UpnpAction {
   private final Action action;
   @NonNull
   private final ActionController actionController;
-  private final List<UpnpAction.Argument> arguments = new Vector<>();
+  private final List<UpnpAction.Argument> arguments = new ArrayList<>();
   private final Map<String, String> responses = new HashMap<>();
 
   public UpnpAction(

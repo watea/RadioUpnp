@@ -68,15 +68,27 @@ import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 public class RadioService
   extends MediaBrowserServiceCompat
   implements PlayerAdapter.Listener, RadioHandler.Listener {
+  public static final String DATE = "date";
+  public static final String INFORMATION = "information";
+  public static final String PLAYLIST = "playlist";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
   private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
+  private static final String PLAYLIST_SEPARATOR = "##";
+  private static final String PLAYLIST_ITEM_SEPARATOR = "&&";
   private static final int NOTIFICATION_ID = 9;
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
@@ -84,6 +96,18 @@ public class RadioService
     new MediaSessionCompatCallback();
   private final ActionController actionController = new ActionController();
   private final ContentProvider contentProvider = new ContentProvider();
+  private AndroidUpnpService.UpnpService upnpService = null;
+  private final ServiceConnection upnpConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+      upnpService = (AndroidUpnpService.UpnpService) service;
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+      upnpService = null;
+    }
+  };
   private NotificationManagerCompat notificationManager;
   private Radio radio = null;
   private MediaSessionCompat session;
@@ -99,18 +123,6 @@ public class RadioService
         }
       }
     };
-  private AndroidUpnpService.UpnpService upnpService = null;
-  private final ServiceConnection upnpConnection = new ServiceConnection() {
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-      upnpService = (AndroidUpnpService.UpnpService) service;
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-      upnpService = null;
-    }
-  };
   private boolean isAllowedToRewind = false;
   private String lockKey = null;
   private final RadioHandler.Controller radioHandlerController = new RadioHandler.Controller() {
@@ -137,6 +149,32 @@ public class RadioService
   public static boolean isValid(@NonNull MediaMetadataCompat mediaMetadataCompat) {
     return getSessionTag()
       .equals(mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI));
+  }
+
+  @NonNull
+  public static List<Map<String, String>> getPlaylist(@NonNull String playlist) {
+    final List<Map<String, String>> result = new ArrayList<>();
+    for (final String line : playlist.split(PLAYLIST_SEPARATOR)) {
+      final String[] items = line.split(PLAYLIST_ITEM_SEPARATOR);
+      final Map<String, String> map = new HashMap<>();
+      map.put(DATE, items[0]);
+      map.put(INFORMATION, items[1]);
+      result.add(map);
+    }
+    return result;
+  }
+
+  @NonNull
+  private static String addPlaylistItem(@Nullable String playlist, @NonNull String item) {
+    if (item.isEmpty()) {
+      return (playlist == null) ? "" : playlist;
+    } else {
+      final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+      final String information =
+        dateFormat.format(Calendar.getInstance().getTime()) + PLAYLIST_ITEM_SEPARATOR + item;
+      return ((playlist == null) || playlist.isEmpty()) ?
+        information : playlist + PLAYLIST_SEPARATOR + information;
+    }
   }
 
   @NonNull
@@ -270,9 +308,14 @@ public class RadioService
       if (radio != null) {
         // Media information in ARTIST and SUBTITLE.
         // Ensure session meta data is tagged to ensure only session based use.
+        String playlist = session
+          .getController()
+          .getMetadata()
+          .getString(PLAYLIST);
         session.setMetadata(getTaggedMediaMetadataBuilder(radio)
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
           .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
+          .putString(PLAYLIST, addPlaylistItem(playlist, information))
           .build());
         // Update UPnP
         if (playerAdapter instanceof UpnpPlayerAdapter) {

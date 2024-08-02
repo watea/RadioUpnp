@@ -89,11 +89,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 public class MainActivity
   extends AppCompatActivity
@@ -108,7 +108,7 @@ public class MainActivity
   private static final String MIME_JSON = "application/json";
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
-    new Hashtable<Class<? extends Fragment>, Integer>() {
+    new HashMap<Class<? extends Fragment>, Integer>() {
       {
         put(MainFragment.class, R.id.action_home);
         put(SearchFragment.class, R.id.action_search);
@@ -117,7 +117,7 @@ public class MainActivity
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  private static final List<Listener> listeners = new Vector<>();
+  private static final List<Listener> listeners = new ArrayList<>();
   private static Radios radios = null;
   private static Radio currentRadio = null;
   private DrawerLayout drawerLayout;

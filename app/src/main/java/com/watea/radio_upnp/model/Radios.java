@@ -37,17 +37,17 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Vector;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class Radios extends Vector<Radio> {
+public class Radios extends ArrayList<Radio> {
   private static final String LOG_TAG = Radios.class.getSimpleName();
   private static final String FILE = Radios.class.getSimpleName();
-  private final List<Listener> listeners = new Vector<>();
+  private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;
 
@@ -84,20 +84,20 @@ public class Radios extends Vector<Radio> {
     return add(radio, true);
   }
 
-  // o != null
-  @Override
-  public boolean remove(@Nullable Object o) {
-    assert o != null;
-    final int index = indexOf(o);
-    return tellListeners(super.remove(o) && write(), listener -> listener.onRemove(index));
-  }
-
   @NonNull
   @Override
   public Radio remove(int index) {
     final Radio result = super.remove(index);
     tellListeners(write(), listener -> listener.onRemove(index));
     return result;
+  }
+
+  // o != null
+  @Override
+  public boolean remove(@Nullable Object o) {
+    assert o != null;
+    final int index = indexOf(o);
+    return tellListeners(super.remove(o) && write(), listener -> listener.onRemove(index));
   }
 
   @Override

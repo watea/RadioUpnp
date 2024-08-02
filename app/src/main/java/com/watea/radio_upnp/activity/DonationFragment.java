@@ -51,7 +51,7 @@ import com.google.common.collect.ImmutableList;
 import com.watea.radio_upnp.R;
 
 import java.util.Arrays;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -65,7 +65,7 @@ public class DonationFragment
   private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L; // 1s
   private static final long RECONNECT_TIMER_MAX_TIME_MILLISECONDS = 1000L * 60L * 15L; // 15 mins
   private static final Handler handler = new Handler(Looper.getMainLooper());
-  private final Map<String, ProductDetails> ownProductDetailss = new Hashtable<>();
+  private final Map<String, ProductDetails> ownProductDetailss = new HashMap<>();
   private List<QueryProductDetailsParams.Product> googleProducts;
   private BillingClient billingClient;
   private Spinner googleSpinner;

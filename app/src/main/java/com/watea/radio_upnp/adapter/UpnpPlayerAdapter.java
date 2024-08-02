@@ -42,9 +42,9 @@ import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 import com.watea.radio_upnp.upnp.Watchdog;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Vector;
 import java.util.function.Function;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
@@ -392,7 +392,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         protected void onSuccess() {
           final String sink = getResponse("Sink");
           if (sink != null) {
-            final List<String> protocolInfos = new Vector<>();
+            final List<String> protocolInfos = new ArrayList<>();
             for (String protocolInfo : sink.split(",")) {
               if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
                 Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);

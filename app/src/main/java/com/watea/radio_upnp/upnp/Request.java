@@ -16,10 +16,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -31,7 +31,7 @@ public abstract class Request {
   @NonNull
   private final String action;
   // List as parameter must follow an order
-  private final List<UpnpAction.Argument> properties = new Vector<>();
+  private final List<UpnpAction.Argument> properties = new ArrayList<>();
 
   public Request(
     @NonNull Service service,

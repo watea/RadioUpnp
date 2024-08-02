@@ -36,8 +36,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -93,7 +93,7 @@ public class HlsHandler {
   @NonNull
   private final Consumer<String> rateListener;
   @NonNull
-  private final List<URI> actualSegmentURIs = new Vector<>();
+  private final List<URI> actualSegmentURIs = new ArrayList<>();
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   private int targetDuration = CONNECT_DEFAULT_PAUSE; // ms
   @Nullable
