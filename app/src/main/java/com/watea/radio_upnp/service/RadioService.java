@@ -154,12 +154,15 @@ public class RadioService
   @NonNull
   public static List<Map<String, String>> getPlaylist(@NonNull String playlist) {
     final List<Map<String, String>> result = new ArrayList<>();
-    for (final String line : playlist.split(PLAYLIST_SEPARATOR)) {
-      final String[] items = line.split(PLAYLIST_ITEM_SEPARATOR);
+    for (final String line : playlist.split("##")) {
+      final String[] items = line.split("&&");
       final Map<String, String> map = new HashMap<>();
-      map.put(DATE, items[0]);
-      map.put(INFORMATION, items[1]);
-      result.add(map);
+      // Result has 2 parts: date and information
+      if (items.length == 2) {
+        map.put(DATE, items[0]);
+        map.put(INFORMATION, items[1]);
+        result.add(map);
+      }
     }
     return result;
   }

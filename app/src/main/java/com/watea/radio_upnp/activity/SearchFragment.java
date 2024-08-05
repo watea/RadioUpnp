@@ -154,7 +154,7 @@ public class SearchFragment extends MainActivityFragment {
     // Adapter
     radiosSearchAdapter = new RadiosSearchAdapter(radiosRecyclerView);
     // Build alert dialog
-    searchAlertDialog = new AlertDialog.Builder(getMainActivity(), R.style.AlertDialogStyle)
+    searchAlertDialog = new AlertDialog.Builder(getMainActivity())
       .setView(searchView)
       .setPositiveButton(
         R.string.action_go,

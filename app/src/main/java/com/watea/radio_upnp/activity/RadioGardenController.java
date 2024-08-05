@@ -90,7 +90,7 @@ public class RadioGardenController {
 
   public RadioGardenController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
-    radioGardenAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
+    radioGardenAlertDialog = new AlertDialog.Builder(mainActivity)
       .setTitle(R.string.title_radio_garden)
       .setIcon(R.drawable.ic_baseline_location_searching_black_24dp)
       .setView(R.layout.view_radio_garden)

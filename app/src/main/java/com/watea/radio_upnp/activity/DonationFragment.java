@@ -161,7 +161,7 @@ public class DonationFragment
     view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
     view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
     // Alert dialog
-    paymentAlertDialogBuilder = new AlertDialog.Builder(getMainActivity(), R.style.AlertDialogStyle)
+    paymentAlertDialogBuilder = new AlertDialog.Builder(getMainActivity())
       .setIcon(android.R.drawable.ic_dialog_alert)
       .setTitle(R.string.donation_alert_dialog_title)
       .setMessage(R.string.donation_alert_dialog_try_again)

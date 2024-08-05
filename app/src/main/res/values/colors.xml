@@ -26,8 +26,8 @@
     <color name="white">@android:color/white</color>
     <color name="dark_blue">@android:color/holo_blue_dark</color>
     <color name="dark">@android:color/background_dark</color>
-    <color name="dark_gray">#303030</color>
-    <color name="light_gray">#606060</color>
+    <color name="dark_gray">#202020</color>
+    <color name="light_gray">#909090</color>
     <color name="dark_red">@android:color/holo_red_dark</color>
     <color name="ic_launcher_background">@android:color/white</color>
 </resources>

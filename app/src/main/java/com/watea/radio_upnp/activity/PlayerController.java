@@ -252,7 +252,7 @@ public class PlayerController {
       R.layout.row_playlist,
       new String[]{RadioService.DATE, RadioService.INFORMATION},
       new int[]{R.id.row_playlist_date_text_view, R.id.row_playlist_information_text_view});
-    playlistAlertDialog = new AlertDialog.Builder(mainActivity, R.style.AlertDialogStyle)
+    playlistAlertDialog = new AlertDialog.Builder(mainActivity)
       .setAdapter(playlistAdapter, null)
       .create();
     // Create view
@@ -263,8 +263,11 @@ public class PlayerController {
         this.mainActivity.tell(R.string.radio_connection_waiting);
       } else {
         playInformations.clear();
-        playInformations.addAll(RadioService.getPlaylist(
-          mediaController.getMetadata().getString(RadioService.PLAYLIST)));
+        final String playInformation =
+          mediaController.getMetadata().getString(RadioService.PLAYLIST);
+        if (playInformation != null) {
+          playInformations.addAll(RadioService.getPlaylist(playInformation));
+        }
         if (playInformations.isEmpty()) {
           this.mainActivity.tell(R.string.radio_no_playlist);
         } else {

@@ -479,13 +479,13 @@ public class MainActivity
     final View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
     ((TextView) aboutView.findViewById(R.id.version_name_text_view))
       .setText(BuildConfig.VERSION_NAME);
-    aboutAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+    aboutAlertDialog = new AlertDialog.Builder(this)
       .setView(aboutView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
     if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-      new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+      new AlertDialog.Builder(this)
         .setMessage(R.string.notification_needed)
         .setPositiveButton(
           R.string.action_go,
@@ -499,7 +499,7 @@ public class MainActivity
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     devicesDefaultView = contentUpnp.findViewById(R.id.devices_default_linear_layout);
-    upnpAlertDialog = new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+    upnpAlertDialog = new AlertDialog.Builder(this)
       .setView(contentUpnp)
       .create();
     // FAB
@@ -710,7 +710,7 @@ public class MainActivity
     @NonNull String fileType,
     @NonNull String mimeType) {
     final AlertDialog.Builder alertDialogBuilder =
-      new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+      new AlertDialog.Builder(this)
         // Restore checked item
         .setOnDismissListener(dialogInterface -> checkNavigationMenu());
     try {
@@ -748,7 +748,7 @@ public class MainActivity
   }
 
   private void importJson() {
-    new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+    new AlertDialog.Builder(this)
       .setTitle(R.string.title_import)
       .setIcon(R.drawable.ic_baseline_exit_to_app_black_24dp)
       .setMessage(R.string.import_message)
@@ -781,12 +781,12 @@ public class MainActivity
     public UserHint(int key, int message, int delay) {
       this.delay = delay;
       gotIt = sharedPreferences.getBoolean(getString(key), false);
-      alertDialog = new AlertDialog.Builder(MainActivity.this, R.style.AlertDialogStyle)
+      alertDialog = new AlertDialog.Builder(MainActivity.this)
         .setMessage(message)
         .setPositiveButton(
           R.string.action_got_it,
           (dialogInterface, i) ->
-            sharedPreferences.edit().putBoolean(getString(key), gotIt = true).apply())
+            sharedPreferences.edit().putBoolean(getString(key), (gotIt = true)).apply())
         .create();
     }
 
