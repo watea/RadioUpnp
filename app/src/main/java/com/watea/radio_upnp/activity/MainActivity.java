@@ -420,6 +420,8 @@ public class MainActivity
         Log.e(LOG_TAG, "Internal failure; unable to init radios");
       }
     }
+    // Theme
+    setTheme(getCurrentTheme());
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // UPnP adapter (order matters)
@@ -623,6 +625,19 @@ public class MainActivity
       if (chosenDevice != null) {
         outState.putString(getString(R.string.key_selected_device), chosenDevice.getUUID());
       }
+    }
+  }
+
+  private int getCurrentTheme() {
+    // Check the actual system setting
+    final int uiMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+    switch (uiMode) {
+      case Configuration.UI_MODE_NIGHT_YES:
+        return R.style.BaseAppTheme;
+      case Configuration.UI_MODE_NIGHT_NO:
+        return R.style.BaseAppTheme;
+      default:
+        return R.style.BaseAppTheme;
     }
   }
 
