@@ -28,8 +28,8 @@
     android:layout_width="@dimen/tile_size"
     android:layout_height="@dimen/tile_size"
     android:layout_margin="@dimen/app_horizontal_margin"
-    android:padding="2dp"
-    android:maxLines="2"
     android:ellipsize="end"
+    android:maxLines="2"
+    android:padding="2dp"
     android:textAllCaps="true"
     android:textStyle="bold" />

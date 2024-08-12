@@ -78,8 +78,12 @@
             android:icon="@drawable/ic_payment_white_24dp"
             android:title="@string/title_donate" />
         <item
-            android:id="@+id/action_about"
+            android:id="@+id/action_parameter"
             android:icon="@drawable/ic_settings_white_24dp"
+            android:title="@string/title_parameters"></item>
+        <item
+            android:id="@+id/action_about"
+            android:icon="@drawable/ic_baseline_question_mark_white_24dp"
             android:title="@string/title_about" />
     </group>
 </menu>

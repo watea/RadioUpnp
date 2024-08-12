@@ -27,8 +27,7 @@
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusableInTouchMode="true"
-    android:orientation="vertical"
-    android:theme="@style/AlertDialogTheme">
+    android:orientation="vertical">
 
     <TextView
         android:layout_width="wrap_content"
@@ -44,13 +43,14 @@
         android:hint="@string/searched_words"
         android:importantForAutofill="no"
         android:inputType="textCapCharacters"
-        android:textAllCaps="true" />
+        android:textAllCaps="true"
+        android:textSize="30sp" />
 
     <Spinner
         android:id="@+id/country_spinner"
-        android:layout_width="300dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:entries="@array/iso3166_countries"
-        android:theme="@style/countrySpinnerItemStyle" />
+        android:popupBackground="@color/dark_gray" />
 
 </LinearLayout>

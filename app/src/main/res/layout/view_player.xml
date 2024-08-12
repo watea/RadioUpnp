@@ -92,14 +92,14 @@
             android:layout_height="@dimen/tile_size"
             android:visibility="invisible"
             app:srcCompat="@drawable/ic_play_arrow_white_24dp"
-            tools:ignore="ContentDescription"
-            app:tint="@animator/play_selector" />
+            app:tint="@animator/play_selector"
+            tools:ignore="ContentDescription" />
 
         <ProgressBar
             android:id="@+id/progress_bar"
             android:layout_width="@dimen/tile_size"
             android:layout_height="@dimen/tile_size"
-            android:indeterminateTint="@android:color/darker_gray"
+            android:indeterminateTint="?attr/android:textColorSecondary"
             android:visibility="invisible" />
 
     </FrameLayout>

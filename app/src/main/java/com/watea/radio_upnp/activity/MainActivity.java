@@ -281,11 +281,11 @@ public class MainActivity
   }
 
   public void tell(int message) {
-    Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG).show();
+    tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
   }
 
   public void tell(@NonNull String message) {
-    Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG).show();
+    tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
   }
 
   public void onUpnpReset() {
@@ -628,17 +628,22 @@ public class MainActivity
     }
   }
 
+  // Customize snackbar for both dark and light theme
+  private void tell(@NonNull Snackbar snackbar) {
+    snackbar
+      .setTextColor(ContextCompat.getColor(this, R.color.light_gray))
+      .setBackgroundTint(ContextCompat.getColor(this, R.color.dark_gray))
+      .show();
+  }
+
+  @SuppressLint("DiscouragedApi")
   private int getCurrentTheme() {
     // Check the actual system setting
     final int uiMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-    switch (uiMode) {
-      case Configuration.UI_MODE_NIGHT_YES:
-        return R.style.BaseAppTheme;
-      case Configuration.UI_MODE_NIGHT_NO:
-        return R.style.BaseAppTheme;
-      default:
-        return R.style.BaseAppTheme;
-    }
+    return getResources().getIdentifier(
+      (uiMode == Configuration.UI_MODE_NIGHT_NO) ? "AppTheme.Light" : "AppTheme.Dark",
+      "style",
+      getPackageName());
   }
 
   private boolean noRequestPermission(@NonNull String permission, int requestCode) {

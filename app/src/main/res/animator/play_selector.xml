@@ -23,7 +23,7 @@
 
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:color="@color/light_gray"
+        android:color="?attr/colorControlHighlight"
         android:state_enabled="false" />
-    <item android:color="@color/white" />
+    <item android:color="?attr/colorButtonNormal" />
 </selector>
