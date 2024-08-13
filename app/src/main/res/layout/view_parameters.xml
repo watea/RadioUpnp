@@ -20,26 +20,47 @@
   ~ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   ~ OTHER DEALINGS IN THE SOFTWARE.
   -->
-
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:theme="@style/AlertDialogTheme"
+    android:padding="@dimen/app_margin"
+    android:orientation="vertical">
 
     <TextView
-        android:id="@+id/row_playlist_date_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:padding="@dimen/app_horizontal_margin"
-        android:textAllCaps="true"
-        android:textColor="?attr/android:textColorHighlight" />
+        android:layout_gravity="center"
+        android:textStyle="bold"
+        android:text="@string/Theme" />
 
-    <TextView
-        android:id="@+id/row_playlist_information_text_view"
+    <RadioGroup
+        android:id="@+id/theme_radio_group"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="@dimen/app_horizontal_margin"
-        android:textStyle="bold" />
+        android:layout_height="wrap_content">
+
+        <RadioButton
+            android:id="@+id/system_radio_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/app_margin"
+            android:text="@string/system_radio_button" />
+
+        <RadioButton
+            android:id="@+id/dark_radio_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/app_margin"
+            android:text="@string/dark_radio_button" />
+
+        <RadioButton
+            android:id="@+id/light_radio_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/app_margin"
+            android:text="@string/light_radio_button" />
+
+    </RadioGroup>
 
 </LinearLayout>

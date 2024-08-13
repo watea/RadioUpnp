@@ -84,7 +84,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:text="@string/action_browse"
-            android:textColor="@color/dark_blue" />
+            android:textColor="?attr/android:textColorHighlight" />
 
     </RelativeLayout>
 
@@ -113,7 +113,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/app_margin"
             android:text="@string/icon_search"
-            android:textColor="@color/dark_blue" />
+            android:textColor="?attr/android:textColorHighlight" />
 
         <ProgressBar
             android:id="@+id/icon_search_progress_bar"

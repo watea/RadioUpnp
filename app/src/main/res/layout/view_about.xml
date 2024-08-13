@@ -23,9 +23,9 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 
-    android:id="@+id/view_about"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:theme="@style/AlertDialogTheme"
     android:orientation="vertical"
     android:padding="@dimen/app_margin">
 

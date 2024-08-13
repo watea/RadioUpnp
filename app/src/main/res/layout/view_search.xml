@@ -25,6 +25,7 @@
 
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:theme="@style/AlertDialogTheme"
     android:clickable="true"
     android:focusableInTouchMode="true"
     android:orientation="vertical">
@@ -50,7 +51,6 @@
         android:id="@+id/country_spinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:entries="@array/iso3166_countries"
-        android:popupBackground="@color/dark_gray" />
+        android:entries="@array/iso3166_countries" />
 
 </LinearLayout>

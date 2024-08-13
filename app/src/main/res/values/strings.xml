@@ -105,13 +105,14 @@
     <string name="liberapay">liberapay.com</string>
     <string name="paypal">paypal.com</string>
     <string name="or_use">or use</string>
+    <string name="Theme">Theme</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
     <string name="title_item_add">Add</string>
     <string name="title_modify">Modify</string>
     <string name="title_donate">Donate</string>
-    <string name="title_parameters">Theme</string>
+    <string name="title_parameters">Parameters</string>
     <string name="title_about">About</string>
     <string name="title_item_modify">Edit</string>
     <string name="title_dlna">UPnP/DLNA</string>
@@ -135,4 +136,7 @@
     <string name="action_all">SELECT ALL</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
+    <string name="system_radio_button">System</string>
+    <string name="dark_radio_button">Dark</string>
+    <string name="light_radio_button">Light</string>
 </resources>

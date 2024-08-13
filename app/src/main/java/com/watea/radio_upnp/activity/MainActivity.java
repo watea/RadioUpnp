@@ -23,6 +23,9 @@
 
 package com.watea.radio_upnp.activity;
 
+import static com.watea.radio_upnp.R.id;
+import static com.watea.radio_upnp.R.string;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
@@ -46,6 +49,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
@@ -125,6 +130,7 @@ public class MainActivity
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
   private AlertDialog upnpAlertDialog;
+  private AlertDialog parametersAlertDialog;
   private View devicesDefaultView;
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
@@ -133,6 +139,7 @@ public class MainActivity
   private RadioGardenController radioGardenController;
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
+  private Theme theme = Theme.SYSTEM;
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -238,6 +245,9 @@ public class MainActivity
           Manifest.permission.WRITE_EXTERNAL_STORAGE, CSV_EXPORT_PERMISSION_REQUEST_CODE)) {
           exportCsv();
         }
+        break;
+      case R.id.action_parameters:
+        parametersAlertDialog.show();
         break;
       case R.id.action_about:
         aboutAlertDialog.show();
@@ -398,7 +408,7 @@ public class MainActivity
 
   // Is called also when coming back after a "Back" exit
   @Override
-  @SuppressLint("InflateParams")
+  @SuppressLint({"InflateParams", "NonConstantResourceId"})
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // Fetch preferences
@@ -421,6 +431,7 @@ public class MainActivity
       }
     }
     // Theme
+    theme = Theme.valueOf(sharedPreferences.getString(getString(R.string.key_theme), theme.toString()));
     setTheme(getCurrentTheme());
     // Init connexion
     networkProxy = new NetworkProxy(this);
@@ -503,6 +514,44 @@ public class MainActivity
     devicesDefaultView = contentUpnp.findViewById(R.id.devices_default_linear_layout);
     upnpAlertDialog = new AlertDialog.Builder(this)
       .setView(contentUpnp)
+      .create();
+    // Parameters dialog
+    final View parametersView = getLayoutInflater().inflate(R.layout.view_parameters, null);
+    final RadioGroup themeRadioGroup = parametersView.findViewById(R.id.theme_radio_group);
+    themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+      final Theme previousTheme = theme;
+      switch (group.getCheckedRadioButtonId()) {
+        case R.id.dark_radio_button:
+          theme = Theme.DARK;
+          break;
+        case id.light_radio_button:
+          theme = Theme.LIGHT;
+          break;
+        default:
+          theme = Theme.SYSTEM;
+      }
+      if (theme != previousTheme) {
+        sharedPreferences
+          .edit()
+          .putString(getString(string.key_theme), theme.toString())
+          .apply();
+        recreate();
+      }
+    });
+    RadioButton radioButton;
+    switch (theme) {
+      case DARK:
+        radioButton = parametersView.findViewById(id.dark_radio_button);
+        break;
+      case LIGHT:
+        radioButton = parametersView.findViewById(id.light_radio_button);
+        break;
+      default:
+        radioButton = parametersView.findViewById(id.system_radio_button);
+    }
+    radioButton.setChecked(true);
+    parametersAlertDialog = new AlertDialog.Builder(this)
+      .setView(parametersView)
       .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
@@ -641,7 +690,9 @@ public class MainActivity
     // Check the actual system setting
     final int uiMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
     return getResources().getIdentifier(
-      (uiMode == Configuration.UI_MODE_NIGHT_NO) ? "AppTheme.Light" : "AppTheme.Dark",
+      (((theme == Theme.SYSTEM) && (uiMode == Configuration.UI_MODE_NIGHT_NO)) ||
+        (theme == Theme.LIGHT)) ?
+        "AppTheme.Light" : "AppTheme.Dark",
       "style",
       getPackageName());
   }
@@ -770,7 +821,7 @@ public class MainActivity
   private void importJson() {
     new AlertDialog.Builder(this)
       .setTitle(R.string.title_import)
-      .setIcon(R.drawable.ic_baseline_exit_to_app_black_24dp)
+      .setIcon(R.drawable.ic_baseline_exit_to_app_white_24dp)
       .setMessage(R.string.import_message)
       .setPositiveButton(R.string.action_go, (dialog, which) ->
         openDocumentLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -785,6 +836,10 @@ public class MainActivity
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
+  }
+
+  private enum Theme {
+    SYSTEM, DARK, LIGHT
   }
 
   public interface Listener {
