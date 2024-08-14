@@ -679,10 +679,7 @@ public class MainActivity
 
   // Customize snackbar for both dark and light theme
   private void tell(@NonNull Snackbar snackbar) {
-    snackbar
-      .setTextColor(ContextCompat.getColor(this, R.color.light_gray))
-      .setBackgroundTint(ContextCompat.getColor(this, R.color.dark_gray))
-      .show();
+    snackbar.setTextColor(ContextCompat.getColor(this, R.color.light_gray)).show();
   }
 
   @SuppressLint("DiscouragedApi")
