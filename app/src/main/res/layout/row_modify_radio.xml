@@ -54,7 +54,7 @@
             android:contentDescription="@string/preferred"
             android:gravity="center"
             app:srcCompat="@drawable/ic_star_border_white_30dp"
-            app:tint="@attr/colorControlHighlight" />
+            app:tint="?attr/colorControlHighlight" />
 
         <ImageButton
             android:id="@id/row_modify_radio_move_image_button"
@@ -65,7 +65,7 @@
             android:contentDescription="@string/action_move"
             android:gravity="center"
             app:srcCompat="@drawable/ic_baseline_drag_indicator_24dp"
-            app:tint="@attr/colorControlHighlight" />
+            app:tint="?attr/colorControlHighlight" />
 
     </RelativeLayout>
 

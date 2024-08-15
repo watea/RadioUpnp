@@ -140,7 +140,7 @@ public class MainActivity
   private RadioGardenController radioGardenController;
   private boolean gotItRadioGarden = false;
   private int navigationMenuCheckedId;
-  private Theme theme = Theme.SYSTEM;
+  private Theme theme = Theme.DARK;
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
