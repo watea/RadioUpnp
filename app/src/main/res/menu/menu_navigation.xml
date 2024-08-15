@@ -74,13 +74,13 @@
             android:icon="@drawable/ic_baseline_attach_email_white_24dp"
             android:title="@string/title_log" />
         <item
-            android:id="@+id/action_donate"
-            android:icon="@drawable/ic_payment_white_24dp"
-            android:title="@string/title_donate" />
-        <item
             android:id="@+id/action_parameters"
             android:icon="@drawable/ic_settings_white_24dp"
             android:title="@string/title_parameters" />
+        <item
+            android:id="@+id/action_donate"
+            android:icon="@drawable/ic_payment_white_24dp"
+            android:title="@string/title_donate" />
         <item
             android:id="@+id/action_about"
             android:icon="@drawable/ic_baseline_question_mark_white_24dp"
