@@ -37,7 +37,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
@@ -56,14 +55,17 @@ public class UpnpDevicesAdapter
   private final List<Device> devices = new ArrayList<>();
   @NonNull
   private final Listener listener;
+  private final int selectedColor;
   @Nullable
   private ChosenDeviceListener chosenDeviceListener = null;
   @Nullable
   private String chosenUpnpDeviceIdentity;
 
   public UpnpDevicesAdapter(
+    int selectedColor,
     @Nullable String chosenUpnpDeviceIdentity,
     @NonNull Listener listener) {
+    this.selectedColor = selectedColor;
     this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
     this.listener = listener;
   }
@@ -222,7 +224,6 @@ public class UpnpDevicesAdapter
     @NonNull
     private final TextView textView;
     private final int defaultColor;
-    private final int selectedColor;
     @Nullable
     private Device device;
 
@@ -238,7 +239,6 @@ public class UpnpDevicesAdapter
         listener.onRowClick(device, (getChosenDevice() != null));
       });
       defaultColor = textView.getCurrentTextColor();
-      selectedColor = ContextCompat.getColor(textView.getContext(), R.color.dark_blue);
       castIcon = BitmapFactory.decodeResource(textView.getResources(), R.drawable.ic_cast_blue);
     }
 

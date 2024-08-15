@@ -36,6 +36,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -406,6 +407,17 @@ public class MainActivity
         super.onOptionsItemSelected(item);
   }
 
+  /**
+   * @noinspection resource, SameParameterValue
+   */
+  public int getThemeAttributeColor(int attr) {
+    final int[] attrs = {attr};
+    final TypedArray typedArray = obtainStyledAttributes(attrs);
+    final int result = typedArray.getColor(0, 0); // Get the color value
+    typedArray.recycle(); // Always recycle TypedArray
+    return result;
+  }
+
   // Is called also when coming back after a "Back" exit
   @Override
   @SuppressLint({"InflateParams", "NonConstantResourceId"})
@@ -437,6 +449,7 @@ public class MainActivity
     networkProxy = new NetworkProxy(this);
     // UPnP adapter (order matters)
     upnpDevicesAdapter = new UpnpDevicesAdapter(
+      getThemeAttributeColor(android.R.attr.textColorHighlight),
       (savedInstanceState == null) ?
         null : savedInstanceState.getString(getString(R.string.key_selected_device)),
       new UpnpDevicesAdapter.Listener() {
@@ -679,7 +692,7 @@ public class MainActivity
 
   // Customize snackbar for both dark and light theme
   private void tell(@NonNull Snackbar snackbar) {
-    snackbar.setTextColor(ContextCompat.getColor(this, R.color.light_gray)).show();
+    snackbar.setTextColor(getThemeAttributeColor(R.attr.colorAccent)).show();
   }
 
   @SuppressLint("DiscouragedApi")
