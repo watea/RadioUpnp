@@ -106,6 +106,7 @@
     <string name="liberapay">liberapay.com</string>
     <string name="paypal">paypal.com</string>
     <string name="or_use">or use</string>
+    <string name="user_advisory">"Dear user,\n\na new release is ready.\nIt impacts <b>UPnP functions</b> a lot; I need volunteers to use beta-version on UPnP speakers.\nPlease email if interested at fr.watea@gmail.com.\n\nThanks"</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

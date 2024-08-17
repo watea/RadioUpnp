@@ -497,12 +497,27 @@ public class MainActivity
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
+    // Check notification
     if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
       new AlertDialog.Builder(this, R.style.AlertDialogStyle)
         .setMessage(R.string.notification_needed)
         .setPositiveButton(
           R.string.action_go,
           (dialogInterface, i) -> setNotification(this, getPackageName()))
+        .create()
+        .show();
+    }
+    // User advisory for new release
+    if (sharedPreferences.getBoolean(getString(R.string.key_user_advisory), true)) {
+      new AlertDialog.Builder(this, R.style.AlertDialogStyle)
+        .setMessage(R.string.user_advisory)
+        .setPositiveButton(
+          R.string.action_got_it,
+          (dialogInterface, i) ->
+            sharedPreferences
+              .edit()
+              .putBoolean(getString(R.string.key_user_advisory), false)
+              .commit())
         .create()
         .show();
     }
