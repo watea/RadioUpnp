@@ -552,18 +552,18 @@ public class MainActivity
         recreate();
       }
     });
-    RadioButton radioButton;
+    int radioButtonId;
     switch (theme) {
       case DARK:
-        radioButton = parametersView.findViewById(id.dark_radio_button);
+        radioButtonId = R.id.dark_radio_button;
         break;
       case LIGHT:
-        radioButton = parametersView.findViewById(id.light_radio_button);
+        radioButtonId = R.id.light_radio_button;
         break;
       default:
-        radioButton = parametersView.findViewById(id.system_radio_button);
+        radioButtonId = R.id.system_radio_button;
     }
-    radioButton.setChecked(true);
+    ((RadioButton) parametersView.findViewById(radioButtonId)).setChecked(true);
     parametersAlertDialog = new AlertDialog.Builder(this)
       .setView(parametersView)
       .create();
