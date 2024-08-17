@@ -510,6 +510,7 @@ public class MainActivity
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
+    // Check notification
     if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
       new AlertDialog.Builder(this)
         .setMessage(R.string.notification_needed)
