@@ -43,7 +43,8 @@ import io.resourcepool.ssdp.model.SsdpService;
 
 /**
  * @noinspection unused
- */ //  <device>
+ */
+//  <device>
 //    <deviceType>urn:schemas-upnp-org:device:deviceType:v</deviceType>
 //    <friendlyName>short user-friendly title</friendlyName>
 //    <manufacturer>manufacturer name</manufacturer>

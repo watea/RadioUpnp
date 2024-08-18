@@ -40,7 +40,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @noinspection unused
- */ // <actionList>
+ */
+// <actionList>
 //  <action>
 //    <name>actionName</name>
 //    <argumentList>
