@@ -32,6 +32,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * @noinspection unused
+ */
 public class Action extends Asset {
   public static final String XML_NAME = "action";
   private static final String LOG_TAG = Action.class.getSimpleName();

@@ -86,11 +86,10 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
     }
 
     private int getBackgroundColor() {
-      final TypedArray typedArray = radioTextView.getContext().getTheme().obtainStyledAttributes(
-        new int[]{android.R.attr.colorPrimary});
-      final int result = typedArray.getColor(0, 0);
-      typedArray.recycle();
-      return result;
+      try (final TypedArray typedArray = radioTextView
+        .getContext().getTheme().obtainStyledAttributes(new int[]{android.R.attr.colorPrimary})) {
+        return typedArray.getColor(0, 0);
+      }
     }
   }
 }

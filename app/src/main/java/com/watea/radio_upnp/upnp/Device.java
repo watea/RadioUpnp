@@ -41,7 +41,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.resourcepool.ssdp.model.SsdpService;
 
-//  <device>
+/**
+ * @noinspection unused
+ */ //  <device>
 //    <deviceType>urn:schemas-upnp-org:device:deviceType:v</deviceType>
 //    <friendlyName>short user-friendly title</friendlyName>
 //    <manufacturer>manufacturer name</manufacturer>
