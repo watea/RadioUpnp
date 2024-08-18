@@ -96,7 +96,7 @@
     <string name="import_no_data">Import done; no data added!</string>
     <string name="no_data">No playlist data found</string>
     <string name="dump_error">Error: local export file could not be generated</string>
-    <string name="export_done">Export file created in download directory: </string>
+    <string name="export_done">Export file created in download directory:\n</string>
     <string name="radio_garden_radio_added">Radio Garden radio added!</string>
     <string name="try_to_add_from_radio_garden">Try to add from Radio Garden.\nMay take some time, please wait&#8230;</string>
     <string name="play_store_not_installed">Play Store not available.\nRadio Garden cannot be installed!</string>
