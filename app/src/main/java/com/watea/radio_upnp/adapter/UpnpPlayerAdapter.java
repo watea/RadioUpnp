@@ -114,9 +114,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     watchdog = new Watchdog(this.actionController, avTransportService) {
       @Override
       public void onEvent(@NonNull ReaderState readerState) {
-        changeAndNotifyState(
-          (readerState == Watchdog.ReaderState.PLAYING) ?
-            PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR);
+        // Do nothing if paused as event has already been sent
+        if (!isPaused) {
+          changeAndNotifyState(
+            (readerState == Watchdog.ReaderState.PLAYING) ?
+              PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR);
+        }
       }
     };
   }
@@ -143,9 +146,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   public long getAvailableActions() {
     long actions = super.getAvailableActions();
     switch (state) {
-      case PlaybackStateCompat.STATE_NONE:
-      case PlaybackStateCompat.STATE_BUFFERING:
+      case PlaybackStateCompat.STATE_PLAYING:
+        actions |= PlaybackStateCompat.ACTION_PAUSE;
+        break;
       case PlaybackStateCompat.STATE_PAUSED:
+      case PlaybackStateCompat.STATE_BUFFERING:
         actions |= PlaybackStateCompat.ACTION_PLAY;
         break;
       default:
@@ -214,13 +219,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onPlay() {
+    changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+    scheduleActionSetAvTransportUri();
     scheduleActionPlay();
   }
 
-  // Nota: as tested, not supported by UPnP device
   @Override
   protected void onPause() {
-    Log.d(LOG_TAG, "onPause: not supported");
+    scheduleActionStop();
   }
 
   @Override
@@ -273,6 +279,14 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     scheduleMandatoryAction(
       avTransportService.getAction(ACTION_STOP),
       action -> new UpnpAction(action, actionController, instanceId) {
+        @Override
+        protected void onSuccess() {
+          if (isPaused) {
+            changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
+          }
+          super.onSuccess();
+        }
+
         @Override
         protected void onFailure() {
           changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);

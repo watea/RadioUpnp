@@ -90,6 +90,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     }
   };
   private boolean audioNoisyReceiverRegistered = false;
+  protected boolean isPaused = false;
 
   public PlayerAdapter(
     @NonNull Context context,
@@ -142,6 +143,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
         registerAudioNoisyReceiver();
       }
       if (isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
+        isPaused = false;
         onPlay();
       }
     }
@@ -152,6 +154,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
       releaseAudioFocus();
     }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
+      isPaused = true;
       onPause();
     }
   }

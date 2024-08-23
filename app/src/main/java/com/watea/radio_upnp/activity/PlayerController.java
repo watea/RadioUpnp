@@ -139,10 +139,8 @@ public class PlayerController {
         switch (intState) {
           case PlaybackStateCompat.STATE_PLAYING:
             // UPnP device doesn't support PAUSE but STOP
-            playImageButton.setImageResource(
-              isUpnp ? R.drawable.ic_stop_white_24dp : R.drawable.ic_pause_white_24dp);
-            playImageButton.setTag(
-              isUpnp ? PlaybackStateCompat.STATE_STOPPED : PlaybackStateCompat.STATE_PAUSED);
+            playImageButton.setImageResource(R.drawable.ic_pause_white_24dp);
+            playImageButton.setTag(PlaybackStateCompat.STATE_PAUSED);
           case PlaybackStateCompat.STATE_PAUSED:
             setPlayImageButtonVisibility(true, false);
             break;
