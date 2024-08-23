@@ -80,6 +80,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   @Nullable
   private final AudioFocusRequest audioFocusRequest;
   protected int state = PlaybackStateCompat.STATE_NONE;
+  protected boolean isPaused = false;
   private boolean playOnAudioFocus = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
@@ -90,7 +91,6 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     }
   };
   private boolean audioNoisyReceiverRegistered = false;
-  protected boolean isPaused = false;
 
   public PlayerAdapter(
     @NonNull Context context,

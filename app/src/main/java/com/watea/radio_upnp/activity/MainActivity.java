@@ -440,7 +440,7 @@ public class MainActivity
     // UPnP adapter (order matters), only if not already existing
     upnpDevicesAdapter = (upnpDevicesAdapter == null) ? new UpnpDevicesAdapter(
       (savedInstanceState == null) ?
-              null : savedInstanceState.getString(getString(R.string.key_selected_device)),
+        null : savedInstanceState.getString(getString(R.string.key_selected_device)),
       new UpnpDevicesAdapter.Listener() {
         @Override
         public void onRowClick(@NonNull Device device, boolean isChosen) {
