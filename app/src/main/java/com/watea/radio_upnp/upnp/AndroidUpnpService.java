@@ -57,7 +57,6 @@ public class AndroidUpnpService extends android.app.Service {
     .build();
   private final DiscoveryRequest discoverMediaRenderer = SsdpRequest.builder()
     .discoveryOptions(discoveryOptions)
-    .serviceType(DEVICE)
     .build();
   private final Set<Device> devices = new CopyOnWriteArraySet<>();
   private final ActionController actionController = new ActionController();
@@ -85,12 +84,12 @@ public class AndroidUpnpService extends android.app.Service {
 
     public void onServiceDiscovered(SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
-      Log.d(LOG_TAG, "Found SsdpService: " + service.getServiceType());
-      Log.d(LOG_TAG, "Found SsdpService: " + service.getOriginalResponse().toString());
-      try {
-        new Device(service, deviceCallback);
-      } catch (IOException | XmlPullParserException exception) {
-        Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
+      if (DEVICE.equals(service.getServiceType())) {
+        try {
+          new Device(service, deviceCallback);
+        } catch (IOException | XmlPullParserException exception) {
+          Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
+        }
       }
     }
 
@@ -98,11 +97,12 @@ public class AndroidUpnpService extends android.app.Service {
     public void onServiceAnnouncement(SsdpServiceAnnouncement announcement) {
       Log.d(LOG_TAG, "SsdpServiceAnnouncement: " + announcement);
       final String uUID = announcement.getSerialNumber();
-      final boolean isAlive = (announcement.getStatus() != SsdpServiceAnnouncement.Status.BYEBYE);
+      final SsdpServiceAnnouncement.Status status = announcement.getStatus();
+      final boolean isAlive = (status != SsdpServiceAnnouncement.Status.BYEBYE);
       devices.stream()
         .filter(device -> device.hasUUID(uUID) && (device.isAlive() != isAlive))
         .forEach(device -> {
-          Log.d(LOG_TAG, "Device announcement: " + device.getDisplayString());
+          Log.d(LOG_TAG, "Device announcement: " + device.getDisplayString() + " => " + status);
           listeners.forEach(listener -> {
             if (isAlive) {
               listener.onDeviceAdd(device);
@@ -148,11 +148,6 @@ public class AndroidUpnpService extends android.app.Service {
   }
 
   public class UpnpService extends android.os.Binder {
-    @NonNull
-    public Set<Device> getDevices() {
-      return devices;
-    }
-
     @NonNull
     public ActionController getActionController() {
       return actionController;

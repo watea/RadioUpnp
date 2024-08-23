@@ -152,7 +152,7 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
-      wifiTest(() -> getMainActivity().onUpnpReset());
+      wifiTest(() -> getMainActivity().onUpnp());
       return true;
     };
   }

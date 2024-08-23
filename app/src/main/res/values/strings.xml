@@ -44,7 +44,6 @@
     <string name="radio_no_radio">No radio</string>
     <string name="radio_no_playlist">No playlist available</string>
     <string name="onrad_io_search">Search with online <b>OnRad.io</b> database;\nplease note that data may be outdated:</string>
-    <string name="dlna_search_reset">UPnP/DLNA search reset</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
     <string name="no_dlna_selection">No UPnP/DLNA device selected</string>
     <string name="radio_name">RADIO NAME</string>
@@ -67,12 +66,11 @@
     <string name="mime_not_authorized">Warning! MIME type is not authorized.\nAudio content: </string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL</string>
     <string name="connection_test_successful">Connection test successful.\nAudio content: </string>
-    <string name="service_not_available">Service not available</string>
     <string name="lan_required">No LAN/Wifi connection found for UPnP/DLNA function</string>
     <string name="radio_long_press">Long press opens web site</string>
     <string name="play_long_press">Long press stops radio</string>
     <string name="information_press">Click on playing radio icon to display current playlist</string>
-    <string name="dlna_enable">Short or Long press: search or reset UPnP/DLNA devices.\n\nConnection may need connection authorization.\nBad Wifi may hinder connection quality.</string>
+    <string name="dlna_enable">Short or Long press: search UPnP/DLNA devices.\n\nConnection may need connection authorization.\nBad Wifi may hinder connection quality.</string>
     <string name="preferred_radios">Display only preferred radios.\nPreferred radios are set in Modify screen.</string>
     <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>
     <string name="icon_updated">Icon updated!</string>

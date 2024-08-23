@@ -299,16 +299,6 @@ public class MainActivity
     tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
   }
 
-  public void onUpnpReset() {
-    if (upnpService == null) {
-      tell(R.string.service_not_available);
-    } else {
-      upnpService.getDevices().clear();
-      upnpDevicesAdapter.resetRemoteDevices();
-      tell(R.string.dlna_search_reset);
-    }
-  }
-
   // radio is null for current
   public void startReading(@Nullable Radio radio) {
     final Device chosenDevice = upnpDevicesAdapter.getChosenDevice();
