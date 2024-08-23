@@ -130,9 +130,6 @@ public class PlayerController {
       @Override
       public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
         final int intState = getState(state);
-        final Bundle bundle = mediaController.getExtras();
-        final boolean isUpnp =
-          (bundle != null) && bundle.containsKey(mainActivity.getString(R.string.key_upnp_device));
         Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
         // Play button stores state to reach
         setDefaultPlayImageButton();
@@ -157,15 +154,12 @@ public class PlayerController {
             setPlayImageButtonVisibility(false, false);
             break;
           default:
-            // On error, leave radio data visibility ON, if not UPnP streaming.
+            // On error, leave radio data visibility ON.
             // Important notice: this is for user convenience only.
             // Display state is not saved if the context is disposed
             // (as it would require a Radio Service safe context,
             // too complex to implement).
-            if (isUpnp) {
-              MainActivity.setCurrentRadio(null);
-              setPlayImageButtonVisibility(false, false);
-            } else if (MainActivity.getCurrentRadio() != null) {
+            if (MainActivity.getCurrentRadio() != null) {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
               setPlayImageButtonVisibility(true, false);

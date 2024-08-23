@@ -25,7 +25,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/action_dlna"
+        android:id="@+id/action_upnp"
         android:title="@string/title_dlna"
         app:showAsAction="ifRoom" />
     <item

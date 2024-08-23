@@ -437,11 +437,10 @@ public class MainActivity
     setTheme(getCurrentTheme());
     // Init connexion
     networkProxy = new NetworkProxy(this);
-    // UPnP adapter (order matters)
-    upnpDevicesAdapter = new UpnpDevicesAdapter(
-      getThemeAttributeColor(android.R.attr.textColorHighlight),
+    // UPnP adapter (order matters), only if not already existing
+    upnpDevicesAdapter = (upnpDevicesAdapter == null) ? new UpnpDevicesAdapter(
       (savedInstanceState == null) ?
-        null : savedInstanceState.getString(getString(R.string.key_selected_device)),
+              null : savedInstanceState.getString(getString(R.string.key_selected_device)),
       new UpnpDevicesAdapter.Listener() {
         @Override
         public void onRowClick(@NonNull Device device, boolean isChosen) {
@@ -458,7 +457,8 @@ public class MainActivity
         public void onCountChange(boolean isEmpty) {
           devicesDefaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
         }
-      });
+      }) : upnpDevicesAdapter;
+    upnpDevicesAdapter.setSelectedColor(getThemeAttributeColor(android.R.attr.textColorHighlight));
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
@@ -673,11 +673,10 @@ public class MainActivity
         getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
     }
     // May not exist
-    if (upnpDevicesAdapter != null) {
-      Device chosenDevice = upnpDevicesAdapter.getChosenDevice();
-      if (chosenDevice != null) {
-        outState.putString(getString(R.string.key_selected_device), chosenDevice.getUUID());
-      }
+    final String chosenDeviceUUID =
+      (upnpDevicesAdapter == null) ? null : upnpDevicesAdapter.getChosenDeviceUUID();
+    if (chosenDeviceUUID != null) {
+      outState.putString(getString(R.string.key_selected_device), chosenDeviceUUID);
     }
   }
 

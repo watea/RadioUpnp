@@ -55,19 +55,20 @@ public class UpnpDevicesAdapter
   private final List<Device> devices = new ArrayList<>();
   @NonNull
   private final Listener listener;
-  private final int selectedColor;
+  private int selectedColor;
   @Nullable
   private ChosenDeviceListener chosenDeviceListener = null;
   @Nullable
   private String chosenUpnpDeviceIdentity;
 
-  public UpnpDevicesAdapter(
-    int selectedColor,
-    @Nullable String chosenUpnpDeviceIdentity,
-    @NonNull Listener listener) {
-    this.selectedColor = selectedColor;
+  public UpnpDevicesAdapter(@Nullable String chosenUpnpDeviceIdentity, @NonNull Listener listener) {
     this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
     this.listener = listener;
+  }
+
+  // Must be called
+  public void setSelectedColor(int selectedColor) {
+    this.selectedColor = selectedColor;
   }
 
   public void setChosenDeviceListener(@Nullable ChosenDeviceListener chosenDeviceListener) {
@@ -102,6 +103,11 @@ public class UpnpDevicesAdapter
       }
     }
     return null;
+  }
+
+  @Nullable
+  public String getChosenDeviceUUID() {
+    return chosenUpnpDeviceIdentity;
   }
 
   @Override
@@ -189,6 +195,7 @@ public class UpnpDevicesAdapter
   private void add(@NonNull Device device) {
     devices.add(device);
     listener.onCountChange(false);
+    tellChosenDevice();
     notifyItemInserted(devices.indexOf(device));
   }
 
@@ -197,6 +204,7 @@ public class UpnpDevicesAdapter
     if (position >= 0) {
       devices.remove(device);
       listener.onCountChange(devices.isEmpty());
+      tellChosenDevice();
       notifyItemRemoved(position);
     }
   }

@@ -47,12 +47,12 @@ import com.watea.radio_upnp.model.Radio;
 
 public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
-  private MenuItem dlnaMenuItem;
+  private MenuItem upnpMenuItem;
   private final UpnpDevicesAdapter.ChosenDeviceListener chosenDeviceListener = icon -> {
-    if (dlnaMenuItem != null) {
-      dlnaMenuItem.setVisible((icon != null));
+    if (upnpMenuItem != null) {
+      upnpMenuItem.setVisible((icon != null));
       if (icon != null) {
-        dlnaMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
+        upnpMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
       }
     }
   };
@@ -120,7 +120,7 @@ public class MainFragment extends MainActivityFragment {
         setPreferredMenuItem();
         preferredRadiosUserHint.show();
         return true;
-      case R.id.action_dlna:
+      case R.id.action_upnp:
         upnpDevicesAdapter.removeChosenUpnpDevice();
         tell(R.string.no_dlna_selection);
         return true;
@@ -133,7 +133,7 @@ public class MainFragment extends MainActivityFragment {
 
   @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
-    dlnaMenuItem = menu.findItem(R.id.action_dlna);
+    upnpMenuItem = menu.findItem(R.id.action_upnp);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     chosenDeviceListener.onChosenDeviceChange(upnpDevicesAdapter.getChosenUpnpDeviceIcon());
     setPreferredMenuItem();
