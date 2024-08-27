@@ -53,26 +53,22 @@ public class UpnpDevicesAdapter
   private static final String LOG_TAG = UpnpDevicesAdapter.class.getSimpleName();
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private final List<Device> devices = new ArrayList<>();
+  private final int selectedColor;
+  private final View defaultView;
   @NonNull
   private final Listener listener;
-  private int selectedColor;
-  @Nullable
-  private ChosenDeviceListener chosenDeviceListener = null;
   @Nullable
   private String chosenUpnpDeviceIdentity;
 
-  public UpnpDevicesAdapter(@Nullable String chosenUpnpDeviceIdentity, @NonNull Listener listener) {
-    this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
-    this.listener = listener;
-  }
-
-  // Must be called
-  public void setSelectedColor(int selectedColor) {
+  public UpnpDevicesAdapter(
+    int selectedColor,
+    @NonNull View defaultView,
+    @NonNull Listener listener,
+    @Nullable String chosenUpnpDeviceIdentity) {
     this.selectedColor = selectedColor;
-  }
-
-  public void setChosenDeviceListener(@Nullable ChosenDeviceListener chosenDeviceListener) {
-    this.chosenDeviceListener = chosenDeviceListener;
+    this.defaultView = defaultView;
+    this.listener = listener;
+    this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
   }
 
   @NonNull
@@ -151,8 +147,7 @@ public class UpnpDevicesAdapter
   @SuppressLint("NotifyDataSetChanged")
   public void resetRemoteDevices() {
     devices.clear();
-    listener.onCountChange(true);
-    tellChosenDevice();
+    onCountChange(true);
     notifyDataSetChanged();
   }
 
@@ -160,6 +155,11 @@ public class UpnpDevicesAdapter
   public Bitmap getChosenUpnpDeviceIcon() {
     final Device device = getChosenDevice();
     return (device == null) ? null : device.getIcon();
+  }
+
+  private void onCountChange(boolean isEmpty) {
+    defaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
+    tellChosenDevice();
   }
 
   private void setChosenUpnpDevice(@Nullable Device device) {
@@ -194,8 +194,7 @@ public class UpnpDevicesAdapter
 
   private void add(@NonNull Device device) {
     devices.add(device);
-    listener.onCountChange(false);
-    tellChosenDevice();
+    onCountChange(false);
     notifyItemInserted(devices.indexOf(device));
   }
 
@@ -203,25 +202,18 @@ public class UpnpDevicesAdapter
     final int position = devices.indexOf(device);
     if (position >= 0) {
       devices.remove(device);
-      listener.onCountChange(devices.isEmpty());
-      tellChosenDevice();
+      onCountChange(devices.isEmpty());
       notifyItemRemoved(position);
     }
   }
 
   private void tellChosenDevice() {
-    if (chosenDeviceListener != null) {
-      chosenDeviceListener.onChosenDeviceChange(getChosenUpnpDeviceIcon());
-    }
+    listener.onChosenDeviceChange(getChosenUpnpDeviceIcon());
   }
 
   public interface Listener {
     void onRowClick(@NonNull Device device, boolean isChosen);
 
-    void onCountChange(boolean isEmpty);
-  }
-
-  public interface ChosenDeviceListener {
     void onChosenDeviceChange(@Nullable Bitmap icon);
   }
 

@@ -37,8 +37,11 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
 public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapter.ViewHolder> {
-  public RadiosModifyAdapter(@NonNull RecyclerView recyclerView, @NonNull Listener listener) {
-    super(MainActivity::getRadios, R.layout.row_modify_radio, recyclerView, listener);
+  public RadiosModifyAdapter(
+    @NonNull MainActivity mainActivity,
+    @NonNull RecyclerView recyclerView,
+    @NonNull Listener listener) {
+    super(mainActivity, MainActivity::getRadios, R.layout.row_modify_radio, recyclerView, listener);
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
   }

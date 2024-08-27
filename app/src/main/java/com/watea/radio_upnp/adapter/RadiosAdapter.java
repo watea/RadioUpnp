@@ -43,13 +43,19 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   extends RecyclerView.Adapter<V> {
   protected static final int DEFAULT = -1;
   @NonNull
+  protected final MainActivity mainActivity;
+  @NonNull
   protected final Supplier<List<Radio>> radiosSupplier;
   private final int row;
   @NonNull
   protected List<Radio> radios;
 
   public RadiosAdapter(
-    @NonNull Supplier<List<Radio>> radiosSupplier, int row, @NonNull RecyclerView recyclerView) {
+    @NonNull MainActivity mainActivity,
+    @NonNull Supplier<List<Radio>> radiosSupplier,
+    int row,
+    @NonNull RecyclerView recyclerView) {
+    this.mainActivity = mainActivity;
     this.radiosSupplier = radiosSupplier;
     this.radios = this.radiosSupplier.get();
     this.row = row;

@@ -26,6 +26,7 @@ package com.watea.radio_upnp.activity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -42,20 +43,23 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosMainAdapter;
-import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.Radio;
 
 public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;
-  private final UpnpDevicesAdapter.ChosenDeviceListener chosenDeviceListener = icon -> {
-    if (upnpMenuItem != null) {
-      upnpMenuItem.setVisible((icon != null));
-      if (icon != null) {
-        upnpMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
+  private final MainActivity.Listener mainActivityListener =
+    new MainActivity.Listener() {
+      @Override
+      public void onChosenDeviceChange(@Nullable Bitmap icon) {
+        if (upnpMenuItem != null) {
+          upnpMenuItem.setVisible((icon != null));
+          if (icon != null) {
+            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
+          }
+        }
       }
-    }
-  };
+    };
   private MenuItem preferredMenuItem;
   private MainActivity.UserHint radioLongPressUserHint;
   private final RadiosMainAdapter.Listener radiosMainAdapterListener =
@@ -89,7 +93,6 @@ public class MainFragment extends MainActivityFragment {
   private MainActivity.UserHint preferredRadiosUserHint;
   private boolean isPreferredRadios = false;
   private RadiosMainAdapter radiosMainAdapter = null;
-  private UpnpDevicesAdapter upnpDevicesAdapter = null;
 
   @Override
   public void onResume() {
@@ -98,16 +101,17 @@ public class MainFragment extends MainActivityFragment {
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
     // Set view
     radiosMainAdapter.set();
-    // UPnP changes
-    upnpDevicesAdapter.setChosenDeviceListener(chosenDeviceListener);
+    // Listener
+    getMainActivity().addListener(mainActivityListener);
   }
 
   @Override
   public void onPause() {
     super.onPause();
-    // Clear resources
-    upnpDevicesAdapter.setChosenDeviceListener(null);
+    // Unset view
     radiosMainAdapter.unset();
+    // Listener
+    getMainActivity().removeListener(mainActivityListener);
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -121,7 +125,7 @@ public class MainFragment extends MainActivityFragment {
         preferredRadiosUserHint.show();
         return true;
       case R.id.action_upnp:
-        upnpDevicesAdapter.removeChosenUpnpDevice();
+        getMainActivity().removeChosenUpnpDevice();
         tell(R.string.no_dlna_selection);
         return true;
       default:
@@ -135,7 +139,7 @@ public class MainFragment extends MainActivityFragment {
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     upnpMenuItem = menu.findItem(R.id.action_upnp);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
-    chosenDeviceListener.onChosenDeviceChange(upnpDevicesAdapter.getChosenUpnpDeviceIcon());
+    mainActivityListener.onChosenDeviceChange(getMainActivity().getChosenUpnpDeviceIcon());
     setPreferredMenuItem();
   }
 
@@ -185,10 +189,10 @@ public class MainFragment extends MainActivityFragment {
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapters (order matters!)
     radiosMainAdapter = new RadiosMainAdapter(
-      () -> isPreferredRadios ? MainActivity.getRadios().getPreferred() : MainActivity.getRadios(),
+      getMainActivity(),
+      () -> isPreferredRadios ? getRadios().getPreferred() : getRadios(),
       radiosRecyclerView,
       radiosMainAdapterListener);
-    upnpDevicesAdapter = getMainActivity().getUpnpDevicesAdapter();
     // Build alert dialogs
     radioLongPressUserHint = getMainActivity()
       .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);

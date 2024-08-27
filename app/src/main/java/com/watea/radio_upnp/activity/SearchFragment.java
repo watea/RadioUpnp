@@ -152,7 +152,7 @@ public class SearchFragment extends MainActivityFragment {
     nameEditText = searchView.findViewById(R.id.name_edit_text);
     final Spinner countrySpinner = searchView.findViewById(R.id.country_spinner);
     // Adapter
-    radiosSearchAdapter = new RadiosSearchAdapter(radiosRecyclerView);
+    radiosSearchAdapter = new RadiosSearchAdapter(getMainActivity(), radiosRecyclerView);
     // Build alert dialog
     searchAlertDialog = new AlertDialog.Builder(getMainActivity())
       .setView(searchView)

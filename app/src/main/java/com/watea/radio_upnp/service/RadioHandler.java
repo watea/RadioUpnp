@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.service;
 
+import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 
@@ -30,6 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
+import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
@@ -72,8 +74,8 @@ public class RadioHandler implements HttpServer.Handler {
   @NonNull
   private Controller controller = DEFAULT_CONTROLLER;
 
-  public RadioHandler(@NonNull String userAgent, @NonNull Listener listener) {
-    this.userAgent = userAgent;
+  public RadioHandler(@NonNull Context context, @NonNull Listener listener) {
+    this.userAgent = context.getString(R.string.app_name);
     this.listener = listener;
   }
 

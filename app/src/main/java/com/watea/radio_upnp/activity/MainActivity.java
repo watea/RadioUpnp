@@ -123,16 +123,15 @@ public class MainActivity
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  private static final List<Listener> listeners = new ArrayList<>();
   private static Radios radios = null;
-  private static Radio currentRadio = null;
+  private final List<Listener> listeners = new ArrayList<>();
+  private Radio currentRadio = null;
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
   private AlertDialog upnpAlertDialog;
   private AlertDialog parametersAlertDialog;
-  private View devicesDefaultView;
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
   private PlayerController playerController;
@@ -169,6 +168,24 @@ public class MainActivity
   };
   private Intent newIntent = null;
   private NetworkProxy networkProxy = null;
+  private final UpnpDevicesAdapter.Listener upnpDevicesAdapterListener =
+    new UpnpDevicesAdapter.Listener() {
+      @Override
+      public void onRowClick(@NonNull Device device, boolean isChosen) {
+        if (isChosen) {
+          startReading(null);
+          tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+        } else {
+          tell(R.string.no_dlna_selection);
+        }
+        upnpAlertDialog.dismiss();
+      }
+
+      @Override
+      public void onChosenDeviceChange(@Nullable Bitmap icon) {
+        listeners.forEach(listener -> listener.onChosenDeviceChange(icon));
+      }
+    };
   private ActivityResultLauncher<Intent> openDocumentLauncher;
 
   @NonNull
@@ -187,32 +204,32 @@ public class MainActivity
     return radios;
   }
 
-  @Nullable
-  public static Radio getCurrentRadio() {
-    return currentRadio;
-  }
-
-  public static void setCurrentRadio(@Nullable String radioId) {
-    currentRadio = (radioId == null) ? null : radios.getRadioFrom(radioId);
-    listeners.forEach(listener -> listener.onNewCurrentRadio(currentRadio));
-  }
-
-  public static boolean isCurrentRadio(@NonNull Radio radio) {
-    return (currentRadio == radio);
-  }
-
-  public static void addListener(@NonNull Listener listener) {
-    listeners.add(listener);
-  }
-
-  public static void removeListener(@NonNull Listener listener) {
-    listeners.remove(listener);
-  }
-
   public static void setNotification(@NonNull Context context, @NonNull String packageName) {
     final Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
       .putExtra(Settings.EXTRA_APP_PACKAGE, packageName);
     context.startActivity(intent);
+  }
+
+  @Nullable
+  public Radio getCurrentRadio() {
+    return currentRadio;
+  }
+
+  public void setCurrentRadio(@Nullable String radioId) {
+    currentRadio = (radioId == null) ? null : radios.getRadioFrom(radioId);
+    listeners.forEach(listener -> listener.onNewCurrentRadio(currentRadio));
+  }
+
+  public boolean isCurrentRadio(@NonNull Radio radio) {
+    return (currentRadio == radio);
+  }
+
+  public void addListener(@NonNull Listener listener) {
+    listeners.add(listener);
+  }
+
+  public void removeListener(@NonNull Listener listener) {
+    listeners.remove(listener);
   }
 
   @NonNull
@@ -345,12 +362,6 @@ public class MainActivity
     checkNavigationMenu(navigationMenuCheckedId);
   }
 
-  @NonNull
-  public UpnpDevicesAdapter getUpnpDevicesAdapter() {
-    assert upnpDevicesAdapter != null;
-    return upnpDevicesAdapter;
-  }
-
   public void onUpnp() {
     upnpAlertDialog.show();
   }
@@ -437,28 +448,6 @@ public class MainActivity
     setTheme(getCurrentTheme());
     // Init connexion
     networkProxy = new NetworkProxy(this);
-    // UPnP adapter (order matters), only if not already existing
-    upnpDevicesAdapter = (upnpDevicesAdapter == null) ? new UpnpDevicesAdapter(
-      (savedInstanceState == null) ?
-        null : savedInstanceState.getString(getString(R.string.key_selected_device)),
-      new UpnpDevicesAdapter.Listener() {
-        @Override
-        public void onRowClick(@NonNull Device device, boolean isChosen) {
-          if (isChosen) {
-            startReading(null);
-            tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
-          } else {
-            tell(R.string.no_dlna_selection);
-          }
-          upnpAlertDialog.dismiss();
-        }
-
-        @Override
-        public void onCountChange(boolean isEmpty) {
-          devicesDefaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
-        }
-      }) : upnpDevicesAdapter;
-    upnpDevicesAdapter.setSelectedColor(getThemeAttributeColor(android.R.attr.textColorHighlight));
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
@@ -514,8 +503,13 @@ public class MainActivity
     final View contentUpnp = getLayoutInflater().inflate(R.layout.content_upnp, null);
     final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+    upnpDevicesAdapter = new UpnpDevicesAdapter(
+      getThemeAttributeColor(android.R.attr.textColorHighlight),
+      contentUpnp.findViewById(R.id.devices_default_linear_layout),
+      upnpDevicesAdapterListener,
+      (savedInstanceState == null) ?
+        null : savedInstanceState.getString(getString(R.string.key_selected_device)));
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
-    devicesDefaultView = contentUpnp.findViewById(R.id.devices_default_linear_layout);
     upnpAlertDialog = new AlertDialog.Builder(this)
       .setView(contentUpnp)
       .create();
@@ -838,12 +832,24 @@ public class MainActivity
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
   }
 
+  public void removeChosenUpnpDevice() {
+    upnpDevicesAdapter.removeChosenUpnpDevice();
+  }
+
+  @Nullable
+  public Bitmap getChosenUpnpDeviceIcon() {
+    return upnpDevicesAdapter.getChosenUpnpDeviceIcon();
+  }
+
   private enum Theme {
     SYSTEM, DARK, LIGHT
   }
 
   public interface Listener {
     default void onNewCurrentRadio(@Nullable Radio radio) {
+    }
+
+    default void onChosenDeviceChange(@Nullable Bitmap icon) {
     }
   }
 

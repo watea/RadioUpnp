@@ -70,7 +70,7 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
-      if (MainActivity.isCurrentRadio(radio)) {
+      if (getMainActivity().isCurrentRadio(radio)) {
         tell(R.string.not_to_modify);
       } else {
         radio.setName(getRadioName());

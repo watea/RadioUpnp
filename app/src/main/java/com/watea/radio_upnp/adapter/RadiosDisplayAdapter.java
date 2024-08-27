@@ -86,16 +86,17 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   };
 
   public RadiosDisplayAdapter(
+    @NonNull MainActivity mainActivity,
     @NonNull Supplier<List<Radio>> radiosSupplier,
     int row,
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener) {
-    super(radiosSupplier, row, recyclerView);
+    super(mainActivity, radiosSupplier, row, recyclerView);
     this.listener = listener;
   }
 
   public void unset() {
-    MainActivity.removeListener(mainActivityListener);
+    mainActivity.removeListener(mainActivityListener);
     MainActivity.getRadios().removeListener(radiosListener);
   }
 
@@ -108,13 +109,13 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
 
   // Must be called
   public void set() {
-    MainActivity.addListener(mainActivityListener);
+    mainActivity.addListener(mainActivityListener);
     MainActivity.getRadios().addListener(radiosListener);
     refresh();
   }
 
   private void update() {
-    currentRadioIndex = getIndexOf(MainActivity.getCurrentRadio());
+    currentRadioIndex = getIndexOf(mainActivity.getCurrentRadio());
     listener.onCountChange(radios.isEmpty());
   }
 

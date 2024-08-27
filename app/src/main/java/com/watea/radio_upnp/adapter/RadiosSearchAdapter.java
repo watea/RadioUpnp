@@ -32,6 +32,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.ArrayList;
@@ -42,8 +43,10 @@ import java.util.Set;
 public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewHolder> {
   private final Set<Radio> selectedRadios = new HashSet<>();
 
-  public RadiosSearchAdapter(@NonNull RecyclerView recyclerView) {
-    super(ArrayList::new, R.layout.row_search_radio, recyclerView);
+  public RadiosSearchAdapter(
+    @NonNull MainActivity mainActivity,
+    @NonNull RecyclerView recyclerView) {
+    super(mainActivity, ArrayList::new, R.layout.row_search_radio, recyclerView);
   }
 
   public void add(@NonNull Radio radio) {

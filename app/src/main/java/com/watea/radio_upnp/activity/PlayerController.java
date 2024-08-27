@@ -87,7 +87,7 @@ public class PlayerController {
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onPreferredChange(@NonNull Radio radio) {
-      if (MainActivity.isCurrentRadio(radio)) {
+      if (mainActivity.isCurrentRadio(radio)) {
         setPreferredButton(radio.isPreferred());
       }
     }
@@ -144,13 +144,13 @@ public class PlayerController {
           case PlaybackStateCompat.STATE_BUFFERING:
           case PlaybackStateCompat.STATE_CONNECTING:
             assert mediaController != null;
-            MainActivity.setCurrentRadio(
+            mainActivity.setCurrentRadio(
               mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
             setPlayImageButtonVisibility(true, true);
             break;
           case PlaybackStateCompat.STATE_NONE:
           case PlaybackStateCompat.STATE_STOPPED:
-            MainActivity.setCurrentRadio(null);
+            mainActivity.setCurrentRadio(null);
             setPlayImageButtonVisibility(false, false);
             break;
           default:
@@ -159,7 +159,7 @@ public class PlayerController {
             // Display state is not saved if the context is disposed
             // (as it would require a Radio Service safe context,
             // too complex to implement).
-            if (MainActivity.getCurrentRadio() != null) {
+            if (mainActivity.getCurrentRadio() != null) {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
               setPlayImageButtonVisibility(true, false);
@@ -211,7 +211,7 @@ public class PlayerController {
           mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
         } else {
           // Reset current radio as session is not valid any more
-          MainActivity.setCurrentRadio(null);
+          mainActivity.setCurrentRadio(null);
         }
         // Nota: no mediaBrowser.subscribe here needed
       }
@@ -332,8 +332,8 @@ public class PlayerController {
   public void onActivityResume() {
     // Connect to other components
     radios.addListener(radiosListener);
-    MainActivity.addListener(mainActivityListener);
-    mainActivityListener.onNewCurrentRadio(MainActivity.getCurrentRadio());
+    mainActivity.addListener(mainActivityListener);
+    mainActivityListener.onNewCurrentRadio(mainActivity.getCurrentRadio());
     // Launch RadioService, may fail if already called and connection not ended
     try {
       mediaBrowser.connect();
@@ -347,7 +347,7 @@ public class PlayerController {
   public void onActivityPause() {
     // Disconnect
     radios.removeListener(radiosListener);
-    MainActivity.removeListener(mainActivityListener);
+    mainActivity.removeListener(mainActivityListener);
     // Disconnect mediaBrowser
     mediaBrowser.disconnect();
     // Forced suspended connection
@@ -385,7 +385,7 @@ public class PlayerController {
 
   @Nullable
   private Radio getCurrentRadio() {
-    return (mediaController == null) ? null : MainActivity.getCurrentRadio();
+    return (mediaController == null) ? null : mainActivity.getCurrentRadio();
   }
 
   private void setPreferredButton(boolean isPreferred) {

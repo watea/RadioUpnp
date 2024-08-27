@@ -29,7 +29,6 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 
 import java.io.IOException;
@@ -46,8 +45,7 @@ public class RadioHttpServer extends HttpServer {
     @NonNull Context context,
     @NonNull RadioHandler.Listener radioHandlerListener) throws IOException {
     this.context = context;
-    radioHandler =
-      new RadioHandler(this.context.getString(R.string.app_name), radioHandlerListener);
+    radioHandler = new RadioHandler(this.context, radioHandlerListener);
     addHandler(radioHandler);
     addHandler(resourceHandler);
   }
