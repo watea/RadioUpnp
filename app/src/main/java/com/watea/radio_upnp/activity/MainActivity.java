@@ -168,11 +168,13 @@ public class MainActivity
   };
   private Intent newIntent = null;
   private NetworkProxy networkProxy = null;
+  private ActivityResultLauncher<Intent> openDocumentLauncher;
+  private String selectedDeviceIdentity;
   private final UpnpDevicesAdapter.Listener upnpDevicesAdapterListener =
     new UpnpDevicesAdapter.Listener() {
       @Override
-      public void onRowClick(@NonNull Device device, boolean isChosen) {
-        if (isChosen) {
+      public void onRowClick(@NonNull Device device, boolean isSelected) {
+        if (isSelected) {
           startReading(null);
           tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
         } else {
@@ -182,11 +184,11 @@ public class MainActivity
       }
 
       @Override
-      public void onChosenDeviceChange(@Nullable Bitmap icon) {
+      public void onSelectedDeviceChange(@Nullable String deviceIdentity, @Nullable Bitmap icon) {
+        selectedDeviceIdentity = deviceIdentity;
         listeners.forEach(listener -> listener.onChosenDeviceChange(icon));
       }
     };
-  private ActivityResultLauncher<Intent> openDocumentLauncher;
 
   @NonNull
   public static Bitmap iconResize(@NonNull Bitmap bitmap) {
@@ -318,13 +320,12 @@ public class MainActivity
 
   // radio is null for current
   public void startReading(@Nullable Radio radio) {
-    final Device chosenDevice = upnpDevicesAdapter.getChosenDevice();
     playerController.startReading(
       radio,
       ((upnpService != null) &&
-        (chosenDevice != null) &&
+        (selectedDeviceIdentity != null) &&
         networkProxy.hasWifiIpAddress()) ?
-        chosenDevice.getUUID() : null);
+        selectedDeviceIdentity : null);
   }
 
   @NonNull
@@ -436,8 +437,6 @@ public class MainActivity
         sharedPreferences
           .edit()
           .putBoolean(getString(R.string.key_first_start), false)
-          // false: no legacy processing needed
-          .putBoolean(getString(R.string.key_legacy_processed), false)
           .apply();
       } else {
         Log.e(LOG_TAG, "Internal failure; unable to init radios");
@@ -503,12 +502,13 @@ public class MainActivity
     final View contentUpnp = getLayoutInflater().inflate(R.layout.content_upnp, null);
     final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+    selectedDeviceIdentity = (savedInstanceState == null) ?
+      null : savedInstanceState.getString(getString(R.string.key_selected_device));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       getThemeAttributeColor(android.R.attr.textColorHighlight),
       contentUpnp.findViewById(R.id.devices_default_linear_layout),
       upnpDevicesAdapterListener,
-      (savedInstanceState == null) ?
-        null : savedInstanceState.getString(getString(R.string.key_selected_device)));
+      selectedDeviceIdentity);
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = new AlertDialog.Builder(this)
       .setView(contentUpnp)
@@ -529,10 +529,6 @@ public class MainActivity
           theme = Theme.SYSTEM;
       }
       if (theme != previousTheme) {
-        sharedPreferences
-          .edit()
-          .putString(getString(string.key_theme), theme.toString())
-          .apply();
         recreate();
       }
     });
@@ -586,6 +582,7 @@ public class MainActivity
     sharedPreferences
       .edit()
       .putBoolean(getString(R.string.key_radio_garden_got_it), gotItRadioGarden)
+      .putString(getString(string.key_theme), theme.toString())
       .apply();
     // Release UPnP service
     unbindService(upnpConnection);
@@ -666,11 +663,8 @@ public class MainActivity
       outState.putString(
         getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
     }
-    // May not exist
-    final String chosenDeviceUUID =
-      (upnpDevicesAdapter == null) ? null : upnpDevicesAdapter.getChosenDeviceUUID();
-    if (chosenDeviceUUID != null) {
-      outState.putString(getString(R.string.key_selected_device), chosenDeviceUUID);
+    if (selectedDeviceIdentity != null) {
+      outState.putString(getString(R.string.key_selected_device), selectedDeviceIdentity);
     }
   }
 
@@ -833,12 +827,12 @@ public class MainActivity
   }
 
   public void removeChosenUpnpDevice() {
-    upnpDevicesAdapter.removeChosenUpnpDevice();
+    upnpDevicesAdapter.removeSelectedUpnpDevice();
   }
 
   @Nullable
   public Bitmap getChosenUpnpDeviceIcon() {
-    return upnpDevicesAdapter.getChosenUpnpDeviceIcon();
+    return upnpDevicesAdapter.getSelectedUpnpDeviceIcon();
   }
 
   private enum Theme {

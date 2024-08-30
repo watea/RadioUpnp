@@ -48,7 +48,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 public abstract class Request {
-  private final String LOG_TAG = Request.class.getSimpleName();
+  private static final String LOG_TAG = Request.class.getSimpleName();
+  private static final int TIMEOUT = 3000; // ms, for request connection and read
   @NonNull
   private final Service service;
   @NonNull
@@ -84,6 +85,8 @@ public abstract class Request {
     try {
       Log.d(LOG_TAG, "call: " + action + " URL => " + url.toString());
       httpURLConnection = (HttpURLConnection) url.openConnection();
+      httpURLConnection.setConnectTimeout(TIMEOUT);
+      httpURLConnection.setReadTimeout(TIMEOUT);
       httpURLConnection.setRequestMethod("POST");
       httpURLConnection.setRequestProperty("Content-Type", "text/xml; charset=\"utf-8\"");
       httpURLConnection.setRequestProperty("SOAPAction", "\"" + serviceType + "#" + action + "\"");
@@ -92,25 +95,32 @@ public abstract class Request {
       onFailure("SOAP connection exception", ioException.toString());
       return;
     }
-    try (OutputStreamWriter writer = new OutputStreamWriter(httpURLConnection.getOutputStream())) {
+    try (final OutputStreamWriter writer =
+           new OutputStreamWriter(httpURLConnection.getOutputStream())) {
       writer.write(getSoapBody(serviceType).toString());
       writer.flush();
       // Read the response
       final int responseCode = httpURLConnection.getResponseCode();
+      Log.d(LOG_TAG, "call: response is " + responseCode);
       // Success/Failure range
       final boolean isFailure = (responseCode < 200) || (responseCode >= 300);
-      final InputStream responseStream =
-        isFailure ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream();
-      if (responseStream == null) {
-        onFailure("SOAP connection error", "No response stream available");
+      final Document document;
+      try (final InputStream responseStream =
+             isFailure ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream()) {
+        if (responseStream == null) {
+          onFailure("SOAP connection internal error/responseCode: " + responseCode, "No response available");
+          return;
+        }
+        final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true); // Necessary!!
+        final DocumentBuilder builder = factory.newDocumentBuilder();
+        document = builder.parse(responseStream);
+      } catch (Exception exception) {
+        onFailure("SOAP response parsing exception/responseCode: " + responseCode, exception.toString());
         return;
+      } finally {
+        httpURLConnection.disconnect();
       }
-      final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-      factory.setNamespaceAware(true); // Necessary!!
-      final DocumentBuilder builder = factory.newDocumentBuilder();
-      final Document document = builder.parse(responseStream);
-      responseStream.close();
-      httpURLConnection.disconnect();
       // Get the action response element
       if (isFailure) {
         final NodeList responseNodes = document.getElementsByTagName("s:Fault");
@@ -149,8 +159,8 @@ public abstract class Request {
         }
       }
       onSuccess(responses);
-    } catch (Exception exception) {
-      onFailure("SOAP exception", exception.toString());
+    } catch (IOException ioException) {
+      onFailure("Request exception", ioException.toString());
     }
   }
 

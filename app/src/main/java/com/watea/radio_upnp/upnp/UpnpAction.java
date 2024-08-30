@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class UpnpAction {
-  private final String LOG_TAG = UpnpAction.class.getSimpleName();
+  private static final String LOG_TAG = UpnpAction.class.getSimpleName();
   @NonNull
   private final Action action;
   @NonNull

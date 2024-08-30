@@ -53,7 +53,7 @@ public class RadioURL {
   private static final Pattern ICON_PATTERN =
     Pattern.compile(".*(https?:/(/[-A-Za-z\\d+&@#%?=~_|!:,.;]+)+\\.(png|jpg)).*");
   private static final int CONNECTION_TRY = 3;
-  private static final int TIMEOUT = 8000; // ms
+  private static final int TIMEOUT = 8000; // ms, for connection and read
   // Create the SSL connection for HTTPS
   private static final SSLSocketFactory sSLSocketFactory;
 

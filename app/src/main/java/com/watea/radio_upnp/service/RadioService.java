@@ -493,7 +493,7 @@ public class RadioService
   }
 
   @Nullable
-  private Device getChosenDevice(@NonNull String identity) {
+  private Device getSelectedDevice(@NonNull String identity) {
     return (upnpService == null) ? null : upnpService.getDevice(identity);
   }
 
@@ -517,6 +517,7 @@ public class RadioService
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
+      Log.e(LOG_TAG, "MediaSessionCompatCallback.onPrepareFromMediaId");
       // Ensure robustness
       upnpService.getActionController().release();
       // Stop player to be clean on resources (if not, audio focus is not well handled)
@@ -539,9 +540,9 @@ public class RadioService
         abort("onPrepareFromMediaId: nanoHttpServer is null");
       }
       final String identity = extras.getString(getString(R.string.key_upnp_device));
-      final Device chosenDevice = (identity == null) ? null : getChosenDevice(identity);
+      final Device selectedDevice = (identity == null) ? null : getSelectedDevice(identity);
       // UPnP not accepted if environment not OK: force STOP
-      if ((identity != null) && (chosenDevice == null)) {
+      if ((identity != null) && (selectedDevice == null)) {
         abort("onPrepareFromMediaId: can't process UPnP device");
         return;
       }
@@ -570,7 +571,7 @@ public class RadioService
           lockKey,
           RadioHandler.getHandledUri(radioHttpServer.getUri(), radio, lockKey),
           radioHttpServer.createLogoFile(radio),
-          chosenDevice,
+          selectedDevice,
           actionController,
           contentProvider);
         session.setPlaybackToRemote(volumeProviderCompat);

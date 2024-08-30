@@ -47,6 +47,7 @@ import java.util.Map;
 
 public class URLService {
   private static final String LOG_TAG = URLService.class.getSimpleName();
+  private static final int TIMEOUT = 3000; // ms, for connection and read
   @NonNull
   final URLConnection uRLConnection;
   private final Map<String, String> tags = new HashMap<>();
@@ -55,6 +56,8 @@ public class URLService {
 
   public URLService(@NonNull URL uRL) throws IOException {
     uRLConnection = uRL.openConnection();
+    uRLConnection.setConnectTimeout(TIMEOUT);
+    uRLConnection.setReadTimeout(TIMEOUT);
   }
 
   public URLService(@NonNull URL uRL, @NonNull URI uRI) throws IOException, URISyntaxException {

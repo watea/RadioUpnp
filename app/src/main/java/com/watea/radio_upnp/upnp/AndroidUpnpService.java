@@ -50,10 +50,11 @@ import io.resourcepool.ssdp.model.SsdpServiceAnnouncement;
 public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:1";
+  private static final Long PERIOD = 5000L;
   private final Binder binder = new UpnpService();
   private final SsdpClient ssdpClient = SsdpClient.create();
   private final DiscoveryOptions discoveryOptions = DiscoveryOptions.builder()
-    .intervalBetweenRequests(10000L)
+    .intervalBetweenRequests(PERIOD)
     .build();
   private final DiscoveryRequest discoverMediaRenderer = SsdpRequest.builder()
     .discoveryOptions(discoveryOptions)
@@ -109,9 +110,13 @@ public class AndroidUpnpService extends android.app.Service {
             } else {
               listener.onDeviceRemove(device);
             }
-            device.setAlive(isAlive);
           });
         });
+    }
+
+    @Override
+    public void onFailedAndIgnored(Exception exception) {
+      Log.d(LOG_TAG, "DiscoveryListener.onFailedAndIgnored: ", exception);
     }
 
     @Override

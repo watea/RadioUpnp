@@ -159,7 +159,9 @@ public class PlayerController {
             // Display state is not saved if the context is disposed
             // (as it would require a Radio Service safe context,
             // too complex to implement).
-            if (mainActivity.getCurrentRadio() != null) {
+            if (mainActivity.getCurrentRadio() == null) {
+              setPlayImageButtonVisibility(false, false);
+            } else {
               playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
               playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
               setPlayImageButtonVisibility(true, false);
@@ -356,19 +358,18 @@ public class PlayerController {
 
   // radio == null for current, do nothing if no current
   public void startReading(@Nullable Radio radio, @Nullable String upnpDeviceIdentity) {
-    // Should not happen
-    if (mediaController == null) {
-      mainActivity.tell(R.string.radio_connection_waiting);
-    } else if ((radio == null) && ((radio = getCurrentRadio()) == null)) {
-      // Should not happen
-      Log.e(LOG_TAG, "startReading: internal failure, radio is null");
-    } else {
-      final Bundle bundle = new Bundle();
-      if (upnpDeviceIdentity != null) {
-        bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
+    radio = (radio == null) ? getCurrentRadio() : radio;
+    if (radio != null) {
+      if (mediaController == null) {
+        // Should not happen
+        mainActivity.tell(R.string.radio_connection_waiting);
+      } else {
+        final Bundle bundle = new Bundle();
+        if (upnpDeviceIdentity != null) {
+          bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
+        }
+        mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
       }
-      assert mediaController != null;
-      mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
     }
   }
 

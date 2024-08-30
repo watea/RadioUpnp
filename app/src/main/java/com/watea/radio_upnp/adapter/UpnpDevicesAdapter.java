@@ -58,17 +58,17 @@ public class UpnpDevicesAdapter
   @NonNull
   private final Listener listener;
   @Nullable
-  private String chosenUpnpDeviceIdentity;
+  private String selectedUpnpDeviceIdentity;
 
   public UpnpDevicesAdapter(
     int selectedColor,
     @NonNull View defaultView,
     @NonNull Listener listener,
-    @Nullable String chosenUpnpDeviceIdentity) {
+    @Nullable String selectedUpnpDeviceIdentity) {
     this.selectedColor = selectedColor;
     this.defaultView = defaultView;
     this.listener = listener;
-    this.chosenUpnpDeviceIdentity = chosenUpnpDeviceIdentity;
+    this.selectedUpnpDeviceIdentity = selectedUpnpDeviceIdentity;
   }
 
   @NonNull
@@ -87,23 +87,6 @@ public class UpnpDevicesAdapter
   @Override
   public int getItemCount() {
     return devices.size();
-  }
-
-  // Null if device no longer online
-  @Nullable
-  public Device getChosenDevice() {
-    for (Device device : devices) {
-      final String identity = device.getUUID();
-      if ((identity != null) && identity.equals(chosenUpnpDeviceIdentity)) {
-        return device;
-      }
-    }
-    return null;
-  }
-
-  @Nullable
-  public String getChosenDeviceUUID() {
-    return chosenUpnpDeviceIdentity;
   }
 
   @Override
@@ -134,14 +117,14 @@ public class UpnpDevicesAdapter
   public void onIcon(@NonNull Device device) {
     if (devices.contains(device)) {
       notifyItemChanged(devices.indexOf(device));
-      if (device == getChosenDevice()) {
-        tellChosenDevice();
+      if (device == getSelectedDevice()) {
+        tellSelectedDevice();
       }
     }
   }
 
-  public void removeChosenUpnpDevice() {
-    setChosenUpnpDevice(null);
+  public void removeSelectedUpnpDevice() {
+    setSelectedUpnpDevice(null);
   }
 
   @SuppressLint("NotifyDataSetChanged")
@@ -152,28 +135,40 @@ public class UpnpDevicesAdapter
   }
 
   @Nullable
-  public Bitmap getChosenUpnpDeviceIcon() {
-    final Device device = getChosenDevice();
+  public Bitmap getSelectedUpnpDeviceIcon() {
+    final Device device = getSelectedDevice();
     return (device == null) ? null : device.getIcon();
+  }
+
+  // Null if device no longer online
+  @Nullable
+  private Device getSelectedDevice() {
+    for (Device device : devices) {
+      final String identity = device.getUUID();
+      if ((identity != null) && identity.equals(selectedUpnpDeviceIdentity)) {
+        return device;
+      }
+    }
+    return null;
   }
 
   private void onCountChange(boolean isEmpty) {
     defaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
-    tellChosenDevice();
+    tellSelectedDevice();
   }
 
-  private void setChosenUpnpDevice(@Nullable Device device) {
-    final Device chosenDevice = getChosenDevice();
-    if (chosenDevice != null) {
-      notifyChange(chosenDevice);
+  private void setSelectedUpnpDevice(@Nullable Device device) {
+    final Device selectedDevice = getSelectedDevice();
+    if (selectedDevice != null) {
+      notifyChange(selectedDevice);
     }
     if (device == null) {
-      chosenUpnpDeviceIdentity = null;
+      selectedUpnpDeviceIdentity = null;
     } else {
-      chosenUpnpDeviceIdentity = device.getUUID();
+      selectedUpnpDeviceIdentity = device.getUUID();
       notifyChange(device);
     }
-    tellChosenDevice();
+    tellSelectedDevice();
   }
 
   private void notifyChange(@NonNull Device device) {
@@ -207,14 +202,14 @@ public class UpnpDevicesAdapter
     }
   }
 
-  private void tellChosenDevice() {
-    listener.onChosenDeviceChange(getChosenUpnpDeviceIcon());
+  private void tellSelectedDevice() {
+    listener.onSelectedDeviceChange(selectedUpnpDeviceIdentity, getSelectedUpnpDeviceIcon());
   }
 
   public interface Listener {
-    void onRowClick(@NonNull Device device, boolean isChosen);
+    void onRowClick(@NonNull Device device, boolean isSelected);
 
-    void onChosenDeviceChange(@Nullable Bitmap icon);
+    void onSelectedDeviceChange(@Nullable String deviceIdentity, @Nullable Bitmap icon);
   }
 
   public class ViewHolder extends RecyclerView.ViewHolder {
@@ -232,11 +227,11 @@ public class UpnpDevicesAdapter
       textView = (TextView) itemView;
       textView.setOnClickListener(v -> {
         assert device != null;
-        setChosenUpnpDevice(
-          ((chosenUpnpDeviceIdentity == null) ||
-            !chosenUpnpDeviceIdentity.equals(device.getUUID())) ?
+        setSelectedUpnpDevice(
+          ((selectedUpnpDeviceIdentity == null) ||
+            !selectedUpnpDeviceIdentity.equals(device.getUUID())) ?
             device : null);
-        listener.onRowClick(device, (getChosenDevice() != null));
+        listener.onRowClick(device, (getSelectedDevice() != null));
       });
       defaultColor = textView.getCurrentTextColor();
       castIcon = BitmapFactory.decodeResource(textView.getResources(), R.drawable.ic_cast_blue);
@@ -253,7 +248,7 @@ public class UpnpDevicesAdapter
         new BitmapDrawable(textView.getResources(), bitmap), null, null, null);
       // Selected item
       textView.setTextColor(
-        (chosenUpnpDeviceIdentity != null) && chosenUpnpDeviceIdentity.equals(device.getUUID()) ?
+        (selectedUpnpDeviceIdentity != null) && selectedUpnpDeviceIdentity.equals(device.getUUID()) ?
           selectedColor : defaultColor);
     }
   }
