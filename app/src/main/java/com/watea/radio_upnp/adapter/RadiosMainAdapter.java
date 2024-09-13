@@ -62,10 +62,12 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
 
   public class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
     private final int backgroundColor;
+    private final int textColor;
 
     protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_radio_name_text_view);
-      backgroundColor = getBackgroundColor();
+      backgroundColor = getTextViewColor(android.R.attr.colorPrimary);
+      textColor = getTextViewColor(android.R.attr.textColorPrimary);
       radioTextView.setOnLongClickListener(
         v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
     }
@@ -79,17 +81,21 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
     @Override
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
-      radioTextView.setBackgroundColor(
-        isCurrentRadio() ? backgroundColor : getDominantColor(this.radio.getIcon()));
+      final int dominantColor = getDominantColor(this.radio.getIcon());
+      final int radioBackgroundColor = isCurrentRadio() ? backgroundColor : dominantColor;
+      radioTextView.setBackgroundColor(radioBackgroundColor);
+      radioTextView.setTextColor(
+        ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ?
+          textColor : backgroundColor);
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {
       return Radio.createScaledBitmap(bitmap, 1).getPixel(0, 0);
     }
 
-    private int getBackgroundColor() {
+    private int getTextViewColor(int color) {
       try (final TypedArray typedArray = radioTextView
-        .getContext().getTheme().obtainStyledAttributes(new int[]{android.R.attr.colorPrimary})) {
+        .getContext().getTheme().obtainStyledAttributes(new int[]{color})) {
         return typedArray.getColor(0, 0);
       }
     }
