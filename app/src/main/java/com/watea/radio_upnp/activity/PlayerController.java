@@ -143,14 +143,12 @@ public class PlayerController {
             break;
           case PlaybackStateCompat.STATE_BUFFERING:
           case PlaybackStateCompat.STATE_CONNECTING:
-            assert mediaController != null;
-            mainActivity.setCurrentRadio(
-              mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
+            setCurrentRadio(false);
             setPlayImageButtonVisibility(true, true);
             break;
           case PlaybackStateCompat.STATE_NONE:
           case PlaybackStateCompat.STATE_STOPPED:
-            mainActivity.setCurrentRadio(null);
+            setCurrentRadio(true);
             setPlayImageButtonVisibility(false, false);
             break;
           default:
@@ -209,11 +207,12 @@ public class PlayerController {
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         if ((mediaMetadataCompat != null) && RadioService.isValid(mediaMetadataCompat)) {
           // Order matters here for display coherence
+          setCurrentRadio(false);
           mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
           mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
         } else {
           // Reset current radio as session is not valid any more
-          mainActivity.setCurrentRadio(null);
+          setCurrentRadio(true);
         }
         // Nota: no mediaBrowser.subscribe here needed
       }
@@ -392,5 +391,12 @@ public class PlayerController {
   private void setPreferredButton(boolean isPreferred) {
     preferredImageButton.setImageResource(
       isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+  }
+
+  // mediaController shall not be null
+  private void setCurrentRadio(boolean isReset) {
+    assert mediaController != null;
+    mainActivity.setCurrentRadio(isReset ?
+      null : mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
   }
 }
