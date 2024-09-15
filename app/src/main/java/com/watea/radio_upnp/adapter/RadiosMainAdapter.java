@@ -62,12 +62,14 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
 
   public class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
     private final int backgroundColor;
+    private final int windowBackgroundColor;
     private final int textColor;
 
     protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_radio_name_text_view);
       backgroundColor = getTextViewColor(android.R.attr.colorPrimary);
       textColor = getTextViewColor(android.R.attr.textColorPrimary);
+      windowBackgroundColor = getTextViewColor(android.R.attr.windowBackground);
       radioTextView.setOnLongClickListener(
         v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
     }
@@ -85,8 +87,9 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
       final int radioBackgroundColor = isCurrentRadio() ? backgroundColor : dominantColor;
       radioTextView.setBackgroundColor(radioBackgroundColor);
       radioTextView.setTextColor(
-        ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ?
-          textColor : backgroundColor);
+        (ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ||
+          ColorContrastChecker.isMoreThanHalfTransparent(radioBackgroundColor)) ?
+          textColor : windowBackgroundColor);
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {

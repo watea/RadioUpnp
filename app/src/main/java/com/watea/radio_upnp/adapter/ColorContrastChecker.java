@@ -23,6 +23,8 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.graphics.Color;
+
 public class ColorContrastChecker {
   public static boolean hasSufficientContrast(int color1, int color2) {
     final double contrastRatio = calculateContrastRatio(color1, color2);
@@ -47,5 +49,9 @@ public class ColorContrastChecker {
   private static double getSRGBComponent(int component) {
     final double value = component / 255.0;
     return ((value <= 0.03928) ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4));
+  }
+
+  public static boolean isMoreThanHalfTransparent(int color) {
+    return (Color.alpha(color) < 128);
   }
 }
