@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 34
-        versionCode 27002
-        versionName "2.70.02 (beta)"
+        versionCode 27003
+        versionName "2.70.03 (beta)"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -80,10 +80,6 @@ dependencies {
     implementation 'com.android.billingclient:billing:7.0.0'
     // SSDP
     implementation 'io.resourcepool:ssdp-client:2.5.1'
-    // KSOAP
-    implementation 'com.google.code.ksoap2-android:ksoap2-android:3.6.1'
-    // NanoHTTPD
-    implementation 'org.nanohttpd:nanohttpd:2.2.0'
 }
 
 configurations.implementation {
