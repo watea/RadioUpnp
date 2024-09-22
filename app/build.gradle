@@ -29,8 +29,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 34
-        versionCode 27005
-        versionName "2.70.05 (beta)"
+        versionCode 27006
+        versionName "2.70.06 (beta)"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -49,16 +49,6 @@ android {
     buildFeatures {
         buildConfig true
     }
-}
-
-repositories {
-    // cling
-    maven {
-        url "http://4thline.org/m2/"
-        allowInsecureProtocol = true
-    }
-    // KSOAP
-    maven { url 'https://oss.sonatype.org/content/repositories/ksoap2-android-releases/' }
 }
 
 dependencies {
@@ -80,9 +70,4 @@ dependencies {
     implementation 'com.android.billingclient:billing:7.1.0'
     // SSDP
     implementation 'io.resourcepool:ssdp-client:2.5.1'
-}
-
-configurations.implementation {
-    // Workaround troubles with implementation 'androidx.core:core:...'
-    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
 }
