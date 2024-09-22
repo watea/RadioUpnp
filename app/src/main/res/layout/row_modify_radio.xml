@@ -47,7 +47,7 @@
 
         <ImageButton
             android:id="@id/row_radio_preferred_image_button"
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_toStartOf="@+id/row_modify_radio_move_image_button"
@@ -58,7 +58,7 @@
 
         <ImageButton
             android:id="@id/row_modify_radio_move_image_button"
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
