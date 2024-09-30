@@ -23,25 +23,41 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.content.Context;
+import android.graphics.Canvas;
+import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
 public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapter.ViewHolder> {
+  private static final int SCROLL = 10;
+  private static final int THRESHOLD = 200;
+  private final NestedScrollView nestedScrollView;
+  private final AppBarLayout appBarLayout;
+
   public RadiosModifyAdapter(
     @NonNull MainActivity mainActivity,
     @NonNull RecyclerView recyclerView,
-    @NonNull Listener listener) {
+    @NonNull Listener listener,
+    @NonNull NestedScrollView nestedScrollView,
+    @NonNull AppBarLayout appBarLayout) {
     super(mainActivity, MainActivity::getRadios, R.layout.row_modify_radio, recyclerView, listener);
+    this.nestedScrollView = nestedScrollView;
+    this.appBarLayout = appBarLayout;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
   }
@@ -82,6 +98,44 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
       ((Radios) radios).remove(viewHolder.getAbsoluteAdapterPosition());
+    }
+
+    @Override
+    public void onChildDraw(
+      @NonNull Canvas c,
+      @NonNull RecyclerView recyclerView,
+      @NonNull RecyclerView.ViewHolder viewHolder,
+      float dX,
+      float dY,
+      int actionState,
+      boolean isCurrentlyActive) {
+      super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+      if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+        final DisplayMetrics displayMetrics = new DisplayMetrics();
+        final WindowManager windowManager =
+          (WindowManager) recyclerView.getContext().getSystemService(Context.WINDOW_SERVICE);
+        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
+        final int screenHeight = displayMetrics.heightPixels;
+        final View itemView = viewHolder.itemView;
+        final int[] location = new int[2];
+        itemView.getLocationOnScreen(location);
+        final int itemTop = itemView.getTop();
+        final int itemAbsoluteLocation = location[1];
+        // Scroll up or down
+        if ((Integer.min(itemTop, itemAbsoluteLocation) < THRESHOLD) && (dY < 0)) {
+          nestedScrollView.smoothScrollBy(0, -SCROLL);
+        } else if ((Integer.max(itemTop, itemAbsoluteLocation) > screenHeight - THRESHOLD) &&
+          (dY > 0)) {
+          nestedScrollView.smoothScrollBy(0, SCROLL);
+          // Collapse toolbar
+          final CoordinatorLayout.LayoutParams params =
+            (CoordinatorLayout.LayoutParams) appBarLayout.getLayoutParams();
+          final AppBarLayout.Behavior behavior = (AppBarLayout.Behavior) params.getBehavior();
+          if (behavior != null) {
+            behavior.setTopAndBottomOffset(-appBarLayout.getTotalScrollRange());
+          }
+        }
+      }
     }
   }
 
