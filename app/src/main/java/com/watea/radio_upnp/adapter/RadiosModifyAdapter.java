@@ -110,6 +110,8 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
       int actionState,
       boolean isCurrentlyActive) {
       super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+      // Scroll up or down.
+      // Caution: algorithm is dedicated to this specific layout.
       if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
         final DisplayMetrics displayMetrics = new DisplayMetrics();
         final WindowManager windowManager =
@@ -121,11 +123,9 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
         itemView.getLocationOnScreen(location);
         final int itemTop = itemView.getTop();
         final int itemAbsoluteLocation = location[1];
-        // Scroll up or down
         if ((Integer.min(itemTop, itemAbsoluteLocation) < THRESHOLD) && (dY < 0)) {
           nestedScrollView.smoothScrollBy(0, -SCROLL);
-        } else if ((Integer.max(itemTop, itemAbsoluteLocation) > screenHeight - THRESHOLD) &&
-          (dY > 0)) {
+        } else if ((itemAbsoluteLocation > screenHeight - THRESHOLD) && (dY > 0)) {
           nestedScrollView.smoothScrollBy(0, SCROLL);
           // Collapse toolbar
           final CoordinatorLayout.LayoutParams params =
