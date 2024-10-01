@@ -35,7 +35,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.Radio;
 
-public final class LocalPlayerAdapter extends PlayerAdapter {
+public class LocalPlayerAdapter extends PlayerAdapter {
   private static final String LOG_TAG = LocalPlayerAdapter.class.getSimpleName();
   @NonNull
   private final ExoPlayer exoPlayer;
