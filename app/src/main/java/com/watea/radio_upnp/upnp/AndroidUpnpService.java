@@ -49,7 +49,7 @@ import io.resourcepool.ssdp.model.SsdpServiceAnnouncement;
 
 public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
-  private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:1";
+  private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
   private static final Long PERIOD = 5000L;
   private final Binder binder = new UpnpService();
   private final SsdpClient ssdpClient = SsdpClient.create();
@@ -85,7 +85,8 @@ public class AndroidUpnpService extends android.app.Service {
 
     public void onServiceDiscovered(SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
-      if (DEVICE.equals(service.getServiceType())) {
+      final String serviceType = service.getServiceType();
+      if ((serviceType != null) && serviceType.startsWith(DEVICE)) {
         try {
           new Device(service, deviceCallback);
         } catch (IOException | XmlPullParserException exception) {
@@ -100,10 +101,10 @@ public class AndroidUpnpService extends android.app.Service {
       final String uUID = announcement.getSerialNumber();
       final SsdpServiceAnnouncement.Status status = announcement.getStatus();
       final boolean isAlive = (status != SsdpServiceAnnouncement.Status.BYEBYE);
-      devices.stream()
-        .filter(device -> device.hasUUID(uUID) && (device.isAlive() != isAlive))
-        .forEach(device -> {
+      for (final Device device : devices) {
+        if (device.hasUUID(uUID) && (device.isAlive() != isAlive)) {
           Log.d(LOG_TAG, "Device announcement: " + device.getDisplayString() + " => " + status);
+          device.setAlive(isAlive);
           listeners.forEach(listener -> {
             if (isAlive) {
               listener.onDeviceAdd(device);
@@ -111,7 +112,10 @@ public class AndroidUpnpService extends android.app.Service {
               listener.onDeviceRemove(device);
             }
           });
-        });
+          // Done!
+          return;
+        }
+      }
     }
 
     @Override
