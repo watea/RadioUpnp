@@ -64,6 +64,15 @@ public class AndroidUpnpService extends android.app.Service {
   private final Set<Listener> listeners = new HashSet<>();
   private final DiscoveryListener discoveryListener = new DiscoveryListener() {
     private final Device.Callback deviceCallback = new Device.Callback() {
+      private void addDevice(@NonNull Device device) {
+        // Reject if already known
+        if (devices.stream().noneMatch(device::hasUUID)) {
+          Log.d(LOG_TAG, "Device added: " + device.getDisplayString());
+          devices.add(device);
+          listeners.forEach(listener -> listener.onDeviceAdd(device));
+        }
+      }
+
       @Override
       public void onIcon(@NonNull Device device) {
         listeners.forEach(listener -> listener.onIcon(device));
@@ -72,14 +81,10 @@ public class AndroidUpnpService extends android.app.Service {
       @Override
       public void onComplete(@NonNull Asset asset) {
         final Device device = (Device) asset;
-        final String displayString = device.getDisplayString();
-        Log.d(LOG_TAG, "Device found: " + displayString);
-        // Reject if already known
-        if (devices.stream().noneMatch(device::hasUUID)) {
-          Log.d(LOG_TAG, "Device added: " + displayString);
-          devices.add(device);
-          listeners.forEach(listener -> listener.onDeviceAdd(device));
-        }
+        Log.d(LOG_TAG, "Device found: " + device.getDisplayString());
+        // Add device and embedded devices
+        addDevice(device);
+        device.getEmbeddedDevices().forEach(this::addDevice);
       }
     };
 
@@ -172,18 +177,7 @@ public class AndroidUpnpService extends android.app.Service {
 
     @Nullable
     public Device getDevice(@NonNull String uUID) {
-      final Device result =
-        devices.stream().filter(device -> device.hasUUID(uUID)).findAny().orElse(null);
-      // Embedded devices?
-      if (result == null) {
-        for (final Device device : devices) {
-          final Device embeddedDevice = device.getEmbeddedDevice(uUID);
-          if (embeddedDevice != null) {
-            return embeddedDevice;
-          }
-        }
-      }
-      return result;
+      return devices.stream().filter(device -> device.hasUUID(uUID)).findAny().orElse(null);
     }
 
     public Set<Device> getAliveDevices() {
