@@ -465,7 +465,7 @@ public class MainActivity
         if (result.getResultCode() == RESULT_OK && result.getData() != null) {
           final Uri uri = result.getData().getData();
           if (uri != null) {
-            importJsonFrom(result.getData().getData());
+            importJsonFrom(uri);
           }
         }
       }

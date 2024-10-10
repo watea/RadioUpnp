@@ -154,11 +154,12 @@ public class Radios extends ArrayList<Radio> {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
+  // Returns false if nothing is added
   public synchronized boolean addFrom(@NonNull JSONArray jSONArray) {
-    return addFrom(jSONArray, true, true);
+    return addFrom(jSONArray, true);
   }
 
-  public boolean write() {
+  private boolean write() {
     try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
       fileOutputStream.write(toString().getBytes());
     } catch (IOException iOException) {
@@ -168,30 +169,16 @@ public class Radios extends ArrayList<Radio> {
     return true;
   }
 
-  // Returns false if nothing is added
-  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite, boolean avoidDuplicate) {
-    boolean result = false;
-    for (int i = 0; i < jSONArray.length(); i++) {
-      try {
-        result = addRadioFrom((JSONObject) jSONArray.get(i), isToWrite, avoidDuplicate) || result;
-      } catch (JSONException jSONException) {
-        Log.e(LOG_TAG, "addFrom: invalid JSONArray member", jSONException);
-      }
-    }
-    return result;
-  }
-
-  private boolean addRadioFrom(
-    @NonNull JSONObject jSONObject,
-    boolean isToWrite,
-    boolean avoidDuplicate) {
+  // Avoid duplicate radio.
+  // No write.
+  private boolean addFrom(@NonNull JSONObject jSONObject) {
     boolean result = false;
     try {
       final Radio radio = new Radio(jSONObject);
-      if (!avoidDuplicate ||
-        stream().map(Radio::getURL).noneMatch(
-          uRL -> radio.getURL().toString().equals(uRL.toString()))) {
-        result = add(radio, isToWrite);
+      if (stream()
+        .map(Radio::getURL)
+        .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {
+        result = add(radio, false);
       }
     } catch (JSONException jSONException) {
       Log.e(LOG_TAG, "addRadioFrom: internal JSON failure", jSONException);
@@ -199,6 +186,19 @@ public class Radios extends ArrayList<Radio> {
       Log.e(LOG_TAG, "addRadioFrom: internal failure creating radio", malformedURLException);
     }
     return result;
+  }
+
+  // Returns false if nothing is added
+  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite) {
+    boolean result = false;
+    for (int i = 0; i < jSONArray.length(); i++) {
+      try {
+        result = addFrom((JSONObject) jSONArray.get(i)) || result;
+      } catch (JSONException jSONException) {
+        Log.e(LOG_TAG, "addFrom: invalid JSONArray member", jSONException);
+      }
+    }
+    return result && (!isToWrite || write());
   }
 
   @NonNull
@@ -224,7 +224,7 @@ public class Radios extends ArrayList<Radio> {
       if (fileInputStream.read(buffer) < 0) {
         Log.e(LOG_TAG, "init: internal failure");
       } else {
-        if (!addFrom(new JSONArray(new String(buffer)), false, false)) {
+        if (!addFrom(new JSONArray(new String(buffer)), false)) {
           Log.e(LOG_TAG, "init: no valid radio found");
         }
       }
