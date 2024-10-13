@@ -460,14 +460,14 @@ public class MainActivity
             if (uri != null) {
               switch (importExportAction) {
                 case CSV_EXPORT:
-                  exportTo(radios.export().getBytes(), uri, MIME_CSV);
+                  exportTo(radios.export(), uri, MIME_CSV);
                   break;
                 case CSV_IMPORT:
                   // Not implemented; shall not happen
                   Log.e(LOG_TAG, "Internal failure; .csv import is not implemented");
                   break;
                 case JSON_EXPORT:
-                  exportTo(radios.toString().getBytes(), uri, MIME_JSON);
+                  exportTo(radios.toString(), uri, MIME_JSON);
                   break;
                 case JSON_IMPORT:
                   importFrom(uri);
@@ -737,7 +737,7 @@ public class MainActivity
       .show();
   }
 
-  private void exportTo(@NonNull byte[] b, @NonNull Uri treeUri, @NonNull String type) {
+  private void exportTo(@NonNull String string, @NonNull Uri treeUri, @NonNull String type) {
     try {
       // Create the file using the tree URI
       final Uri fileUri = createFileInTree(treeUri, getString(R.string.app_name), type);
@@ -749,7 +749,7 @@ public class MainActivity
       }
       try (OutputStream outputStream = getContentResolver().openOutputStream(fileUri)) {
         if (outputStream != null) {
-          outputStream.write(b);
+          outputStream.write(string.getBytes());
         }
       }
       tell(getString(R.string.export_done) + getString(R.string.app_name));
