@@ -53,17 +53,13 @@
         android:id="@+id/exchange"
         android:checkableBehavior="single">
         <item
-            android:id="@+id/action_import"
-            android:icon="@drawable/ic_baseline_exit_to_app_white_24dp"
-            android:title="@string/title_import" />
-        <item
             android:id="@+id/action_export"
             android:icon="@drawable/ic_baseline_output_white_24dp"
             android:title="@string/title_export" />
         <item
-            android:id="@+id/action_export_csv"
-            android:icon="@drawable/ic_baseline_code_white_24dp"
-            android:title="@string/title_export_csv" />
+            android:id="@+id/action_import"
+            android:icon="@drawable/ic_baseline_exit_to_app_white_24dp"
+            android:title="@string/title_import" />
     </group>
 
     <group

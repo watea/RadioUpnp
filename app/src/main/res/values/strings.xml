@@ -89,12 +89,15 @@
     <string name="notification_needed">This app is intended to be used with notifications enabled</string>
     <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically (take a few seconds)!\n</string>
     <string name="import_message">[GO!] asks for .json file; content will be imported.</string>
+    <string name="export_message">[.CSV] or [.JSON] exports file in chosen directory.</string>
     <string name="import_successful">Import successful!</string>
     <string name="import_failed">Import failed!</string>
     <string name="import_no_data">Import done; no data added!</string>
+    <string name="export_done">Export file created: </string>
+    <string name="export_failed">Export failed!</string>
+    <string name="export_failed_not_created">Export failed; unable to create file!</string>
     <string name="no_data">No playlist data found</string>
     <string name="dump_error">Error: local export file could not be generated</string>
-    <string name="export_done">Export file created in download directory:\n</string>
     <string name="radio_garden_radio_added">Radio Garden radio added!</string>
     <string name="try_to_add_from_radio_garden">Try to add from Radio Garden.\nMay take some time, please wait&#8230;</string>
     <string name="play_store_not_installed">Play Store not available.\nRadio Garden cannot be installed!</string>
@@ -132,6 +135,8 @@
     <string name="action_go">Go!</string>
     <string name="action_got_it">Got it!</string>
     <string name="action_all">SELECT ALL</string>
+    <string name="action_csv_export">.CSV</string>
+    <string name="action_json_export">.JSON</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
     <string name="system_radio_button">System</string>
