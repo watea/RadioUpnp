@@ -89,6 +89,8 @@ public class Radio {
   @SuppressWarnings("NotNullFieldNotInitialized")
   @NonNull
   private Bitmap icon;
+  @Nullable
+  private String base64Icon = null; // cache
   @NonNull
   private URL url;
   @Nullable
@@ -139,6 +141,8 @@ public class Radio {
       jSONObject.getString(MIME),
       jSONObject.getInt(QUALITY),
       jSONObject.getBoolean(IS_PREFERRED));
+    // Cache base 64 icon
+    base64Icon = jSONObject.getString(ICON);
   }
 
   public Radio(@NonNull String json) throws JSONException, MalformedURLException {
@@ -235,6 +239,8 @@ public class Radio {
 
   public void setIcon(@NonNull Bitmap icon) {
     this.icon = crop(icon);
+    // Cache not valid any more
+    base64Icon = null;
   }
 
   public boolean isPreferred() {
@@ -277,7 +283,7 @@ public class Radio {
   public JSONObject getJSONObject() throws JSONException {
     return new JSONObject()
       .put(NAME, name)
-      .put(ICON, iconToBase64String())
+      .put(ICON, (base64Icon == null) ? (base64Icon = iconToBase64String()) : base64Icon)
       .put(URL, url.toString())
       .put(WEB_PAGE_URL, (webPageUrl == null) ? "" : webPageUrl.toString())
       .put(MIME, mime)
