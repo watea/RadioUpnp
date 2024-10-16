@@ -43,6 +43,7 @@ import io.resourcepool.ssdp.client.SsdpClient;
 import io.resourcepool.ssdp.model.DiscoveryListener;
 import io.resourcepool.ssdp.model.DiscoveryOptions;
 import io.resourcepool.ssdp.model.DiscoveryRequest;
+import io.resourcepool.ssdp.model.SsdpClientOptions;
 import io.resourcepool.ssdp.model.SsdpRequest;
 import io.resourcepool.ssdp.model.SsdpService;
 import io.resourcepool.ssdp.model.SsdpServiceAnnouncement;
@@ -58,6 +59,9 @@ public class AndroidUpnpService extends android.app.Service {
     .build();
   private final DiscoveryRequest discoverMediaRenderer = SsdpRequest.builder()
     .discoveryOptions(discoveryOptions)
+    .build();
+  private final SsdpClientOptions ssdpClientOptions = SsdpClientOptions.builder()
+    .overrideBindingPort(0)
     .build();
   private final Set<Device> devices = new CopyOnWriteArraySet<>();
   private final ActionController actionController = new ActionController();
@@ -137,7 +141,7 @@ public class AndroidUpnpService extends android.app.Service {
   @Override
   public void onCreate() {
     super.onCreate();
-    ssdpClient.discoverServices(discoverMediaRenderer, discoveryListener);
+    ssdpClient.discoverServices(discoverMediaRenderer, ssdpClientOptions, discoveryListener);
   }
 
   @Override
