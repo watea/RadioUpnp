@@ -103,8 +103,6 @@ public class MainActivity
   private static final int RADIO_ICON_SIZE = 300;
   private static final String MIME_JSON = "application/json";
   private static final String MIME_CSV = "text/csv";
-  private static final String DOWNLOAD_PATH =
-    "content://com.android.externalstorage.documents/tree/primary%3ADownload";
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<Class<? extends Fragment>, Integer>() {
@@ -700,8 +698,7 @@ public class MainActivity
   private void exportFile() {
     final android.content.DialogInterface.OnClickListener listener =
       (dialog, which) -> {
-        importExportLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-          .putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.parse(DOWNLOAD_PATH)));
+        importExportLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE));
         importExportAction = (which == DialogInterface.BUTTON_NEUTRAL) ?
           ImportExportAction.CSV_EXPORT : ImportExportAction.JSON_EXPORT;
       };
