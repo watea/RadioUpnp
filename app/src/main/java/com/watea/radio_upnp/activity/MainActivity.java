@@ -68,6 +68,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
@@ -125,10 +126,12 @@ public class MainActivity
   private AlertDialog parametersAlertDialog;
   private AlertDialog aboutAlertDialog;
   private CollapsingToolbarLayout actionBarLayout;
+  private AppBarLayout appBarLayout;
   private PlayerController playerController;
   private SharedPreferences sharedPreferences;
   private RadioGardenController radioGardenController;
   private boolean gotItRadioGarden = false;
+  private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
   private Theme theme = Theme.DARK;
   private AndroidUpnpService.UpnpService upnpService = null;
@@ -238,6 +241,11 @@ public class MainActivity
   @Nullable
   public Bitmap getChosenUpnpDeviceIcon() {
     return upnpDevicesAdapter.getSelectedUpnpDeviceIcon();
+  }
+
+  // With animation
+  public void setToolbarExpanded(boolean isExpanded) {
+    appBarLayout.setExpanded(isExpanded, true);
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -445,6 +453,11 @@ public class MainActivity
     playerController = new PlayerController(this, actionBarLayout);
     assert getSupportActionBar() != null;
     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    // AppBarLayout and Toolbar
+    (appBarLayout = findViewById(R.id.appbar_layout)).addOnOffsetChangedListener(
+      (localAppBarLayout, verticalOffset) -> isToolbarExpanded = (verticalOffset == 0));
+    // Toggle expansion state,animate the transition
+    findViewById(R.id.actionbar).setOnClickListener(v -> setToolbarExpanded(!isToolbarExpanded));
     // Radio Garden
     radioGardenController = new RadioGardenController(this);
     // Import/export function

@@ -33,7 +33,6 @@ import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.appbar.AppBarLayout;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
@@ -98,16 +97,10 @@ public class ModifyFragment extends MainActivityFragment {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     assert container != null;
     final NestedScrollView nestedScrollView = container.findViewById(R.id.content_frame);
-    final AppBarLayout appBarLayout =
-      ((ViewGroup) container.getParent()).findViewById(R.id.appbar_layout);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapter
     radiosModifyAdapter = new RadiosModifyAdapter(
-      getMainActivity(),
-      radiosRecyclerView,
-      radiosModifyAdapterListener,
-      nestedScrollView,
-      appBarLayout);
+      getMainActivity(), radiosRecyclerView, radiosModifyAdapterListener, nestedScrollView);
   }
 }

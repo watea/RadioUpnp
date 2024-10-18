@@ -32,12 +32,10 @@ import android.view.WindowManager;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.appbar.AppBarLayout;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
@@ -47,17 +45,14 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
   private static final int SCROLL = 10;
   private static final int THRESHOLD = 200;
   private final NestedScrollView nestedScrollView;
-  private final AppBarLayout appBarLayout;
 
   public RadiosModifyAdapter(
     @NonNull MainActivity mainActivity,
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener,
-    @NonNull NestedScrollView nestedScrollView,
-    @NonNull AppBarLayout appBarLayout) {
+    @NonNull NestedScrollView nestedScrollView) {
     super(mainActivity, MainActivity::getRadios, R.layout.row_modify_radio, recyclerView, listener);
     this.nestedScrollView = nestedScrollView;
-    this.appBarLayout = appBarLayout;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
   }
@@ -91,6 +86,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
       @NonNull RecyclerView recyclerView,
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
+      mainActivity.setToolbarExpanded(false);
       return ((Radios) radios).swap(
         viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
     }
@@ -127,13 +123,6 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
           nestedScrollView.smoothScrollBy(0, -SCROLL);
         } else if ((itemAbsoluteLocation > screenHeight - THRESHOLD) && (dY > 0)) {
           nestedScrollView.smoothScrollBy(0, SCROLL);
-          // Collapse toolbar
-          final CoordinatorLayout.LayoutParams params =
-            (CoordinatorLayout.LayoutParams) appBarLayout.getLayoutParams();
-          final AppBarLayout.Behavior behavior = (AppBarLayout.Behavior) params.getBehavior();
-          if (behavior != null) {
-            behavior.setTopAndBottomOffset(-appBarLayout.getTotalScrollRange());
-          }
         }
       }
     }
