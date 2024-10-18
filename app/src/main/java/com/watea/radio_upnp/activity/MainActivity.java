@@ -125,12 +125,12 @@ public class MainActivity
   private AlertDialog upnpAlertDialog;
   private AlertDialog parametersAlertDialog;
   private AlertDialog aboutAlertDialog;
+  private UserHint toolbarUserHint;
   private CollapsingToolbarLayout actionBarLayout;
   private AppBarLayout appBarLayout;
   private PlayerController playerController;
   private SharedPreferences sharedPreferences;
   private RadioGardenController radioGardenController;
-  private boolean gotItRadioGarden = false;
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
   private Theme theme = Theme.DARK;
@@ -207,6 +207,11 @@ public class MainActivity
     context.startActivity(intent);
   }
 
+  @NonNull
+  public SharedPreferences getSharedPreferences() {
+    return sharedPreferences;
+  }
+
   @Nullable
   public Radio getCurrentRadio() {
     return currentRadio;
@@ -255,7 +260,7 @@ public class MainActivity
     // Note: switch not to use as id not final
     switch (id) {
       case R.id.action_radio_garden:
-        radioGardenController.launchRadioGarden(gotItRadioGarden);
+        radioGardenController.launch(false);
         break;
       case R.id.action_export:
         exportFile();
@@ -364,10 +369,6 @@ public class MainActivity
     upnpAlertDialog.show();
   }
 
-  public boolean setRadioGardenGotIt() {
-    return gotItRadioGarden = true;
-  }
-
   @NonNull
   public Intent getNewSendIntent() {
     return new Intent(Intent.ACTION_SEND)
@@ -454,9 +455,13 @@ public class MainActivity
     assert getSupportActionBar() != null;
     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     // AppBarLayout and Toolbar
+    toolbarUserHint = new UserHint(R.string.key_toolbar_got_it, R.string.toolbar_press, 50);
     (appBarLayout = findViewById(R.id.appbar_layout)).addOnOffsetChangedListener(
-      (localAppBarLayout, verticalOffset) -> isToolbarExpanded = (verticalOffset == 0));
-    // Toggle expansion state,animate the transition
+      (localAppBarLayout, verticalOffset) -> {
+        isToolbarExpanded = (verticalOffset == 0);
+        toolbarUserHint.show();
+      });
+    // Toggle expansion state, animate the transition
     findViewById(R.id.actionbar).setOnClickListener(v -> setToolbarExpanded(!isToolbarExpanded));
     // Radio Garden
     radioGardenController = new RadioGardenController(this);
@@ -596,11 +601,7 @@ public class MainActivity
     super.onPause();
     Log.d(LOG_TAG, "onPause");
     // Shared preferences
-    sharedPreferences
-      .edit()
-      .putBoolean(getString(R.string.key_radio_garden_got_it), gotItRadioGarden)
-      .putString(getString(string.key_theme), theme.toString())
-      .apply();
+    sharedPreferences.edit().putString(getString(string.key_theme), theme.toString()).apply();
     // Release UPnP service
     unbindService(upnpConnection);
     // Force disconnection to release resources
@@ -620,8 +621,6 @@ public class MainActivity
   protected void onResume() {
     super.onResume();
     Log.d(LOG_TAG, "onResume");
-    // Fetch preferences
-    gotItRadioGarden = sharedPreferences.getBoolean(getString(R.string.key_radio_garden_got_it), false);
     // Bind to UPnP service
     if (!bindService(
       new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
@@ -847,7 +846,8 @@ public class MainActivity
     }
 
     public void show() {
-      if (!alertDialog.isShowing() && !gotIt && (++count > delay)) {
+      count = (count < delay) ? count + 1 : count;
+      if (!alertDialog.isShowing() && !gotIt && (count >= delay)) {
         alertDialog.show();
       }
     }

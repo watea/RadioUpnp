@@ -69,6 +69,7 @@
     <string name="lan_required">No LAN/Wifi connection found for UPnP/DLNA function</string>
     <string name="radio_long_press">Long press opens web site</string>
     <string name="play_long_press">Long press stops radio</string>
+    <string name="toolbar_press">Touch on toolbar toggles expanded/reduced view</string>
     <string name="information_press">Click on playing radio icon to display current playlist</string>
     <string name="dlna_enable">Short or Long press: search UPnP/DLNA devices.\n\nConnection may need connection authorization.\nBad Wifi may hinder connection quality.</string>
     <string name="preferred_radios">Display only preferred radios.\nPreferred radios are set in Modify screen.</string>
@@ -88,8 +89,8 @@
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
     <string name="notification_needed">This app is intended to be used with notifications enabled</string>
     <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically (take a few seconds)!\n</string>
-    <string name="import_message">[GO!] asks for .json file; content will be imported.</string>
-    <string name="export_message">[.CSV] or [.JSON] exports file in chosen directory.</string>
+    <string name="import_message">[GO!] asks for .json file; content will be imported</string>
+    <string name="export_message">[.CSV] or [.JSON] exports file in chosen directory</string>
     <string name="import_successful">Import successful!</string>
     <string name="import_failed">Import failed!</string>
     <string name="import_no_data">Import done; no data added!</string>

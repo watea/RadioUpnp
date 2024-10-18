@@ -96,10 +96,17 @@ public class RadioGardenController {
       .setView(R.layout.view_radio_garden)
       .setPositiveButton(
         R.string.action_got_it,
-        (dialogInterface, i) -> launchRadioGarden(mainActivity.setRadioGardenGotIt()))
+        (dialogInterface, i) -> {
+          mainActivity
+            .getSharedPreferences()
+            .edit()
+            .putBoolean(mainActivity.getString(R.string.key_radio_garden_got_it), true)
+            .apply();
+          launch(true);
+        })
       .setNeutralButton(
         R.string.title_radio_garden,
-        (dialogInterface, i) -> launchRadioGarden(true))
+        (dialogInterface, i) -> launch(true))
       // Restore checked item
       .setOnDismissListener(dialogInterface -> mainActivity.checkNavigationMenu())
       .create();
@@ -146,10 +153,12 @@ public class RadioGardenController {
     }
   }
 
-  // Show help if not gotIt.
-  // Else launch Radio Garden or bring user to the market if Radio Garden not installed.
-  public void launchRadioGarden(boolean gotIt) {
-    if (gotIt) {
+  // Launch Radio Garden or bring user to the market if Radio Garden not installed
+  public void launch(boolean force) {
+    final boolean gotIt = mainActivity
+      .getSharedPreferences()
+      .getBoolean(mainActivity.getString(R.string.key_radio_garden_got_it), false);
+    if (force || gotIt) {
       final PackageManager packageManager = mainActivity.getPackageManager();
       Intent intent = packageManager.getLaunchIntentForPackage(RADIO_GARDEN_PACKAGE);
       if (intent == null) {
