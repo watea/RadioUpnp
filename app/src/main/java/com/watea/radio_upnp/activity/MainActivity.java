@@ -758,9 +758,9 @@ public class MainActivity
           tell(R.string.export_failed);
         } else {
           radios.write(outputStream, type);
+          tell(getString(R.string.export_done) + getString(R.string.app_name));
         }
       }
-      tell(getString(R.string.export_done) + getString(R.string.app_name));
     } catch (JSONException | IOException iOException) {
       Log.e(LOG_TAG, "exportTo: internal failure", iOException);
       tell(R.string.export_failed);

@@ -30,7 +30,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -193,10 +192,10 @@ public class Radios extends ArrayList<Radio> {
         if (inObject) {
           currentObject.append(chunk);
           if (JSON_OBJECT_END.equals(chunk)) {
-              success = success || addFrom(new JSONObject(currentObject.toString()));
-              // Reset for next object
-              currentObject.setLength(0);
-              inObject = false;
+            success = success || addFrom(currentObject.toString());
+            // Reset for next object
+            currentObject.setLength(0);
+            inObject = false;
           }
         } else if (JSON_OBJECT_START.equals(chunk)) {
           currentObject.append(chunk);
@@ -220,10 +219,10 @@ public class Radios extends ArrayList<Radio> {
 
   // Avoid duplicate radio.
   // No write.
-  private boolean addFrom(@NonNull JSONObject jSONObject) {
+  private boolean addFrom(@NonNull String json) {
     boolean result = false;
     try {
-      final Radio radio = new Radio(jSONObject);
+      final Radio radio = new Radio(json);
       if (stream()
         .map(Radio::getURL)
         .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {

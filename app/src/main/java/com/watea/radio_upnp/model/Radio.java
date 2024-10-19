@@ -38,7 +38,6 @@ import androidx.annotation.Nullable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -132,7 +131,7 @@ public class Radio {
     this(name, icon, url, webPageUrl, "", DEFAULT);
   }
 
-  public Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
+  private Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
     this(
       jSONObject.getString(NAME),
       getBitmapFrom(jSONObject.getString(ICON)),
@@ -146,7 +145,7 @@ public class Radio {
   }
 
   public Radio(@NonNull String json) throws JSONException, MalformedURLException {
-    this((JSONObject) new JSONTokener(json).nextValue());
+    this(new JSONObject(json));
   }
 
   // Store bitmap as filename.png
