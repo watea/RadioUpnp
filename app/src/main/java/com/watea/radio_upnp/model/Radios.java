@@ -29,24 +29,34 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class Radios extends ArrayList<Radio> {
+  public static final String MIME_JSON = "application/json";
+  public static final String MIME_CSV = "text/csv";
   private static final String LOG_TAG = Radios.class.getSimpleName();
   private static final String FILE = Radios.class.getSimpleName();
+  private static final String CR = "\n";
+  private static final byte JSON_ARRAY_START = '[';
+  private static final byte JSON_ARRAY_END = ']';
+  private static final byte JSON_ARRAY_COMMA = ',';
+  private static final String JSON_OBJECT_START = "{";
+  private static final String JSON_OBJECT_END = "}";
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;
@@ -105,23 +115,10 @@ public class Radios extends ArrayList<Radio> {
     return tellListeners(super.addAll(c) && write(), listener -> listener.onAddAll(c));
   }
 
-  @NonNull
-  @Override
-  public synchronized String toString() {
-    return toJSONArray().toString();
-  }
-
   public synchronized boolean add(@NonNull Radio radio, boolean isToWrite) {
     return tellListeners(
       super.add(radio) && (!isToWrite || write()),
       listener -> listener.onAdd(radio));
-  }
-
-  @NonNull
-  public synchronized String export() {
-    final StringBuilder result = new StringBuilder().append(Radio.EXPORT_HEAD).append("\n");
-    forEach(radio -> result.append(radio.export()).append("\n"));
-    return result.toString();
   }
 
   // No listener
@@ -154,15 +151,67 @@ public class Radios extends ArrayList<Radio> {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
-  // Returns false if nothing is added
-  public synchronized boolean addFrom(@NonNull JSONArray jSONArray) {
-    return addFrom(jSONArray, true);
+  public synchronized void write(
+    @NonNull OutputStream outputStream,
+    @NonNull String type) throws JSONException, IOException {
+    switch (type) {
+      case MIME_CSV:
+        outputStream.write((Radio.EXPORT_HEAD + CR).getBytes());
+        for (final Radio radio : this) {
+          outputStream.write((radio.export() + CR).getBytes());
+        }
+        break;
+      case MIME_JSON:
+        // Add the leading [
+        outputStream.write(JSON_ARRAY_START);
+        for (int i = 0; i < size(); i++) {
+          outputStream.write(get(i).getJSONObject().toString().getBytes());
+          // Add ',' for all elements except the last one
+          if (i < size() - 1) {
+            outputStream.write(JSON_ARRAY_COMMA);
+          }
+        }
+        // Add the closing ]
+        outputStream.write(JSON_ARRAY_END);
+        break;
+      default:
+        // Shall not happen
+    }
   }
 
+  // Only JSON can be read.
+  // True if something is read.
+  public synchronized boolean read(
+    @NonNull InputStream inputStream) throws JSONException, IOException {
+    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+      final char[] buffer = new char[1];
+      final StringBuilder currentObject = new StringBuilder();
+      boolean inObject = false;
+      boolean success = false;
+      while (reader.read(buffer) != -1) {
+        final String chunk = new String(buffer);
+        if (inObject) {
+          currentObject.append(chunk);
+          if (JSON_OBJECT_END.equals(chunk)) {
+              success = success || addFrom(new JSONObject(currentObject.toString()));
+              // Reset for next object
+              currentObject.setLength(0);
+              inObject = false;
+          }
+        } else if (JSON_OBJECT_START.equals(chunk)) {
+          currentObject.append(chunk);
+          inObject = true;
+        }
+      }
+      return success;
+    }
+  }
+
+  // Write JSON
   private boolean write() {
     try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
-      fileOutputStream.write(toString().getBytes());
-    } catch (IOException iOException) {
+      write(fileOutputStream, MIME_JSON);
+    } catch (IOException | JSONException iOException) {
       Log.e(LOG_TAG, "write: internal failure", iOException);
       return false;
     }
@@ -188,50 +237,13 @@ public class Radios extends ArrayList<Radio> {
     return result;
   }
 
-  // Returns false if nothing is added
-  private boolean addFrom(@NonNull JSONArray jSONArray, boolean isToWrite) {
-    boolean result = false;
-    for (int i = 0; i < jSONArray.length(); i++) {
-      try {
-        result = addFrom((JSONObject) jSONArray.get(i)) || result;
-      } catch (JSONException jSONException) {
-        Log.e(LOG_TAG, "addFrom: invalid JSONArray member", jSONException);
-      }
-    }
-    return result && (!isToWrite || write());
-  }
-
-  @NonNull
-  private JSONArray toJSONArray() {
-    final JSONArray jSONArray = new JSONArray();
-    stream()
-      .map(radio -> {
-        try {
-          return radio.getJSONObject();
-        } catch (JSONException jSONException) {
-          Log.e(LOG_TAG, "toJSONArray: JSON failure for " + radio.getName(), jSONException);
-          return null;
-        }
-      })
-      .filter(Objects::nonNull)
-      .forEach(jSONArray::put);
-    return jSONArray;
-  }
-
   private void init() {
     try (final FileInputStream fileInputStream = new FileInputStream(fileName)) {
-      final byte[] buffer = new byte[fileInputStream.available()];
-      if (fileInputStream.read(buffer) < 0) {
-        Log.e(LOG_TAG, "init: internal failure");
-      } else {
-        if (!addFrom(new JSONArray(new String(buffer)), false)) {
-          Log.e(LOG_TAG, "init: no valid radio found");
-        }
-      }
+      read(fileInputStream);
     } catch (IOException iOException) {
-      Log.e(LOG_TAG, "init: IOException fired", iOException);
+      Log.e(LOG_TAG, "init: IO failure", iOException);
     } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "init: JSONArray can not be read", jSONException);
+      Log.e(LOG_TAG, "init: JSON failure", jSONException);
     }
   }
 

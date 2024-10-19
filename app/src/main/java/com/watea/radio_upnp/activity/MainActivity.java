@@ -83,14 +83,12 @@ import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
-import org.json.JSONArray;
+import org.json.JSONException;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -102,8 +100,6 @@ public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
   private static final int RADIO_ICON_SIZE = 300;
-  private static final String MIME_JSON = "application/json";
-  private static final String MIME_CSV = "text/csv";
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<Class<? extends Fragment>, Integer>() {
@@ -476,14 +472,14 @@ public class MainActivity
             if (uri != null) {
               switch (importExportAction) {
                 case CSV_EXPORT:
-                  exportTo(radios.export(), uri, MIME_CSV);
+                  exportTo(uri, Radios.MIME_CSV);
                   break;
                 case CSV_IMPORT:
                   // Not implemented; shall not happen
                   Log.e(LOG_TAG, "Internal failure; .csv import is not implemented");
                   break;
                 case JSON_EXPORT:
-                  exportTo(radios.toString(), uri, MIME_JSON);
+                  exportTo(uri, Radios.MIME_JSON);
                   break;
                 case JSON_IMPORT:
                   importFrom(uri);
@@ -732,7 +728,7 @@ public class MainActivity
       (dialog, which) -> {
         importExportLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT)
           .addCategory(Intent.CATEGORY_OPENABLE)
-          .setType(MIME_JSON));
+          .setType(Radios.MIME_JSON));
         importExportAction = ImportExportAction.JSON_IMPORT;
       };
     new AlertDialog.Builder(this)
@@ -746,7 +742,7 @@ public class MainActivity
       .show();
   }
 
-  private void exportTo(@NonNull String string, @NonNull Uri treeUri, @NonNull String type) {
+  private void exportTo(@NonNull Uri treeUri, @NonNull String type) {
     try {
       // Create the file using the tree URI
       final Uri fileUri = createFileInTree(treeUri, getString(R.string.app_name), type);
@@ -756,13 +752,16 @@ public class MainActivity
         tell(R.string.export_failed_not_created);
         return;
       }
-      try (OutputStream outputStream = getContentResolver().openOutputStream(fileUri)) {
-        if (outputStream != null) {
-          outputStream.write(string.getBytes());
+      try (final OutputStream outputStream = getContentResolver().openOutputStream(fileUri)) {
+        if (outputStream == null) {
+          Log.e(LOG_TAG, "exportTo: internal failure, file not created");
+          tell(R.string.export_failed);
+        } else {
+          radios.write(outputStream, type);
         }
       }
       tell(getString(R.string.export_done) + getString(R.string.app_name));
-    } catch (IOException iOException) {
+    } catch (JSONException | IOException iOException) {
       Log.e(LOG_TAG, "exportTo: internal failure", iOException);
       tell(R.string.export_failed);
     }
@@ -787,19 +786,19 @@ public class MainActivity
 
   // Only JSON supported
   private void importFrom(@NonNull Uri uri) {
-    try (InputStream inputStream = getContentResolver().openInputStream(uri);
-         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-      final StringBuilder stringBuilder = new StringBuilder();
-      String line;
-      while ((line = reader.readLine()) != null) {
-        stringBuilder.append(line);
+    try (final InputStream inputStream = getContentResolver().openInputStream(uri)) {
+      if (inputStream == null) {
+        Log.e(LOG_TAG, "importFrom: internal failure");
+      } else {
+        tell(radios.read(inputStream) ? R.string.import_successful : R.string.import_no_data);
+        return;
       }
-      tell(radios.addFrom(new JSONArray(stringBuilder.toString())) ?
-        R.string.import_successful : R.string.import_no_data);
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "importFrom: exception", exception);
-      tell(R.string.import_failed);
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "importFrom: I/O failure", iOException);
+    } catch (JSONException jSONException) {
+      Log.e(LOG_TAG, "importFrom: JSON failure", jSONException);
     }
+    tell(R.string.import_failed);
   }
 
   @Nullable
