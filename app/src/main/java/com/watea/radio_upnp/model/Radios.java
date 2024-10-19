@@ -184,25 +184,25 @@ public class Radios extends ArrayList<Radio> {
     @NonNull InputStream inputStream) throws JSONException, IOException {
     try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
       final char[] buffer = new char[1];
-      final StringBuilder currentObject = new StringBuilder();
-      boolean inObject = false;
-      boolean success = false;
+      StringBuilder currentObject = null;
+      boolean result = false;
       while (reader.read(buffer) != -1) {
         final String chunk = new String(buffer);
-        if (inObject) {
+        if (currentObject == null) {
+          if (JSON_OBJECT_START.equals(chunk)) {
+            currentObject = new StringBuilder();
+            currentObject.append(chunk);
+          }
+        } else {
           currentObject.append(chunk);
           if (JSON_OBJECT_END.equals(chunk)) {
-            success = success || addFrom(currentObject.toString());
+            result = addRadioFrom(currentObject.toString()) || result;
             // Reset for next object
-            currentObject.setLength(0);
-            inObject = false;
+            currentObject = null;
           }
-        } else if (JSON_OBJECT_START.equals(chunk)) {
-          currentObject.append(chunk);
-          inObject = true;
         }
       }
-      return success;
+      return result;
     }
   }
 
@@ -219,7 +219,7 @@ public class Radios extends ArrayList<Radio> {
 
   // Avoid duplicate radio.
   // No write.
-  private boolean addFrom(@NonNull String json) {
+  private boolean addRadioFrom(@NonNull String json) {
     boolean result = false;
     try {
       final Radio radio = new Radio(json);
