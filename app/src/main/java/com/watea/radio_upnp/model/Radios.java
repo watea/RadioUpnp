@@ -53,7 +53,7 @@ public class Radios extends ArrayList<Radio> {
   private static final String CR = "\n";
   private static final byte JSON_ARRAY_START = '[';
   private static final byte JSON_ARRAY_END = ']';
-  private static final byte JSON_ARRAY_COMMA = ',';
+  private static final byte[] JSON_ARRAY_COMMA = ",\n".getBytes();
   private static final String JSON_OBJECT_START = "{";
   private static final String JSON_OBJECT_END = "}";
   private final List<Listener> listeners = new ArrayList<>();
@@ -114,12 +114,6 @@ public class Radios extends ArrayList<Radio> {
     return tellListeners(super.addAll(c) && write(), listener -> listener.onAddAll(c));
   }
 
-  public synchronized boolean add(@NonNull Radio radio, boolean isToWrite) {
-    return tellListeners(
-      super.add(radio) && (!isToWrite || write()),
-      listener -> listener.onAdd(radio));
-  }
-
   // No listener
   public synchronized boolean modify(@NonNull Radio radio) {
     final int index = indexOf(radio);
@@ -150,9 +144,8 @@ public class Radios extends ArrayList<Radio> {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
-  public synchronized void write(
-    @NonNull OutputStream outputStream,
-    @NonNull String type) throws JSONException, IOException {
+  public synchronized void write(@NonNull OutputStream outputStream, @NonNull String type)
+    throws JSONException, IOException {
     switch (type) {
       case MIME_CSV:
         outputStream.write((Radio.EXPORT_HEAD + CR).getBytes());
@@ -178,10 +171,19 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
+  public synchronized boolean importFrom(@NonNull InputStream inputStream)
+    throws JSONException, IOException {
+    return read(inputStream) && write();
+  }
+
+  private boolean add(@NonNull Radio radio, boolean isToWrite) {
+    return tellListeners(
+      super.add(radio) && (!isToWrite || write()), listener -> listener.onAdd(radio));
+  }
+
   // Only JSON can be read.
   // True if something is read.
-  public synchronized boolean read(
-    @NonNull InputStream inputStream) throws JSONException, IOException {
+  private boolean read(@NonNull InputStream inputStream) throws JSONException, IOException {
     try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
       final char[] buffer = new char[1];
       StringBuilder currentObject = null;

@@ -790,7 +790,7 @@ public class MainActivity
       if (inputStream == null) {
         Log.e(LOG_TAG, "importFrom: internal failure");
       } else {
-        tell(radios.read(inputStream) ? R.string.import_successful : R.string.import_no_data);
+        tell(radios.importFrom(inputStream) ? R.string.import_successful : R.string.import_no_data);
         return;
       }
     } catch (IOException iOException) {
