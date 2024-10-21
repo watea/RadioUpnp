@@ -29,19 +29,24 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.json.JSONException;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
-import java.io.BufferedReader;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -54,8 +59,6 @@ public class Radios extends ArrayList<Radio> {
   private static final byte JSON_ARRAY_START = '[';
   private static final byte JSON_ARRAY_END = ']';
   private static final byte[] JSON_ARRAY_COMMA = ",\n".getBytes();
-  private static final String JSON_OBJECT_START = "{";
-  private static final String JSON_OBJECT_END = "}";
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;
@@ -184,28 +187,19 @@ public class Radios extends ArrayList<Radio> {
   // Only JSON can be read.
   // True if something is read.
   private boolean read(@NonNull InputStream inputStream) throws JSONException, IOException {
-    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-      final char[] buffer = new char[1];
-      StringBuilder currentObject = null;
-      boolean result = false;
-      while (reader.read(buffer) != -1) {
-        final String chunk = new String(buffer);
-        if (currentObject == null) {
-          if (JSON_OBJECT_START.equals(chunk)) {
-            currentObject = new StringBuilder();
-            currentObject.append(chunk);
-          }
-        } else {
-          currentObject.append(chunk);
-          if (JSON_OBJECT_END.equals(chunk)) {
-            result = addRadioFrom(currentObject.toString()) || result;
-            // Reset for next object
-            currentObject = null;
-          }
-        }
+    final Gson gson = new Gson();
+    boolean result = false;
+    try (final InputStreamReader reader = new InputStreamReader(inputStream)) {
+      // Define the type for the Map
+      final Type listType = new TypeToken<List<Map<String, Object>>>() {
+      }.getType();
+      // Parse JSON file to a Map using Gson
+      final List<Map<String, Object>> jsonObjects = gson.fromJson(reader, listType);
+      for (final Map<String, Object> jsonObject : jsonObjects) {
+        result = addRadioFrom(new JSONObject(jsonObject)) || result;
       }
-      return result;
     }
+    return result;
   }
 
   // Write JSON
@@ -221,10 +215,10 @@ public class Radios extends ArrayList<Radio> {
 
   // Avoid duplicate radio.
   // No write.
-  private boolean addRadioFrom(@NonNull String json) {
+  private boolean addRadioFrom(@NonNull JSONObject jSONObject) {
     boolean result = false;
     try {
-      final Radio radio = new Radio(json);
+      final Radio radio = new Radio(jSONObject);
       if (stream()
         .map(Radio::getURL)
         .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {

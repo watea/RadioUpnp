@@ -131,7 +131,7 @@ public class Radio {
     this(name, icon, url, webPageUrl, "", DEFAULT);
   }
 
-  private Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
+  public Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
     this(
       jSONObject.getString(NAME),
       getBitmapFrom(jSONObject.getString(ICON)),
@@ -142,10 +142,6 @@ public class Radio {
       jSONObject.getBoolean(IS_PREFERRED));
     // Cache base 64 icon
     base64Icon = jSONObject.getString(ICON);
-  }
-
-  public Radio(@NonNull String json) throws JSONException, MalformedURLException {
-    this(new JSONObject(json));
   }
 
   // Store bitmap as filename.png
