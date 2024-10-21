@@ -25,10 +25,11 @@ package com.watea.radio_upnp.adapter;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.hardware.display.DisplayManager;
 import android.util.DisplayMetrics;
+import android.view.Display;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
@@ -42,9 +43,15 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
 public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapter.ViewHolder> {
-  private static final int SCROLL = 10;
-  private static final int THRESHOLD = 200;
   private final NestedScrollView nestedScrollView;
+
+  @NonNull
+  public static DisplayMetrics getDisplayMetrics(@NonNull Context context) {
+    final DisplayManager displayManager =
+      (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+    final Display defaultDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+    return context.createDisplayContext(defaultDisplay).getResources().getDisplayMetrics();
+  }
 
   public RadiosModifyAdapter(
     @NonNull MainActivity mainActivity,
@@ -109,20 +116,18 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
       // Scroll up or down.
       // Caution: algorithm is dedicated to this specific layout.
       if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
-        final DisplayMetrics displayMetrics = new DisplayMetrics();
-        final WindowManager windowManager =
-          (WindowManager) recyclerView.getContext().getSystemService(Context.WINDOW_SERVICE);
-        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
-        final int screenHeight = displayMetrics.heightPixels;
+        final int screenHeight = getDisplayMetrics(recyclerView.getContext()).heightPixels;
         final View itemView = viewHolder.itemView;
         final int[] location = new int[2];
         itemView.getLocationOnScreen(location);
         final int itemTop = itemView.getTop();
         final int itemAbsoluteLocation = location[1];
-        if ((Integer.min(itemTop, itemAbsoluteLocation) < THRESHOLD) && (dY < 0)) {
-          nestedScrollView.smoothScrollBy(0, -SCROLL);
-        } else if ((itemAbsoluteLocation > screenHeight - THRESHOLD) && (dY > 0)) {
-          nestedScrollView.smoothScrollBy(0, SCROLL);
+        final int threshold = screenHeight / 6;
+        final int dy = threshold / 10;
+        if ((Integer.min(itemTop, itemAbsoluteLocation) < threshold) && (dY < 0)) {
+          nestedScrollView.smoothScrollBy(0, -dy);
+        } else if ((itemAbsoluteLocation > screenHeight - threshold) && (dY > 0)) {
+          nestedScrollView.smoothScrollBy(0, dy);
         }
       }
     }
