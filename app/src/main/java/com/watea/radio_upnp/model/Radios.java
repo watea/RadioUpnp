@@ -188,12 +188,12 @@ public class Radios extends ArrayList<Radio> {
   // True if something is read.
   private boolean read(@NonNull InputStream inputStream) throws JSONException, IOException {
     final Gson gson = new Gson();
+    // Define the type for the parsing
+    final Type listType = new TypeToken<List<Map<String, Object>>>() {
+    }.getType();
     boolean result = false;
+    // Parse JSON file
     try (final InputStreamReader reader = new InputStreamReader(inputStream)) {
-      // Define the type for the Map
-      final Type listType = new TypeToken<List<Map<String, Object>>>() {
-      }.getType();
-      // Parse JSON file to a Map using Gson
       final List<Map<String, Object>> jsonObjects = gson.fromJson(reader, listType);
       for (final Map<String, Object> jsonObject : jsonObjects) {
         result = addRadioFrom(new JSONObject(jsonObject)) || result;
