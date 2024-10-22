@@ -445,8 +445,8 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
       "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
       "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
-      "<dc:title>" + radio.getName() + "</dc:title>" +
-      "<upnp:artist>" + information + "</upnp:artist>" +
+      "<dc:title>" + moveToSoap(radio.getName()) + "</dc:title>" +
+      "<upnp:artist>" + moveToSoap(information) + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "<res duration=\"0:00:00\" protocolInfo=\"" +
