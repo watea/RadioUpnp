@@ -110,7 +110,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     // Those services are mandatory in UPnP standard
     connectionManager = Objects.requireNonNull(device.getShortService(CONNECTION_MANAGER_ID));
     renderingControl = Objects.requireNonNull(device.getShortService(RENDERING_CONTROL_ID));
-    // Watchdog test if reader is actually playing
+    // Watchdog tests if reader is actually playing
     watchdog = new Watchdog(this.actionController, avTransportService) {
       @Override
       public void onEvent(@NonNull ReaderState readerState) {
@@ -428,7 +428,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @NonNull
   private String moveToSoap(@NonNull String string) {
-    return string.replace("<", "&lt;").replace(">", "&gt;");
+    return string
+      .replace("&", "&amp;")
+      .replace("<", "&lt;")
+      .replace(">", "&gt;")
+      .replace("\"", "&quot;")
+      .replace("'", "&apos;");
   }
 
   // Create DIDL-Lite metadata
