@@ -711,8 +711,8 @@ public class MainActivity
           ImportExportAction.CSV_EXPORT : ImportExportAction.JSON_EXPORT;
       };
     new AlertDialog.Builder(this)
-      .setTitle(R.string.title_import)
-      .setIcon(R.drawable.ic_baseline_exit_to_app_white_24dp)
+      .setTitle(string.title_export)
+      .setIcon(R.drawable.ic_baseline_output_white_24dp)
       .setMessage(R.string.export_message)
       .setNeutralButton(R.string.action_csv_export, listener)
       .setPositiveButton(R.string.action_json_export, listener)
@@ -732,7 +732,7 @@ public class MainActivity
         importExportAction = ImportExportAction.JSON_IMPORT;
       };
     new AlertDialog.Builder(this)
-      .setTitle(R.string.title_import)
+      .setTitle(string.title_import)
       .setIcon(R.drawable.ic_baseline_exit_to_app_white_24dp)
       .setMessage(R.string.import_message)
       .setPositiveButton(R.string.action_go, listener)
