@@ -238,7 +238,7 @@ public class PlayerController {
     playLongPressUserHint = this.mainActivity
       .new UserHint(R.string.key_play_long_press_got_it, R.string.play_long_press);
     informationPressUserHint = this.mainActivity
-      .new UserHint(R.string.key_information_press_got_it, R.string.information_press, 4);
+      .new UserHint(R.string.key_information_press_got_it, R.string.information_press, 40);
     final SimpleAdapter playlistAdapter = new SimpleAdapter(
       mainActivity,
       playInformations,
