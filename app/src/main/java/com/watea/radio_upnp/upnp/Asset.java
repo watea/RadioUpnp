@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.upnp;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -41,6 +42,10 @@ public abstract class Asset implements URLService.Consumer {
   protected Asset() {
     this(asset -> {
     });
+  }
+
+  protected static String getTag(@Nullable String tag) {
+    return (tag == null) ? "Unknown" : tag;
   }
 
   @Override

@@ -388,15 +388,15 @@ public class PlayerController {
     return (mediaController == null) ? null : mainActivity.getCurrentRadio();
   }
 
-  private void setPreferredButton(boolean isPreferred) {
-    preferredImageButton.setImageResource(
-      isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
-  }
-
   // mediaController shall not be null
   private void setCurrentRadio(boolean isReset) {
     assert mediaController != null;
     mainActivity.setCurrentRadio(isReset ?
       null : mediaController.getMetadata().getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
+  }
+
+  private void setPreferredButton(boolean isPreferred) {
+    preferredImageButton.setImageResource(
+      isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
   }
 }

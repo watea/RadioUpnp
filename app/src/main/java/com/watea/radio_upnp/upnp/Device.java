@@ -90,6 +90,7 @@ public class Device extends Asset {
   private static final String XML_TAG = "device";
   private static final String DEVICE_LIST = "deviceList";
   private static final String SERVICE_NAME_SPACE = "urn:upnp-org:serviceId:";
+  private static final String DEVICE_TYPE = "deviceType";
   private static final String FRIENDLY_NAME = "friendlyName";
   private static final String MODEL_NAME = "modelName";
   private static final String MODEL_NUMBER = "modelNumber";
@@ -107,6 +108,8 @@ public class Device extends Asset {
   private final AtomicReference<Device> currentDevice = new AtomicReference<>();
   @NonNull
   private final URL location;
+  @Nullable
+  private String deviceType;
   @Nullable
   private String friendlyName = null;
   @Nullable
@@ -203,6 +206,9 @@ public class Device extends Asset {
     switch (currentTag) {
       case DEVICE_LIST:
         isEmbeddedDevices = false;
+        break;
+      case DEVICE_TYPE:
+        currentDevice.get().deviceType = urlService.getTag(DEVICE_TYPE);
         break;
       case FRIENDLY_NAME:
         currentDevice.get().friendlyName = urlService.getTag(FRIENDLY_NAME);
@@ -316,8 +322,13 @@ public class Device extends Asset {
   }
 
   @NonNull
+  public String getDeviceType() {
+    return getTag(deviceType);
+  }
+
+  @NonNull
   public String getDisplayString() {
-    return (friendlyName == null) ? "Unknown" : friendlyName;
+    return getTag(friendlyName);
   }
 
   @Nullable

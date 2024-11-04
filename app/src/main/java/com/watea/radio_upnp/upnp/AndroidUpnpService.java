@@ -68,9 +68,9 @@ public class AndroidUpnpService extends android.app.Service {
   private final Set<Listener> listeners = new HashSet<>();
   private final DiscoveryListener discoveryListener = new DiscoveryListener() {
     private final Device.Callback deviceCallback = new Device.Callback() {
+      // Add device if of type DEVICE and not already known
       private void addDevice(@NonNull Device device) {
-        // Reject if already known
-        if (devices.stream().noneMatch(device::hasUUID)) {
+        if (device.getDeviceType().startsWith(DEVICE) && devices.stream().noneMatch(device::hasUUID)) {
           Log.d(LOG_TAG, "Device added: " + device.getDisplayString());
           devices.add(device);
           listeners.forEach(listener -> listener.onDeviceAdd(device));
@@ -85,22 +85,20 @@ public class AndroidUpnpService extends android.app.Service {
       @Override
       public void onComplete(@NonNull Asset asset) {
         final Device device = (Device) asset;
-        Log.d(LOG_TAG, "Device found: " + device.getDisplayString());
+        final Set<Device> embeddedDevices = device.getEmbeddedDevices();
+        Log.d(LOG_TAG, "Device found (embedded: " + embeddedDevices.size() + "): " + device.getDisplayString());
         // Add device and embedded devices
         addDevice(device);
-        device.getEmbeddedDevices().forEach(this::addDevice);
+        embeddedDevices.forEach(this::addDevice);
       }
     };
 
     public void onServiceDiscovered(SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
-      final String serviceType = service.getServiceType();
-      if ((serviceType != null) && serviceType.startsWith(DEVICE)) {
-        try {
-          new Device(service, deviceCallback);
-        } catch (IOException | XmlPullParserException exception) {
-          Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
-        }
+      try {
+        new Device(service, deviceCallback);
+      } catch (IOException | XmlPullParserException exception) {
+        Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
       }
     }
 
@@ -115,10 +113,13 @@ public class AndroidUpnpService extends android.app.Service {
           Log.d(LOG_TAG, "Device announcement: " + device.getDisplayString() + " => " + status);
           device.setAlive(isAlive);
           listeners.forEach(listener -> {
+            final Set<Device> embeddedDevices = device.getEmbeddedDevices();
             if (isAlive) {
               listener.onDeviceAdd(device);
+              embeddedDevices.forEach(listener::onDeviceAdd);
             } else {
               listener.onDeviceRemove(device);
+              embeddedDevices.forEach(listener::onDeviceRemove);
             }
           });
           // Done!

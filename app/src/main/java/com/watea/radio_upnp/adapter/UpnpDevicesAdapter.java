@@ -45,7 +45,6 @@ import com.watea.radio_upnp.upnp.Device;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class UpnpDevicesAdapter
   extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
@@ -89,28 +88,19 @@ public class UpnpDevicesAdapter
     return devices.size();
   }
 
+  // Add device if AV_TRANSPORT_SERVICE_ID service is found
   @Override
   public void onDeviceAdd(@NonNull Device device) {
-    // This device?
-    if (addIf(device)) {
-      return;
-    }
-    // Embedded devices?
-    final Set<Device> devices = device.getEmbeddedDevices();
-    if (!devices.isEmpty()) {
-      Log.d(LOG_TAG, "EmbeddedDevices found: " + devices.size());
-      //noinspection ResultOfMethodCallIgnored
-      devices.stream().anyMatch(this::addIf);
+    if (device.getShortService(UpnpPlayerAdapter.getAvtransportId()) != null) {
+      Log.d(LOG_TAG, "Device with AV_TRANSPORT_SERVICE added: " + device.getDisplayString());
+      handler.post(() -> add(device));
     }
   }
 
   @Override
   public void onDeviceRemove(@NonNull Device device) {
-    Log.d(LOG_TAG, "Device and embedded removed: " + device.getDisplayString());
-    // This device?
+    Log.d(LOG_TAG, "Device removed: " + device.getDisplayString());
     handler.post(() -> remove(device));
-    // Embedded devices?
-    handler.post(() -> device.getEmbeddedDevices().forEach(this::remove));
   }
 
   @Override
@@ -173,18 +163,6 @@ public class UpnpDevicesAdapter
 
   private void notifyChange(@NonNull Device device) {
     notifyItemChanged(devices.indexOf(device));
-  }
-
-  // Returns true if AV_TRANSPORT_SERVICE_ID is found.
-  // Add device in this case.
-  private boolean addIf(final Device device) {
-    if (device.getShortService(UpnpPlayerAdapter.getAvtransportId()) == null) {
-      return false;
-    } else {
-      Log.d(LOG_TAG, "UPnP reader found!");
-      handler.post(() -> add(device));
-      return true;
-    }
   }
 
   private void add(@NonNull Device device) {

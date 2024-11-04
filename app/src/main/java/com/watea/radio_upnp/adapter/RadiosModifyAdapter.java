@@ -45,14 +45,6 @@ import com.watea.radio_upnp.model.Radios;
 public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapter.ViewHolder> {
   private final NestedScrollView nestedScrollView;
 
-  @NonNull
-  public static DisplayMetrics getDisplayMetrics(@NonNull Context context) {
-    final DisplayManager displayManager =
-      (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
-    final Display defaultDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
-    return context.createDisplayContext(defaultDisplay).getResources().getDisplayMetrics();
-  }
-
   public RadiosModifyAdapter(
     @NonNull MainActivity mainActivity,
     @NonNull RecyclerView recyclerView,
@@ -62,6 +54,14 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     this.nestedScrollView = nestedScrollView;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
+  }
+
+  @NonNull
+  public static DisplayMetrics getDisplayMetrics(@NonNull Context context) {
+    final DisplayManager displayManager =
+      (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+    final Display defaultDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+    return context.createDisplayContext(defaultDisplay).getResources().getDisplayMetrics();
   }
 
   @NonNull
