@@ -127,8 +127,12 @@ public class AndroidUpnpService extends android.app.Service {
               listener.onDeviceAdd(device);
               embeddedDevices.forEach(listener::onDeviceAdd);
             } else {
+              ssdpServices.remove(device.getSsdpService());
               listener.onDeviceRemove(device);
-              embeddedDevices.forEach(listener::onDeviceRemove);
+              embeddedDevices.forEach(embeddedDevice -> {
+                ssdpServices.remove(embeddedDevice.getSsdpService());
+                listener.onDeviceRemove(embeddedDevice);
+              });
             }
           });
           // Done!
