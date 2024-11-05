@@ -54,6 +54,8 @@ public class AndroidUpnpService extends android.app.Service {
   private static final Long PERIOD = 5000L;
   private final Binder binder = new UpnpService();
   private final SsdpClient ssdpClient = SsdpClient.create();
+  // Some devices are not detected with bind port to 1900, so we create a special client with ephemeral port
+  private final SsdpClient specificSsdpClient = SsdpClient.create();
   private final DiscoveryOptions discoveryOptions = DiscoveryOptions.builder()
     .intervalBetweenRequests(PERIOD)
     .build();
@@ -64,6 +66,7 @@ public class AndroidUpnpService extends android.app.Service {
     .overrideBindingPort(0)
     .build();
   private final Set<Device> devices = new CopyOnWriteArraySet<>();
+  private final Set<SsdpService> ssdpServices = new CopyOnWriteArraySet<>(); // Cache of SsdpServices
   private final ActionController actionController = new ActionController();
   private final Set<Listener> listeners = new HashSet<>();
   private final DiscoveryListener discoveryListener = new DiscoveryListener() {
@@ -95,10 +98,16 @@ public class AndroidUpnpService extends android.app.Service {
 
     public void onServiceDiscovered(SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
-      try {
-        new Device(service, deviceCallback);
-      } catch (IOException | XmlPullParserException exception) {
-        Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
+      // Already seen?
+      if (ssdpServices.stream().noneMatch(service::equals)) {
+        // Cache service
+        ssdpServices.add(service);
+        // Process if not already there
+        try {
+          new Device(service, deviceCallback);
+        } catch (IOException | XmlPullParserException exception) {
+          Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
+        }
       }
     }
 
@@ -142,13 +151,15 @@ public class AndroidUpnpService extends android.app.Service {
   @Override
   public void onCreate() {
     super.onCreate();
-    ssdpClient.discoverServices(discoverMediaRenderer, ssdpClientOptions, discoveryListener);
+    ssdpClient.discoverServices(discoverMediaRenderer, discoveryListener);
+    specificSsdpClient.discoverServices(discoverMediaRenderer, ssdpClientOptions, discoveryListener);
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
     ssdpClient.stopDiscovery();
+    specificSsdpClient.stopDiscovery();
     listeners.clear();
   }
 
