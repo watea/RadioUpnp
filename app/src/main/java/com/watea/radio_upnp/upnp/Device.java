@@ -203,24 +203,35 @@ public class Device extends Asset {
 
   @Override
   public void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+    final Device device = currentDevice.get();
     switch (currentTag) {
       case DEVICE_LIST:
         isEmbeddedDevices = false;
         break;
       case DEVICE_TYPE:
-        currentDevice.get().deviceType = urlService.getTag(DEVICE_TYPE);
+        if (device != null) {
+          device.deviceType = urlService.getTag(DEVICE_TYPE);
+        }
         break;
       case FRIENDLY_NAME:
-        currentDevice.get().friendlyName = urlService.getTag(FRIENDLY_NAME);
+        if (device != null) {
+          device.friendlyName = urlService.getTag(FRIENDLY_NAME);
+        }
         break;
       case MODEL_NAME:
-        currentDevice.get().modelName = urlService.getTag(MODEL_NAME);
+        if (device != null) {
+          device.modelName = urlService.getTag(MODEL_NAME);
+        }
         break;
       case MODEL_NUMBER:
-        currentDevice.get().modelNumber = urlService.getTag(MODEL_NUMBER);
+        if (device != null) {
+          device.modelNumber = urlService.getTag(MODEL_NUMBER);
+        }
         break;
       case UDN:
-        currentDevice.get().uUID = urlService.getTag(UDN);
+        if (device != null) {
+          device.uUID = urlService.getTag(UDN);
+        }
         break;
       case Service.XML_TAG:
         final String serviceType = urlService.getTag(Service.SERVICE_TYPE);
@@ -229,14 +240,15 @@ public class Device extends Asset {
         final String controlURL = urlService.getTag(Service.CONTROL_URL);
         // No more tags for Service
         urlService.clearTags();
-        if ((serviceType == null) ||
+        if ((device == null) ||
+          (serviceType == null) ||
           (serviceId == null) ||
           (descriptionURL == null) ||
           (controlURL == null)) {
           Log.e(LOG_TAG, "endAccept: incomplete service parameters");
         } else {
           try {
-            currentDevice.get().services.add(new Service(
+            device.services.add(new Service(
               this,
               urlService.getURL(),
               serviceType,
@@ -253,11 +265,11 @@ public class Device extends Asset {
         break;
       case ICON:
         final String stringWidth = urlService.getTag(WIDTH);
-        final String stringHeigth = urlService.getTag(HEIGHT);
+        final String stringHeight = urlService.getTag(HEIGHT);
         final String stringUrl = urlService.getTag(URL);
-        if ((stringWidth != null) && (stringHeigth != null) && (stringUrl != null)) {
+        if ((stringWidth != null) && (stringHeight != null) && (stringUrl != null)) {
           final int width = Integer.parseInt(stringWidth);
-          final int height = Integer.parseInt(stringHeigth);
+          final int height = Integer.parseInt(stringHeight);
           if ((icon == null) || (icon.getWidth() < width) && (icon.getHeight() < height)) {
             try {
               fetchIcon(new URI(stringUrl));
@@ -268,7 +280,6 @@ public class Device extends Asset {
         }
         break;
       case XML_TAG:
-        final Device device = currentDevice.get();
         // Embedded device?
         if ((device != null) && isEmbeddedDevices) {
           embeddedDevices.add(device);
