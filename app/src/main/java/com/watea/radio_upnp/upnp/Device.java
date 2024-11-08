@@ -29,6 +29,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.ssdp.SsdpService;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
@@ -38,8 +40,6 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-
-import io.resourcepool.ssdp.model.SsdpService;
 
 /**
  * @noinspection unused

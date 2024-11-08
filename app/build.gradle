@@ -75,8 +75,6 @@ dependencies {
     implementation 'org.slf4j:slf4j-log4j12:2.0.16'
     // Playstore
     implementation 'com.android.billingclient:billing:7.1.1'
-    // SSDP
-    implementation 'io.resourcepool:ssdp-client:2.5.1'
     // GSON
     implementation 'com.google.code.gson:gson:2.11.0'
 }

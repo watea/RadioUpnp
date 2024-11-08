@@ -1,0 +1,258 @@
+/*
+ * Copyright (c) 2024. Stephane Treuchot
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to
+ * do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+package com.watea.radio_upnp.ssdp;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class SsdpClient {
+  private static final String LOG_TAG = SsdpClient.class.getSimpleName();
+  private static final String MULTICAST_ADDRESS = "239.255.255.250";
+  private static final int SSDP_PORT = 1900;
+  private static final int DELAY = 3; // s
+  private static final String SEARCH_MESSAGE =
+    "M-SEARCH * HTTP/1.1\r\n" +
+      "HOST: 239.255.255.250:1900\r\n" +
+      "MAN: \"ssdp:discover\"\r\n" +
+      "MX: 3\r\n" +
+      "ST: ssdp:all\r\n\r\n";
+  private static final Pattern CACHE_CONTROL_PATTERN = Pattern.compile("max-age[ ]*=[ ]*([0-9]+).*");
+  // Date format for expires headers
+  private static final SimpleDateFormat DATE_HEADER_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
+  private static final Pattern SEARCH_REQUEST_LINE_PATTERN = Pattern.compile("^HTTP/1\\.1 [0-9]+ .*");
+  private static final Pattern SERVICE_ANNOUNCEMENT_LINE_PATTERN = Pattern.compile("NOTIFY \\* HTTP/1\\.1");
+  private static final Pattern HEADER_PATTERN = Pattern.compile("(.*?):(.*)$");
+  // CRLF
+  private static final String S_CRLF = "\r\n";
+  private static final String CACHE_CONTROL = "CACHE-CONTROL";
+  private static final String EXPIRES = "EXPIRES";
+  private static final byte[] B_CRLF = S_CRLF.getBytes(UTF_8);
+  // Ephemeral socket
+  private final MulticastSocket socket;
+  // For device responding on port 1900
+  private final MulticastSocket listeningSocket;
+  private final Listener listener;
+  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+  // Cache
+  private final List<SsdpService> ssdpServices = new ArrayList<>();
+  private boolean isRunning;
+
+  public SsdpClient(@NonNull Listener listener) {
+    this.listener = listener;
+    MulticastSocket workSocket1, workSocket2;
+    try {
+      workSocket1 = new MulticastSocket();
+      setSocket(workSocket1);
+      workSocket2 = new MulticastSocket(SSDP_PORT);
+      setSocket(workSocket2);
+    } catch (IOException iOException) {
+      this.listener.onFailed(iOException);
+      workSocket1 = workSocket2 = null;
+    }
+    socket = workSocket1;
+    listeningSocket = workSocket2;
+  }
+
+  public void start() {
+    // May fail
+    try {
+      executor.scheduleWithFixedDelay(this::search, 0, DELAY, TimeUnit.SECONDS);
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "SSDP search task failed!", exception);
+    }
+    new Thread(() -> receive(socket)).start();
+    new Thread(() -> receive(listeningSocket)).start();
+  }
+
+  public void stop() {
+    isRunning = false;
+    executor.shutdown();
+  }
+
+  public void search() {
+    try {
+      final byte[] sendData = SEARCH_MESSAGE.getBytes();
+      final DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(MULTICAST_ADDRESS), SSDP_PORT);
+      socket.send(packet);
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "SSDP search failed!", iOException);
+    }
+  }
+
+  private void setSocket(@NonNull MulticastSocket socket) throws IOException {
+    socket.setSoTimeout(DELAY / 2);
+    socket.setReuseAddress(true);
+    // Set the multicast address and port
+    final InetSocketAddress group = new InetSocketAddress(MULTICAST_ADDRESS, socket.getLocalPort());
+    // Get the network interface (wlan0 for Wi-Fi)
+    final NetworkInterface networkInterface = NetworkInterface.getByName("wlan0");
+    // Join the multicast group on the specified network interface
+    socket.setNetworkInterface(networkInterface);
+    socket.joinGroup(group, networkInterface);
+  }
+
+  private void receive(@NonNull MulticastSocket socket, @NonNull DatagramPacket receivePacket) throws IOException {
+    socket.receive(receivePacket);
+    Log.d(LOG_TAG, "receive: answer received from " + receivePacket.getAddress());
+    final SsdpResponse ssdpResponse = parse(receivePacket);
+    if (ssdpResponse == null) {
+      Log.e(LOG_TAG, "receive: unable to parse response");
+    } else if (ssdpResponse.getType() == SsdpResponse.Type.DISCOVERY_RESPONSE) {
+      final SsdpService ssdpService = new SsdpService(ssdpResponse);
+      final int index = ssdpServices.indexOf(ssdpService);
+      boolean isNew = false;
+      if (index < 0) {
+        ssdpServices.add(ssdpService);
+        isNew = true;
+      } else if (ssdpServices.get(index).isExpired()) {
+        ssdpServices.set(index, ssdpService);
+        isNew = true;
+      }
+      if (isNew) {
+        listener.onServiceDiscovered(ssdpService);
+      }
+    } else {
+      listener.onServiceAnnouncement(new SsdpServiceAnnouncement(ssdpResponse));
+    }
+  }
+
+  private void receive(@NonNull MulticastSocket socket) {
+    final byte[] receiveData = new byte[1024];
+    final DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+    isRunning = true;
+    while (isRunning) {
+      try {
+        receive(socket, receivePacket);
+      } catch (IOException iOException) {
+        Log.e(LOG_TAG, "receive: unexpected error", iOException);
+      }
+    }
+    socket.close();
+  }
+
+  @Nullable
+  private SsdpResponse parse(@NonNull DatagramPacket packet) {
+    final byte[] data = packet.getData();
+    // Find position of the last header data
+    int endOfHeaders = findEndOfHeaders(data);
+    if (endOfHeaders == -1) {
+      endOfHeaders = packet.getLength();
+    }
+    // Retrieve all header lines
+    final List<String> headerLines = Arrays.asList(new String(Arrays.copyOfRange(data, 0, endOfHeaders)).split(S_CRLF));
+    final String firstLine = headerLines.get(0);
+    // Determine type of message
+    final SsdpResponse.Type type =
+      SEARCH_REQUEST_LINE_PATTERN.matcher(firstLine).matches() ?
+        SsdpResponse.Type.DISCOVERY_RESPONSE :
+        SERVICE_ANNOUNCEMENT_LINE_PATTERN.matcher(firstLine).matches() ?
+          SsdpResponse.Type.PRESENCE_ANNOUNCEMENT :
+          null;
+    if (type == null) {
+      return null;
+    }
+    // Let's parse our headers
+    final Map<String, String> headers = new HashMap<>();
+    headerLines.stream().map(HEADER_PATTERN::matcher).filter(Matcher::matches).forEach(matcher -> {
+      final String key = matcher.group(1);
+      final String value = matcher.group(2);
+      if ((key != null) && (value != null)) {
+        headers.put(key.toUpperCase().trim(), value.trim());
+      }
+    });
+    // Determine expiry depending on the presence of cache-control or expires headers
+    final long expiry = parseCacheHeader(headers);
+    // Let's see if we have a body. If we do, let's copy the byte array and put it into the response for the user to get.
+    final int endOfBody = packet.getLength();
+    final byte[] body = (endOfBody > endOfHeaders + 4) ? Arrays.copyOfRange(data, endOfHeaders + 4, endOfBody) : null;
+    return new SsdpResponse(type, headers, body, expiry, packet.getAddress());
+  }
+
+  // Parse both Cache-Control and Expires headers to determine if there is any caching strategy requested by service.
+  private long parseCacheHeader(@NonNull Map<String, String> headers) {
+    final String cacheControlHeader = headers.get(CACHE_CONTROL);
+    if (cacheControlHeader != null) {
+      final Matcher m = CACHE_CONTROL_PATTERN.matcher(cacheControlHeader);
+      if (m.matches()) {
+        return new Date().getTime() + Long.parseLong(m.group(1)) * 1000L;
+      }
+    }
+    final String expires = headers.get(EXPIRES);
+    if (expires != null) {
+      try {
+        final Date date = DATE_HEADER_FORMAT.parse(expires);
+        return (date == null) ? 0 : date.getTime();
+      } catch (ParseException parseException) {
+        Log.d(LOG_TAG, "parseCacheHeader: failed to parse expires header");
+      }
+    }
+    // No result, no expiry strategy
+    return 0;
+  }
+
+  // Find the index matching the end of the header data.
+  private int findEndOfHeaders(@NonNull byte[] data) {
+    for (int i = 0; i < data.length - 3; i++) {
+      if (data[i] != B_CRLF[0] || data[i + 1] != B_CRLF[1] || data[i + 2] != B_CRLF[0] || data[i + 3] != B_CRLF[1]) {
+        continue;
+      }
+      // Headers finish here
+      return i;
+    }
+    return -1;
+  }
+
+  public interface Listener {
+    void onServiceDiscovered(@NonNull SsdpService service);
+
+    void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement);
+
+    void onFailed(@NonNull Exception exception);
+  }
+}

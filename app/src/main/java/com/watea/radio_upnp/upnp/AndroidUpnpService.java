@@ -31,6 +31,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.ssdp.SsdpClient;
+import com.watea.radio_upnp.ssdp.SsdpService;
+import com.watea.radio_upnp.ssdp.SsdpServiceAnnouncement;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
@@ -39,37 +43,14 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
-import io.resourcepool.ssdp.client.SsdpClient;
-import io.resourcepool.ssdp.model.DiscoveryListener;
-import io.resourcepool.ssdp.model.DiscoveryOptions;
-import io.resourcepool.ssdp.model.DiscoveryRequest;
-import io.resourcepool.ssdp.model.SsdpClientOptions;
-import io.resourcepool.ssdp.model.SsdpRequest;
-import io.resourcepool.ssdp.model.SsdpService;
-import io.resourcepool.ssdp.model.SsdpServiceAnnouncement;
-
 public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
-  private static final Long PERIOD = 5000L;
   private final Binder binder = new UpnpService();
-  private final SsdpClient ssdpClient = SsdpClient.create();
-  // Some devices are not detected with bind port to 1900, so we create a special client with ephemeral port
-  private final SsdpClient specificSsdpClient = SsdpClient.create();
-  private final DiscoveryOptions discoveryOptions = DiscoveryOptions.builder()
-    .intervalBetweenRequests(PERIOD)
-    .build();
-  private final DiscoveryRequest discoverMediaRenderer = SsdpRequest.builder()
-    .discoveryOptions(discoveryOptions)
-    .build();
-  private final SsdpClientOptions ssdpClientOptions = SsdpClientOptions.builder()
-    .overrideBindingPort(0)
-    .build();
   private final Set<Device> devices = new CopyOnWriteArraySet<>();
-  private final Set<SsdpService> ssdpServices = new CopyOnWriteArraySet<>(); // Cache of SsdpServices
   private final ActionController actionController = new ActionController();
   private final Set<Listener> listeners = new HashSet<>();
-  private final DiscoveryListener discoveryListener = new DiscoveryListener() {
+  private final SsdpClient.Listener ssdpClientListener = new SsdpClient.Listener() {
     private final Device.Callback deviceCallback = new Device.Callback() {
       // Add device if of type DEVICE and not already known
       private void addDevice(@NonNull Device device) {
@@ -96,23 +77,19 @@ public class AndroidUpnpService extends android.app.Service {
       }
     };
 
-    public void onServiceDiscovered(SsdpService service) {
+    public void onServiceDiscovered(@NonNull SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
-      // Already seen?
-      if (ssdpServices.stream().noneMatch(service::equals)) {
-        // Cache service
-        ssdpServices.add(service);
-        // Process if not already there
+      new Thread(() -> {
         try {
           new Device(service, deviceCallback);
         } catch (IOException | XmlPullParserException exception) {
           Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
         }
-      }
+      }).start();
     }
 
     @Override
-    public void onServiceAnnouncement(SsdpServiceAnnouncement announcement) {
+    public void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement) {
       Log.d(LOG_TAG, "SsdpServiceAnnouncement: " + announcement);
       final String uUID = announcement.getSerialNumber();
       final SsdpServiceAnnouncement.Status status = announcement.getStatus();
@@ -127,12 +104,8 @@ public class AndroidUpnpService extends android.app.Service {
               listener.onDeviceAdd(device);
               embeddedDevices.forEach(listener::onDeviceAdd);
             } else {
-              ssdpServices.remove(device.getSsdpService());
               listener.onDeviceRemove(device);
-              embeddedDevices.forEach(embeddedDevice -> {
-                ssdpServices.remove(embeddedDevice.getSsdpService());
-                listener.onDeviceRemove(embeddedDevice);
-              });
+              embeddedDevices.forEach(listener::onDeviceRemove);
             }
           });
           // Done!
@@ -142,28 +115,22 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     @Override
-    public void onFailedAndIgnored(Exception exception) {
-      Log.d(LOG_TAG, "DiscoveryListener.onFailedAndIgnored: ", exception);
-    }
-
-    @Override
-    public void onFailed(Exception exception) {
+    public void onFailed(@NonNull Exception exception) {
       Log.d(LOG_TAG, "DiscoveryListener.onFailed: ", exception);
     }
   };
+  private final SsdpClient ssdpClient = new SsdpClient(ssdpClientListener);
 
   @Override
   public void onCreate() {
     super.onCreate();
-    ssdpClient.discoverServices(discoverMediaRenderer, discoveryListener);
-    specificSsdpClient.discoverServices(discoverMediaRenderer, ssdpClientOptions, discoveryListener);
+    ssdpClient.start();
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
-    ssdpClient.stopDiscovery();
-    specificSsdpClient.stopDiscovery();
+    ssdpClient.stop();
     listeners.clear();
   }
 
