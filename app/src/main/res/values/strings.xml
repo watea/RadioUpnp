@@ -32,7 +32,6 @@
     <string name="credit_2">- Apache Commons IO [Apache License 2.0]</string>
     <string name="credit_3">- Jsoup [MIT License]</string>
     <string name="credit_4">- ExoPlayer [Apache License 2.0]</string>
-    <string name="credit_5">- SSDP [Apache License 2.0, MIT License]</string>
     <string name="license">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
     <string name="free_software">This is a free software; see sources for copying conditions.</string>
     <string name="version">Version: </string>
