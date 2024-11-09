@@ -23,7 +23,12 @@
 
 package com.watea.radio_upnp.upnp;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
@@ -120,16 +125,31 @@ public class AndroidUpnpService extends android.app.Service {
     }
   };
   private final SsdpClient ssdpClient = new SsdpClient(ssdpClientListener);
+  private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      final ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+      final NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+      boolean isConnected = (activeNetwork != null) && activeNetwork.isConnectedOrConnecting();
+      boolean isWiFi = (activeNetwork != null) && (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI);
+      if (isConnected && isWiFi) {
+        ssdpClient.start();
+      } else if (!isConnected && isWiFi) {
+        ssdpClient.stop();
+      }
+    }
+  };
 
   @Override
   public void onCreate() {
     super.onCreate();
-    ssdpClient.start();
+    registerReceiver(broadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
+    unregisterReceiver(broadcastReceiver);
     ssdpClient.stop();
     listeners.clear();
   }

@@ -73,59 +73,64 @@ public class SsdpClient {
   private static final String CACHE_CONTROL = "CACHE-CONTROL";
   private static final String EXPIRES = "EXPIRES";
   private static final byte[] B_CRLF = S_CRLF.getBytes(UTF_8);
-  // Ephemeral socket
-  private final MulticastSocket socket;
-  // For device responding on port 1900
-  private final MulticastSocket listeningSocket;
   private final Listener listener;
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   // Cache
   private final List<SsdpService> ssdpServices = new ArrayList<>();
   private boolean isRunning;
+  // Ephemeral socket
+  @Nullable
+  private MulticastSocket socket = null;
+  // For device responding on port 1900
+  @Nullable
+  private MulticastSocket listeningSocket = null;
 
   public SsdpClient(@NonNull Listener listener) {
     this.listener = listener;
-    MulticastSocket workSocket1, workSocket2;
-    try {
-      workSocket1 = new MulticastSocket();
-      setSocket(workSocket1);
-      workSocket2 = new MulticastSocket(SSDP_PORT);
-      setSocket(workSocket2);
-    } catch (IOException iOException) {
-      this.listener.onFailed(iOException);
-      workSocket1 = workSocket2 = null;
-    }
-    socket = workSocket1;
-    listeningSocket = workSocket2;
   }
 
+  // Network shall be available
   public void start() {
-    // May fail
     try {
+      socket = getSocket(0);
+      listeningSocket = getSocket(SSDP_PORT);
+      // Search
       executor.scheduleWithFixedDelay(this::search, 0, DELAY, TimeUnit.SECONDS);
+      // Receive
+      isRunning = true;
+      new Thread(() -> receive(socket)).start();
+      new Thread(() -> receive(listeningSocket)).start();
     } catch (Exception exception) {
-      Log.e(LOG_TAG, "SSDP search task failed!", exception);
+      this.listener.onFailed(exception);
+      Log.e(LOG_TAG, "start: failed!", exception);
     }
-    new Thread(() -> receive(socket)).start();
-    new Thread(() -> receive(listeningSocket)).start();
   }
 
   public void stop() {
     isRunning = false;
     executor.shutdown();
+    if (socket != null) {
+      socket.close();
+    }
+    if (listeningSocket != null) {
+      listeningSocket.close();
+    }
   }
 
   public void search() {
     try {
       final byte[] sendData = SEARCH_MESSAGE.getBytes();
       final DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(MULTICAST_ADDRESS), SSDP_PORT);
+      assert socket != null;
       socket.send(packet);
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "SSDP search failed!", iOException);
     }
   }
 
-  private void setSocket(@NonNull MulticastSocket socket) throws IOException {
+  @NonNull
+  private MulticastSocket getSocket(int port) throws IOException {
+    final MulticastSocket socket = new MulticastSocket(port);
     socket.setSoTimeout(DELAY / 2);
     socket.setReuseAddress(true);
     // Set the multicast address and port
@@ -135,45 +140,41 @@ public class SsdpClient {
     // Join the multicast group on the specified network interface
     socket.setNetworkInterface(networkInterface);
     socket.joinGroup(group, networkInterface);
-  }
-
-  private void receive(@NonNull MulticastSocket socket, @NonNull DatagramPacket receivePacket) throws IOException {
-    socket.receive(receivePacket);
-    Log.d(LOG_TAG, "receive: answer received from " + receivePacket.getAddress());
-    final SsdpResponse ssdpResponse = parse(receivePacket);
-    if (ssdpResponse == null) {
-      Log.e(LOG_TAG, "receive: unable to parse response");
-    } else if (ssdpResponse.getType() == SsdpResponse.Type.DISCOVERY_RESPONSE) {
-      final SsdpService ssdpService = new SsdpService(ssdpResponse);
-      final int index = ssdpServices.indexOf(ssdpService);
-      boolean isNew = false;
-      if (index < 0) {
-        ssdpServices.add(ssdpService);
-        isNew = true;
-      } else if (ssdpServices.get(index).isExpired()) {
-        ssdpServices.set(index, ssdpService);
-        isNew = true;
-      }
-      if (isNew) {
-        listener.onServiceDiscovered(ssdpService);
-      }
-    } else {
-      listener.onServiceAnnouncement(new SsdpServiceAnnouncement(ssdpResponse));
-    }
+    return socket;
   }
 
   private void receive(@NonNull MulticastSocket socket) {
     final byte[] receiveData = new byte[1024];
     final DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-    isRunning = true;
     while (isRunning) {
       try {
-        receive(socket, receivePacket);
+        socket.receive(receivePacket);
+        Log.d(LOG_TAG, "receive: answer received from " + receivePacket.getAddress());
+        final SsdpResponse ssdpResponse = parse(receivePacket);
+        if (ssdpResponse == null) {
+          Log.e(LOG_TAG, "receive: unable to parse response");
+        } else if (ssdpResponse.getType() == SsdpResponse.Type.DISCOVERY_RESPONSE) {
+          final SsdpService ssdpService = new SsdpService(ssdpResponse);
+          // Handle cache
+          final int index = ssdpServices.indexOf(ssdpService);
+          boolean isNew = false;
+          if (index < 0) {
+            ssdpServices.add(ssdpService);
+            isNew = true;
+          } else if (ssdpServices.get(index).isExpired()) {
+            ssdpServices.set(index, ssdpService);
+            isNew = true;
+          }
+          if (isNew) {
+            listener.onServiceDiscovered(ssdpService);
+          }
+        } else {
+          listener.onServiceAnnouncement(new SsdpServiceAnnouncement(ssdpResponse));
+        }
       } catch (IOException iOException) {
         Log.e(LOG_TAG, "receive: unexpected error", iOException);
       }
     }
-    socket.close();
   }
 
   @Nullable
