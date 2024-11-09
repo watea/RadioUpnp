@@ -36,6 +36,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.ssdp.SsdpClient;
 import com.watea.radio_upnp.ssdp.SsdpService;
 import com.watea.radio_upnp.ssdp.SsdpServiceAnnouncement;
@@ -123,18 +124,27 @@ public class AndroidUpnpService extends android.app.Service {
     public void onFailed(@NonNull Exception exception) {
       Log.d(LOG_TAG, "DiscoveryListener.onFailed: ", exception);
     }
+
+    @Override
+    public void onStop() {
+      for (final Device device : devices) {
+        listeners.forEach(listener -> {
+          listener.onDeviceRemove(device);
+          device.getEmbeddedDevices().forEach(listener::onDeviceRemove);
+        });
+      }
+    }
   };
   private final SsdpClient ssdpClient = new SsdpClient(ssdpClientListener);
   private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
-      final ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-      final NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-      boolean isConnected = (activeNetwork != null) && activeNetwork.isConnectedOrConnecting();
-      boolean isWiFi = (activeNetwork != null) && (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI);
-      if (isConnected && isWiFi) {
-        ssdpClient.start();
-      } else if (!isConnected && isWiFi) {
+      if (new NetworkProxy(AndroidUpnpService.this).hasWifiIpAddress()) {
+        if (!ssdpClient.isStarted()) {
+          devices.clear();
+          ssdpClient.start();
+        }
+      } else {
         ssdpClient.stop();
       }
     }

@@ -77,9 +77,10 @@ public class SsdpClient {
   private static final String EXPIRES = "EXPIRES";
   private static final byte[] B_CRLF = S_CRLF.getBytes(UTF_8);
   private final Listener listener;
-  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   // Cache
   private final List<SsdpService> ssdpServices = new ArrayList<>();
+  @Nullable
+  private ScheduledExecutorService executor = null;
   private boolean isRunning;
   @Nullable
   private DatagramSocket searchSocket = null;
@@ -110,6 +111,7 @@ public class SsdpClient {
       listenSocket.setNetworkInterface(networkInterface);
       listenSocket.joinGroup(group, networkInterface);
       // Search
+      executor = Executors.newSingleThreadScheduledExecutor();
       executor.scheduleWithFixedDelay(this::search, 0, DELAY, TimeUnit.SECONDS);
       // Receive on both ports unicast and multicast responses
       isRunning = true;
@@ -124,7 +126,10 @@ public class SsdpClient {
 
   public void stop() {
     isRunning = false;
-    executor.shutdown();
+    listener.onStop();
+    if (executor != null) {
+      executor.shutdown();
+    }
     if (searchSocket != null) {
       searchSocket.close();
     }
@@ -250,11 +255,17 @@ public class SsdpClient {
     return -1;
   }
 
+  public boolean isStarted() {
+    return isRunning;
+  }
+
   public interface Listener {
     void onServiceDiscovered(@NonNull SsdpService service);
 
     void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement);
 
     void onFailed(@NonNull Exception exception);
+
+    void onStop();
   }
 }
