@@ -103,13 +103,8 @@ public class SsdpClient {
       listenSocket = new MulticastSocket(null);
       listenSocket.setReuseAddress(true);
       listenSocket.bind(new InetSocketAddress(SSDP_PORT));
-      // Set the multicast address and port
-      final InetSocketAddress group = new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT); // Port unused
-      // Get the network interface (wlan0 for Wi-Fi)
-      final NetworkInterface networkInterface = NetworkInterface.getByName(WLAN);
-      // Join the multicast group on the specified network interface
-      listenSocket.setNetworkInterface(networkInterface);
-      listenSocket.joinGroup(group, networkInterface);
+      // Join the multicast group on the specified network interface (wlan0 for Wi-Fi)
+      listenSocket.joinGroup(new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT), NetworkInterface.getByName(WLAN));
       // Search
       executor = Executors.newSingleThreadScheduledExecutor();
       executor.scheduleWithFixedDelay(this::search, 0, DELAY, TimeUnit.SECONDS);
