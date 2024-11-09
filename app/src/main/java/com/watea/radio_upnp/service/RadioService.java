@@ -96,6 +96,7 @@ public class RadioService
     new MediaSessionCompatCallback();
   private final ActionController actionController = new ActionController();
   private final ContentProvider contentProvider = new ContentProvider();
+  @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
@@ -109,10 +110,12 @@ public class RadioService
     }
   };
   private NotificationManagerCompat notificationManager;
+  @Nullable
   private Radio radio = null;
   private MediaSessionCompat session;
   private Radios radios;
   private RadioHttpServer radioHttpServer;
+  @Nullable
   private PlayerAdapter playerAdapter = null;
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
@@ -124,6 +127,7 @@ public class RadioService
       }
     };
   private boolean isAllowedToRewind = false;
+  @Nullable
   private String lockKey = null;
   private final RadioHandler.Controller radioHandlerController = new RadioHandler.Controller() {
     @NonNull
@@ -519,6 +523,7 @@ public class RadioService
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       Log.e(LOG_TAG, "MediaSessionCompatCallback.onPrepareFromMediaId");
       // Ensure robustness
+      assert upnpService != null;
       upnpService.getActionController().release();
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
@@ -590,11 +595,13 @@ public class RadioService
 
     @Override
     public void onPlay() {
+      assert playerAdapter != null;
       playerAdapter.play();
     }
 
     @Override
     public void onPause() {
+      assert playerAdapter != null;
       playerAdapter.pause();
     }
 
@@ -610,6 +617,7 @@ public class RadioService
 
     @Override
     public void onRewind() {
+      assert radio != null;
       onPrepareFromMediaId(radio);
     }
 
@@ -624,6 +632,7 @@ public class RadioService
     }
 
     private void skipTo(int direction) {
+      assert radio != null;
       onPrepareFromMediaId(radios.getRadioFrom(radio, direction));
     }
 
@@ -634,6 +643,7 @@ public class RadioService
 
     private void abort(@NonNull String log) {
       Log.d(LOG_TAG, log);
+      assert lockKey != null;
       onPlaybackStateChange(
         PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_STOPPED).build(),
         lockKey);

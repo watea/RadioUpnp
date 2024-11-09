@@ -57,7 +57,7 @@ public class ModifyFragment extends MainActivityFragment {
         tell(R.string.not_to_delete);
       }
     };
-  private RadiosModifyAdapter radiosModifyAdapter = null;
+  private RadiosModifyAdapter radiosModifyAdapter;
 
   @Override
   public void onResume() {

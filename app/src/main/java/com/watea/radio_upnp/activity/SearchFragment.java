@@ -54,6 +54,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class SearchFragment extends MainActivityFragment {
   private static final String LOG_TAG = SearchFragment.class.getSimpleName();
@@ -79,7 +80,7 @@ public class SearchFragment extends MainActivityFragment {
   @NonNull
   private static String extractValue(@NonNull Element element, @NonNull String tag) {
     final Elements elements = element.getElementsByTag(tag);
-    return elements.isEmpty() ? "" : elements.first().ownText();
+    return elements.isEmpty() ? "" : Objects.requireNonNull(elements.first()).ownText();
   }
 
   @Override

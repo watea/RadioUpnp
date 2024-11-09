@@ -92,7 +92,7 @@ public class MainFragment extends MainActivityFragment {
   private MainActivity.UserHint dlnaEnableUserHint;
   private MainActivity.UserHint preferredRadiosUserHint;
   private boolean isPreferredRadios = false;
-  private RadiosMainAdapter radiosMainAdapter = null;
+  private RadiosMainAdapter radiosMainAdapter;
 
   @Override
   public void onResume() {

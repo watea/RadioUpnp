@@ -44,8 +44,9 @@ import com.watea.radio_upnp.service.NetworkProxy;
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
   protected static final int DEFAULT_RESOURCE = -1;
+  @Nullable
   private View view = null;
-  private ViewGroup container = null;
+  private ViewGroup container;
   private int yScrollPosition = 0;
 
   // Required empty constructor

@@ -39,6 +39,7 @@ import java.net.URL;
 
 public class ItemModifyFragment extends ItemFragment {
   private static final String LOG_TAG = ItemModifyFragment.class.getSimpleName();
+  @Nullable
   private Radio radio = null;
 
   // Must be called before creation
@@ -70,6 +71,7 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
+      assert radio != null;
       if (getMainActivity().isCurrentRadio(radio)) {
         tell(R.string.not_to_modify);
       } else {
@@ -92,6 +94,7 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     super.onCreateView(view, container);
+    assert radio != null;
     nameEditText.setText(radio.getName());
     urlEditText.setText(radio.getURL().toString());
     final URL webPageURL = radio.getWebPageURL();

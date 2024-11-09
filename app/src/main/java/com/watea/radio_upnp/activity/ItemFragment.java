@@ -68,6 +68,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   protected UrlWatcher iconWatcher;
   private Button iconSearchButton;
   private ProgressBar iconSearchProgressBar;
+  @Nullable
   private Bitmap restoredBitmap = null;
 
   @Override

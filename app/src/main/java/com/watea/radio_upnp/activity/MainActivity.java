@@ -111,8 +111,10 @@ public class MainActivity
         put(DonationFragment.class, R.id.action_donate);
       }
     };
+  @Nullable
   private static Radios radios = null;
   private final List<Listener> listeners = new ArrayList<>();
+  @Nullable
   private Radio currentRadio = null;
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
@@ -130,8 +132,9 @@ public class MainActivity
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
   private Theme theme = Theme.DARK;
+  @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
-  private UpnpDevicesAdapter upnpDevicesAdapter = null;
+  private UpnpDevicesAdapter upnpDevicesAdapter;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
@@ -156,10 +159,11 @@ public class MainActivity
       upnpDevicesAdapter.resetRemoteDevices();
     }
   };
-  private Intent newIntent = null;
-  private NetworkProxy networkProxy = null;
+  private Intent newIntent;
+  private NetworkProxy networkProxy;
   private ActivityResultLauncher<Intent> importExportLauncher;
-  private ImportExportAction importExportAction;
+  @Nullable
+  private ImportExportAction importExportAction = null;
   private String selectedDeviceIdentity;
   private final UpnpDevicesAdapter.Listener upnpDevicesAdapterListener =
     new UpnpDevicesAdapter.Listener() {
@@ -214,6 +218,7 @@ public class MainActivity
   }
 
   public void setCurrentRadio(@Nullable String radioId) {
+    assert radios != null;
     currentRadio = (radioId == null) ? null : radios.getRadioFrom(radioId);
     listeners.forEach(listener -> listener.onNewCurrentRadio(currentRadio));
   }
@@ -470,6 +475,7 @@ public class MainActivity
           if (data != null && data.getData() != null) {
             final Uri uri = result.getData().getData();
             if (uri != null) {
+              assert importExportAction != null;
               switch (importExportAction) {
                 case CSV_EXPORT:
                   exportTo(uri, Radios.MIME_CSV);
@@ -757,6 +763,7 @@ public class MainActivity
           Log.e(LOG_TAG, "exportTo: internal failure, file not created");
           tell(R.string.export_failed);
         } else {
+          assert radios != null;
           radios.write(outputStream, type);
           tell(getString(R.string.export_done) + getString(R.string.app_name));
         }
@@ -790,6 +797,7 @@ public class MainActivity
       if (inputStream == null) {
         Log.e(LOG_TAG, "importFrom: internal failure");
       } else {
+        assert radios != null;
         tell(radios.importFrom(inputStream) ? R.string.import_successful : R.string.import_no_data);
         return;
       }
