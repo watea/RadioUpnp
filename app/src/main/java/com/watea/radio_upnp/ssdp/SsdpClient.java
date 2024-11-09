@@ -144,13 +144,13 @@ public class SsdpClient {
     }
   }
 
-  private void receive(@NonNull DatagramSocket socket) {
+  private void receive(@NonNull DatagramSocket datagramSocket) {
     final byte[] receiveData = new byte[1024];
     final DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
     try {
-      setSoTimeout(socket);
+      setSoTimeout(datagramSocket);
       while (isRunning) {
-        socket.receive(receivePacket);
+        datagramSocket.receive(receivePacket);
         final SsdpResponse ssdpResponse = parse(receivePacket);
         if (ssdpResponse == null) {
           Log.e(LOG_TAG, "receive: unable to parse response");
@@ -179,12 +179,12 @@ public class SsdpClient {
   }
 
   @Nullable
-  private SsdpResponse parse(@NonNull DatagramPacket packet) {
-    final byte[] data = packet.getData();
+  private SsdpResponse parse(@NonNull DatagramPacket datagramPacket) {
+    final byte[] data = datagramPacket.getData();
     // Find position of the last header data
     int endOfHeaders = findEndOfHeaders(data);
     if (endOfHeaders == -1) {
-      endOfHeaders = packet.getLength();
+      endOfHeaders = datagramPacket.getLength();
     }
     // Retrieve all header lines
     final List<String> headerLines = Arrays.asList(new String(Arrays.copyOfRange(data, 0, endOfHeaders)).split(S_CRLF));
@@ -211,9 +211,9 @@ public class SsdpClient {
     // Determine expiry depending on the presence of cache-control or expires headers
     final long expiry = parseCacheHeader(headers);
     // Let's see if we have a body. If we do, let's copy the byte array and put it into the response for the user to get.
-    final int endOfBody = packet.getLength();
+    final int endOfBody = datagramPacket.getLength();
     final byte[] body = (endOfBody > endOfHeaders + 4) ? Arrays.copyOfRange(data, endOfHeaders + 4, endOfBody) : null;
-    return new SsdpResponse(type, headers, body, expiry, packet.getAddress());
+    return new SsdpResponse(type, headers, body, expiry, datagramPacket.getAddress());
   }
 
   // Parse both Cache-Control and Expires headers to determine if there is any caching strategy requested by service.
