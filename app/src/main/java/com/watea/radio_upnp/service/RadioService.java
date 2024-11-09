@@ -546,8 +546,9 @@ public class RadioService
       }
       final String identity = extras.getString(getString(R.string.key_upnp_device));
       final Device selectedDevice = (identity == null) ? null : getSelectedDevice(identity);
+      final Uri serverUri = radioHttpServer.getUri();
       // UPnP not accepted if environment not OK: force STOP
-      if ((identity != null) && (selectedDevice == null)) {
+      if ((identity != null) && ((selectedDevice == null) || (serverUri == null))) {
         abort("onPrepareFromMediaId: can't process UPnP device");
         return;
       }
@@ -567,14 +568,12 @@ public class RadioService
           RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey));
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       } else {
-        final Uri serverUri = radioHttpServer.getUri();
-        assert serverUri != null;
         playerAdapter = new UpnpPlayerAdapter(
           RadioService.this,
           RadioService.this,
           radio,
           lockKey,
-          RadioHandler.getHandledUri(radioHttpServer.getUri(), radio, lockKey),
+          RadioHandler.getHandledUri(serverUri, radio, lockKey),
           radioHttpServer.createLogoFile(radio),
           selectedDevice,
           actionController,
