@@ -95,7 +95,7 @@ public class AndroidUpnpService extends android.app.Service {
 
     @Override
     public void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement) {
-      Log.d(LOG_TAG, "SsdpServiceAnnouncement: " + announcement);
+      Log.d(LOG_TAG, "SsdpService Announcement: " + announcement);
       final String uUID = announcement.getSerialNumber();
       final SsdpServiceAnnouncement.Status status = announcement.getStatus();
       final boolean isAlive = (status != SsdpServiceAnnouncement.Status.BYEBYE);

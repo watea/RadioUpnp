@@ -32,10 +32,12 @@ import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -54,8 +56,9 @@ import java.util.regex.Pattern;
 public class SsdpClient {
   private static final String LOG_TAG = SsdpClient.class.getSimpleName();
   private static final String MULTICAST_ADDRESS = "239.255.255.250";
+  private static final String WLAN = "wlan0";
   private static final int SSDP_PORT = 1900;
-  private static final int DELAY = 3; // s
+  private static final int DELAY = 5; // s
   private static final String SEARCH_MESSAGE =
     "M-SEARCH * HTTP/1.1\r\n" +
       "HOST: 239.255.255.250:1900\r\n" +
@@ -78,28 +81,41 @@ public class SsdpClient {
   // Cache
   private final List<SsdpService> ssdpServices = new ArrayList<>();
   private boolean isRunning;
-  // Ephemeral socket
   @Nullable
-  private MulticastSocket socket = null;
-  // For device responding on port 1900
+  private DatagramSocket searchSocket = null;
   @Nullable
-  private MulticastSocket listeningSocket = null;
+  private MulticastSocket listenSocket = null;
 
   public SsdpClient(@NonNull Listener listener) {
     this.listener = listener;
   }
 
-  // Network shall be available
+  private static void setSoTimeout(@NonNull DatagramSocket datagramSocket) throws SocketException {
+    datagramSocket.setSoTimeout(DELAY * 1000);
+  }
+
+  // Network shall be available (implementation dependant)
   public void start() {
     try {
-      socket = getSocket(0);
-      listeningSocket = getSocket(SSDP_PORT);
+      searchSocket = new DatagramSocket();
+      // Late binding in case port is already used
+      listenSocket = new MulticastSocket(null);
+      listenSocket.setReuseAddress(true);
+      listenSocket.bind(new InetSocketAddress(SSDP_PORT));
+      // Set the multicast address and port
+      final InetSocketAddress group = new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT); // Port unused
+      // Get the network interface (wlan0 for Wi-Fi)
+      final NetworkInterface networkInterface = NetworkInterface.getByName(WLAN);
+      // Join the multicast group on the specified network interface
+      listenSocket.setNetworkInterface(networkInterface);
+      listenSocket.joinGroup(group, networkInterface);
       // Search
       executor.scheduleWithFixedDelay(this::search, 0, DELAY, TimeUnit.SECONDS);
-      // Receive
+      // Receive on both ports unicast and multicast responses
       isRunning = true;
-      new Thread(() -> receive(socket)).start();
-      new Thread(() -> receive(listeningSocket)).start();
+      ssdpServices.clear();
+      new Thread(() -> receive(searchSocket)).start();
+      new Thread(() -> receive(listenSocket)).start();
     } catch (Exception exception) {
       this.listener.onFailed(exception);
       Log.e(LOG_TAG, "start: failed!", exception);
@@ -109,11 +125,11 @@ public class SsdpClient {
   public void stop() {
     isRunning = false;
     executor.shutdown();
-    if (socket != null) {
-      socket.close();
+    if (searchSocket != null) {
+      searchSocket.close();
     }
-    if (listeningSocket != null) {
-      listeningSocket.close();
+    if (listenSocket != null) {
+      listenSocket.close();
     }
   }
 
@@ -121,35 +137,20 @@ public class SsdpClient {
     try {
       final byte[] sendData = SEARCH_MESSAGE.getBytes();
       final DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(MULTICAST_ADDRESS), SSDP_PORT);
-      assert socket != null;
-      socket.send(packet);
+      assert searchSocket != null;
+      searchSocket.send(packet);
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "SSDP search failed!", iOException);
     }
   }
 
-  @NonNull
-  private MulticastSocket getSocket(int port) throws IOException {
-    final MulticastSocket socket = new MulticastSocket(port);
-    socket.setSoTimeout(DELAY / 2);
-    socket.setReuseAddress(true);
-    // Set the multicast address and port
-    final InetSocketAddress group = new InetSocketAddress(MULTICAST_ADDRESS, socket.getLocalPort());
-    // Get the network interface (wlan0 for Wi-Fi)
-    final NetworkInterface networkInterface = NetworkInterface.getByName("wlan0");
-    // Join the multicast group on the specified network interface
-    socket.setNetworkInterface(networkInterface);
-    socket.joinGroup(group, networkInterface);
-    return socket;
-  }
-
-  private void receive(@NonNull MulticastSocket socket) {
+  private void receive(@NonNull DatagramSocket socket) {
     final byte[] receiveData = new byte[1024];
     final DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-    while (isRunning) {
-      try {
+    try {
+      setSoTimeout(socket);
+      while (isRunning) {
         socket.receive(receivePacket);
-        Log.d(LOG_TAG, "receive: answer received from " + receivePacket.getAddress());
         final SsdpResponse ssdpResponse = parse(receivePacket);
         if (ssdpResponse == null) {
           Log.e(LOG_TAG, "receive: unable to parse response");
@@ -171,9 +172,9 @@ public class SsdpClient {
         } else {
           listener.onServiceAnnouncement(new SsdpServiceAnnouncement(ssdpResponse));
         }
-      } catch (IOException iOException) {
-        Log.e(LOG_TAG, "receive: unexpected error", iOException);
       }
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "receive: unexpected error", iOException);
     }
   }
 
