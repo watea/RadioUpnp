@@ -88,7 +88,7 @@ public class AndroidUpnpService extends android.app.Service {
         try {
           new Device(service, deviceCallback);
         } catch (IOException | XmlPullParserException exception) {
-          Log.d(LOG_TAG, "DiscoveryListener.onServiceDiscovered: ", exception);
+          Log.d(LOG_TAG, "onServiceDiscovered: ", exception);
         }
       }).start();
     }
@@ -120,8 +120,18 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     @Override
-    public void onFailed(@NonNull Exception exception) {
-      Log.d(LOG_TAG, "DiscoveryListener.onFailed: ", exception);
+    public void onReceptionFailed() {
+      Log.d(LOG_TAG, "onReceptionFailed");
+      // Restart the all stuff
+      ssdpClient.stop();
+      ssdpClient.start();
+    }
+
+    @Override
+    public void onFatalError() {
+      Log.d(LOG_TAG, "onFatalError");
+      ssdpClient.stop();
+      listeners.forEach(Listener::onFatalError);
     }
 
     @Override
@@ -132,6 +142,7 @@ public class AndroidUpnpService extends android.app.Service {
           device.getEmbeddedDevices().forEach(listener::onDeviceRemove);
         });
       }
+      devices.clear();
     }
   };
   private final SsdpClient ssdpClient = new SsdpClient(ssdpClientListener);
@@ -170,11 +181,17 @@ public class AndroidUpnpService extends android.app.Service {
   }
 
   public interface Listener {
-    void onDeviceAdd(@NonNull Device device);
+    default void onDeviceAdd(@NonNull Device device) {
+    }
 
-    void onDeviceRemove(@NonNull Device device);
+    default void onDeviceRemove(@NonNull Device device) {
+    }
 
-    void onIcon(@NonNull Device device);
+    default void onIcon(@NonNull Device device) {
+    }
+
+    default void onFatalError() {
+    }
   }
 
   public class UpnpService extends android.os.Binder {

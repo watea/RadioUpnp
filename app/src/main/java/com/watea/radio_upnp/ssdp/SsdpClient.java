@@ -37,6 +37,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
+import java.net.SocketTimeoutException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -111,8 +112,8 @@ public class SsdpClient {
       new Thread(() -> receive(searchSocket)).start();
       new Thread(() -> receive(listenSocket)).start();
     } catch (Exception exception) {
-      this.listener.onFailed(exception);
       Log.e(LOG_TAG, "start: failed!", exception);
+      listener.onFatalError();
     }
   }
 
@@ -169,7 +170,13 @@ public class SsdpClient {
           listener.onServiceAnnouncement(new SsdpServiceAnnouncement(ssdpResponse));
         }
       } catch (IOException iOException) {
-        Log.e(LOG_TAG, "receive: error", iOException);
+        if (iOException instanceof SocketTimeoutException) {
+          Log.d(LOG_TAG, "receive: timeout");
+        } else {
+          Log.e(LOG_TAG, "receive:", iOException);
+          this.listener.onReceptionFailed();
+          break;
+        }
       }
     }
   }
@@ -255,7 +262,9 @@ public class SsdpClient {
 
     void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement);
 
-    void onFailed(@NonNull Exception exception);
+    void onReceptionFailed();
+
+    void onFatalError();
 
     void onStop();
   }

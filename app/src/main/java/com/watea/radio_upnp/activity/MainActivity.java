@@ -136,6 +136,13 @@ public class MainActivity
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
+    private AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
+      @Override
+      public void onFatalError() {
+        tell(R.string.upnp_error);
+      }
+    };
+
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       upnpService = (AndroidUpnpService.UpnpService) service;
@@ -145,6 +152,7 @@ public class MainActivity
         upnpService.getAliveDevices().forEach(upnpDevicesAdapter::onDeviceAdd);
         // Get ready for future device advertisements
         upnpService.addListener(upnpDevicesAdapter);
+        upnpService.addListener(upnpListener);
       }
     }
 
