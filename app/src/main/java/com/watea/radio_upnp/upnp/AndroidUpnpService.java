@@ -58,7 +58,7 @@ public class AndroidUpnpService extends android.app.Service {
   private final SsdpClient.Listener ssdpClientListener = new SsdpClient.Listener() {
     private final Device.Callback deviceCallback = new Device.Callback() {
       // Add device if of type DEVICE and not already known
-      private void addDevice(@NonNull Device device) {
+      private synchronized void addDevice(@NonNull Device device) {
         if (device.getDeviceType().startsWith(DEVICE) && devices.stream().noneMatch(device::hasUUID)) {
           Log.d(LOG_TAG, "Device added: " + device.getDisplayString());
           devices.add(device);

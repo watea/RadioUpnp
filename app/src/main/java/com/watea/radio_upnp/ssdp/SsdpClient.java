@@ -37,7 +37,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -91,14 +90,12 @@ public class SsdpClient {
     this.listener = listener;
   }
 
-  private static void setSoTimeout(@NonNull DatagramSocket datagramSocket) throws SocketException {
-    datagramSocket.setSoTimeout(DELAY * 1000);
-  }
-
   // Network shall be available (implementation dependant)
   public void start() {
     try {
+      // Search socket and timeout
       searchSocket = new DatagramSocket();
+      searchSocket.setSoTimeout(DELAY * 1000);
       // Late binding in case port is already used
       listenSocket = new MulticastSocket(null);
       listenSocket.setReuseAddress(true);
@@ -147,9 +144,8 @@ public class SsdpClient {
   private void receive(@NonNull DatagramSocket datagramSocket) {
     final byte[] receiveData = new byte[1024];
     final DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-    try {
-      setSoTimeout(datagramSocket);
-      while (isRunning) {
+    while (isRunning) {
+      try {
         datagramSocket.receive(receivePacket);
         final SsdpResponse ssdpResponse = parse(receivePacket);
         if (ssdpResponse == null) {
@@ -172,9 +168,9 @@ public class SsdpClient {
         } else {
           listener.onServiceAnnouncement(new SsdpServiceAnnouncement(ssdpResponse));
         }
+      } catch (IOException iOException) {
+        Log.e(LOG_TAG, "receive: error", iOException);
       }
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "receive: unexpected error", iOException);
     }
   }
 
