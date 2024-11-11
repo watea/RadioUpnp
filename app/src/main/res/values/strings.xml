@@ -80,7 +80,7 @@
     <string name="donation_alert_dialog_title">Error occurred!</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
     <string name="dar_fm_failure">Note: trouble while fetching data in <b>OnRad.io</b> server</string>
-    <string name="upnp_error">UPnP service failed, please restart app!</string>
+    <string name="upnp_error">UPnP service failed, please check if network is available!</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>
     <string name="not_to_modify">Current radio cannot be edited!</string>

@@ -66,11 +66,11 @@ public class MainFragment extends MainActivityFragment {
     new RadiosMainAdapter.Listener() {
       @Override
       public void onClick(@NonNull Radio radio) {
-        if (getNetworkProxy().isDeviceOffline()) {
-          tell(R.string.no_internet);
-        } else {
+        if (getNetworkProxy().isDeviceOnline()) {
           getMainActivity().startReading(radio);
           radioLongPressUserHint.show();
+        } else {
+          tell(R.string.no_internet);
         }
       }
 
@@ -217,7 +217,7 @@ public class MainFragment extends MainActivityFragment {
   }
 
   private void wifiTest(@NonNull Runnable runnable) {
-    if (getNetworkProxy().hasWifiIpAddress()) {
+    if (getNetworkProxy().isOnWifi()) {
       runnable.run();
     } else {
       tell(R.string.lan_required);

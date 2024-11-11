@@ -128,7 +128,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (getNetworkProxy().isDeviceOffline()) {
+      if (!getNetworkProxy().isDeviceOnline()) {
         tell(R.string.no_internet);
       } else if (urlWatcher.url == null) {
         tell(R.string.connection_test_aborted);
@@ -220,9 +220,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
   private void iconSearch() {
     flushKeyboard();
-    if (getNetworkProxy().isDeviceOffline()) {
-      tell(R.string.no_internet);
-    } else {
+    if (getNetworkProxy().isDeviceOnline()) {
       final URL iconUrl = iconWatcher.url;
       final URL webPageUrl = webPageWatcher.url;
       if ((iconUrl == null) && (webPageUrl == null)) {
@@ -235,6 +233,8 @@ public abstract class ItemFragment extends MainActivityFragment {
           new IconUrlSearcher(iconUrl);
         }
       }
+    } else {
+      tell(R.string.no_internet);
     }
   }
 

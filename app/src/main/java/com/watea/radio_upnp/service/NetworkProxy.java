@@ -59,21 +59,13 @@ public class NetworkProxy {
     return getUri("127.0.0.1", port);
   }
 
-  // Only Wifi and Cellular is supported
-  public boolean isDeviceOffline() {
-    if (connectivityManager == null) {
-      return true;
-    } else {
-      final NetworkCapabilities capabilities =
-        connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
-      return (capabilities == null) ||
-        !(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-          capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
-    }
+  public boolean isOnWifi() {
+    return isOnNetworkCapability(NetworkCapabilities.TRANSPORT_WIFI);
   }
 
-  public boolean hasWifiIpAddress() {
-    return (getIpAddress() != null);
+  // Only Wifi and Cellular is supported
+  public boolean isDeviceOnline() {
+    return isOnWifi() || isOnNetworkCapability(NetworkCapabilities.TRANSPORT_CELLULAR);
   }
 
   @Nullable
@@ -97,5 +89,15 @@ public class NetworkProxy {
       }
     }
     return null;
+  }
+
+  public boolean isOnNetworkCapability(int networkCapability) {
+    if (connectivityManager == null) {
+      return false;
+    } else {
+      final NetworkCapabilities capabilities =
+        connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
+      return (capabilities != null) && capabilities.hasTransport(networkCapability);
+    }
   }
 }

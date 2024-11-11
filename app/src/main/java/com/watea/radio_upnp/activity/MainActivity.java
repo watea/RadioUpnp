@@ -136,7 +136,7 @@ public class MainActivity
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
-    private AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
+    private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
       @Override
       public void onFatalError() {
         tell(R.string.upnp_error);
@@ -178,8 +178,12 @@ public class MainActivity
       @Override
       public void onRowClick(@NonNull Device device, boolean isSelected) {
         if (isSelected) {
-          startReading(null);
-          tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+          if (networkProxy.isOnWifi()) {
+            startReading(null);
+            tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+          } else {
+            tell(string.lan_required);
+          }
         } else {
           tell(R.string.no_dlna_selection);
         }
@@ -335,7 +339,7 @@ public class MainActivity
       radio,
       ((upnpService != null) &&
         (selectedDeviceIdentity != null) &&
-        networkProxy.hasWifiIpAddress()) ?
+        networkProxy.isOnWifi()) ?
         selectedDeviceIdentity : null);
   }
 

@@ -86,6 +86,8 @@ public class SsdpClient {
   private DatagramSocket searchSocket = null;
   @Nullable
   private MulticastSocket listenSocket = null;
+  @Nullable
+  private NetworkInterface networkInterface = null;
 
   public SsdpClient(@NonNull Listener listener) {
     this.listener = listener;
@@ -93,6 +95,7 @@ public class SsdpClient {
 
   // Network shall be available (implementation dependant)
   public void start() {
+    Log.d(LOG_TAG, "start: entering");
     try {
       // Search socket and timeout
       searchSocket = new DatagramSocket();
@@ -102,7 +105,8 @@ public class SsdpClient {
       listenSocket.setReuseAddress(true);
       listenSocket.bind(new InetSocketAddress(SSDP_PORT));
       // Join the multicast group on the specified network interface (wlan0 for Wi-Fi)
-      listenSocket.joinGroup(new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT), NetworkInterface.getByName(WLAN));
+      networkInterface = NetworkInterface.getByName(WLAN);
+      listenSocket.joinGroup(new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT), networkInterface);
       // Search
       executor = Executors.newSingleThreadScheduledExecutor();
       executor.scheduleWithFixedDelay(this::search, 0, DELAY, TimeUnit.SECONDS);
@@ -113,11 +117,13 @@ public class SsdpClient {
       new Thread(() -> receive(listenSocket)).start();
     } catch (Exception exception) {
       Log.e(LOG_TAG, "start: failed!", exception);
+      stop();
       listener.onFatalError();
     }
   }
 
   public void stop() {
+    Log.d(LOG_TAG, "stop: entering");
     isRunning = false;
     listener.onStop();
     if (executor != null) {
@@ -127,6 +133,13 @@ public class SsdpClient {
       searchSocket.close();
     }
     if (listenSocket != null) {
+      if (networkInterface != null) {
+        try {
+          listenSocket.leaveGroup(new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT), networkInterface);
+        } catch (IOException iOException) {
+          Log.e(LOG_TAG, "stop: unable to leave group!", iOException);
+        }
+      }
       listenSocket.close();
     }
   }
@@ -174,8 +187,6 @@ public class SsdpClient {
           Log.d(LOG_TAG, "receive: timeout");
         } else {
           Log.e(LOG_TAG, "receive:", iOException);
-          this.listener.onReceptionFailed();
-          break;
         }
       }
     }
@@ -261,8 +272,6 @@ public class SsdpClient {
     void onServiceDiscovered(@NonNull SsdpService service);
 
     void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement);
-
-    void onReceptionFailed();
 
     void onFatalError();
 

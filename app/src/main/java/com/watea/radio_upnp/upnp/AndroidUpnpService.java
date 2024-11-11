@@ -23,11 +23,12 @@
 
 package com.watea.radio_upnp.upnp;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
@@ -51,6 +52,11 @@ import java.util.stream.Collectors;
 public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
+  private final NetworkRequest networkRequest = new NetworkRequest.Builder()
+    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) // Not a VPN
+    .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) // Validated
+    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) // Internet
+    .build();
   private final Binder binder = new UpnpService();
   private final Set<Device> devices = new CopyOnWriteArraySet<>();
   private final ActionController actionController = new ActionController();
@@ -120,17 +126,8 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     @Override
-    public void onReceptionFailed() {
-      Log.d(LOG_TAG, "onReceptionFailed");
-      // Restart the all stuff
-      ssdpClient.stop();
-      ssdpClient.start();
-    }
-
-    @Override
     public void onFatalError() {
       Log.d(LOG_TAG, "onFatalError");
-      ssdpClient.stop();
       listeners.forEach(Listener::onFatalError);
     }
 
@@ -146,15 +143,20 @@ public class AndroidUpnpService extends android.app.Service {
     }
   };
   private final SsdpClient ssdpClient = new SsdpClient(ssdpClientListener);
-  private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+  private ConnectivityManager connectivityManager;
+  private NetworkProxy networkProxy;
+  private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
     @Override
-    public void onReceive(Context context, Intent intent) {
-      if (new NetworkProxy(AndroidUpnpService.this).hasWifiIpAddress()) {
-        if (!ssdpClient.isStarted()) {
-          devices.clear();
-          ssdpClient.start();
-        }
-      } else {
+    public void onAvailable(@NonNull Network network) {
+      if (!ssdpClient.isStarted() && networkProxy.isOnWifi()) {
+        devices.clear();
+        ssdpClient.start();
+      }
+    }
+
+    @Override
+    public void onLost(@NonNull Network network) {
+      if (!networkProxy.isOnWifi()) {
         ssdpClient.stop();
       }
     }
@@ -163,13 +165,15 @@ public class AndroidUpnpService extends android.app.Service {
   @Override
   public void onCreate() {
     super.onCreate();
-    registerReceiver(broadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+    connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+    connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+    networkProxy = new NetworkProxy(AndroidUpnpService.this);
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
-    unregisterReceiver(broadcastReceiver);
+    connectivityManager.unregisterNetworkCallback(networkCallback);
     ssdpClient.stop();
     listeners.clear();
   }
