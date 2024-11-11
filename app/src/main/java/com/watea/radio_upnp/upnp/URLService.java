@@ -25,6 +25,7 @@ package com.watea.radio_upnp.upnp;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -76,7 +77,9 @@ public class URLService {
 
   @Nullable
   public Bitmap getBitmap() throws IOException {
-    return BitmapFactory.decodeStream(getInputStream());
+    final BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inPreferredConfig = Bitmap.Config.ARGB_8888; // Enable transparency
+    return BitmapFactory.decodeStream(getInputStream(), null, options);
   }
 
   @NonNull

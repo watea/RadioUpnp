@@ -270,7 +270,7 @@ public class Device extends Asset {
         if ((stringWidth != null) && (stringHeight != null) && (stringUrl != null)) {
           final int width = Integer.parseInt(stringWidth);
           final int height = Integer.parseInt(stringHeight);
-          if ((icon == null) || (icon.getWidth() < width) && (icon.getHeight() < height)) {
+          if ((icon == null) || stringUrl.endsWith(".png")) {
             try {
               fetchIcon(new URI(stringUrl));
             } catch (Exception exception) {
