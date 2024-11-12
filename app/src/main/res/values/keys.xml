@@ -32,6 +32,7 @@
     <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
     <string name="key_preferred_radios_got_it">key_preferred_radios_got_it</string>
     <string name="key_information_press_got_it">key_information_press_got_it</string>
+    <string name="key_information_select_press_got_it">key_information_select_press_got_it</string>
     <string name="key_radio_icon_file">key_radio_icon_file</string>
     <string name="key_radio_index">key_radio_index</string>
     <string name="key_current_fragment">key_current_fragment</string>
@@ -40,4 +41,6 @@
     <!-- Bundles -->
     <string name="key_upnp_device">key_upnp_device</string>
     <string name="key_rate">key_rate</string>
+    <!-- Others -->
+    <string name="key_radio_information">Radio Information</string>
 </resources>

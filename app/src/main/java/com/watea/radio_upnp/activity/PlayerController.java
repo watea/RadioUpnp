@@ -24,7 +24,10 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v4.media.MediaBrowserCompat;
@@ -75,6 +78,8 @@ public class PlayerController {
   private final MainActivity.UserHint playLongPressUserHint;
   @NonNull
   private final MainActivity.UserHint informationPressUserHint;
+  @NonNull
+  private final MainActivity.UserHint informationSelectPressUserHint;
   @NonNull
   private final AlertDialog playlistAlertDialog;
   @NonNull
@@ -239,6 +244,8 @@ public class PlayerController {
       .new UserHint(R.string.key_play_long_press_got_it, R.string.play_long_press);
     informationPressUserHint = this.mainActivity
       .new UserHint(R.string.key_information_press_got_it, R.string.information_press, 40);
+    informationSelectPressUserHint = this.mainActivity
+      .new UserHint(R.string.key_information_select_press_got_it, R.string.information_select_press, 2);
     final SimpleAdapter playlistAdapter = new SimpleAdapter(
       mainActivity,
       playInformations,
@@ -248,6 +255,18 @@ public class PlayerController {
     playlistAlertDialog = new AlertDialog.Builder(mainActivity)
       .setAdapter(playlistAdapter, null)
       .create();
+    playlistAlertDialog.getListView().setOnItemClickListener((parent, rowView, position, id) -> {
+      // Get the selected item from the playlist
+      final Map<String, String> selectedItem = playInformations.get(position);
+      final String selectedInformation = selectedItem.get(RadioService.INFORMATION);
+      // Copy selectedInformation to clipboard
+      final ClipboardManager clipboard = (ClipboardManager) mainActivity.getSystemService(Context.CLIPBOARD_SERVICE);
+      clipboard.setPrimaryClip(ClipData.newPlainText(mainActivity.getString(R.string.key_radio_information), selectedInformation));
+      // Display a toast message to inform the user
+      mainActivity.tell(R.string.copied_to_clipboard);
+      // Dismiss the dialog after handling the click
+      playlistAlertDialog.dismiss();
+    });
     // Create view
     albumArtImageView = view.findViewById(R.id.album_art_image_view);
     albumArtImageView.setOnClickListener(v -> {
@@ -265,6 +284,7 @@ public class PlayerController {
           this.mainActivity.tell(R.string.radio_no_playlist);
         } else {
           playlistAlertDialog.show();
+          informationSelectPressUserHint.show();
         }
       }
     });
