@@ -175,8 +175,8 @@ public class UpnpDevicesAdapter
     final int position = devices.indexOf(device);
     if (position >= 0) {
       devices.remove(device);
-      onCountChange(devices.isEmpty());
       notifyItemRemoved(position);
+      onCountChange(devices.isEmpty());
     }
   }
 
