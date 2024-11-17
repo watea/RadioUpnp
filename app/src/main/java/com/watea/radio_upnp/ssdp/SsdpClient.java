@@ -58,7 +58,8 @@ public class SsdpClient {
   private static final String MULTICAST_ADDRESS = "239.255.255.250";
   private static final String WLAN = "wlan0";
   private static final int SSDP_PORT = 1900;
-  private static final int DELAY = 5; // s
+  private static final int SEARCH_DELAY = 500; // ms
+  private static final int SEARCH_REPEAT = 3;
   private static final String SEARCH_MESSAGE =
     "M-SEARCH * HTTP/1.1\r\n" +
       "HOST: 239.255.255.250:1900\r\n" +
@@ -79,8 +80,6 @@ public class SsdpClient {
   private final Listener listener;
   // Cache
   private final List<SsdpService> ssdpServices = new ArrayList<>();
-  @Nullable
-  private ScheduledExecutorService executor = null;
   private boolean isRunning;
   @Nullable
   private DatagramSocket searchSocket = null;
@@ -99,7 +98,7 @@ public class SsdpClient {
     try {
       // Search socket and timeout
       searchSocket = new DatagramSocket();
-      searchSocket.setSoTimeout(DELAY * 1000);
+      searchSocket.setSoTimeout(SEARCH_DELAY * SEARCH_REPEAT);
       // Late binding in case port is already used
       listenSocket = new MulticastSocket(null);
       listenSocket.setReuseAddress(true);
@@ -108,8 +107,11 @@ public class SsdpClient {
       networkInterface = NetworkInterface.getByName(WLAN);
       listenSocket.joinGroup(new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT), networkInterface);
       // Search
-      executor = Executors.newSingleThreadScheduledExecutor();
-      executor.scheduleWithFixedDelay(this::search, 0, DELAY, TimeUnit.SECONDS);
+      final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+      for (int i = 0; i < SEARCH_REPEAT; i++) {
+        scheduler.schedule(this::search, i * SEARCH_DELAY, TimeUnit.MILLISECONDS);
+      }
+      scheduler.shutdown();
       // Receive on both ports unicast and multicast responses
       isRunning = true;
       ssdpServices.clear();
@@ -126,9 +128,6 @@ public class SsdpClient {
     Log.d(LOG_TAG, "stop: entering");
     isRunning = false;
     listener.onStop();
-    if (executor != null) {
-      executor.shutdown();
-    }
     if (searchSocket != null) {
       searchSocket.close();
     }
@@ -145,13 +144,14 @@ public class SsdpClient {
   }
 
   public void search() {
-    try {
-      final byte[] sendData = SEARCH_MESSAGE.getBytes();
-      final DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(MULTICAST_ADDRESS), SSDP_PORT);
-      assert searchSocket != null;
-      searchSocket.send(packet);
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "SSDP search failed!", iOException);
+    if ((searchSocket != null) && !searchSocket.isClosed()) {
+      try {
+        final byte[] sendData = SEARCH_MESSAGE.getBytes();
+        final DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(MULTICAST_ADDRESS), SSDP_PORT);
+        searchSocket.send(packet);
+      } catch (IOException iOException) {
+        Log.e(LOG_TAG, "SSDP search failed!", iOException);
+      }
     }
   }
 
@@ -164,23 +164,25 @@ public class SsdpClient {
         final SsdpResponse ssdpResponse = parse(receivePacket);
         if (ssdpResponse == null) {
           Log.e(LOG_TAG, "receive: unable to parse response");
-        } else if (ssdpResponse.getType() == SsdpResponse.Type.DISCOVERY_RESPONSE) {
-          final SsdpService ssdpService = new SsdpService(ssdpResponse);
-          // Handle cache
-          final int index = ssdpServices.indexOf(ssdpService);
-          boolean isNew = false;
-          if (index < 0) {
-            ssdpServices.add(ssdpService);
-            isNew = true;
-          } else if (ssdpServices.get(index).isExpired()) {
-            ssdpServices.set(index, ssdpService);
-            isNew = true;
-          }
-          if (isNew) {
-            listener.onServiceDiscovered(ssdpService);
-          }
         } else {
-          listener.onServiceAnnouncement(new SsdpServiceAnnouncement(ssdpResponse));
+          final SsdpService ssdpService = new SsdpService(ssdpResponse);
+          if (ssdpService.getType() == SsdpResponse.Type.DISCOVERY_RESPONSE) {
+            // Handle cache
+            final int index = ssdpServices.indexOf(ssdpService);
+            boolean isNew = false;
+            if (index < 0) {
+              ssdpServices.add(ssdpService);
+              isNew = true;
+            } else if (ssdpServices.get(index).isExpired()) {
+              ssdpServices.set(index, ssdpService);
+              isNew = true;
+            }
+            if (isNew) {
+              listener.onServiceDiscovered(ssdpService);
+            }
+          } else {
+            listener.onServiceAnnouncement(ssdpService);
+          }
         }
       } catch (IOException iOException) {
         if (iOException instanceof SocketTimeoutException) {
@@ -224,13 +226,14 @@ public class SsdpClient {
     });
     // Determine expiry depending on the presence of cache-control or expires headers
     final long expiry = parseCacheHeader(headers);
-    // Let's see if we have a body. If we do, let's copy the byte array and put it into the response for the user to get.
+    // Let's see if we have a body.
+    // If we do, let's copy the byte array and put it into the response for the user to get.
     final int endOfBody = datagramPacket.getLength();
     final byte[] body = (endOfBody > endOfHeaders + 4) ? Arrays.copyOfRange(data, endOfHeaders + 4, endOfBody) : null;
     return new SsdpResponse(type, headers, body, expiry, datagramPacket.getAddress());
   }
 
-  // Parse both Cache-Control and Expires headers to determine if there is any caching strategy requested by service.
+  // Parse both Cache-Control and Expires headers to determine if there is any caching strategy requested by service
   private long parseCacheHeader(@NonNull Map<String, String> headers) {
     final String cacheControlHeader = headers.get(CACHE_CONTROL);
     if (cacheControlHeader != null) {
@@ -252,7 +255,7 @@ public class SsdpClient {
     return 0;
   }
 
-  // Find the index matching the end of the header data.
+  // Find the index matching the end of the header data
   private int findEndOfHeaders(@NonNull byte[] data) {
     for (int i = 0; i < data.length - 3; i++) {
       if (data[i] != B_CRLF[0] || data[i + 1] != B_CRLF[1] || data[i + 2] != B_CRLF[0] || data[i + 3] != B_CRLF[1]) {
@@ -271,7 +274,7 @@ public class SsdpClient {
   public interface Listener {
     void onServiceDiscovered(@NonNull SsdpService service);
 
-    void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement);
+    void onServiceAnnouncement(@NonNull SsdpService service);
 
     void onFatalError();
 

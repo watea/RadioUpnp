@@ -39,6 +39,8 @@ public class SsdpService {
   @Nullable
   private final String location;
   @NonNull
+  private final Status status;
+  @NonNull
   private final InetAddress remoteIp;
   @NonNull
   private final SsdpResponse originalResponse;
@@ -46,7 +48,8 @@ public class SsdpService {
   public SsdpService(@NonNull SsdpResponse response) {
     final Map<String, String> headers = response.getHeaders();
     this.serialNumber = headers.get("USN");
-    this.serviceType = headers.get("ST");
+    this.serviceType = headers.get((response.getType() == SsdpResponse.Type.DISCOVERY_RESPONSE) ? "ST" : "NT");
+    this.status = Status.parse(headers.get("NTS"));
     final String location = headers.get("LOCATION");
     this.location = (location == null) ? headers.get("AL") : location;
     this.remoteIp = response.getOriginAddress();
@@ -87,25 +90,59 @@ public class SsdpService {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     final SsdpService that = (SsdpService) o;
-    if (!Objects.equals(serialNumber, that.serialNumber)) return false;
-    return Objects.equals(serviceType, that.serviceType);
+    if (!Objects.equals(serialNumber, that.serialNumber))
+      return false;
+    if (!Objects.equals(serviceType, that.serviceType))
+      return false;
+    return status == that.status;
   }
 
   @Override
   public int hashCode() {
-    int result = (serialNumber == null) ? 0 : serialNumber.hashCode();
+    int result = serialNumber != null ? serialNumber.hashCode() : 0;
     result = 31 * result + ((serviceType == null) ? 0 : serviceType.hashCode());
+    result = 31 * result + status.hashCode();
     return result;
   }
 
   @NonNull
   @Override
   public String toString() {
-    return "SsdpService{" +
+    return "SsdpServiceAnnouncement{" +
       "serialNumber='" + serialNumber + '\'' +
       ", serviceType='" + serviceType + '\'' +
       ", location='" + location + '\'' +
+      ", status=" + status +
       ", remoteIp=" + remoteIp +
       '}';
+  }
+
+  @NonNull
+  public SsdpResponse.Type getType() {
+    return originalResponse.getType();
+  }
+
+  @NonNull
+  public Status getStatus() {
+    return status;
+  }
+
+  public enum Status {
+    NONE, ALIVE, BYEBYE, UPDATE;
+
+    // Parse NTS or ST header into a Status
+    @NonNull
+    public static Status parse(@Nullable String nts) {
+      if ("ssdp:alive".equals(nts)) {
+        return ALIVE;
+      }
+      if ("ssdp:byebye".equals(nts)) {
+        return BYEBYE;
+      }
+      if ("ssdp:update".equals(nts)) {
+        return UPDATE;
+      }
+      return NONE;
+    }
   }
 }

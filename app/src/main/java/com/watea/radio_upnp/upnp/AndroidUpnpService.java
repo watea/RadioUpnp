@@ -39,7 +39,6 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.ssdp.SsdpClient;
 import com.watea.radio_upnp.ssdp.SsdpService;
-import com.watea.radio_upnp.ssdp.SsdpServiceAnnouncement;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -88,8 +87,7 @@ public class AndroidUpnpService extends android.app.Service {
       }
     };
 
-    public void onServiceDiscovered(@NonNull SsdpService service) {
-      Log.d(LOG_TAG, "Found SsdpService: " + service);
+    private void addDevice(@NonNull SsdpService service) {
       new Thread(() -> {
         try {
           new Device(service, deviceCallback);
@@ -99,12 +97,17 @@ public class AndroidUpnpService extends android.app.Service {
       }).start();
     }
 
+    public void onServiceDiscovered(@NonNull SsdpService service) {
+      Log.d(LOG_TAG, "Found SsdpService: " + service);
+      addDevice(service);
+    }
+
     @Override
-    public void onServiceAnnouncement(@NonNull SsdpServiceAnnouncement announcement) {
-      Log.d(LOG_TAG, "SsdpService Announcement: " + announcement);
-      final String uUID = announcement.getSerialNumber();
-      final SsdpServiceAnnouncement.Status status = announcement.getStatus();
-      final boolean isAlive = (status != SsdpServiceAnnouncement.Status.BYEBYE);
+    public void onServiceAnnouncement(@NonNull SsdpService service) {
+      Log.d(LOG_TAG, "Announce SsdpService: " + service);
+      final String uUID = service.getSerialNumber(); // Serial number and device UUID shall be identical
+      final SsdpService.Status status = service.getStatus();
+      final boolean isAlive = (status != SsdpService.Status.BYEBYE) && (status != SsdpService.Status.NONE);
       for (final Device device : devices) {
         if (device.hasUUID(uUID) && (device.isAlive() != isAlive)) {
           Log.d(LOG_TAG, "Device announcement: " + device.getDisplayString() + " => " + status);
@@ -123,6 +126,9 @@ public class AndroidUpnpService extends android.app.Service {
           return;
         }
       }
+      // Device not found, we add it
+      if (status.equals(SsdpService.Status.ALIVE))
+        addDevice(service);
     }
 
     @Override
