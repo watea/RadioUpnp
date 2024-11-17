@@ -492,15 +492,12 @@ public class MainActivity
                 case CSV_EXPORT:
                   exportTo(uri, Radios.MIME_CSV);
                   break;
-                case CSV_IMPORT:
-                  // Not implemented; shall not happen
-                  Log.e(LOG_TAG, "Internal failure; .csv import is not implemented");
-                  break;
                 case JSON_EXPORT:
                   exportTo(uri, Radios.MIME_JSON);
                   break;
                 case JSON_IMPORT:
-                  importFrom(uri);
+                case CSV_IMPORT:
+                  importFrom(uri, importExportAction);
               }
             }
           }
@@ -740,20 +737,26 @@ public class MainActivity
       .show();
   }
 
-  // Only JSON supported
   private void importFile() {
     final android.content.DialogInterface.OnClickListener listener =
       (dialog, which) -> {
-        importExportLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT)
-          .addCategory(Intent.CATEGORY_OPENABLE)
-          .setType(Radios.MIME_JSON));
-        importExportAction = ImportExportAction.JSON_IMPORT;
+        final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
+          .addCategory(Intent.CATEGORY_OPENABLE);
+        if (which == DialogInterface.BUTTON_NEUTRAL) {
+          intent.setType("*/*"); // Radios.MIME_CSV MIME type is not supported
+          importExportAction = ImportExportAction.CSV_IMPORT;
+        } else {
+          intent.setType(Radios.MIME_JSON);
+          importExportAction = ImportExportAction.JSON_IMPORT;
+        }
+        importExportLauncher.launch(intent);
       };
     new AlertDialog.Builder(this)
       .setTitle(string.title_import)
       .setIcon(R.drawable.ic_baseline_exit_to_app_white_24dp)
       .setMessage(R.string.import_message)
-      .setPositiveButton(R.string.action_go, listener)
+      .setNeutralButton(R.string.action_csv_export, listener)
+      .setPositiveButton(R.string.action_json_export, listener)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.checkNavigationMenu())
       .create()
@@ -803,14 +806,15 @@ public class MainActivity
     return DocumentsContract.createDocument(getContentResolver(), docUri, type, fileName);
   }
 
-  // Only JSON supported
-  private void importFrom(@NonNull Uri uri) {
+  private void importFrom(@NonNull Uri uri, @NonNull ImportExportAction importExportAction) {
     try (final InputStream inputStream = getContentResolver().openInputStream(uri)) {
       if (inputStream == null) {
         Log.e(LOG_TAG, "importFrom: internal failure");
       } else {
         assert radios != null;
-        tell(radios.importFrom(inputStream) ? R.string.import_successful : R.string.import_no_data);
+        final boolean result = (importExportAction == ImportExportAction.JSON_IMPORT) ?
+          radios.importFrom(inputStream) : radios.importCsvFrom(inputStream);
+        tell(result ? R.string.import_successful : R.string.import_no_data);
         return;
       }
     } catch (IOException iOException) {

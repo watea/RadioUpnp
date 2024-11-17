@@ -35,6 +35,7 @@ import com.google.gson.reflect.TypeToken;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -177,6 +178,27 @@ public class Radios extends ArrayList<Radio> {
   public synchronized boolean importFrom(@NonNull InputStream inputStream)
     throws JSONException, IOException {
     return read(inputStream) && write();
+  }
+
+  public synchronized boolean importCsvFrom(@NonNull InputStream inputStream)
+    throws IOException {
+    return readCsv(inputStream) && write();
+  }
+
+  private boolean readCsv(@NonNull InputStream inputStream) throws IOException {
+    boolean result = false;
+    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+      String line;
+      // Skip header line
+      reader.readLine();
+      while ((line = reader.readLine()) != null) {
+        final Radio radio = Radio.getRadioFromCsv(line);
+        if (radio != null) {
+          result = add(radio, false) || result;
+        }
+      }
+    }
+    return result;
   }
 
   private boolean add(@NonNull Radio radio, boolean isToWrite) {

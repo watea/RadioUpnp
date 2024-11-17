@@ -67,7 +67,7 @@ public class Radio {
     try {
       radio = new Radio(
         "DUMMY",
-        BitmapFactory.decodeResource(Resources.getSystem(), android.R.drawable.ic_secure),
+        BitmapFactory.decodeResource(Resources.getSystem(), android.R.drawable.ic_menu_help),
         new URL("http:"),
         null,
         "",
@@ -166,6 +166,27 @@ public class Radio {
     final int width = icon.getWidth();
     final int min = Math.min(height, width);
     return Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
+  }
+
+  @Nullable
+  public static Radio getRadioFromCsv(@NonNull String csvLine) {
+    final String[] fields = csvLine.split(SPACER);
+    if (fields.length == 4) {
+      try {
+        final String name = fields[0];
+        final URL url = new URL(fields[1]);
+        final URL webPageUrl = fields[2].isEmpty() ? null : new URL(fields[2]);
+        final boolean isPreferred = Boolean.parseBoolean(fields[3]);
+        final Radio radio = new Radio(name, Radio.DUMMY_RADIO.getIcon(), url, webPageUrl);
+        radio.setIsPreferred(isPreferred);
+        return radio;
+      } catch (MalformedURLException malformedURLException) {
+        Log.e(LOG_TAG, "getRadioFromCsv: URL error", malformedURLException);
+      }
+    } else {
+      Log.e(LOG_TAG, "getRadioFromCsv: bad .csv line");
+    }
+    return null;
   }
 
   @NonNull
