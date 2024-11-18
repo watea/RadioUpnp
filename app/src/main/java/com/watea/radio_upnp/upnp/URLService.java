@@ -25,7 +25,6 @@ package com.watea.radio_upnp.upnp;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
