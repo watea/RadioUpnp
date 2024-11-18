@@ -51,6 +51,7 @@ import java.util.stream.Collectors;
 public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
+  private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
   private final NetworkRequest networkRequest = new NetworkRequest.Builder()
     .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) // Not a VPN
     .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) // Validated
@@ -62,9 +63,11 @@ public class AndroidUpnpService extends android.app.Service {
   private final Set<Listener> listeners = new HashSet<>();
   private final SsdpClient.Listener ssdpClientListener = new SsdpClient.Listener() {
     private final Device.Callback deviceCallback = new Device.Callback() {
-      // Add device if of type DEVICE and not already known
+      // Add device if has good DEVICE and not already known
       private synchronized void addDevice(@NonNull Device device) {
-        if (device.getDeviceType().startsWith(DEVICE) && devices.stream().noneMatch(device::hasUUID)) {
+        if (device.getDeviceType().startsWith(DEVICE) &&
+          (device.getShortService(AV_TRANSPORT_SERVICE_ID) != null) &&
+          devices.stream().noneMatch(device::hasUUID)) {
           Log.d(LOG_TAG, "Device added: " + device.getDisplayString());
           devices.add(device);
           listeners.forEach(listener -> listener.onDeviceAdd(device));

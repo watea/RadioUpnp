@@ -253,12 +253,12 @@ public class MainActivity
   }
 
   public void removeChosenUpnpDevice() {
-    upnpDevicesAdapter.removeSelectedUpnpDevice();
+    upnpDevicesAdapter.removeSelectedDevice();
   }
 
   @Nullable
   public Bitmap getChosenUpnpDeviceIcon() {
-    return upnpDevicesAdapter.getSelectedUpnpDeviceIcon();
+    return upnpDevicesAdapter.getSelectedDeviceIcon();
   }
 
   // With animation
@@ -541,7 +541,8 @@ public class MainActivity
       getThemeAttributeColor(android.R.attr.textColorHighlight),
       contentUpnp.findViewById(R.id.devices_default_linear_layout),
       upnpDevicesAdapterListener,
-      selectedDeviceIdentity);
+      selectedDeviceIdentity,
+      devicesRecyclerView);
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = new AlertDialog.Builder(this)
       .setView(contentUpnp)

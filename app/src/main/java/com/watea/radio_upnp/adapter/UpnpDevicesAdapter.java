@@ -29,7 +29,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -49,13 +48,14 @@ import java.util.List;
 public class UpnpDevicesAdapter
   extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
   implements AndroidUpnpService.Listener {
-  private static final String LOG_TAG = UpnpDevicesAdapter.class.getSimpleName();
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private final List<Device> devices = new ArrayList<>();
   private final int selectedColor;
   private final View defaultView;
   @NonNull
   private final Listener listener;
+  @NonNull
+  private final RecyclerView recyclerView;
   @Nullable
   private String selectedUpnpDeviceIdentity;
 
@@ -63,11 +63,13 @@ public class UpnpDevicesAdapter
     int selectedColor,
     @NonNull View defaultView,
     @NonNull Listener listener,
-    @Nullable String selectedUpnpDeviceIdentity) {
+    @Nullable String selectedUpnpDeviceIdentity,
+    @NonNull RecyclerView recyclerView) {
     this.selectedColor = selectedColor;
     this.defaultView = defaultView;
     this.listener = listener;
     this.selectedUpnpDeviceIdentity = selectedUpnpDeviceIdentity;
+    this.recyclerView = recyclerView;
   }
 
   @NonNull
@@ -88,19 +90,25 @@ public class UpnpDevicesAdapter
     return devices.size();
   }
 
-  // Add device if AV_TRANSPORT_SERVICE_ID service is found
   @Override
   public void onDeviceAdd(@NonNull Device device) {
-    if (device.getShortService(UpnpPlayerAdapter.getAvtransportId()) != null) {
-      Log.d(LOG_TAG, "Device with AV_TRANSPORT_SERVICE added: " + device.getDisplayString());
-      handler.post(() -> add(device));
-    }
+    handler.post(() -> {
+      devices.add(device);
+      notifyItemInserted(devices.indexOf(device));
+      onCountChange(false);
+    });
   }
 
   @Override
   public void onDeviceRemove(@NonNull Device device) {
-    Log.d(LOG_TAG, "Device removed: " + device.getDisplayString());
-    handler.post(() -> remove(device));
+    handler.post(() -> {
+      final int position = devices.indexOf(device);
+      if (position >= 0) {
+        devices.remove(device);
+        notifyItemRemoved(position);
+        onCountChange(devices.isEmpty());
+      }
+    });
   }
 
   @Override
@@ -113,8 +121,8 @@ public class UpnpDevicesAdapter
     }
   }
 
-  public void removeSelectedUpnpDevice() {
-    setSelectedUpnpDevice(null);
+  public void removeSelectedDevice() {
+    setSelectedDevice(null);
   }
 
   @SuppressLint("NotifyDataSetChanged")
@@ -125,7 +133,7 @@ public class UpnpDevicesAdapter
   }
 
   @Nullable
-  public Bitmap getSelectedUpnpDeviceIcon() {
+  public Bitmap getSelectedDeviceIcon() {
     final Device device = getSelectedDevice();
     return (device == null) ? null : device.getIcon();
   }
@@ -142,12 +150,7 @@ public class UpnpDevicesAdapter
     return null;
   }
 
-  private void onCountChange(boolean isEmpty) {
-    defaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
-    tellSelectedDevice();
-  }
-
-  private void setSelectedUpnpDevice(@Nullable Device device) {
+  private void setSelectedDevice(@Nullable Device device) {
     final Device selectedDevice = getSelectedDevice();
     if (selectedDevice != null) {
       notifyChange(selectedDevice);
@@ -161,27 +164,19 @@ public class UpnpDevicesAdapter
     tellSelectedDevice();
   }
 
+  private void onCountChange(boolean isEmpty) {
+    defaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
+    // Workaround: recyclerview doesn't always disappear correctly
+    recyclerView.setVisibility(isEmpty ? View.INVISIBLE : View.VISIBLE);
+    tellSelectedDevice();
+  }
+
   private void notifyChange(@NonNull Device device) {
     notifyItemChanged(devices.indexOf(device));
   }
 
-  private void add(@NonNull Device device) {
-    devices.add(device);
-    onCountChange(false);
-    notifyItemInserted(devices.indexOf(device));
-  }
-
-  private void remove(@NonNull Device device) {
-    final int position = devices.indexOf(device);
-    if (position >= 0) {
-      devices.remove(device);
-      notifyItemRemoved(position);
-      onCountChange(devices.isEmpty());
-    }
-  }
-
   private void tellSelectedDevice() {
-    listener.onSelectedDeviceChange(selectedUpnpDeviceIdentity, getSelectedUpnpDeviceIcon());
+    listener.onSelectedDeviceChange(selectedUpnpDeviceIdentity, getSelectedDeviceIcon());
   }
 
   public interface Listener {
@@ -205,7 +200,7 @@ public class UpnpDevicesAdapter
       textView = (TextView) itemView;
       textView.setOnClickListener(v -> {
         assert device != null;
-        setSelectedUpnpDevice(
+        setSelectedDevice(
           ((selectedUpnpDeviceIdentity == null) ||
             !selectedUpnpDeviceIdentity.equals(device.getUUID())) ?
             device : null);

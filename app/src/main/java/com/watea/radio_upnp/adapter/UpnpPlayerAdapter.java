@@ -124,10 +124,6 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     };
   }
 
-  public static String getAvtransportId() {
-    return AV_TRANSPORT_SERVICE_ID;
-  }
-
   @Override
   public void adjustVolume(int direction) {
     final UpnpAction upnpAction = getActionGetVolume();
