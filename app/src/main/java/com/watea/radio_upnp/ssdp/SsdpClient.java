@@ -54,18 +54,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SsdpClient {
+  public static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:1";
+  public static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
   private static final String LOG_TAG = SsdpClient.class.getSimpleName();
   private static final String MULTICAST_ADDRESS = "239.255.255.250";
   private static final String WLAN = "wlan0";
   private static final int SSDP_PORT = 1900;
   private static final int SEARCH_DELAY = 500; // ms
   private static final int SEARCH_REPEAT = 3;
+  private static final int MX = 3; // s
+  private static final int MARGIN = 100; // ms
   private static final String SEARCH_MESSAGE =
     "M-SEARCH * HTTP/1.1\r\n" +
       "HOST: 239.255.255.250:1900\r\n" +
       "MAN: \"ssdp:discover\"\r\n" +
-      "MX: 3\r\n" +
-      "ST: ssdp:all\r\n\r\n";
+      "MX: " + MX + "\r\n" +
+      "ST: " + DEVICE + "\r\n\r\n";
   private static final Pattern CACHE_CONTROL_PATTERN = Pattern.compile("max-age[ ]*=[ ]*([0-9]+).*");
   // Date format for expires headers
   private static final SimpleDateFormat DATE_HEADER_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
@@ -98,7 +102,7 @@ public class SsdpClient {
     try {
       // Search socket and timeout
       searchSocket = new DatagramSocket();
-      searchSocket.setSoTimeout(SEARCH_DELAY * SEARCH_REPEAT);
+      searchSocket.setSoTimeout(MX * 1000 + SEARCH_DELAY * SEARCH_REPEAT + MARGIN);
       // Late binding in case port is already used
       listenSocket = new MulticastSocket(null);
       listenSocket.setReuseAddress(true);
@@ -106,17 +110,17 @@ public class SsdpClient {
       // Join the multicast group on the specified network interface (wlan0 for Wi-Fi)
       networkInterface = NetworkInterface.getByName(WLAN);
       listenSocket.joinGroup(new InetSocketAddress(MULTICAST_ADDRESS, SSDP_PORT), networkInterface);
-      // Search
-      final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-      for (int i = 0; i < SEARCH_REPEAT; i++) {
-        scheduler.schedule(this::search, i * SEARCH_DELAY, TimeUnit.MILLISECONDS);
-      }
-      scheduler.shutdown();
       // Receive on both ports unicast and multicast responses
       isRunning = true;
       ssdpServices.clear();
       new Thread(() -> receive(searchSocket)).start();
       new Thread(() -> receive(listenSocket)).start();
+      // Now we can search
+      final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+      for (int i = 0; i < SEARCH_REPEAT; i++) {
+        scheduler.schedule(this::search, i * SEARCH_DELAY, TimeUnit.MILLISECONDS);
+      }
+      scheduler.shutdown();
     } catch (Exception exception) {
       Log.e(LOG_TAG, "start: failed!", exception);
       stop();
