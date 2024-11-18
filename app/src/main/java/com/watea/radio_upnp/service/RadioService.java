@@ -173,7 +173,7 @@ public class RadioService
 
   @NonNull
   private static String addPlaylistItem(@Nullable String playlist, @NonNull String item) {
-    if (item.isEmpty()) {
+    if (item.isEmpty() || (playlist != null) && playlist.contains(item)) {
       return (playlist == null) ? "" : playlist;
     } else {
       final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
@@ -315,10 +315,7 @@ public class RadioService
       if (radio != null) {
         // Media information in ARTIST and SUBTITLE.
         // Ensure session meta data is tagged to ensure only session based use.
-        String playlist = session
-          .getController()
-          .getMetadata()
-          .getString(PLAYLIST);
+        final String playlist = session.getController().getMetadata().getString(PLAYLIST);
         session.setMetadata(getTaggedMediaMetadataBuilder(radio)
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
           .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
