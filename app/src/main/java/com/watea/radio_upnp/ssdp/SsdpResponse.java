@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class SsdpResponse {
   @NonNull
   private final Map<String, String> headers;
@@ -61,7 +62,6 @@ public class SsdpResponse {
     return type;
   }
 
-  @SuppressWarnings("unused")
   @Nullable
   public byte[] getBody() {
     return body;
