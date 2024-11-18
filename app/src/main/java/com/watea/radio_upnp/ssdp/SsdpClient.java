@@ -131,7 +131,6 @@ public class SsdpClient {
   public void stop() {
     Log.d(LOG_TAG, "stop: entering");
     isRunning = false;
-    listener.onStop();
     if (searchSocket != null) {
       searchSocket.close();
     }
@@ -145,6 +144,7 @@ public class SsdpClient {
       }
       listenSocket.close();
     }
+    listener.onStop();
   }
 
   public void search() {

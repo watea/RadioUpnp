@@ -140,6 +140,7 @@ public class AndroidUpnpService extends android.app.Service {
 
     @Override
     public void onStop() {
+      Log.d(LOG_TAG, "onStop");
       for (final Device device : devices) {
         listeners.forEach(listener -> {
           listener.onDeviceRemove(device);
