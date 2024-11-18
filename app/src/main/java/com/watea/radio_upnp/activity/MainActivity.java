@@ -335,12 +335,10 @@ public class MainActivity
 
   // radio is null for current
   public void startReading(@Nullable Radio radio) {
+    final Device selectedDevice =
+      ((upnpService == null) || !networkProxy.isOnWifi()) ? null : upnpService.getDevice(selectedDeviceIdentity);
     playerController.startReading(
-      radio,
-      ((upnpService != null) &&
-        (selectedDeviceIdentity != null) &&
-        networkProxy.isOnWifi()) ?
-        selectedDeviceIdentity : null);
+      radio, ((selectedDevice == null) || !selectedDevice.isAlive()) ? null : selectedDeviceIdentity);
   }
 
   @NonNull
