@@ -173,7 +173,7 @@ public class RadioService
 
   @NonNull
   private static String addPlaylistItem(@Nullable String playlist, @NonNull String item) {
-    if (item.isEmpty() || (playlist != null) && playlist.contains(item)) {
+    if (item.isEmpty() || (playlist != null) && playlist.endsWith(item)) {
       return (playlist == null) ? "" : playlist;
     } else {
       final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
