@@ -493,11 +493,6 @@ public class RadioService
       .build();
   }
 
-  @Nullable
-  private Device getSelectedDevice(@NonNull String identity) {
-    return (upnpService == null) ? null : upnpService.getDevice(identity);
-  }
-
   private void buildNotification() {
     try {
       notificationManager.notify(NOTIFICATION_ID, getNotification());
@@ -539,15 +534,14 @@ public class RadioService
       }
       // Catch catastrophic failure
       if (radioHttpServer == null) {
-        abort("onPrepareFromMediaId: nanoHttpServer is null");
+        abort("onPrepareFromMediaId: radioHttpServer is null");
       }
-      final String identity = extras.getString(getString(R.string.key_upnp_device));
-      final Device selectedDevice = (identity == null) ? null : getSelectedDevice(identity);
+      String identity = extras.getString(getString(R.string.key_upnp_device));
+      final Device selectedDevice = ((identity == null) || (upnpService == null)) ? null : upnpService.getDevice(identity);
       final Uri serverUri = radioHttpServer.getUri();
-      // UPnP not accepted if environment not OK: force STOP
-      if ((identity != null) && ((selectedDevice == null) || (serverUri == null))) {
-        abort("onPrepareFromMediaId: can't process UPnP device");
-        return;
+      // UPnP not accepted if environment not OK: force local processing
+      if ((selectedDevice == null) || !selectedDevice.isAlive() || (serverUri == null)) {
+        identity = null;
       }
       // Synchronize session data
       session.setActive(true);
