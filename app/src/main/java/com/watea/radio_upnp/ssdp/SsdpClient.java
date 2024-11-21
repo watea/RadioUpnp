@@ -54,8 +54,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SsdpClient {
-  public static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:1";
+  public static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
   public static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
+  private static final String DEVICE_VERSION = "1";
   private static final String LOG_TAG = SsdpClient.class.getSimpleName();
   private static final String MULTICAST_ADDRESS = "239.255.255.250";
   private static final String WLAN = "wlan0";
@@ -69,7 +70,7 @@ public class SsdpClient {
       "HOST: 239.255.255.250:1900\r\n" +
       "MAN: \"ssdp:discover\"\r\n" +
       "MX: " + MX + "\r\n" +
-      "ST: " + DEVICE + "\r\n\r\n";
+      "ST: " + DEVICE + DEVICE_VERSION + "\r\n\r\n";
   private static final Pattern CACHE_CONTROL_PATTERN = Pattern.compile("max-age[ ]*=[ ]*([0-9]+).*");
   // Date format for expires headers
   private static final SimpleDateFormat DATE_HEADER_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
