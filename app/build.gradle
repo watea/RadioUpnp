@@ -24,13 +24,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdk 34
+    compileSdk 35
     defaultConfig {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
-        targetSdkVersion 34
-        versionCode 27118
-        versionName "2.71.18"
+        targetSdkVersion 35
+        versionCode 27119
+        versionName "2.71.19"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -59,7 +59,7 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core:1.13.0'
+    implementation 'androidx.core:core:1.15.0'
     implementation 'androidx.media:media:1.7.0'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
