@@ -43,6 +43,7 @@ import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class UpnpDevicesAdapter
@@ -94,6 +95,7 @@ public class UpnpDevicesAdapter
   public void onDeviceAdd(@NonNull Device device) {
     handler.post(() -> {
       devices.add(device);
+      devices.sort(Comparator.comparing(Device::getDisplayString));
       notifyItemInserted(devices.indexOf(device));
       onCountChange(false);
     });
