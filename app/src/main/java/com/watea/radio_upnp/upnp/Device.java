@@ -324,14 +324,6 @@ public class Device extends Asset {
     return hasUUID(device.uUID);
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if ((o == null) || (getClass() != o.getClass())) return false;
-    final Device that = (Device) o;
-    return ssdpService.equals(that.getSsdpService());
-  }
-
   @NonNull
   public String getDeviceType() {
     return getTag(deviceType);

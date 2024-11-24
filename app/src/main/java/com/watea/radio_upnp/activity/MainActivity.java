@@ -539,8 +539,7 @@ public class MainActivity
       getThemeAttributeColor(android.R.attr.textColorHighlight),
       contentUpnp.findViewById(R.id.devices_default_linear_layout),
       upnpDevicesAdapterListener,
-      selectedDeviceIdentity,
-      devicesRecyclerView);
+      selectedDeviceIdentity);
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = new AlertDialog.Builder(this)
       .setView(contentUpnp)

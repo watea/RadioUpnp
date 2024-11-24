@@ -55,8 +55,6 @@ public class UpnpDevicesAdapter
   private final View defaultView;
   @NonNull
   private final Listener listener;
-  @NonNull
-  private final RecyclerView recyclerView;
   @Nullable
   private String selectedUpnpDeviceIdentity;
 
@@ -64,13 +62,11 @@ public class UpnpDevicesAdapter
     int selectedColor,
     @NonNull View defaultView,
     @NonNull Listener listener,
-    @Nullable String selectedUpnpDeviceIdentity,
-    @NonNull RecyclerView recyclerView) {
+    @Nullable String selectedUpnpDeviceIdentity) {
     this.selectedColor = selectedColor;
     this.defaultView = defaultView;
     this.listener = listener;
     this.selectedUpnpDeviceIdentity = selectedUpnpDeviceIdentity;
-    this.recyclerView = recyclerView;
   }
 
   @NonNull
@@ -130,8 +126,8 @@ public class UpnpDevicesAdapter
   @SuppressLint("NotifyDataSetChanged")
   public void resetRemoteDevices() {
     devices.clear();
-    onCountChange(true);
     notifyDataSetChanged();
+    onCountChange(true);
   }
 
   @Nullable
@@ -168,8 +164,6 @@ public class UpnpDevicesAdapter
 
   private void onCountChange(boolean isEmpty) {
     defaultView.setVisibility(isEmpty ? View.VISIBLE : View.INVISIBLE);
-    // Workaround: recyclerview doesn't always disappear correctly
-    recyclerView.setVisibility(isEmpty ? View.INVISIBLE : View.VISIBLE);
     tellSelectedDevice();
   }
 
