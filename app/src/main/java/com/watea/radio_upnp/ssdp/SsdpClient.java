@@ -40,13 +40,13 @@ import java.net.NetworkInterface;
 import java.net.SocketTimeoutException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Vector;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -64,6 +64,7 @@ public class SsdpClient {
   private static final int SEARCH_DELAY = 500; // ms
   private static final int SEARCH_REPEAT = 3;
   private static final int MX = 3; // s
+  private static final int SEARCH_TTL = 2; // UPnP spec
   private static final int MARGIN = 100; // ms
   private static final String SEARCH_MESSAGE =
     "M-SEARCH * HTTP/1.1\r\n" +
@@ -71,7 +72,7 @@ public class SsdpClient {
       "MAN: \"ssdp:discover\"\r\n" +
       "MX: " + MX + "\r\n" +
       "ST: " + DEVICE + DEVICE_VERSION + "\r\n\r\n";
-  private static final Pattern CACHE_CONTROL_PATTERN = Pattern.compile("max-age[ ]*=[ ]*([0-9]+).*");
+  private static final Pattern CACHE_CONTROL_PATTERN = Pattern.compile("max-age *= *([0-9]+).*");
   // Date format for expires headers
   private static final SimpleDateFormat DATE_HEADER_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
   private static final Pattern SEARCH_REQUEST_LINE_PATTERN = Pattern.compile("^HTTP/1\\.1 [0-9]+ .*");
@@ -84,10 +85,10 @@ public class SsdpClient {
   private static final byte[] B_CRLF = S_CRLF.getBytes(UTF_8);
   private final Listener listener;
   // Cache
-  private final List<SsdpService> ssdpServices = new ArrayList<>();
+  private final List<SsdpService> ssdpServices = new Vector<>(); // Threadsafe List implementation
   private boolean isRunning;
   @Nullable
-  private DatagramSocket searchSocket = null;
+  private MulticastSocket searchSocket = null; // Multicast socket used here only for TTL, otherwise DatagramSocket could be enough
   @Nullable
   private MulticastSocket listenSocket = null;
   @Nullable
@@ -102,8 +103,9 @@ public class SsdpClient {
     Log.d(LOG_TAG, "start: entering");
     try {
       // Search socket and timeout
-      searchSocket = new DatagramSocket();
+      searchSocket = new MulticastSocket();
       searchSocket.setSoTimeout(MX * 1000 + SEARCH_DELAY * SEARCH_REPEAT + MARGIN);
+      searchSocket.setTimeToLive(SEARCH_TTL);
       // Late binding in case port is already used
       listenSocket = new MulticastSocket(null);
       listenSocket.setReuseAddress(true);
