@@ -97,10 +97,9 @@ public class SsdpResponse {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if ((o == null) || (getClass() != o.getClass())) return false;
     final SsdpResponse that = (SsdpResponse) o;
-    if (!headers.equals(that.headers)) return false;
-    return Arrays.equals(body, that.body);
+    return headers.equals(that.headers) && Arrays.equals(body, that.body);
   }
 
   @Override

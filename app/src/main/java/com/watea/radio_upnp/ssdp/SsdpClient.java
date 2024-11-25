@@ -265,11 +265,9 @@ public class SsdpClient {
   // Find the index matching the end of the header data
   private int findEndOfHeaders(@NonNull byte[] data) {
     for (int i = 0; i < data.length - 3; i++) {
-      if (data[i] != B_CRLF[0] || data[i + 1] != B_CRLF[1] || data[i + 2] != B_CRLF[0] || data[i + 3] != B_CRLF[1]) {
-        continue;
+      if (Arrays.equals(B_CRLF, Arrays.copyOfRange(data, i, i + 4))) {
+        return i; // Headers finish here
       }
-      // Headers finish here
-      return i;
     }
     return -1;
   }
