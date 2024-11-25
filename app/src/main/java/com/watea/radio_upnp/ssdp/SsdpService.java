@@ -88,18 +88,16 @@ public class SsdpService {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if ((o == null) || (getClass() != o.getClass())) return false;
     final SsdpService that = (SsdpService) o;
-    if (!Objects.equals(serialNumber, that.serialNumber))
-      return false;
-    if (!Objects.equals(serviceType, that.serviceType))
-      return false;
-    return status == that.status;
+    return Objects.equals(serialNumber, that.serialNumber) &&
+      Objects.equals(serviceType, that.serviceType) &&
+      (status == that.status);
   }
 
   @Override
   public int hashCode() {
-    int result = serialNumber != null ? serialNumber.hashCode() : 0;
+    int result = (serialNumber == null) ? 0 : serialNumber.hashCode();
     result = 31 * result + ((serviceType == null) ? 0 : serviceType.hashCode());
     result = 31 * result + status.hashCode();
     return result;
