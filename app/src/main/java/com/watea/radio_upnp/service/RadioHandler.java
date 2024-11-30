@@ -30,6 +30,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.candidhttpserver.HttpServer;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
