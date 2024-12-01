@@ -6,8 +6,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 35
-        versionCode 27120
-        versionName "2.71.20"
+        versionCode 27121
+        versionName "2.71.21"
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -55,5 +55,5 @@ dependencies {
     // GSON
     implementation 'com.google.code.gson:gson:2.11.0'
     // CandidHttpServer
-    implementation 'com.github.watea:CandidHttpServer:1.0.7'
+    implementation 'com.github.watea:CandidHttpServer:1.0.8'
 }
