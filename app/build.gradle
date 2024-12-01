@@ -78,5 +78,5 @@ dependencies {
     // GSON
     implementation 'com.google.code.gson:gson:2.11.0'
     // CandidHttpServer
-    implementation 'com.github.watea:CandidHttpServer:1.0.4'
+    implementation 'com.github.watea:CandidHttpServer:1.0.5'
 }
