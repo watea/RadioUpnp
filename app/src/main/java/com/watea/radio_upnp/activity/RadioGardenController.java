@@ -79,7 +79,7 @@ public class RadioGardenController {
   private static final String MARKET = "market://details?id=";
   private static final String RADIO_GARDEN_PACKAGE = "com.jonathanpuckey.radiogarden";
   private static final String PLAY_STORE_PACKAGE = "com.android.vending";
-  private static final String RADIO_GARDEN = "http://radio.garden/api/ara/content/";
+  private static final String RADIO_GARDEN = "https://radio.garden/api/ara/content/";
   private static final String CHANNEL = "channel/";
   private static final String LISTEN = "listen/";
   private static final String CHANNEL_MP3 = "/channel.mp3";
