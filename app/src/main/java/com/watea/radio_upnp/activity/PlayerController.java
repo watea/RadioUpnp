@@ -55,6 +55,8 @@ import com.watea.radio_upnp.service.RadioService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 
 public class PlayerController {
   private static final String LOG_TAG = PlayerController.class.getSimpleName();
@@ -255,6 +257,25 @@ public class PlayerController {
     playlistAlertDialog = new AlertDialog.Builder(mainActivity)
       .setAdapter(playlistAdapter, null)
       .create();
+      playlistAlertDialog.getListView().setOnItemLongClickListener((parent, itemView, position, id) -> {
+        // Concatenate all entries from the playlist
+        String allInformation = playInformations.stream()
+                                  .map(item -> item.get(RadioService.INFORMATION))
+                                  .collect(Collectors.joining("\n\n"));
+    
+        // Copy the concatenated information to clipboard
+        ClipboardManager clipboard = (ClipboardManager) mainActivity.getSystemService(Context.CLIPBOARD_SERVICE);
+        clipboard.setPrimaryClip(ClipData.newPlainText(mainActivity.getString(R.string.key_radio_information), allInformation.toString()));
+    
+        // Display a toast message to inform the user
+        mainActivity.tell(R.string.copied_playlist_to_clipboard);
+    
+        // Dismiss the dialog after handling the long press
+        playlistAlertDialog.dismiss();
+        return true; // Indicate that the long press was handled
+    });
+    
+        
     playlistAlertDialog.getListView().setOnItemClickListener((parent, rowView, position, id) -> {
       // Get the selected item from the playlist
       final Map<String, String> selectedItem = playInformations.get(position);
