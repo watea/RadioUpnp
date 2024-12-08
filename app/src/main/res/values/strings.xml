@@ -69,7 +69,7 @@
     <string name="play_long_press">Long press stops radio</string>
     <string name="toolbar_press">Touch on toolbar toggles expanded/reduced view</string>
     <string name="information_press">Click on playing radio icon to display current playlist</string>
-    <string name="information_select_press">Click or long press song to copy song or whole list information to clipboard</string>
+    <string name="information_select_press">Click (resp. long press) song to copy song (resp. whole list) information to clipboard</string>
     <string name="dlna_enable">Short or Long press: search UPnP/DLNA devices.\n\nConnection may need connection authorization.\nBad Wifi may hinder connection quality.</string>
     <string name="preferred_radios">Display only preferred radios.\nPreferred radios are set in Modify screen.</string>
     <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>

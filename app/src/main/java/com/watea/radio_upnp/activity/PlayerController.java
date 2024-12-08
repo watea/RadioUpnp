@@ -257,34 +257,21 @@ public class PlayerController {
     playlistAlertDialog = new AlertDialog.Builder(mainActivity)
       .setAdapter(playlistAdapter, null)
       .create();
-      playlistAlertDialog.getListView().setOnItemLongClickListener((parent, itemView, position, id) -> {
-        // Concatenate all entries from the playlist
-        String allInformation = playInformations.stream()
-                                  .map(item -> item.get(RadioService.INFORMATION))
-                                  .collect(Collectors.joining("\n\n"));
-    
-        // Copy the concatenated information to clipboard
-        ClipboardManager clipboard = (ClipboardManager) mainActivity.getSystemService(Context.CLIPBOARD_SERVICE);
-        clipboard.setPrimaryClip(ClipData.newPlainText(mainActivity.getString(R.string.key_radio_information), allInformation.toString()));
-    
-        // Display a toast message to inform the user
-        mainActivity.tell(R.string.copied_playlist_to_clipboard);
-    
-        // Dismiss the dialog after handling the long press
-        playlistAlertDialog.dismiss();
-        return true; // Indicate that the long press was handled
+    playlistAlertDialog.getListView().setOnItemLongClickListener((parent, itemView, position, id) -> {
+      // Concatenate all entries from the playlist
+      copyToClipBoard(playInformations.stream()
+        .map(item -> item.get(RadioService.INFORMATION))
+        .collect(Collectors.joining("\n\n")));
+      // Dismiss the dialog after handling the long press
+      playlistAlertDialog.dismiss();
+      // Indicate that the long press was handled
+      return true;
     });
-    
-        
     playlistAlertDialog.getListView().setOnItemClickListener((parent, rowView, position, id) -> {
       // Get the selected item from the playlist
-      final Map<String, String> selectedItem = playInformations.get(position);
-      final String selectedInformation = selectedItem.get(RadioService.INFORMATION);
-      // Copy selectedInformation to clipboard
-      final ClipboardManager clipboard = (ClipboardManager) mainActivity.getSystemService(Context.CLIPBOARD_SERVICE);
-      clipboard.setPrimaryClip(ClipData.newPlainText(mainActivity.getString(R.string.key_radio_information), selectedInformation));
-      // Display a toast message to inform the user
-      mainActivity.tell(R.string.copied_to_clipboard);
+      final String selectedInformation = playInformations.get(position).get(RadioService.INFORMATION);
+      assert selectedInformation != null;
+      copyToClipBoard(selectedInformation);
       // Dismiss the dialog after handling the click
       playlistAlertDialog.dismiss();
     });
@@ -411,6 +398,14 @@ public class PlayerController {
         mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
       }
     }
+  }
+
+  private void copyToClipBoard(@NonNull String string) {
+    // Copy selectedInformation to clipboard
+    final ClipboardManager clipboard = (ClipboardManager) mainActivity.getSystemService(Context.CLIPBOARD_SERVICE);
+    clipboard.setPrimaryClip(ClipData.newPlainText(mainActivity.getString(R.string.key_radio_information), string));
+    // Display a toast message to inform the user
+    mainActivity.tell(R.string.copied_to_clipboard);
   }
 
   private void setDefaultPlayImageButton() {
