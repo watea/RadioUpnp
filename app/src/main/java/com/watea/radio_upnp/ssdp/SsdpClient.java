@@ -54,9 +54,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SsdpClient {
-  public static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
-  public static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
-  private static final String DEVICE_VERSION = "1";
+  private static final String ALL_DEVICES = "ssdp:all";
   private static final String LOG_TAG = SsdpClient.class.getSimpleName();
   private static final String MULTICAST_ADDRESS = "239.255.255.250";
   private static final String WLAN = "wlan0";
@@ -66,23 +64,26 @@ public class SsdpClient {
   private static final int MX = 3; // s
   private static final int SEARCH_TTL = 2; // UPnP spec
   private static final int MARGIN = 100; // ms
+  // CRLF
+  private static final String S_CRLF = "\r\n";
   private static final String SEARCH_MESSAGE =
-    "M-SEARCH * HTTP/1.1\r\n" +
-      "HOST: 239.255.255.250:1900\r\n" +
-      "MAN: \"ssdp:discover\"\r\n" +
-      "MX: " + MX + "\r\n" +
-      "ST: " + DEVICE + DEVICE_VERSION + "\r\n\r\n";
+    "M-SEARCH * HTTP/1.1" + S_CRLF +
+      "HOST: " + MULTICAST_ADDRESS + ":" + SSDP_PORT + S_CRLF +
+      "MAN: \"ssdp:discover\"" + S_CRLF +
+      "MX: " + MX + S_CRLF +
+      "ST: ";
   private static final Pattern CACHE_CONTROL_PATTERN = Pattern.compile("max-age *= *([0-9]+).*");
   // Date format for expires headers
   private static final SimpleDateFormat DATE_HEADER_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
   private static final Pattern SEARCH_REQUEST_LINE_PATTERN = Pattern.compile("^HTTP/1\\.1 [0-9]+ .*");
   private static final Pattern SERVICE_ANNOUNCEMENT_LINE_PATTERN = Pattern.compile("NOTIFY \\* HTTP/1\\.1");
   private static final Pattern HEADER_PATTERN = Pattern.compile("(.*?):(.*)$");
-  // CRLF
-  private static final String S_CRLF = "\r\n";
   private static final String CACHE_CONTROL = "CACHE-CONTROL";
   private static final String EXPIRES = "EXPIRES";
   private static final byte[] B_CRLF = S_CRLF.getBytes(UTF_8);
+  @NonNull
+  private final String device;
+  @NonNull
   private final Listener listener;
   // Cache
   private final List<SsdpService> ssdpServices = new Vector<>(); // Threadsafe List implementation
@@ -94,8 +95,13 @@ public class SsdpClient {
   @Nullable
   private NetworkInterface networkInterface = null;
 
-  public SsdpClient(@NonNull Listener listener) {
+  public SsdpClient(@Nullable String device, @NonNull Listener listener) {
+    this.device = (device == null) ? ALL_DEVICES : device;
     this.listener = listener;
+  }
+
+  public SsdpClient(@NonNull Listener listener) {
+    this(null, listener);
   }
 
   // Network shall be available (implementation dependant)
@@ -153,7 +159,7 @@ public class SsdpClient {
   public void search() {
     if ((searchSocket != null) && !searchSocket.isClosed()) {
       try {
-        final byte[] sendData = SEARCH_MESSAGE.getBytes();
+        final byte[] sendData = (SEARCH_MESSAGE + device + S_CRLF + S_CRLF).getBytes();
         final DatagramPacket packet = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(MULTICAST_ADDRESS), SSDP_PORT);
         searchSocket.send(packet);
       } catch (IOException iOException) {
