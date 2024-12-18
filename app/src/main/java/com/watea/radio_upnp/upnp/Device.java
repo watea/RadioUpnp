@@ -29,7 +29,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.ssdp.SsdpService;
+import com.watea.androidssdpclient.SsdpService;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -41,9 +41,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * @noinspection unused
- */
+@SuppressWarnings("unused")
 //  <device>
 //    <deviceType>urn:schemas-upnp-org:device:deviceType:v</deviceType>
 //    <friendlyName>short user-friendly title</friendlyName>

@@ -36,9 +36,9 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.androidssdpclient.SsdpClient;
+import com.watea.androidssdpclient.SsdpService;
 import com.watea.radio_upnp.service.NetworkProxy;
-import com.watea.radio_upnp.ssdp.SsdpClient;
-import com.watea.radio_upnp.ssdp.SsdpService;
 
 import org.xmlpull.v1.XmlPullParserException;
 

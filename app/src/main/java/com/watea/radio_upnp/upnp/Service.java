@@ -38,9 +38,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * @noinspection unused
- */
+@SuppressWarnings("unused")
 // <actionList>
 //  <action>
 //    <name>actionName</name>
@@ -122,7 +120,7 @@ public class Service extends Asset {
     }
   }
 
-  // We call call back when parsing is over
+  // We call callback when parsing is over
   @Override
   public void endParseAccept(@NonNull URLService uRLService) {
     if (isComplete()) {
