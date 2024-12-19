@@ -208,6 +208,7 @@ public class RadioService
       radioHttpServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation fails", iOException);
+      radioHttpServer = null;
     }
     // Create a new MediaSession and controller...
     session = new MediaSessionCompat(this, LOG_TAG);
@@ -522,6 +523,7 @@ public class RadioService
         playerAdapter.stop();
       }
       // Try to retrieve radio
+      final Radio previousRadio = radio;
       try {
         radio = radios.getRadioFrom(mediaId);
         if (radio == null) {
@@ -535,6 +537,7 @@ public class RadioService
       // Catch catastrophic failure
       if (radioHttpServer == null) {
         abort("onPrepareFromMediaId: radioHttpServer is null");
+        return;
       }
       String identity = extras.getString(getString(R.string.key_upnp_device));
       final Device selectedDevice = ((identity == null) || (upnpService == null)) ? null : upnpService.getDevice(identity);
@@ -548,7 +551,9 @@ public class RadioService
       session.setExtras(extras);
       lockKey = UUID.randomUUID().toString();
       // Tag metadata with package name to enable session discrepancy
-      session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
+      if (radio != previousRadio) {
+        session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
+      }
       // Set playerAdapter
       if (identity == null) {
         playerAdapter = new LocalPlayerAdapter(
@@ -618,6 +623,7 @@ public class RadioService
       } else {
         playerAdapter.stop();
         playerAdapter = null;
+        radio = null;
       }
     }
 

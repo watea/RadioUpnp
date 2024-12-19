@@ -179,8 +179,11 @@ public class MainActivity
       public void onRowClick(@NonNull Device device, boolean isSelected) {
         if (isSelected) {
           if (networkProxy.isOnWifi()) {
-            startReading(null);
-            tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+            final Radio radio = getCurrentRadio();
+            if (radio != null) {
+              startReading(radio);
+              tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+            }
           } else {
             tell(string.lan_required);
           }
@@ -333,12 +336,16 @@ public class MainActivity
     tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
   }
 
-  // radio is null for current
-  public void startReading(@Nullable Radio radio) {
+  // null if no valid device selected
+  @Nullable
+  public String getSelectedDeviceIdentity() {
     final Device selectedDevice = (upnpService == null) ? null : upnpService.getDevice(selectedDeviceIdentity);
     // UPnP only allowed if device is alive
-    playerController.startReading(
-      radio, ((selectedDevice != null) && selectedDevice.isAlive()) ? selectedDeviceIdentity : null);
+    return ((selectedDevice != null) && selectedDevice.isAlive()) ? selectedDeviceIdentity : null;
+  }
+
+  public void startReading(@NonNull Radio radio) {
+    playerController.startReading(radio);
   }
 
   @NonNull

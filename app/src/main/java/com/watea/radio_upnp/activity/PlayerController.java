@@ -312,7 +312,13 @@ public class PlayerController {
         // Tag on button has stored state to reach
         switch ((int) playImageButton.getTag()) {
           case PlaybackStateCompat.STATE_PLAYING:
-            mediaController.getTransportControls().play();
+            final Radio radio = mainActivity.getCurrentRadio();
+            if (radio == null) {
+              // Should not happen
+              Log.e(LOG_TAG, "playImageButton: internal failure, radio is null");
+            } else {
+              startReading(mainActivity.getCurrentRadio());
+            }
             break;
           case PlaybackStateCompat.STATE_PAUSED:
             mediaController.getTransportControls().pause();
@@ -341,7 +347,7 @@ public class PlayerController {
     });
     preferredImageButton = view.findViewById(R.id.preferred_image_button);
     preferredImageButton.setOnClickListener(v -> {
-      final Radio radio = getCurrentRadio();
+      final Radio radio = mainActivity.getCurrentRadio();
       if (radio == null) {
         // Should not happen
         Log.e(LOG_TAG, "preferredImageButton: internal failure, radio is null");
@@ -383,20 +389,17 @@ public class PlayerController {
     mediaBrowserConnectionCallback.onConnectionSuspended();
   }
 
-  // radio == null for current, do nothing if no current
-  public void startReading(@Nullable Radio radio, @Nullable String upnpDeviceIdentity) {
-    radio = (radio == null) ? getCurrentRadio() : radio;
-    if (radio != null) {
-      if (mediaController == null) {
-        // Should not happen
-        mainActivity.tell(R.string.radio_connection_waiting);
-      } else {
-        final Bundle bundle = new Bundle();
-        if (upnpDeviceIdentity != null) {
-          bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
-        }
-        mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
+  public void startReading(@NonNull Radio radio) {
+    if (mediaController == null) {
+      // Should not happen
+      mainActivity.tell(R.string.radio_connection_waiting);
+    } else {
+      final Bundle bundle = new Bundle();
+      final String upnpDeviceIdentity = mainActivity.getSelectedDeviceIdentity();
+      if (upnpDeviceIdentity != null) {
+        bundle.putString(mainActivity.getString(R.string.key_upnp_device), upnpDeviceIdentity);
       }
+      mediaController.getTransportControls().prepareFromMediaId(radio.getId(), bundle);
     }
   }
 
@@ -417,11 +420,6 @@ public class PlayerController {
     playImageButton.setEnabled(isOn);
     playImageButton.setVisibility(MainActivityFragment.getVisibleFrom(!isWaiting));
     progressBar.setVisibility(MainActivityFragment.getVisibleFrom(isWaiting));
-  }
-
-  @Nullable
-  private Radio getCurrentRadio() {
-    return (mediaController == null) ? null : mainActivity.getCurrentRadio();
   }
 
   // mediaController shall not be null
