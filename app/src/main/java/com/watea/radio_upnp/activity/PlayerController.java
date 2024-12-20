@@ -312,6 +312,7 @@ public class PlayerController {
         // Tag on button has stored state to reach
         switch ((int) playImageButton.getTag()) {
           case PlaybackStateCompat.STATE_PLAYING:
+          case PlaybackStateCompat.STATE_REWINDING:
             final Radio radio = mainActivity.getCurrentRadio();
             if (radio == null) {
               // Should not happen
@@ -326,9 +327,6 @@ public class PlayerController {
             break;
           case PlaybackStateCompat.STATE_STOPPED:
             mediaController.getTransportControls().stop();
-            break;
-          case PlaybackStateCompat.STATE_REWINDING:
-            mediaController.getTransportControls().rewind();
             break;
           default:
             // Should not happen

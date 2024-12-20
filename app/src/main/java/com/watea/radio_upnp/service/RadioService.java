@@ -545,6 +545,7 @@ public class RadioService
       // UPnP not accepted if environment not OK: force local processing
       if ((selectedDevice == null) || !selectedDevice.isAlive() || (serverUri == null)) {
         identity = null;
+        extras.clear();
       }
       // Synchronize session data
       session.setActive(true);
