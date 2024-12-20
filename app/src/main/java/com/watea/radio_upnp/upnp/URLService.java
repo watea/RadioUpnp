@@ -42,12 +42,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 public class URLService {
   private static final String LOG_TAG = URLService.class.getSimpleName();
   private static final int TIMEOUT = 3000; // ms, for connection and read
+  private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
   @NonNull
   final URLConnection uRLConnection;
   private final Map<String, String> tags = new HashMap<>();
@@ -74,20 +76,34 @@ public class URLService {
     tags.clear();
   }
 
+  public boolean isPngUrlSignature() throws IOException {
+    try (final InputStream inputStream = getInputStream()) {
+      final byte[] buffer = new byte[PNG_SIGNATURE.length];
+      if (inputStream.read(buffer) == PNG_SIGNATURE.length) {
+        return Arrays.equals(buffer, PNG_SIGNATURE);
+      }
+      return false;
+    }
+  }
+
   @Nullable
   public Bitmap getBitmap() throws IOException {
-    final BitmapFactory.Options options = new BitmapFactory.Options();
-    options.inPreferredConfig = Bitmap.Config.ARGB_8888; // Enable transparency
-    return BitmapFactory.decodeStream(getInputStream(), null, options);
+    try (final InputStream inputStream = getInputStream()) {
+      final BitmapFactory.Options options = new BitmapFactory.Options();
+      options.inPreferredConfig = Bitmap.Config.ARGB_8888; // Enable transparency
+      return BitmapFactory.decodeStream(inputStream, null, options);
+    }
   }
 
   @NonNull
   public URLService fetchContent() throws IOException {
-    String encoding = uRLConnection.getContentEncoding();
-    encoding = (encoding == null) ? "UTF-8" : encoding;
-    content = IOUtils.toString(getInputStream(), encoding);
-    Log.d(LOG_TAG, "fetchContent:\n" + content);
-    return this;
+    try (final InputStream inputStream = getInputStream()) {
+      String encoding = uRLConnection.getContentEncoding();
+      encoding = (encoding == null) ? "UTF-8" : encoding;
+      content = IOUtils.toString(inputStream, encoding);
+      Log.d(LOG_TAG, "fetchContent:\n" + content);
+      return this;
+    }
   }
 
   // Calls consumer on START_TAG, END_TAG.
@@ -126,6 +142,7 @@ public class URLService {
     return uRLConnection.getURL();
   }
 
+  @NonNull
   private InputStream getInputStream() throws IOException {
     return uRLConnection.getInputStream();
   }

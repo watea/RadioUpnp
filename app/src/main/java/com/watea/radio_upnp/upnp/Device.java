@@ -126,6 +126,7 @@ public class Device extends Asset {
   };
   @Nullable
   private Bitmap icon = null;
+  private boolean isPngIcon = false;
 
   public Device(
     @NonNull SsdpService ssdpService,
@@ -262,18 +263,29 @@ public class Device extends Asset {
         }
         break;
       case ICON:
+        // Fetch icon if larger than existing one.
+        // PNG format is preferred.
         final String stringWidth = urlService.getTag(WIDTH);
         final String stringHeight = urlService.getTag(HEIGHT);
         final String stringUrl = urlService.getTag(URL);
         if ((stringWidth != null) && (stringHeight != null) && (stringUrl != null)) {
-          final int width = Integer.parseInt(stringWidth);
-          final int height = Integer.parseInt(stringHeight);
-          if ((icon == null) || stringUrl.endsWith(".png")) {
-            try {
-              fetchIcon(new URI(stringUrl));
-            } catch (Exception exception) {
-              Log.e(LOG_TAG, "endAccept: fail to fetch icon", exception);
+          try {
+            final URI uRI = new URI(stringUrl);
+            final int width = Integer.parseInt(stringWidth);
+            final int height = Integer.parseInt(stringHeight);
+            final boolean isDefined = (icon != null);
+            final boolean isIconSmaller = isDefined && (icon.getWidth() <= width) && (icon.getHeight() <= height);
+            final boolean isPngUrlSignature = new URLService(location, uRI).isPngUrlSignature();
+            if (!isDefined || isIconSmaller && (isPngUrlSignature || !isPngIcon)) {
+              final Bitmap newIcon = new URLService(location, uRI).getBitmap();
+              if (newIcon != null) {
+                icon = newIcon;
+                isPngIcon = isPngUrlSignature;
+                ((Device.Callback) callback).onIcon(this);
+              }
             }
+          } catch (Exception exception) {
+            Log.e(LOG_TAG, "endAccept: fail to fetch icon", exception);
           }
         }
         break;
@@ -335,13 +347,6 @@ public class Device extends Asset {
   @Nullable
   public Bitmap getIcon() {
     return icon;
-  }
-
-  private void fetchIcon(@NonNull URI uRI) throws IOException, URISyntaxException {
-    icon = new URLService(location, uRI).getBitmap();
-    if (icon != null) {
-      ((Device.Callback) callback).onIcon(this);
-    }
   }
 
   public interface Callback extends Asset.Callback {
