@@ -369,6 +369,13 @@ public class MainActivity
     this.upnpIconConsumer = upnpIconConsumer;
   }
 
+  public void initUpnpIconConsumer() {
+    if (this.upnpIconConsumer != null) {
+      final Device device = (upnpService == null) ? null : upnpService.getSelectedDevice();
+      this.upnpIconConsumer.accept((device == null) ? null : device.getIcon());
+    }
+  }
+
   public void resetSelectedDevice() {
     if (upnpService == null) {
       Log.e(LOG_TAG, "resetSelectedDevice: internal failure, upnpService not defined");

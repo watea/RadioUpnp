@@ -26,7 +26,6 @@ package com.watea.radio_upnp.activity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -45,19 +44,9 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.model.Radio;
 
-import java.util.function.Consumer;
-
 public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;
-  private final Consumer<Bitmap> upnpMenuItemSetter = bitmap -> {
-    if (upnpMenuItem != null) {
-      upnpMenuItem.setVisible((bitmap != null));
-      if (bitmap != null) {
-        upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
-      }
-    }
-  };
   private MenuItem preferredMenuItem;
   private MainActivity.UserHint radioLongPressUserHint;
   private final RadiosMainAdapter.Listener radiosMainAdapterListener =
@@ -99,7 +88,6 @@ public class MainFragment extends MainActivityFragment {
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
     // Set view
     radiosMainAdapter.set(true);
-    getMainActivity().setUpnpIconConsumer(upnpMenuItemSetter);
   }
 
   @Override
@@ -107,7 +95,6 @@ public class MainFragment extends MainActivityFragment {
     super.onPause();
     // Unset view
     radiosMainAdapter.set(false);
-    getMainActivity().setUpnpIconConsumer(null);
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -134,7 +121,7 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     upnpMenuItem = menu.findItem(R.id.action_upnp);
-    upnpMenuItem.setVisible(false);
+    getMainActivity().initUpnpIconConsumer();
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     setPreferredMenuItem();
   }
@@ -197,6 +184,15 @@ public class MainFragment extends MainActivityFragment {
       .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
     preferredRadiosUserHint = getMainActivity()
       .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
+    // Fill menu
+    getMainActivity().setUpnpIconConsumer(bitmap -> {
+      if (upnpMenuItem != null) {
+        upnpMenuItem.setVisible((bitmap != null));
+        if (bitmap != null) {
+          upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
+        }
+      }
+    });
   }
 
   @Override
