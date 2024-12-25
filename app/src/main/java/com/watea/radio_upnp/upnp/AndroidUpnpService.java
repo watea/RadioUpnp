@@ -172,6 +172,8 @@ public class AndroidUpnpService extends android.app.Service {
       }
     }
   };
+  @Nullable
+  private String selectedDeviceIdentity = null;
 
   @Override
   public void onCreate() {
@@ -207,6 +209,9 @@ public class AndroidUpnpService extends android.app.Service {
 
     default void onFatalError() {
     }
+
+    default void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
+    }
   }
 
   public class UpnpService extends android.os.Binder {
@@ -230,6 +235,21 @@ public class AndroidUpnpService extends android.app.Service {
 
     public Set<Device> getAliveDevices() {
       return devices.stream().filter(Device::isAlive).collect(Collectors.toSet());
+    }
+
+    public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity, boolean isInit) {
+      final Device previousDevice = getSelectedDevice();
+      AndroidUpnpService.this.selectedDeviceIdentity = selectedDeviceIdentity;
+      if (!isInit) {
+        listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
+      }
+    }
+
+    // Null if no valid device selected
+    public Device getSelectedDevice() {
+      final Device selectedDevice = (selectedDeviceIdentity == null) ? null : getDevice(selectedDeviceIdentity);
+      // UPnP only allowed if device is alive
+      return ((selectedDevice != null) && selectedDevice.isAlive()) ? selectedDevice : null;
     }
   }
 }

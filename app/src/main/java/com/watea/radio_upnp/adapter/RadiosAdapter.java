@@ -30,7 +30,6 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.activity.MainActivity;
@@ -71,10 +70,6 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   @Override
   public int getItemCount() {
     return radios.size();
-  }
-
-  protected int getIndexOf(@Nullable Radio radio) {
-    return (radio == null) ? DEFAULT : radios.indexOf(radio);
   }
 
   @NonNull

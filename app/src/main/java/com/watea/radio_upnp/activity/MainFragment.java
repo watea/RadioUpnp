@@ -45,21 +45,19 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.model.Radio;
 
+import java.util.function.Consumer;
+
 public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;
-  private final MainActivity.Listener mainActivityListener =
-    new MainActivity.Listener() {
-      @Override
-      public void onChosenDeviceChange(@Nullable Bitmap icon) {
-        if (upnpMenuItem != null) {
-          upnpMenuItem.setVisible((icon != null));
-          if (icon != null) {
-            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), icon));
-          }
-        }
+  private final Consumer<Bitmap> upnpMenuItemSetter = bitmap -> {
+    if (upnpMenuItem != null) {
+      upnpMenuItem.setVisible((bitmap != null));
+      if (bitmap != null) {
+        upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
       }
-    };
+    }
+  };
   private MenuItem preferredMenuItem;
   private MainActivity.UserHint radioLongPressUserHint;
   private final RadiosMainAdapter.Listener radiosMainAdapterListener =
@@ -100,18 +98,16 @@ public class MainFragment extends MainActivityFragment {
     // Force column count
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
     // Set view
-    radiosMainAdapter.set();
-    // Listener
-    getMainActivity().addListener(mainActivityListener);
+    radiosMainAdapter.set(true);
+    getMainActivity().setUpnpIconConsumer(upnpMenuItemSetter);
   }
 
   @Override
   public void onPause() {
     super.onPause();
     // Unset view
-    radiosMainAdapter.unset();
-    // Listener
-    getMainActivity().removeListener(mainActivityListener);
+    radiosMainAdapter.set(false);
+    getMainActivity().setUpnpIconConsumer(null);
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -125,7 +121,7 @@ public class MainFragment extends MainActivityFragment {
         preferredRadiosUserHint.show();
         return true;
       case R.id.action_upnp:
-        getMainActivity().removeChosenUpnpDevice();
+        getMainActivity().resetSelectedDevice();
         tell(R.string.no_dlna_selection);
         return true;
       default:
@@ -138,8 +134,8 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     upnpMenuItem = menu.findItem(R.id.action_upnp);
+    upnpMenuItem.setVisible(false);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
-    mainActivityListener.onChosenDeviceChange(getMainActivity().getChosenUpnpDeviceIcon());
     setPreferredMenuItem();
   }
 
@@ -192,7 +188,8 @@ public class MainFragment extends MainActivityFragment {
       getMainActivity(),
       () -> isPreferredRadios ? getRadios().getPreferred() : getRadios(),
       radiosRecyclerView,
-      radiosMainAdapterListener);
+      radiosMainAdapterListener,
+      currentRadioConsumer -> getMainActivity().setCurrentRadioConsumer(currentRadioConsumer));
     // Build alert dialogs
     radioLongPressUserHint = getMainActivity()
       .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);

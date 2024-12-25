@@ -83,8 +83,6 @@
     <string name="upnp_error">UPnP service failed, please check if network is available!</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>
-    <string name="not_to_modify">Current radio cannot be edited!</string>
-    <string name="not_to_delete">Current radio cannot be deleted!</string>
     <string name="report_error">Error, report could not be generated!</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
     <string name="notification_needed">This app is intended to be used with notifications enabled</string>
@@ -97,8 +95,6 @@
     <string name="export_done">Export file created: </string>
     <string name="export_failed">Export failed!</string>
     <string name="export_failed_not_created">Export failed; unable to create file!</string>
-    <string name="no_data">No playlist data found!</string>
-    <string name="dump_error">Error: local export file could not be generated!</string>
     <string name="radio_garden_radio_added">Radio Garden radio added!</string>
     <string name="try_to_add_from_radio_garden">Try to add from Radio Garden.\nMay take some time, please wait&#8230;</string>
     <string name="play_store_not_installed">Play Store not available.\nRadio Garden cannot be installed!</string>
@@ -108,6 +104,7 @@
     <string name="paypal">paypal.com</string>
     <string name="or_use">or use</string>
     <string name="Theme">Theme</string>
+    <string name="radio_not_defined">Radio can\'t be found in database!</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
@@ -121,7 +118,6 @@
     <string name="title_log">Report</string>
     <string name="title_import">Import</string>
     <string name="title_export">Export</string>
-    <string name="title_export_csv">Export .csv</string>
     <string name="title_radio_garden">Radio Garden</string>
     <string name="title_search">Search</string>
     <string name="action_play">Play</string>
@@ -144,5 +140,4 @@
     <string name="dark_radio_button">Dark</string>
     <string name="light_radio_button">Light</string>
     <string name="copied_to_clipboard">Information copied to clipboard!</string>
-    <string name="copied_playlist_to_clipboard">Playlist copied to clipboard!</string>
 </resources>

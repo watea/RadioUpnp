@@ -539,24 +539,19 @@ public class RadioService
         abort("onPrepareFromMediaId: radioHttpServer is null");
         return;
       }
-      String identity = extras.getString(getString(R.string.key_upnp_device));
-      final Device selectedDevice = ((identity == null) || (upnpService == null)) ? null : upnpService.getDevice(identity);
-      final Uri serverUri = radioHttpServer.getUri();
       // UPnP not accepted if environment not OK: force local processing
-      if ((selectedDevice == null) || !selectedDevice.isAlive() || (serverUri == null)) {
-        identity = null;
-        extras.clear();
-      }
+      final Uri serverUri = radioHttpServer.getUri();
+      final Device selectedDevice = (serverUri == null) ? null : upnpService.getSelectedDevice();
       // Synchronize session data
       session.setActive(true);
-      session.setExtras(extras);
+      session.setExtras(new Bundle());
       lockKey = UUID.randomUUID().toString();
       // Tag metadata with package name to enable session discrepancy
       if (radio != previousRadio) {
         session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
       }
       // Set playerAdapter
-      if (identity == null) {
+      if (selectedDevice == null) {
         playerAdapter = new LocalPlayerAdapter(
           RadioService.this,
           RadioService.this,
@@ -591,8 +586,8 @@ public class RadioService
 
     @Override
     public void onPlay() {
-      assert playerAdapter != null;
-      playerAdapter.play();
+      assert radio != null;
+      onPrepareFromMediaId(radio);
     }
 
     @Override
@@ -613,8 +608,7 @@ public class RadioService
 
     @Override
     public void onRewind() {
-      assert radio != null;
-      onPrepareFromMediaId(radio);
+      onPlay();
     }
 
     @Override
@@ -642,7 +636,7 @@ public class RadioService
       Log.d(LOG_TAG, log);
       assert lockKey != null;
       onPlaybackStateChange(
-        PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_STOPPED).build(),
+        PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(),
         lockKey);
     }
   }

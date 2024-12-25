@@ -50,25 +50,19 @@ public class ModifyFragment extends MainActivityFragment {
       public void onCountChange(boolean isEmpty) {
         defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
       }
-
-      // Radio shall not be changed if currently played
-      @Override
-      public void onWarnChange() {
-        tell(R.string.not_to_delete);
-      }
     };
   private RadiosModifyAdapter radiosModifyAdapter;
 
   @Override
   public void onResume() {
     super.onResume();
-    radiosModifyAdapter.set();
+    radiosModifyAdapter.set(true);
   }
 
   @Override
   public void onPause() {
     super.onPause();
-    radiosModifyAdapter.unset();
+    radiosModifyAdapter.set(false);
   }
 
   @NonNull

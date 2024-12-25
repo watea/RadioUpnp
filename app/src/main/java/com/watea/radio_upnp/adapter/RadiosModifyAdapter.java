@@ -70,22 +70,13 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     return new ViewHolder(getView(viewGroup));
   }
 
-  public interface Listener extends RadiosDisplayAdapter.Listener {
-    void onWarnChange();
-  }
-
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
     private static final int DRAG_FLAGS = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
     private static final int IDLE_FLAGS = ItemTouchHelper.START | ItemTouchHelper.END;
 
     @Override
-    public int getMovementFlags(
-      @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-      final boolean isCurrentRadio = ((ViewHolder) viewHolder).isCurrentRadio();
-      if (isCurrentRadio) {
-        ((Listener) listener).onWarnChange();
-      }
-      return makeMovementFlags(DRAG_FLAGS, isCurrentRadio ? 0 : IDLE_FLAGS);
+    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+      return makeMovementFlags(DRAG_FLAGS, IDLE_FLAGS);
     }
 
     @Override
@@ -94,8 +85,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
       mainActivity.setToolbarExpanded(false);
-      return ((Radios) radios).swap(
-        viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
+      return ((Radios) radios).swap(viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
     }
 
     @Override
@@ -137,7 +127,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     @NonNull
     private final ImageButton preferredImageButton;
 
-    ViewHolder(@NonNull View itemView) {
+    protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_modify_radio_text_view);
       (preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button))
         .setOnClickListener(v -> ((Radios) radios).setPreferred(radio, !radio.isPreferred()));

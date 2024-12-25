@@ -39,21 +39,51 @@ import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.ViewHolder> {
+public class RadiosMainAdapter
+  extends RadiosDisplayAdapter<RadiosMainAdapter.ViewHolder>
+  implements Consumer<Radio> {
+  @NonNull
+  private final Consumer<Consumer<Radio>> setCallback;
+  @Nullable
+  private Radio currentRadio = null;
+
   public RadiosMainAdapter(
     @NonNull MainActivity mainActivity,
     @NonNull Supplier<List<Radio>> radiosSupplier,
     @NonNull RecyclerView recyclerView,
-    @NonNull Listener listener) {
+    @NonNull Listener listener,
+    @NonNull Consumer<Consumer<Radio>> setCallback) {
     super(mainActivity, radiosSupplier, R.layout.row_radio, recyclerView, listener);
+    this.setCallback = setCallback;
+  }
+
+  @Override
+  public void set(boolean isOn) {
+    super.set(isOn);
+    setCallback.accept(isOn ? this : null);
   }
 
   @NonNull
   @Override
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     return new ViewHolder(getView(parent));
+  }
+
+  // New current radio
+  @Override
+  public void accept(@Nullable Radio radio) {
+    notifyItemChanged();
+    currentRadio = radio;
+    notifyItemChanged();
+  }
+
+  private void notifyItemChanged() {
+    if (currentRadio != null) {
+      notifyItemChanged(radios.indexOf(currentRadio));
+    }
   }
 
   public interface Listener extends RadiosDisplayAdapter.Listener {
@@ -83,8 +113,9 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
     @Override
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
-      final int dominantColor = getDominantColor(this.radio.getIcon());
-      final int radioBackgroundColor = isCurrentRadio() ? backgroundColor : dominantColor;
+      // Change background color for current radio
+      final int radioBackgroundColor =
+        (radio == currentRadio) ? backgroundColor : getDominantColor(this.radio.getIcon());
       radioTextView.setBackgroundColor(radioBackgroundColor);
       radioTextView.setTextColor(
         (ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ||

@@ -52,7 +52,7 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
   public void add(@NonNull Radio radio) {
     radios.add(radio);
     radios.sort(Comparator.comparing(Radio::getName));
-    notifyItemInserted(getIndexOf(radio));
+    notifyItemInserted(radios.indexOf(radio));
   }
 
   @SuppressLint("NotifyDataSetChanged")

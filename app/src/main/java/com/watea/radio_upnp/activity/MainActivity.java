@@ -90,11 +90,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class MainActivity
   extends AppCompatActivity
@@ -113,9 +112,6 @@ public class MainActivity
     };
   @Nullable
   private static Radios radios = null;
-  private final List<Listener> listeners = new ArrayList<>();
-  @Nullable
-  private Radio currentRadio = null;
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
@@ -135,11 +131,57 @@ public class MainActivity
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
+  private Intent newIntent;
+  private NetworkProxy networkProxy;
+  private ActivityResultLauncher<Intent> importExportLauncher;
+  @Nullable
+  private ImportExportAction importExportAction = null;
+  private String savedSelectedDeviceIdentity;
+  private Consumer<Bitmap> upnpIconConsumer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
+      private void consumeIcon(@Nullable Device device) {
+        if (upnpService.getSelectedDevice() == device) {
+          runOnUiThread(() -> {
+            if (upnpIconConsumer != null) {
+              upnpIconConsumer.accept((device == null) ? null : device.getIcon());
+            }
+          });
+        }
+      }
+
       @Override
       public void onFatalError() {
         tell(R.string.upnp_error);
+      }
+
+      @Override
+      public void onDeviceAdd(@NonNull Device device) {
+        consumeIcon(device);
+      }
+
+      @Override
+      public void onDeviceRemove(@NonNull Device device) {
+        consumeIcon(null);
+      }
+
+      @Override
+      public void onIcon(@NonNull Device device) {
+        consumeIcon(device);
+      }
+
+      @Override
+      public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
+        consumeIcon(device);
+        if (upnpAlertDialog.isShowing()) {
+          if (device == null) {
+            tell(R.string.no_dlna_selection);
+          } else {
+            tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+            playerController.startReading();
+          }
+          upnpAlertDialog.dismiss();
+        }
       }
     };
 
@@ -149,10 +191,13 @@ public class MainActivity
       if (upnpService != null) {
         // Add all devices to the list we already know about
         upnpDevicesAdapter.resetRemoteDevices();
+        upnpDevicesAdapter.setUpnpService(upnpService);
         upnpService.getAliveDevices().forEach(upnpDevicesAdapter::onDeviceAdd);
         // Get ready for future device advertisements
         upnpService.addListener(upnpDevicesAdapter);
         upnpService.addListener(upnpListener);
+        // Init selected device
+        upnpService.setSelectedDeviceIdentity(savedSelectedDeviceIdentity, true);
       }
     }
 
@@ -164,41 +209,10 @@ public class MainActivity
         upnpService = null;
       }
       // No more devices
+      upnpDevicesAdapter.setUpnpService(null);
       upnpDevicesAdapter.resetRemoteDevices();
     }
   };
-  private Intent newIntent;
-  private NetworkProxy networkProxy;
-  private ActivityResultLauncher<Intent> importExportLauncher;
-  @Nullable
-  private ImportExportAction importExportAction = null;
-  private String selectedDeviceIdentity;
-  private final UpnpDevicesAdapter.Listener upnpDevicesAdapterListener =
-    new UpnpDevicesAdapter.Listener() {
-      @Override
-      public void onRowClick(@NonNull Device device, boolean isSelected) {
-        if (isSelected) {
-          if (networkProxy.isOnWifi()) {
-            final Radio radio = getCurrentRadio();
-            if (radio != null) {
-              startReading(radio);
-              tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
-            }
-          } else {
-            tell(string.lan_required);
-          }
-        } else {
-          tell(R.string.no_dlna_selection);
-        }
-        upnpAlertDialog.dismiss();
-      }
-
-      @Override
-      public void onSelectedDeviceChange(@Nullable String deviceIdentity, @Nullable Bitmap icon) {
-        selectedDeviceIdentity = deviceIdentity;
-        listeners.forEach(listener -> listener.onChosenDeviceChange(icon));
-      }
-    };
 
   @NonNull
   public static Bitmap iconResize(@NonNull Bitmap bitmap) {
@@ -227,41 +241,9 @@ public class MainActivity
     return sharedPreferences;
   }
 
-  @Nullable
-  public Radio getCurrentRadio() {
-    return currentRadio;
-  }
-
-  public void setCurrentRadio(@Nullable String radioId) {
-    assert radios != null;
-    currentRadio = (radioId == null) ? null : radios.getRadioFrom(radioId);
-    listeners.forEach(listener -> listener.onNewCurrentRadio(currentRadio));
-  }
-
-  public boolean isCurrentRadio(@NonNull Radio radio) {
-    return (currentRadio == radio);
-  }
-
-  public void addListener(@NonNull Listener listener) {
-    listeners.add(listener);
-  }
-
-  public void removeListener(@NonNull Listener listener) {
-    listeners.remove(listener);
-  }
-
   @NonNull
   public Bitmap getDefaultIcon() {
     return BitmapFactory.decodeResource(getResources(), R.drawable.ic_radio_gray);
-  }
-
-  public void removeChosenUpnpDevice() {
-    upnpDevicesAdapter.removeSelectedDevice();
-  }
-
-  @Nullable
-  public Bitmap getChosenUpnpDeviceIcon() {
-    return upnpDevicesAdapter.getSelectedDeviceIcon();
   }
 
   // With animation
@@ -336,14 +318,6 @@ public class MainActivity
     tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
   }
 
-  // null if no valid device selected
-  @Nullable
-  public String getSelectedDeviceIdentity() {
-    final Device selectedDevice = (upnpService == null) ? null : upnpService.getDevice(selectedDeviceIdentity);
-    // UPnP only allowed if device is alive
-    return ((selectedDevice != null) && selectedDevice.isAlive()) ? selectedDeviceIdentity : null;
-  }
-
   public void startReading(@NonNull Radio radio) {
     playerController.startReading(radio);
   }
@@ -387,6 +361,22 @@ public class MainActivity
     upnpAlertDialog.show();
   }
 
+  public void setCurrentRadioConsumer(@Nullable Consumer<Radio> currentRadioConsumer) {
+    playerController.setListener(currentRadioConsumer);
+  }
+
+  public void setUpnpIconConsumer(@Nullable Consumer<Bitmap> upnpIconConsumer) {
+    this.upnpIconConsumer = upnpIconConsumer;
+  }
+
+  public void resetSelectedDevice() {
+    if (upnpService == null) {
+      Log.e(LOG_TAG, "resetSelectedDevice: internal failure, upnpService not defined");
+    } else {
+      upnpService.setSelectedDeviceIdentity(null, false);
+    }
+  }
+
   @NonNull
   public Intent getNewSendIntent() {
     return new Intent(Intent.ACTION_SEND)
@@ -425,9 +415,7 @@ public class MainActivity
         super.onOptionsItemSelected(item);
   }
 
-  /**
-   * @noinspection resource, SameParameterValue
-   */
+  @SuppressWarnings({"resource", "SameParameterValue"})
   public int getThemeAttributeColor(int attr) {
     final int[] attrs = {attr};
     final TypedArray typedArray = obtainStyledAttributes(attrs);
@@ -540,13 +528,11 @@ public class MainActivity
     final View contentUpnp = getLayoutInflater().inflate(R.layout.content_upnp, null);
     final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-    selectedDeviceIdentity = (savedInstanceState == null) ?
+    savedSelectedDeviceIdentity = (savedInstanceState == null) ?
       null : savedInstanceState.getString(getString(R.string.key_selected_device));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       getThemeAttributeColor(android.R.attr.textColorHighlight),
-      contentUpnp.findViewById(R.id.devices_default_linear_layout),
-      upnpDevicesAdapterListener,
-      selectedDeviceIdentity);
+      contentUpnp.findViewById(R.id.devices_default_linear_layout));
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = new AlertDialog.Builder(this)
       .setView(contentUpnp)
@@ -619,6 +605,8 @@ public class MainActivity
     // Shared preferences
     sharedPreferences.edit().putString(getString(string.key_theme), theme.toString()).apply();
     // Release UPnP service
+    final Device selectedDevice = (upnpService == null) ? null : upnpService.getSelectedDevice();
+    savedSelectedDeviceIdentity = (selectedDevice == null) ? null : selectedDevice.getUUID();
     unbindService(upnpConnection);
     // Force disconnection to release resources
     upnpConnection.onServiceDisconnected(null);
@@ -674,8 +662,8 @@ public class MainActivity
       outState.putString(
         getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
     }
-    if (selectedDeviceIdentity != null) {
-      outState.putString(getString(R.string.key_selected_device), selectedDeviceIdentity);
+    if (savedSelectedDeviceIdentity != null) {
+      outState.putString(getString(R.string.key_selected_device), savedSelectedDeviceIdentity);
     }
   }
 
@@ -824,8 +812,6 @@ public class MainActivity
       }
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "importFrom: I/O failure", iOException);
-    } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "importFrom: JSON failure", jSONException);
     }
     tell(R.string.import_failed);
   }
@@ -841,14 +827,6 @@ public class MainActivity
 
   private enum ImportExportAction {
     JSON_IMPORT, CSV_IMPORT, JSON_EXPORT, CSV_EXPORT
-  }
-
-  public interface Listener {
-    default void onNewCurrentRadio(@Nullable Radio radio) {
-    }
-
-    default void onChosenDeviceChange(@Nullable Bitmap icon) {
-    }
   }
 
   public class UserHint {

@@ -72,18 +72,14 @@ public class ItemModifyFragment extends ItemFragment {
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
       assert radio != null;
-      if (getMainActivity().isCurrentRadio(radio)) {
-        tell(R.string.not_to_modify);
-      } else {
-        radio.setName(getRadioName());
-        assert urlWatcher.url != null;
-        radio.setURL(urlWatcher.url);
-        radio.setWebPageURL(webPageWatcher.url);
-        assert getIcon() != null;
-        radio.setIcon(getIcon());
-        if (!getRadios().modify(radio)) {
-          tell(R.string.radio_database_update_failed);
-        }
+      radio.setName(getRadioName());
+      assert urlWatcher.url != null;
+      radio.setURL(urlWatcher.url);
+      radio.setWebPageURL(webPageWatcher.url);
+      assert getIcon() != null;
+      radio.setIcon(getIcon());
+      if (!getRadios().modify(radio)) {
+        tell(R.string.radio_database_update_failed);
       }
       onBackPressed();
     }

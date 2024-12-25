@@ -144,7 +144,7 @@ public class RadioHandler implements HttpServer.Handler {
     try (final InputStream inputStream =
            isHls ? hlsHandler.getInputStream() : httpURLConnection.getInputStream()) {
       final ConnectionHandler connectionHandler = isHls ?
-        new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey) {
+        new ConnectionHandler(httpURLConnection, inputStream, lockKey) {
           @Override
           @NonNull
           protected Charset getCharset() {
@@ -157,7 +157,7 @@ public class RadioHandler implements HttpServer.Handler {
             return 0;
           }
         } :
-        new ConnectionHandler(httpURLConnection, isGet, inputStream, lockKey);
+        new ConnectionHandler(httpURLConnection, inputStream, lockKey);
       // Build response
       String contentType = controller.getContentType();
       // Force ContentType as some UPnP devices require it
@@ -208,7 +208,6 @@ public class RadioHandler implements HttpServer.Handler {
   private class ConnectionHandler {
     @NonNull
     final HttpURLConnection httpURLConnection;
-    final boolean isGet;
     @NonNull
     final InputStream inputStream;
     @NonNull
@@ -216,11 +215,9 @@ public class RadioHandler implements HttpServer.Handler {
 
     private ConnectionHandler(
       @NonNull HttpURLConnection httpURLConnection,
-      boolean isGet,
       @NonNull InputStream inputStream,
       @NonNull String lockKey) {
       this.httpURLConnection = httpURLConnection;
-      this.isGet = isGet;
       this.inputStream = inputStream;
       this.lockKey = lockKey;
     }

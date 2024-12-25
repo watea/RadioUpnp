@@ -27,7 +27,6 @@ import android.annotation.SuppressLint;
 import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.activity.MainActivity;
@@ -42,18 +41,17 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   extends RadiosAdapter<V> {
   @NonNull
   protected final Listener listener;
-  private int currentRadioIndex = DEFAULT;
   @NonNull
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onPreferredChange(@NonNull Radio radio) {
-      notifyItemChanged(getIndexOf(radio));
+      notifyItemChanged(radios.indexOf(radio));
     }
 
     @Override
     public void onAdd(@NonNull Radio radio) {
-      update();
-      final int index = getIndexOf(radio);
+      onCountChange();
+      final int index = radios.indexOf(radio);
       if (index != DEFAULT) {
         notifyItemRangeInserted(index, 1);
       }
@@ -61,27 +59,18 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
 
     @Override
     public void onRemove(int index) {
-      update();
+      onCountChange();
       notifyItemRemoved(index);
     }
 
     @Override
     public void onMove(int from, int to) {
-      update();
       notifyItemMoved(from, to);
     }
 
     @Override
     public void onAddAll(@NonNull Collection<? extends Radio> c) {
       c.forEach(this::onAdd);
-    }
-  };
-  @NonNull
-  private final MainActivity.Listener mainActivityListener = new MainActivity.Listener() {
-    @Override
-    public void onNewCurrentRadio(@Nullable Radio radio) {
-      notifyItemChanged(currentRadioIndex);
-      notifyItemChanged(currentRadioIndex = getIndexOf(radio));
     }
   };
 
@@ -95,27 +84,24 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     this.listener = listener;
   }
 
-  public void unset() {
-    mainActivity.removeListener(mainActivityListener);
-    MainActivity.getRadios().removeListener(radiosListener);
-  }
-
   @SuppressLint("NotifyDataSetChanged")
   public void refresh() {
     radios = radiosSupplier.get();
-    update();
+    onCountChange();
     notifyDataSetChanged();
   }
 
   // Must be called
-  public void set() {
-    mainActivity.addListener(mainActivityListener);
-    MainActivity.getRadios().addListener(radiosListener);
-    refresh();
+  public void set(boolean isOn) {
+    if (isOn) {
+      MainActivity.getRadios().addListener(radiosListener);
+      refresh();
+    } else {
+      MainActivity.getRadios().removeListener(radiosListener);
+    }
   }
 
-  private void update() {
-    currentRadioIndex = getIndexOf(mainActivity.getCurrentRadio());
+  private void onCountChange() {
     listener.onCountChange(radios.isEmpty());
   }
 
@@ -129,11 +115,6 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     protected ViewHolder(@NonNull View itemView, int textViewId) {
       super(itemView, textViewId);
       radioTextView.setOnClickListener(v -> listener.onClick(radio));
-    }
-
-    protected boolean isCurrentRadio() {
-      assert radio != Radio.DUMMY_RADIO;
-      return (getIndexOf(radio) == currentRadioIndex);
     }
   }
 }

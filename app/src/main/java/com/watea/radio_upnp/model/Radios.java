@@ -176,7 +176,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   public synchronized boolean importFrom(@NonNull InputStream inputStream)
-    throws JSONException, IOException {
+    throws IOException {
     return read(inputStream) && write();
   }
 
@@ -208,7 +208,7 @@ public class Radios extends ArrayList<Radio> {
 
   // Only JSON can be read.
   // True if something is read.
-  private boolean read(@NonNull InputStream inputStream) throws JSONException, IOException {
+  private boolean read(@NonNull InputStream inputStream) throws IOException {
     final Gson gson = new Gson();
     // Define the type for the parsing
     final Type listType = new TypeToken<List<Map<String, Object>>>() {
@@ -259,8 +259,6 @@ public class Radios extends ArrayList<Radio> {
       read(fileInputStream);
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "init: IO failure", iOException);
-    } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "init: JSON failure", jSONException);
     }
   }
 

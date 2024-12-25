@@ -259,9 +259,7 @@ public class HlsHandler {
     return DEFAULT;
   }
 
-  /**
-   * @noinspection SameParameterValue
-   */
+  @SuppressWarnings("SameParameterValue")
   private int parseIntFor(@NonNull String key, @NonNull String string) {
     return parseIntIn(findStringFor(key, string));
   }
