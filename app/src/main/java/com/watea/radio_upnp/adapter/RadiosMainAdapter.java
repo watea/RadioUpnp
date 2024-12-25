@@ -45,8 +45,6 @@ import java.util.function.Supplier;
 public class RadiosMainAdapter
   extends RadiosDisplayAdapter<RadiosMainAdapter.ViewHolder>
   implements Consumer<Radio> {
-  @NonNull
-  private final Consumer<Consumer<Radio>> setCallback;
   @Nullable
   private Radio currentRadio = null;
 
@@ -54,16 +52,8 @@ public class RadiosMainAdapter
     @NonNull MainActivity mainActivity,
     @NonNull Supplier<List<Radio>> radiosSupplier,
     @NonNull RecyclerView recyclerView,
-    @NonNull Listener listener,
-    @NonNull Consumer<Consumer<Radio>> setCallback) {
+    @NonNull Listener listener) {
     super(mainActivity, radiosSupplier, R.layout.row_radio, recyclerView, listener);
-    this.setCallback = setCallback;
-  }
-
-  @Override
-  public void set(boolean isOn) {
-    super.set(isOn);
-    setCallback.accept(isOn ? this : null);
   }
 
   @NonNull

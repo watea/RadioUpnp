@@ -170,13 +170,13 @@ public class MainFragment extends MainActivityFragment {
     final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
     radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
-    // Adapters (order matters!)
+    // Adapter
     radiosMainAdapter = new RadiosMainAdapter(
       getMainActivity(),
       () -> isPreferredRadios ? getRadios().getPreferred() : getRadios(),
       radiosRecyclerView,
-      radiosMainAdapterListener,
-      currentRadioConsumer -> getMainActivity().setCurrentRadioConsumer(currentRadioConsumer));
+      radiosMainAdapterListener);
+    getMainActivity().setCurrentRadioConsumer(radiosMainAdapter);
     // Build alert dialogs
     radioLongPressUserHint = getMainActivity()
       .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);

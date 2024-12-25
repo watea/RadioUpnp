@@ -144,11 +144,7 @@ public class PlayerController {
             setPlayImageButtonVisibility(false, false);
             break;
           default:
-            // On error, leave radio data visibility ON.
-            // Important notice: this is for user convenience only.
-            // Display state is not saved if the context is disposed
-            // (as it would require a Radio Service safe context,
-            // too complex to implement).
+            // On error, leave radio data visibility
             if (getCurrentRadio() == null) {
               setPlayImageButtonVisibility(false, false);
             } else {
@@ -196,6 +192,7 @@ public class PlayerController {
         // Link to the callback controller
         mediaController.registerCallback(mediaControllerCallback);
         // Sync existing MediaSession state with UI
+        onNewCurrentRadio();
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         if ((mediaMetadataCompat != null) && RadioService.isValid(mediaMetadataCompat)) {
           // Order matters here for display coherence
@@ -347,8 +344,6 @@ public class PlayerController {
     } catch (IllegalStateException illegalStateException) {
       Log.e(LOG_TAG, "onActivityResume: mediaBrowser.connect() failed", illegalStateException);
     }
-    // Update display
-    onNewCurrentRadio();
   }
 
   // Must be called on activity pause.
