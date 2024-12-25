@@ -176,7 +176,6 @@ public class MainFragment extends MainActivityFragment {
       () -> isPreferredRadios ? getRadios().getPreferred() : getRadios(),
       radiosRecyclerView,
       radiosMainAdapterListener);
-    getMainActivity().setCurrentRadioConsumer(radiosMainAdapter);
     // Build alert dialogs
     radioLongPressUserHint = getMainActivity()
       .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);
@@ -184,8 +183,10 @@ public class MainFragment extends MainActivityFragment {
       .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
     preferredRadiosUserHint = getMainActivity()
       .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
-    // Fill menu
-    getMainActivity().setUpnpIconConsumer(bitmap -> {
+    // Set listeners
+    getMainActivity().setActionsConsumers(
+      radiosMainAdapter,
+      bitmap -> {
       if (upnpMenuItem != null) {
         upnpMenuItem.setVisible((bitmap != null));
         if (bitmap != null) {

@@ -361,11 +361,10 @@ public class MainActivity
     upnpAlertDialog.show();
   }
 
-  public void setCurrentRadioConsumer(@Nullable Consumer<Radio> currentRadioConsumer) {
+  public void setActionsConsumers(
+    @Nullable Consumer<Radio> currentRadioConsumer,
+    @Nullable Consumer<Bitmap> upnpIconConsumer) {
     playerController.setListener(currentRadioConsumer);
-  }
-
-  public void setUpnpIconConsumer(@Nullable Consumer<Bitmap> upnpIconConsumer) {
     this.upnpIconConsumer = upnpIconConsumer;
   }
 
