@@ -1,7 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
+    namespace 'com.watea.radio_upnp'
+
     compileSdk 35
+    
     defaultConfig {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
@@ -10,6 +13,7 @@ android {
         versionName "2.71.21"
         vectorDrawables.useSupportLibrary = true
     }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -19,10 +23,11 @@ android {
             debuggable true
         }
     }
+
     compileOptions {
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    namespace 'com.watea.radio_upnp'
+
     buildFeatures {
         buildConfig true
     }
