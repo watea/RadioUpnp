@@ -21,7 +21,3 @@ allprojects {
         }
     }
 }
-
-tasks.register('clean', Delete) {
-    delete getLayout().getBuildDirectory()
-}
