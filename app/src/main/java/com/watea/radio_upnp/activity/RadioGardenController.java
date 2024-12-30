@@ -126,10 +126,11 @@ public class RadioGardenController {
       boolean result = (clipData != null);
       if (result) {
         final ClipData.Item item = clipData.getItemAt(0);
-        result = (item != null);
+        final CharSequence text = (item == null) ? null : item.getText();
+        result = (text != null);
         if (result) {
-          Log.d(LOG_TAG, "ClipData: " + item);
-          final Matcher matcher = CLIP_DATA_PATTERN.matcher(item.getText());
+          Log.d(LOG_TAG, "ClipData: " + text);
+          final Matcher matcher = CLIP_DATA_PATTERN.matcher(text);
           result = matcher.find() && (matcher.groupCount() > 2);
           if (result) {
             final String id = matcher.group(3);
