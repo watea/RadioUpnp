@@ -178,9 +178,10 @@ public class AndroidUpnpService extends android.app.Service {
   @Override
   public void onCreate() {
     super.onCreate();
+    // Order matters
+    networkProxy = new NetworkProxy(AndroidUpnpService.this);
     connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
     connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
-    networkProxy = new NetworkProxy(AndroidUpnpService.this);
   }
 
   @Override
