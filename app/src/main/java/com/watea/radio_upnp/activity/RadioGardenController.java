@@ -72,7 +72,7 @@ import java.util.regex.Pattern;
 //    }
 //  }
 //  }
-// Channel: http://radio.garden/api/ara/content/listen/{channelId}/channel.mp3
+// Channel: https://radio.garden/api/ara/content/listen/{channelId}/channel.mp3
 public class RadioGardenController {
   private static final String LOG_TAG = RadioGardenController.class.getSimpleName();
   private static final Handler handler = new Handler(Looper.getMainLooper());
