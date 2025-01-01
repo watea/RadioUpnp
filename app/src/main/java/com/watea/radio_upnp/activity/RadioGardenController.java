@@ -47,6 +47,8 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -182,47 +184,41 @@ public class RadioGardenController {
 
   // Asynchronous call
   private void handle(@NonNull String id) {
-    URL tempWebSite = null;
-    Bitmap tempIcon = null;
-    boolean tempIssOk = false;
-    JSONObject tempData = null;
+    final AtomicBoolean isOk = new AtomicBoolean(false);
+    final AtomicReference<URL> webSite = new AtomicReference<>();
+    final AtomicReference<Bitmap> icon = new AtomicReference<>();
+    final AtomicReference<JSONObject> data = new AtomicReference<>();
     try {
       final JSONObject jSONObject = getJson(new URL(RADIO_GARDEN + CHANNEL + id));
-      tempData = jSONObject.getJSONObject("data");
-      final String webSite = tempData.getString("website");
+      data.set(jSONObject.getJSONObject("data"));
       try {
-        tempWebSite = new URL(webSite);
+        webSite.set(new URL(data.get().getString("website")));
       } catch (MalformedURLException malformedURLException) {
         Log.d(LOG_TAG, "Radio Garden website malformed: " + webSite);
       }
-      if (tempWebSite != null) {
-        tempIcon = RadioURL.iconSearch(tempWebSite);
+      if (webSite.get() != null) {
+        icon.set(RadioURL.iconSearch(webSite.get()));
       }
-      tempIssOk = true;
+      isOk.set(true);
     } catch (Exception exception) {
       Log.d(LOG_TAG, "handle asynchronous exception", exception);
     }
-    final URL webSite = tempWebSite;
-    final Bitmap icon = tempIcon;
-    final JSONObject data = tempData;
-    final boolean isAsynchronousOk = tempIssOk;
     // Synchronous update
     handler.post(() -> {
-      boolean isAddOk = isAsynchronousOk;
       final Radios radios = MainActivity.getRadios();
-      if (isAddOk) {
+      if (isOk.get()) {
         try {
-          isAddOk = radios.add(new Radio(
-            data.getString("title"),
-            (icon == null) ? mainActivity.getDefaultIcon() : icon,
+          isOk.set(radios.add(new Radio(
+            data.get().getString("title"),
+            (icon.get() == null) ? mainActivity.getDefaultIcon() : icon.get(),
             new URL(RADIO_GARDEN + LISTEN + id + CHANNEL_MP3),
-            webSite));
+            webSite.get())));
           Log.d(LOG_TAG, "Radio added!");
         } catch (Exception exception) {
           Log.d(LOG_TAG, "handle synchronous exception", exception);
         }
       }
-      tell(isAddOk);
+      tell(isOk.get());
     });
   }
 
