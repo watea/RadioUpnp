@@ -56,6 +56,13 @@ public class DefaultRadios {
       "audio/mp3",
       192),
     new DefaultRadio(
+      "FRANCE MUSIQUE",
+      R.drawable.logo_france_musique,
+      "https://icecast.radiofrance.fr/francemusique-hifi.aac?id=radiofrance&cy-pub=0",
+      "https://www.francemusique.fr/",
+      "audio/mp3",
+      192),
+    new DefaultRadio(
       "EUROPE1",
       R.drawable.logo_europe1,
       "http://europe1.lmn.fm/europe1.mp3",
