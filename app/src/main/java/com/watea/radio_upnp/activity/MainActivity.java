@@ -833,6 +833,7 @@ public class MainActivity
   }
 
   public class UserHint {
+    @NonNull
     private final AlertDialog alertDialog;
     private final int delay;
     private boolean gotIt;
