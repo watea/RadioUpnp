@@ -59,19 +59,30 @@ public class Action extends Asset {
     final Argument argument = currentArgument.get();
     if (argument == null) {
       // Process Action field
-      if (currentTag.equals("name")) {
-        name = uRLService.getTag(currentTag);
-        // No more tags for Action
-        uRLService.clearTags();
+      switch (currentTag) {
+        case XML_NAME:
+          if (name == null) {
+            setOnError();
+            Log.e(LOG_TAG, "endAccept: incomplete Action");
+          }
+          break;
+        case "name":
+          name = uRLService.getTag(currentTag);
+          // No more tags for Action
+          uRLService.clearTags();
+          break;
+        default:
+          // Nothing to do
       }
     } else {
       // Process Argument, if any
       argument.endAccept(uRLService, currentTag);
       if (currentTag.equals(Argument.XML_NAME)) {
-        if (argument.isComplete()) {
-          arguments.add(argument);
-        } else {
+        if (argument.isOnError()) {
+          setOnError();
           Log.e(LOG_TAG, "endAccept: try to add an incomplete Argument to " + name);
+        } else {
+          arguments.add(argument);
         }
         currentArgument.set(null);
       }
@@ -93,11 +104,6 @@ public class Action extends Asset {
     return name.equals(this.name);
   }
 
-  @Override
-  public boolean isComplete() {
-    return (name != null);
-  }
-
   @NonNull
   public Service getService() {
     return service;
@@ -110,6 +116,7 @@ public class Action extends Asset {
 
   public static class Argument extends Asset {
     private static final String XML_NAME = "argument";
+    private static final String LOG_TAG = Argument.class.getSimpleName();
     private String name = null;
     private String direction = null;
 
@@ -118,6 +125,10 @@ public class Action extends Asset {
       if (currentTag.equals(XML_NAME)) {
         name = uRLService.getTag("name");
         direction = uRLService.getTag("direction");
+        if ((name == null) || (direction == null)) {
+          setOnError();
+          Log.e(LOG_TAG, "endAccept: incomplete Argument");
+        }
         // No more tags for Argument
         uRLService.clearTags();
       }
@@ -130,11 +141,6 @@ public class Action extends Asset {
     @NonNull
     public String getName() {
       return name;
-    }
-
-    @Override
-    public boolean isComplete() {
-      return (name != null) && (direction != null);
     }
   }
 }

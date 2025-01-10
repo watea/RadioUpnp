@@ -69,22 +69,21 @@ public class Service extends Asset {
   private final URI descriptionURL;
   private final Set<Action> actions = new HashSet<>();
 
+  // Service does not call setOnError(); isOnError() is always false
   public Service(
     @NonNull Device device,
     @NonNull URL baseURL,
     @NonNull String serviceType,
     @NonNull String serviceId,
-    @NonNull String descriptionURL,
-    @NonNull String controlURL,
-    @NonNull Callback callback)
+    @NonNull URI descriptionURL,
+    @NonNull URI controlURL)
     throws IOException, XmlPullParserException, URISyntaxException {
-    super(callback);
     this.device = device;
     this.baseURL = baseURL;
     this.serviceType = serviceType;
     this.serviceId = serviceId;
-    this.controlURL = new URI(controlURL);
-    this.descriptionURL = new URI(descriptionURL);
+    this.controlURL = controlURL;
+    this.descriptionURL = descriptionURL;
     // Fetch content
     hydrate(new URLService(baseURL, this.descriptionURL));
   }
@@ -110,27 +109,15 @@ public class Service extends Asset {
       action.endAccept(urlService, currentTag);
       // Action complete?
       if (currentTag.equals(Action.XML_NAME)) {
-        if (action.isComplete()) {
-          actions.add(action);
-        } else {
+        if (action.isOnError()) {
+          // No setOnError() here as we want to tolerate incomplete service
           Log.e(LOG_TAG, "enAccept: try to add an incomplete Action to: " + serviceType);
+        } else {
+          actions.add(action);
         }
         currentAction.set(null);
       }
     }
-  }
-
-  // We call callback when parsing is over
-  @Override
-  public void endParseAccept(@NonNull URLService uRLService) {
-    if (isComplete()) {
-      callback.onComplete(this);
-    }
-  }
-
-  @Override
-  protected boolean isComplete() {
-    return !actions.isEmpty() && actions.stream().allMatch(Action::isComplete);
   }
 
   @NonNull

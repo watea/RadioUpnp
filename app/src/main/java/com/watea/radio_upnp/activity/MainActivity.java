@@ -144,7 +144,9 @@ public class MainActivity
         if (upnpService.getSelectedDevice() == device) {
           runOnUiThread(() -> {
             if (upnpIconConsumer != null) {
-              upnpIconConsumer.accept((device == null) ? null : device.getIcon());
+              Bitmap icon = (device == null) ? null : device.getIcon();
+              icon = (icon == null) ? getDefaultIcon(R.drawable.ic_cast_blue) : icon;
+              upnpIconConsumer.accept((device == null) ? null : icon);
             }
           });
         }
@@ -166,11 +168,6 @@ public class MainActivity
       }
 
       @Override
-      public void onIcon(@NonNull Device device) {
-        consumeIcon(device);
-      }
-
-      @Override
       public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
         consumeIcon(device);
         if (upnpAlertDialog.isShowing()) {
@@ -189,12 +186,8 @@ public class MainActivity
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       upnpService = (AndroidUpnpService.UpnpService) service;
       if (upnpService != null) {
-        // Add all devices to the list we already know about
-        upnpDevicesAdapter.resetRemoteDevices();
+        // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
-        upnpService.getAliveDevices().forEach(upnpDevicesAdapter::onDeviceAdd);
-        // Get ready for future device advertisements
-        upnpService.addListener(upnpDevicesAdapter);
         upnpService.addListener(upnpListener);
         // Init selected device
         upnpService.setSelectedDeviceIdentity(savedSelectedDeviceIdentity, true);
@@ -210,7 +203,6 @@ public class MainActivity
       }
       // No more devices
       upnpDevicesAdapter.setUpnpService(null);
-      upnpDevicesAdapter.resetRemoteDevices();
     }
   };
 
@@ -242,8 +234,13 @@ public class MainActivity
   }
 
   @NonNull
+  public Bitmap getDefaultIcon(int id) {
+    return BitmapFactory.decodeResource(getResources(), id);
+  }
+
+  @NonNull
   public Bitmap getDefaultIcon() {
-    return BitmapFactory.decodeResource(getResources(), R.drawable.ic_radio_gray);
+    return getDefaultIcon(R.drawable.ic_radio_gray);
   }
 
   // With animation

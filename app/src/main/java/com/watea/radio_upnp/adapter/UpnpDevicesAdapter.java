@@ -63,7 +63,11 @@ public class UpnpDevicesAdapter
   }
 
   public void setUpnpService(@Nullable AndroidUpnpService.UpnpService upnpService) {
+    resetRemoteDevices();
     this.upnpService = upnpService;
+    if (this.upnpService != null) {
+      this.upnpService.addListener(this);
+    }
   }
 
   @NonNull
@@ -107,18 +111,13 @@ public class UpnpDevicesAdapter
   }
 
   @Override
-  public void onIcon(@NonNull Device device) {
-    notifyChange(device);
-  }
-
-  @Override
   public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
     notifyChange(previousDevice);
     notifyChange(device);
   }
 
   @SuppressLint("NotifyDataSetChanged")
-  public void resetRemoteDevices() {
+  private void resetRemoteDevices() {
     devices.clear();
     notifyDataSetChanged();
     onCountChange(true);

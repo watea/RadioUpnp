@@ -40,6 +40,8 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("unused")
 //  <device>
@@ -97,6 +99,8 @@ public class Device extends Asset {
   private static final String WIDTH = "width";
   private static final String HEIGHT = "height";
   private static final String URL = "url";
+  private static final String UUID_PATTERN = "^(.*)::";
+  private static final Pattern UUID_REGEX = Pattern.compile(UUID_PATTERN);
   @NonNull
   private final SsdpService ssdpService;
   @Nullable
@@ -118,20 +122,11 @@ public class Device extends Asset {
   private String uUID = null;
   private boolean isAlive = true;
   private boolean isEmbeddedDevices = false;
-  private boolean isParseComplete;
-  private final Asset.Callback isCompleteCallback = asset -> {
-    if (isComplete()) {
-      callback.onComplete(this);
-    }
-  };
   @Nullable
   private Bitmap icon = null;
   private boolean isPngIcon = false;
 
-  public Device(
-    @NonNull SsdpService ssdpService,
-    @NonNull Callback callback) throws IOException, XmlPullParserException {
-    super(callback);
+  public Device(@NonNull SsdpService ssdpService) throws IOException, XmlPullParserException {
     this.ssdpService = ssdpService;
     this.superDevice = null;
     location = new URL(ssdpService.getLocation());
@@ -139,11 +134,20 @@ public class Device extends Asset {
   }
 
   // Embedded device
-  public Device(
-    @NonNull Device device) {
+  public Device(@NonNull Device device) {
     this.ssdpService = device.ssdpService;
     this.superDevice = device;
     this.location = device.location;
+  }
+
+  @Nullable
+  public static String getUUID(@NonNull SsdpService ssdpService) {
+    final Matcher matcher = UUID_REGEX.matcher(ssdpService.getSerialNumber());
+    return (matcher.find()) ? matcher.group(1) : null;
+  }
+
+  public static boolean isAlive(@NonNull SsdpService.Status status) {
+    return (status != SsdpService.Status.BYEBYE);
   }
 
   public boolean isAlive() {
@@ -244,21 +248,28 @@ public class Device extends Asset {
           (serviceId == null) ||
           (descriptionURL == null) ||
           (controlURL == null)) {
+          setOnError();
           Log.e(LOG_TAG, "endAccept: incomplete service parameters");
         } else {
+          final String log = "Add service: " + serviceType + " to " + getDisplayString();
           try {
-            device.services.add(new Service(
+            final Service service = new Service(
               this,
               urlService.getURL(),
               serviceType,
               serviceId,
-              descriptionURL,
-              controlURL,
-              isCompleteCallback));
-            Log.d(LOG_TAG, "Add service: " + serviceType + " to " + getDisplayString());
-          } catch
-          (IOException | XmlPullParserException | URISyntaxException exception) {
-            Log.e(LOG_TAG, "endAccept: service could not be created: " + serviceType, exception);
+              new URI(descriptionURL),
+              new URI(controlURL));
+            if (service.isOnError()) {
+              setOnError();
+              Log.e(LOG_TAG, log + " failed");
+            } else {
+              device.services.add(service);
+              Log.d(LOG_TAG, log);
+            }
+          } catch (IOException | XmlPullParserException | URISyntaxException exception) {
+            setOnError();
+            Log.e(LOG_TAG, log + " failed", exception);
           }
         }
         break;
@@ -281,10 +292,10 @@ public class Device extends Asset {
               if (newIcon != null) {
                 icon = newIcon;
                 isPngIcon = isPngUrlSignature;
-                ((Device.Callback) callback).onIcon(this);
               }
             }
-          } catch (Exception exception) {
+          } catch (IOException | URISyntaxException exception) {
+            // Note: ignore exception, setOnError() not called here
             Log.e(LOG_TAG, "endAccept: fail to fetch icon", exception);
           }
         }
@@ -300,20 +311,12 @@ public class Device extends Asset {
     }
   }
 
-  // May be necessary if last service fails to complete
   @Override
   public void endParseAccept(@NonNull URLService uRLService) {
-    isParseComplete = true;
-    isCompleteCallback.onComplete(this);
-  }
-
-  @Override
-  public boolean isComplete() {
-    return
-      isParseComplete &&
-        !services.isEmpty() &&
-        (services.stream().allMatch(Asset::isComplete) ||
-          embeddedDevices.stream().allMatch(Asset::isComplete));
+    // Some device have no UUID (tag UDN) in XML, so we take it from SSDP response
+    uUID = (uUID == null) ? getUUID(ssdpService) : uUID;
+    // Alive?
+    isAlive = isAlive(ssdpService.getStatus());
   }
 
   @NonNull
@@ -326,8 +329,8 @@ public class Device extends Asset {
     return uUID;
   }
 
-  public boolean hasUUID(@Nullable String uUID) {
-    return (this.uUID != null) && this.uUID.equals(uUID);
+  public boolean hasUUID(@Nullable String otherUUID) {
+    return (uUID != null) && uUID.equals(otherUUID);
   }
 
   public boolean hasUUID(@NonNull Device device) {
@@ -349,7 +352,15 @@ public class Device extends Asset {
     return icon;
   }
 
-  public interface Callback extends Asset.Callback {
-    void onIcon(@NonNull Device device);
+  @Override
+  public boolean equals(@Nullable Object obj) {
+    if (this == obj) return true;
+    if ((obj == null) || (getClass() != obj.getClass())) return false;
+    return hasUUID((Device) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return (uUID == null) ? super.hashCode() : uUID.hashCode();
   }
 }

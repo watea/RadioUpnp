@@ -45,8 +45,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
@@ -59,80 +58,19 @@ public class AndroidUpnpService extends android.app.Service {
     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) // Internet
     .build();
   private final Binder binder = new UpnpService();
-  private final Set<Device> devices = new CopyOnWriteArraySet<>();
   private final ActionController actionController = new ActionController();
+  private final Devices devices = new Devices();
   private final Set<Listener> listeners = new HashSet<>();
   private final SsdpClient.Listener ssdpClientListener = new SsdpClient.Listener() {
-    private final Device.Callback deviceCallback = new Device.Callback() {
-      // Add device if has good DEVICE and not already known
-      private synchronized void addDevice(@NonNull Device device) {
-        if (device.getDeviceType().startsWith(DEVICE) &&
-          (device.getShortService(AV_TRANSPORT_SERVICE_ID) != null) &&
-          devices.stream().noneMatch(device::hasUUID)) {
-          Log.d(LOG_TAG, "Device added: " + device.getDisplayString());
-          devices.add(device);
-          listeners.forEach(listener -> listener.onDeviceAdd(device));
-        }
-      }
-
-      @Override
-      public void onIcon(@NonNull Device device) {
-        listeners.forEach(listener -> listener.onIcon(device));
-      }
-
-      @Override
-      public void onComplete(@NonNull Asset asset) {
-        final Device device = (Device) asset;
-        final Set<Device> embeddedDevices = device.getEmbeddedDevices();
-        Log.d(LOG_TAG, "Device found (embedded: " + embeddedDevices.size() + "): " + device.getDisplayString());
-        // Add device and embedded devices
-        addDevice(device);
-        embeddedDevices.forEach(this::addDevice);
-      }
-    };
-
-    private void addDevice(@NonNull SsdpService service) {
-      new Thread(() -> {
-        try {
-          new Device(service, deviceCallback);
-        } catch (IOException | XmlPullParserException exception) {
-          Log.d(LOG_TAG, "onServiceDiscovered: ", exception);
-        }
-      }).start();
-    }
-
     public void onServiceDiscovered(@NonNull SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
-      addDevice(service);
+      devices.process(service);
     }
 
     @Override
     public void onServiceAnnouncement(@NonNull SsdpService service) {
       Log.d(LOG_TAG, "Announce SsdpService: " + service);
-      final String uUID = service.getSerialNumber(); // Serial number and device UUID shall be identical
-      final SsdpService.Status status = service.getStatus();
-      final boolean isAlive = (status != SsdpService.Status.BYEBYE) && (status != SsdpService.Status.NONE);
-      for (final Device device : devices) {
-        if (device.hasUUID(uUID) && (device.isAlive() != isAlive)) {
-          Log.d(LOG_TAG, "Device announcement: " + device.getDisplayString() + " => " + status);
-          device.setAlive(isAlive);
-          listeners.forEach(listener -> {
-            final Set<Device> embeddedDevices = device.getEmbeddedDevices();
-            if (isAlive) {
-              listener.onDeviceAdd(device);
-              embeddedDevices.forEach(listener::onDeviceAdd);
-            } else {
-              listener.onDeviceRemove(device);
-              embeddedDevices.forEach(listener::onDeviceRemove);
-            }
-          });
-          // Done!
-          return;
-        }
-      }
-      // Device not found, we add it
-      if (status.equals(SsdpService.Status.ALIVE))
-        addDevice(service);
+      devices.process(service);
     }
 
     @Override
@@ -144,12 +82,7 @@ public class AndroidUpnpService extends android.app.Service {
     @Override
     public void onStop() {
       Log.d(LOG_TAG, "onStop");
-      for (final Device device : devices) {
-        listeners.forEach(listener -> {
-          listener.onDeviceRemove(device);
-          device.getEmbeddedDevices().forEach(listener::onDeviceRemove);
-        });
-      }
+      devices.forEach(AndroidUpnpService.this::tellRemoveListeners);
       devices.clear();
     }
   };
@@ -198,14 +131,25 @@ public class AndroidUpnpService extends android.app.Service {
     return binder;
   }
 
+  private void tellRemoveListeners(@NonNull Device device) {
+    listeners.forEach(listener -> {
+      listener.onDeviceRemove(device);
+      devices.getEmbeddedDevicesStream(device).forEach(listener::onDeviceRemove);
+    });
+  }
+
+  private void tellAddListeners(@NonNull Device device) {
+    listeners.forEach(listener -> {
+      listener.onDeviceAdd(device);
+      devices.getEmbeddedDevicesStream(device).forEach(listener::onDeviceAdd);
+    });
+  }
+
   public interface Listener {
     default void onDeviceAdd(@NonNull Device device) {
     }
 
     default void onDeviceRemove(@NonNull Device device) {
-    }
-
-    default void onIcon(@NonNull Device device) {
     }
 
     default void onFatalError() {
@@ -222,7 +166,10 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     public void addListener(@NonNull Listener listener) {
-      listeners.add(listener);
+      synchronized (devices) {
+        devices.stream().filter(Device::isAlive).forEach(listener::onDeviceAdd);
+        listeners.add(listener);
+      }
     }
 
     public void clearListeners() {
@@ -231,11 +178,7 @@ public class AndroidUpnpService extends android.app.Service {
 
     @Nullable
     public Device getDevice(@NonNull String uUID) {
-      return devices.stream().filter(device -> device.hasUUID(uUID)).findAny().orElse(null);
-    }
-
-    public Set<Device> getAliveDevices() {
-      return devices.stream().filter(Device::isAlive).collect(Collectors.toSet());
+      return devices.get(uUID);
     }
 
     public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity, boolean isInit) {
@@ -251,6 +194,64 @@ public class AndroidUpnpService extends android.app.Service {
       final Device selectedDevice = (selectedDeviceIdentity == null) ? null : getDevice(selectedDeviceIdentity);
       // UPnP only allowed if device is alive
       return ((selectedDevice != null) && selectedDevice.isAlive()) ? selectedDevice : null;
+    }
+  }
+
+  private class Devices extends HashSet<Device> {
+    // Add device if has good DEVICE and not already known
+    @Override
+    public synchronized boolean add(Device device) {
+      final boolean added = !device.isOnError() &&
+        device.getDeviceType().startsWith(DEVICE) &&
+        (device.getShortService(AV_TRANSPORT_SERVICE_ID) != null) &&
+        super.add(device);
+      if (added) {
+        Log.d(LOG_TAG, "Device added: " + device.getDisplayString() + " => " + device.isAlive());
+        if (device.isAlive()) {
+          listeners.forEach(listener -> listener.onDeviceAdd(device));
+        }
+      }
+      return added;
+    }
+
+    @Nullable
+    public synchronized Device get(@NonNull String uUID) {
+      return stream().filter(device -> device.hasUUID(uUID)).findFirst().orElse(null);
+    }
+
+    public synchronized void process(@NonNull SsdpService service) {
+      final String uUID = Device.getUUID(service);
+      final Device knownDevice = (uUID == null) ? null : get(uUID);
+      if (knownDevice == null) {
+        // Device not found, we build in own thread
+        new Thread(() -> {
+          try {
+            final Device device = new Device(service);
+            final Set<Device> embeddedDevices = device.getEmbeddedDevices();
+            Log.d(LOG_TAG, "Device found (embedded: " + embeddedDevices.size() + ", onError: " + device.isOnError() + "): " + device.getDisplayString());
+            add(device);
+            addAll(embeddedDevices);
+          } catch (IOException | XmlPullParserException exception) {
+            Log.e(LOG_TAG, "process: add device failed!", exception);
+          }
+        }).start();
+      } else {
+        final boolean isAlive = Device.isAlive(service.getStatus());
+        if (knownDevice.isAlive() != isAlive) {
+          Log.d(LOG_TAG, "Device announcement: " + knownDevice.getDisplayString() + " => " + service.getStatus());
+          knownDevice.setAlive(isAlive);
+          if (isAlive) {
+            tellAddListeners(knownDevice);
+          } else {
+            tellRemoveListeners(knownDevice);
+          }
+        }
+      }
+    }
+
+    @NonNull
+    public synchronized Stream<Device> getEmbeddedDevicesStream(@NonNull Device device) {
+      return device.getEmbeddedDevices().stream().filter(this::contains);
     }
   }
 }

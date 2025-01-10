@@ -31,18 +31,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import java.io.IOException;
 
 public abstract class Asset implements URLService.Consumer {
-  protected final Callback callback;
-
-  // Callback to call when job is done
-  protected Asset(@NonNull Callback callback) {
-    this.callback = callback;
-  }
-
-  // Default is no callback
-  protected Asset() {
-    this(asset -> {
-    });
-  }
+  private boolean isOnError = false;
 
   protected static String getTag(@Nullable String tag) {
     return (tag == null) ? "Unknown" : tag;
@@ -52,14 +41,16 @@ public abstract class Asset implements URLService.Consumer {
   public void endParseAccept(@NonNull URLService uRLService) {
   }
 
-  protected abstract boolean isComplete();
+  protected boolean isOnError() {
+    return isOnError;
+  }
+
+  protected void setOnError() {
+    isOnError = true;
+  }
 
   protected void hydrate
     (@NonNull URLService uRLService) throws IOException, XmlPullParserException {
     uRLService.fetchContent().parseXml(this);
-  }
-
-  public interface Callback {
-    void onComplete(@NonNull Asset asset);
   }
 }

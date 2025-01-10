@@ -187,13 +187,13 @@ public class MainFragment extends MainActivityFragment {
     getMainActivity().setActionsConsumers(
       radiosMainAdapter,
       bitmap -> {
-      if (upnpMenuItem != null) {
-        upnpMenuItem.setVisible((bitmap != null));
-        if (bitmap != null) {
-          upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
+        if (upnpMenuItem != null) {
+          upnpMenuItem.setVisible((bitmap != null));
+          if (bitmap != null) {
+            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
+          }
         }
-      }
-    });
+      });
   }
 
   @Override
