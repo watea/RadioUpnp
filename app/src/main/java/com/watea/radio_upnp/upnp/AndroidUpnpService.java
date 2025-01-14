@@ -166,10 +166,7 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     public void addListener(@NonNull Listener listener) {
-      synchronized (devices) {
-        devices.stream().filter(Device::isAlive).forEach(listener::onDeviceAdd);
-        listeners.add(listener);
-      }
+      devices.addListener(listener);
     }
 
     public void clearListeners() {
@@ -252,6 +249,11 @@ public class AndroidUpnpService extends android.app.Service {
     @NonNull
     public synchronized Stream<Device> getEmbeddedDevicesStream(@NonNull Device device) {
       return device.getEmbeddedDevices().stream().filter(this::contains);
+    }
+
+    public synchronized void addListener(@NonNull Listener listener) {
+      stream().filter(Device::isAlive).forEach(listener::onDeviceAdd);
+      listeners.add(listener);
     }
   }
 }
