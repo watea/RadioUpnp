@@ -62,5 +62,5 @@ dependencies {
     // CandidHttpServer
     implementation 'com.github.watea:candidhttpserver:1.0.9'
     // AndroidSsdpClient
-    implementation 'com.github.watea:androidssdpclient:1.0.0'
+    implementation 'com.github.watea:androidssdpclient:1.0.1'
 }
