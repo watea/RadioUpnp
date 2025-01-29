@@ -40,7 +40,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
@@ -93,6 +95,7 @@ import java.io.OutputStream;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 public class MainActivity
@@ -101,7 +104,7 @@ public class MainActivity
   private static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
-    new HashMap<Class<? extends Fragment>, Integer>() {
+    new HashMap<>() {
       {
         put(MainFragment.class, R.id.action_home);
         put(SearchFragment.class, R.id.action_search);
@@ -385,6 +388,15 @@ public class MainActivity
     return new Intent(Intent.ACTION_SEND)
       .setType("message/rfc822")
       .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
+  }
+
+  @NonNull
+  private Intent getNewSendIntent(@NonNull File logFile, @NonNull String packageName) {
+    final Uri logFileUri = FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile);
+    return getNewSendIntent()
+      .putExtra(Intent.EXTRA_SUBJECT, "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
+      .putExtra(Intent.EXTRA_STREAM, logFileUri)
+      .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
   }
 
   @Override
@@ -687,26 +699,50 @@ public class MainActivity
       getPackageName());
   }
 
-  private void sendLogcatMail() {
-    // File is stored at root place for app
-    final File logFile = new File(getFilesDir(), "logcat.txt");
-    final String packageName = getPackageName();
-    final String[] command =
-      new String[]{"logcat", "-d", "-f", logFile.toString(), packageName + ":D"};
-    try {
-      Runtime.getRuntime().exec(command);
-      // Prepare mail
-      startActivity(getNewSendIntent()
-        .putExtra(
-          Intent.EXTRA_SUBJECT,
-          "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
-        .putExtra(
-          Intent.EXTRA_STREAM,
-          FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile)));
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
-      tell(R.string.report_error);
-    }
+  public void sendLogcatMail() {
+    // Use a background thread for logcat execution
+    final Handler handler = new Handler(Looper.getMainLooper());
+    Executors.newSingleThreadExecutor().execute(() -> {
+      final File logFile = new File(getFilesDir(), "logcat.txt");
+      final String packageName = getPackageName();
+      final String[] command = new String[]{
+        "logcat",
+        "-d",
+        "-v",
+        "threadtime",
+        "-f",
+        logFile.toString(),
+        packageName + ":D",
+      };
+      Process process = null;
+      try {
+        // Execute logcat command
+        process = Runtime.getRuntime().exec(command);
+        // Wait for logcat to finish
+        process.waitFor();
+        // Check if logcat was successful
+        if (logFile.exists() && logFile.length() > 0) {
+          // Prepare mail on the main thread
+          handler.post(() -> {
+            try {
+              startActivity(getNewSendIntent(logFile, packageName));
+            } catch (Exception exception) {
+              Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
+              tell(R.string.report_error);
+            }
+          });
+        } else {
+          handler.post(() -> tell(R.string.report_error));
+        }
+      } catch (IOException | InterruptedException exception) {
+        Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
+        handler.post(() -> tell(R.string.report_error));
+      } finally {
+        if (process != null) {
+          process.destroy();
+        }
+      }
+    });
   }
 
   private void checkNavigationMenu(int id) {
