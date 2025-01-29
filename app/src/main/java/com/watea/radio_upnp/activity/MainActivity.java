@@ -712,7 +712,7 @@ public class MainActivity
         "threadtime",
         "-f",
         logFile.toString(),
-        ":D"
+        "com.watea.*:D"
       };
       Process process = null;
       try {
