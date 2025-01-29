@@ -712,7 +712,7 @@ public class MainActivity
         "threadtime",
         "-f",
         logFile.toString(),
-        packageName + ":D",
+        ":D"
       };
       Process process = null;
       try {
