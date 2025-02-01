@@ -30,6 +30,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.Spinner;
@@ -45,48 +46,43 @@ import com.watea.radio_upnp.adapter.RadiosSearchAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.RadioURL;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class SearchFragment extends MainActivityFragment {
   private static final String LOG_TAG = SearchFragment.class.getSimpleName();
-  private static final String DAR_FM_API = "http://api.dar.fm/";
-  private static final String DAR_FM_PLAYLIST_REQUEST = DAR_FM_API + "playlist.php?q=@callsign%20";
-  private static final String DAR_FM_PAGESIZE = "&pagesize=50";
-  private static final String DAR_FM_STATIONS_REQUEST = DAR_FM_API + "darstations.php?station_id=";
-  private static final String SPACE_FOR_SEARCH = "%20";
-  private static final String ALL_FOR_SEARCH = "*";
-  private static final String COUNTRY_FOR_SEARCH = "@country%20";
-  private static final String DAR_FM_PARTNER_TOKEN = "&partner_token=6453742475";
-  private static final String DAR_FM_BASE_URL = "http://stream.dar.fm/";
-  private static final String DAR_FM_NAME = "name";
-  private static final String DAR_FM_WEB_PAGE = "web_page";
-  private static final String DAR_FM_ID = "id";
+  private static final String[] RADIO_BROWSER_SERVERS = {
+    "https://de1.api.radio-browser.info",
+    "https://fr1.api.radio-browser.info",
+    "https://nl1.api.radio-browser.info",
+    "https://at1.api.radio-browser.info"
+  };
+  private final OkHttpClient httpClient = new OkHttpClient();
+  private String radioBrowserServer = null;
   private FrameLayout defaultFrameLayout;
   private AlertDialog searchAlertDialog;
   private EditText nameEditText;
   private RadiosSearchAdapter radiosSearchAdapter;
+  private Spinner countrySpinner;
   private boolean isFirstStart = true;
-  private String[] countryCodes;
-
-  @NonNull
-  private static String extractValue(@NonNull Element element, @NonNull String tag) {
-    final Elements elements = element.getElementsByTag(tag);
-    return elements.isEmpty() ? "" : Objects.requireNonNull(elements.first()).ownText();
-  }
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    countryCodes = getResources().getStringArray(R.array.iso3166_country_codes);
+    selectServerAndFetchCountries();
   }
 
   @Override
@@ -148,112 +144,119 @@ public class SearchFragment extends MainActivityFragment {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
-    final View searchView =
-      getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
+    final View searchView = getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
     nameEditText = searchView.findViewById(R.id.name_edit_text);
-    final Spinner countrySpinner = searchView.findViewById(R.id.country_spinner);
-    // Adapter
+    countrySpinner = searchView.findViewById(R.id.country_spinner);
     radiosSearchAdapter = new RadiosSearchAdapter(getMainActivity(), radiosRecyclerView);
-    // Build alert dialog
     searchAlertDialog = new AlertDialog.Builder(getMainActivity())
       .setView(searchView)
-      .setPositiveButton(
-        R.string.action_go,
-        (dialogInterface, i) -> search(countryCodes[countrySpinner.getSelectedItemPosition()]))
+      .setPositiveButton(R.string.action_go, (dialogInterface, i) -> search())
       .create();
   }
 
-  // Valid countryCode has length == 2
-  private void search(@NonNull String countryCode) {
-    tell(R.string.wait_search);
-    radiosSearchAdapter.clear();
-    defaultFrameLayout.setVisibility(View.VISIBLE);
+  private void selectServerAndFetchCountries() {
     new Thread(() -> {
       try {
-        // Search all if no entry
-        String searchedText = nameEditText.getText().toString().toUpperCase();
-        final String[] strings = searchedText.split(" ");
-        searchedText = ((strings.length == 0) || strings[0].isEmpty()) ?
-          ALL_FOR_SEARCH : searchedText.replace(" ", SPACE_FOR_SEARCH);
-        final Element search = Jsoup.connect(
-            DAR_FM_PLAYLIST_REQUEST + searchedText +
-              ((countryCode.length() == 2) ? COUNTRY_FOR_SEARCH + countryCode : "") +
-              DAR_FM_PAGESIZE + DAR_FM_PARTNER_TOKEN)
-          .get();
-        // Parse data
-        for (Element station : search.getElementsByTag("station")) {
-          // As stated, may fail
-          try {
-            final String id = extractValue(station, "station_id");
-            if (id.isEmpty()) {
-              Log.d(LOG_TAG, "Error in data; DAR_FM_PLAYLIST_REQUEST extraction");
-            } else {
-              final Map<String, String> radioData = new HashMap<>();
-              radioData.put(DAR_FM_ID, id);
-              radioData.put(DAR_FM_NAME, extractValue(station, "callsign"));
-              new DarFmDetailSearcher(radioData);
+        for (String radioBrowserServer : RADIO_BROWSER_SERVERS) {
+          this.radioBrowserServer = radioBrowserServer;
+          final Request request = getRequestBuilder()
+            .url(this.radioBrowserServer + "/json/countries")
+            .build();
+          final JSONArray countriesArray = getJSONArray(request);
+          final List<String> countries = new ArrayList<>();
+          for (int i = 0; i < countriesArray.length(); i++) {
+            final String name = countriesArray.getJSONObject(i).getString("name");
+            if (!name.isEmpty() && !countries.contains(name)) {
+              countries.add(name);
             }
-          } catch (Exception exception) {
-            Log.d(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST extraction", exception);
           }
+          countries.sort(Comparator.naturalOrder());
+          countries.add(0, getMainActivity().getString(R.string.Country));
+          getMainActivity().runOnUiThread(() -> countrySpinner.setAdapter(
+            new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries)));
+          break;
         }
-      } catch (IOException iOException) {
-        Log.d(LOG_TAG, "Error performing DAR_FM_PLAYLIST_REQUEST search", iOException);
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "fetchCountries: error", exception);
+        this.radioBrowserServer = null;
       }
     }).start();
   }
 
-  private class DarFmDetailSearcher extends Searcher {
-    // Map of radio data
-    @NonNull
-    private final Map<String, String> radioData;
-    @Nullable
-    private Bitmap icon = null;
-
-    private DarFmDetailSearcher(@NonNull Map<String, String> radioData) {
-      super();
-      this.radioData = radioData;
-      start();
+  private void search() {
+    if (radioBrowserServer == null) {
+      tell(R.string.server_not_reachable);
+      return;
     }
+    final String search = nameEditText.getText().toString();
+    final String country = (countrySpinner.getSelectedItemPosition() > 0) ? countrySpinner.getSelectedItem().toString() : "";
+    tell(R.string.wait_search);
+    radiosSearchAdapter.clear();
+    defaultFrameLayout.setVisibility(View.VISIBLE);
+    new Thread(() -> {
+      final String searchQuery = search.isEmpty() ? "" : "name=" + search;
+      final String countryQuery = country.isEmpty() ? "" : "country=" + country;
+      final Request request = getRequestBuilder()
+        .url(radioBrowserServer + "/json/stations/search?" + countryQuery + (countryQuery.isEmpty() ? "" : "&") + searchQuery)
+        .build();
+      final JSONArray stations;
+      try {
+        stations = getJSONArray(request);
+      } catch (java.io.IOException | JSONException IOException) {
+        tell(R.string.radio_search_failure);
+        return;
+      }
+      final int length = stations.length();
+      if (length == 0) {
+        tell(R.string.no_radio_found);
+        return;
+      }
+      for (int i = 0; i < length; i++) {
+        try {
+          final JSONObject station = stations.getJSONObject(i);
+          final String name = station.getString("name");
+          final String streamUrl = station.getString("url");
+          final String homepage = station.optString("homepage", "");
+          final String favicon = station.optString("favicon", "");
+          final AtomicReference<Bitmap> icon = new AtomicReference<>(null);
+          try {
+            icon.set(new RadioURL(new URL(favicon)).getBitmap());
+          } catch (MalformedURLException malformedURLException) {
+            Log.d(LOG_TAG, "search: icon fetch error");
+          }
+          try {
+            final Radio radio = new Radio(
+              name,
+              (icon.get() == null) ? getMainActivity().getDefaultIcon() : icon.get(),
+              new URL(streamUrl),
+              homepage.isEmpty() ? null : new URL(homepage));
+            // We can now add radio if we are not disposed
+            protectedRunOnUiThread(() -> {
+              radiosSearchAdapter.add(radio);
+              if (defaultFrameLayout.getVisibility() == View.VISIBLE) {
+                defaultFrameLayout.setVisibility(View.INVISIBLE);
+              }
+            });
+          } catch (MalformedURLException malformedURLException) {
+            Log.d(LOG_TAG, "Radio could not be created");
+          }
+        } catch (JSONException jSONException) {
+          Log.d(LOG_TAG, "Malformed JSON for radio");
+        }
+      }
+    }).start();
+  }
 
-    @Override
-    protected void onSearch() {
-      try {
-        final Element station = Jsoup
-          .connect(DAR_FM_STATIONS_REQUEST + radioData.get(DAR_FM_ID) + DAR_FM_PARTNER_TOKEN)
-          .get();
-        radioData.put(DAR_FM_WEB_PAGE, extractValue(station, "websiteurl"));
-        // Order matters
-        icon = new RadioURL(new URL(extractValue(station, "imageurl"))).getBitmap();
-      } catch (MalformedURLException malformedURLException) {
-        Log.d(LOG_TAG, "Error performing icon search", malformedURLException);
-      } catch (IOException iOException) {
-        Log.d(LOG_TAG, "Error performing DAR_FM_STATIONS_REQUEST search", iOException);
-      }
-    }
+  @NonNull
+  private Request.Builder getRequestBuilder() {
+    return new Request.Builder().header("User-Agent", getMainActivity().getString(R.string.app_name));
+  }
 
-    @SuppressLint("SetTextI18n")
-    @Override
-    protected void onPostSearch() {
-      final String radioName = radioData.get(DAR_FM_NAME);
-      URL webPage = null;
-      try {
-        webPage = new URL(radioData.get(DAR_FM_WEB_PAGE));
-      } catch (MalformedURLException malformedURLException) {
-        Log.d(LOG_TAG, "No web page found for " + radioName);
-      }
-      try {
-        radiosSearchAdapter.add(new Radio(
-          (radioName == null) ? "" : radioName.toUpperCase(),
-          (icon == null) ? getMainActivity().getDefaultIcon() : icon,
-          new URL(DAR_FM_BASE_URL + radioData.get(DAR_FM_ID)),
-          webPage));
-        // Order matters
-        defaultFrameLayout.setVisibility(View.INVISIBLE);
-      } catch (MalformedURLException malformedURLException) {
-        Log.d(LOG_TAG, "Error adding radio: " + radioName, malformedURLException);
-        tell(R.string.dar_fm_failure);
-      }
+  @NonNull
+  private JSONArray getJSONArray(@NonNull Request request) throws IOException, JSONException {
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+      return (response.body() == null) ? new JSONArray() : new JSONArray(response.body().string());
     }
   }
 }

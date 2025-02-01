@@ -4,7 +4,7 @@ android {
     namespace 'com.watea.radio_upnp'
 
     compileSdk 35
-    
+
     defaultConfig {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
@@ -65,4 +65,6 @@ dependencies {
     implementation 'com.github.watea:candidhttpserver:1.0.9'
     // AndroidSsdpClient
     implementation 'com.github.watea:androidssdpclient:1.0.3'
+    // okhttp
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
 }

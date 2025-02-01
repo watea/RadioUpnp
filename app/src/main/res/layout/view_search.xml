@@ -34,7 +34,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/app_margin"
-        android:text="@string/onrad_io_search" />
+        android:text="@string/radio_search" />
 
     <EditText
         android:id="@+id/name_edit_text"
@@ -49,8 +49,7 @@
 
     <Spinner
         android:id="@+id/country_spinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:entries="@array/iso3166_countries" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
 </LinearLayout>

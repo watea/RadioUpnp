@@ -41,7 +41,7 @@
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio</string>
     <string name="radio_no_playlist">No playlist available!</string>
-    <string name="onrad_io_search">Search with online <b>OnRad.io</b> database;\nplease note that data may be outdated:</string>
+    <string name="radio_search">Search with online radio database;\nplease note that RadioUpnp can\'t guarantee that the radio is available:</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
     <string name="no_dlna_selection">No UPnP/DLNA device selected</string>
     <string name="radio_name">RADIO NAME</string>
@@ -79,7 +79,7 @@
     <string name="donation_google_android_market_description">(Google charges a fee of 15%)</string>
     <string name="donation_alert_dialog_title">Error occurred!</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
-    <string name="dar_fm_failure">Note: trouble while fetching data in <b>OnRad.io</b> server</string>
+    <string name="radio_search_failure">Note: trouble while fetching data in radio search server</string>
     <string name="upnp_error">UPnP service failed, please check if network is available!</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>
@@ -105,6 +105,10 @@
     <string name="or_use">or use</string>
     <string name="Theme">Theme</string>
     <string name="radio_not_defined">Radio can\'t be found in database!</string>
+    <string name="copied_to_clipboard">Information copied to clipboard!</string>
+    <string name="server_not_reachable">Server is not reachable. Please try later…</string>
+    <string name="Country">[Please select a country]</string>
+    <string name="no_radio_found">No radio found!</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
@@ -139,5 +143,4 @@
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dark</string>
     <string name="light_radio_button">Light</string>
-    <string name="copied_to_clipboard">Information copied to clipboard!</string>
 </resources>

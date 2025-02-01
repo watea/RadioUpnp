@@ -25,8 +25,6 @@ package com.watea.radio_upnp.activity;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -172,16 +170,20 @@ public abstract class MainActivityFragment extends Fragment {
       .hideSoftInputFromWindow(focus.getWindowToken(), 0);
   }
 
+  protected void protectedRunOnUiThread(@NonNull Runnable runnable) {
+    getMainActivity().runOnUiThread(() -> {
+      if (isActuallyAdded()) {
+        runnable.run();
+      }
+    });
+  }
+
   // Abstract class to handle web search
   protected abstract class Searcher extends Thread {
     @Override
     public void run() {
       onSearch();
-      new Handler(Looper.getMainLooper()).post(() -> {
-        if (isActuallyAdded()) {
-          onPostSearch();
-        }
-      });
+      protectedRunOnUiThread(this::onPostSearch);
     }
 
     protected abstract void onSearch();
