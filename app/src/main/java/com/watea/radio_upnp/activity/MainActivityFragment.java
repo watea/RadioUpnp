@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.activity;
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -153,11 +154,6 @@ public abstract class MainActivityFragment extends Fragment {
     getMainActivity().getOnBackPressedDispatcher().onBackPressed();
   }
 
-  protected boolean isActuallyAdded() {
-    return ((getActivity() != null) && isAdded());
-  }
-
-
   protected void flushKeyboard() {
     final View focus = getMainActivity().getCurrentFocus();
     if (focus != null) {
@@ -171,11 +167,15 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   protected void protectedRunOnUiThread(@NonNull Runnable runnable) {
-    getMainActivity().runOnUiThread(() -> {
-      if (isActuallyAdded()) {
-        runnable.run();
-      }
-    });
+    final Activity activity = getActivity();
+    if (activity != null) {
+      activity.runOnUiThread(() -> {
+        final Activity actuallActivity = getActivity();
+        if ((actuallActivity != null) && isAdded()) {
+          runnable.run();
+        }
+      });
+    }
   }
 
   // Abstract class to handle web search

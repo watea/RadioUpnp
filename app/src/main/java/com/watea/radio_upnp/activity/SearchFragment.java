@@ -224,22 +224,21 @@ public class SearchFragment extends MainActivityFragment {
           } catch (MalformedURLException malformedURLException) {
             Log.d(LOG_TAG, "search: icon fetch error");
           }
-          try {
-            final Radio radio = new Radio(
-              name,
-              (icon.get() == null) ? getMainActivity().getDefaultIcon() : icon.get(),
-              new URL(streamUrl),
-              homepage.isEmpty() ? null : new URL(homepage));
-            // We can now add radio if we are not disposed
-            protectedRunOnUiThread(() -> {
-              radiosSearchAdapter.add(radio);
+          // We can now add radio if we are not disposed
+          protectedRunOnUiThread(() -> {
+            try {
+              radiosSearchAdapter.add(new Radio(
+                name,
+                (icon.get() == null) ? getMainActivity().getDefaultIcon() : icon.get(),
+                new URL(streamUrl),
+                homepage.isEmpty() ? null : new URL(homepage)));
               if (defaultFrameLayout.getVisibility() == View.VISIBLE) {
                 defaultFrameLayout.setVisibility(View.INVISIBLE);
               }
-            });
-          } catch (MalformedURLException malformedURLException) {
-            Log.d(LOG_TAG, "Radio could not be created");
-          }
+            } catch (MalformedURLException malformedURLException) {
+              Log.d(LOG_TAG, "Radio could not be created");
+            }
+          });
         } catch (JSONException jSONException) {
           Log.d(LOG_TAG, "Malformed JSON for radio");
         }
