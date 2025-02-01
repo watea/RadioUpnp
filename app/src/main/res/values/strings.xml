@@ -80,7 +80,7 @@
     <string name="donation_google_android_market_description">(Google charges a fee of 15%)</string>
     <string name="donation_alert_dialog_title">Error occurred!</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
-    <string name="radio_search_failure">Note: trouble while fetching data in radio search server</string>
+    <string name="radio_search_failure">Fetching data from server failed!</string>
     <string name="upnp_error">UPnP service failed, please check if network is available!</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>

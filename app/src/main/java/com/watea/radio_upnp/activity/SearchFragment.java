@@ -155,12 +155,12 @@ public class SearchFragment extends MainActivityFragment {
   }
 
   private void selectServerAndFetchCountries() {
+    radioBrowserServer = null;
     new Thread(() -> {
-      try {
-        for (String radioBrowserServer : RADIO_BROWSER_SERVERS) {
-          this.radioBrowserServer = radioBrowserServer;
+      for (String radioBrowserServer : RADIO_BROWSER_SERVERS) {
+        try {
           final Request request = getRequestBuilder()
-            .url(this.radioBrowserServer + "/json/countries")
+            .url(radioBrowserServer + "/json/countries")
             .build();
           final JSONArray countriesArray = getJSONArray(request);
           final List<String> countries = new ArrayList<>();
@@ -172,13 +172,15 @@ public class SearchFragment extends MainActivityFragment {
           }
           countries.sort(Comparator.naturalOrder());
           countries.add(0, getMainActivity().getString(R.string.Country));
-          getMainActivity().runOnUiThread(() -> countrySpinner.setAdapter(
-            new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries)));
+          protectedRunOnUiThread(() -> {
+            countrySpinner.setAdapter(
+              new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries));
+            this.radioBrowserServer = radioBrowserServer;
+          });
           break;
+        } catch (IOException | JSONException exception) {
+          Log.e(LOG_TAG, "fetchCountries: error", exception);
         }
-      } catch (Exception exception) {
-        Log.e(LOG_TAG, "fetchCountries: error", exception);
-        this.radioBrowserServer = null;
       }
     }).start();
   }
@@ -202,7 +204,7 @@ public class SearchFragment extends MainActivityFragment {
       final JSONArray stations;
       try {
         stations = getJSONArray(request);
-      } catch (java.io.IOException | JSONException IOException) {
+      } catch (IOException | JSONException exception) {
         tell(R.string.radio_search_failure);
         return;
       }
@@ -253,7 +255,7 @@ public class SearchFragment extends MainActivityFragment {
 
   @NonNull
   private JSONArray getJSONArray(@NonNull Request request) throws IOException, JSONException {
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (final Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
       return (response.body() == null) ? new JSONArray() : new JSONArray(response.body().string());
     }
