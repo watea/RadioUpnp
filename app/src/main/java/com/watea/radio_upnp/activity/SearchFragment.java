@@ -25,7 +25,6 @@ package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -70,6 +69,7 @@ public class SearchFragment extends MainActivityFragment {
     "https://nl1.api.radio-browser.info",
     "https://at1.api.radio-browser.info"
   };
+  private static final int MAX_RADIOS = 200;
   private final OkHttpClient httpClient = new OkHttpClient();
   private String radioBrowserServer = null;
   private FrameLayout defaultFrameLayout;
@@ -77,22 +77,7 @@ public class SearchFragment extends MainActivityFragment {
   private EditText nameEditText;
   private RadiosSearchAdapter radiosSearchAdapter;
   private Spinner countrySpinner;
-  private boolean isFirstStart = true;
-
-  @Override
-  public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    selectServerAndFetchCountries();
-  }
-
-  @Override
-  public void onResume() {
-    super.onResume();
-    if (isFirstStart) {
-      searchAlertDialog.show();
-      isFirstStart = false;
-    }
-  }
+  private int searchId = 0;
 
   @SuppressLint("NonConstantResourceId")
   @Override
@@ -115,7 +100,13 @@ public class SearchFragment extends MainActivityFragment {
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> searchAlertDialog.show();
+    return v -> {
+      if (radioBrowserServer == null) {
+        tell(R.string.server_not_available);
+      } else {
+        searchAlertDialog.show();
+      }
+    };
   }
 
   @Override
@@ -138,23 +129,9 @@ public class SearchFragment extends MainActivityFragment {
     return R.layout.content_main;
   }
 
-  @SuppressLint("InflateParams")
   @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
-    final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
-    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
-    final View searchView = getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
-    nameEditText = searchView.findViewById(R.id.name_edit_text);
-    countrySpinner = searchView.findViewById(R.id.country_spinner);
-    radiosSearchAdapter = new RadiosSearchAdapter(getMainActivity(), radiosRecyclerView);
-    searchAlertDialog = new AlertDialog.Builder(getMainActivity())
-      .setView(searchView)
-      .setPositiveButton(R.string.action_go, (dialogInterface, i) -> search())
-      .create();
-  }
-
-  private void selectServerAndFetchCountries() {
+  public void onResume() {
+    super.onResume();
     radioBrowserServer = null;
     new Thread(() -> {
       for (String radioBrowserServer : RADIO_BROWSER_SERVERS) {
@@ -176,20 +153,42 @@ public class SearchFragment extends MainActivityFragment {
             countrySpinner.setAdapter(
               new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries));
             this.radioBrowserServer = radioBrowserServer;
+            // Show search dialog first time
+            if (searchId == 0) {
+              searchAlertDialog.show();
+            }
           });
-          break;
+          // Done!
+          return;
         } catch (IOException | JSONException exception) {
-          Log.e(LOG_TAG, "fetchCountries: error", exception);
+          Log.d(LOG_TAG, "onResume: radioBrowserServer fetch error");
         }
       }
+      protectedRunOnUiThread(() -> {
+        tell(R.string.server_not_available);
+        searchAlertDialog.hide();
+      });
     }).start();
   }
 
+  @SuppressLint("InflateParams")
+  @Override
+  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+    final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
+    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
+    final View searchView = getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
+    nameEditText = searchView.findViewById(R.id.name_edit_text);
+    countrySpinner = searchView.findViewById(R.id.country_spinner);
+    radiosSearchAdapter = new RadiosSearchAdapter(getMainActivity(), radiosRecyclerView);
+    searchAlertDialog = new AlertDialog.Builder(getMainActivity())
+      .setView(searchView)
+      .setPositiveButton(R.string.action_go, (dialogInterface, i) -> search())
+      .create();
+  }
+
   private void search() {
-    if (radioBrowserServer == null) {
-      tell(R.string.server_not_reachable);
-      return;
-    }
+    final int threadSearchId = ++searchId; // New search disables preceding
     final String search = nameEditText.getText().toString();
     final String country = (countrySpinner.getSelectedItemPosition() > 0) ? countrySpinner.getSelectedItem().toString() : "";
     tell(R.string.wait_search);
@@ -199,7 +198,8 @@ public class SearchFragment extends MainActivityFragment {
       final String searchQuery = search.isEmpty() ? "" : "name=" + search;
       final String countryQuery = country.isEmpty() ? "" : "country=" + country;
       final Request request = getRequestBuilder()
-        .url(radioBrowserServer + "/json/stations/search?" + countryQuery + (countryQuery.isEmpty() ? "" : "&") + searchQuery)
+        .url(radioBrowserServer + "/json/stations/search?limit=" + MAX_RADIOS + "&" +
+          countryQuery + (countryQuery.isEmpty() ? "" : "&") + searchQuery)
         .build();
       final JSONArray stations;
       try {
@@ -208,12 +208,7 @@ public class SearchFragment extends MainActivityFragment {
         tell(R.string.radio_search_failure);
         return;
       }
-      final int length = stations.length();
-      if (length == 0) {
-        tell(R.string.no_radio_found);
-        return;
-      }
-      for (int i = 0; i < length; i++) {
+      for (int i = 0; i < stations.length(); i++) {
         try {
           final JSONObject station = stations.getJSONObject(i);
           final String name = station.getString("name");
@@ -229,13 +224,15 @@ public class SearchFragment extends MainActivityFragment {
           // We can now add radio if we are not disposed
           protectedRunOnUiThread(() -> {
             try {
-              radiosSearchAdapter.add(new Radio(
-                name,
-                (icon.get() == null) ? getMainActivity().getDefaultIcon() : icon.get(),
-                new URL(streamUrl),
-                homepage.isEmpty() ? null : new URL(homepage)));
-              if (defaultFrameLayout.getVisibility() == View.VISIBLE) {
-                defaultFrameLayout.setVisibility(View.INVISIBLE);
+              if (threadSearchId == searchId) {
+                radiosSearchAdapter.add(new Radio(
+                  name,
+                  (icon.get() == null) ? getMainActivity().getDefaultIcon() : icon.get(),
+                  new URL(streamUrl),
+                  homepage.isEmpty() ? null : new URL(homepage)));
+                if (defaultFrameLayout.getVisibility() == View.VISIBLE) {
+                  defaultFrameLayout.setVisibility(View.INVISIBLE);
+                }
               }
             } catch (MalformedURLException malformedURLException) {
               Log.d(LOG_TAG, "Radio could not be created");
@@ -245,6 +242,11 @@ public class SearchFragment extends MainActivityFragment {
           Log.d(LOG_TAG, "Malformed JSON for radio");
         }
       }
+      protectedRunOnUiThread(() -> {
+        if (defaultFrameLayout.getVisibility() == View.VISIBLE) {
+          tell(R.string.no_radio_found);
+        }
+      });
     }).start();
   }
 

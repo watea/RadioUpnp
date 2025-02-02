@@ -42,7 +42,7 @@
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio</string>
     <string name="radio_no_playlist">No playlist available!</string>
-    <string name="radio_search">Search with online radio database;\nplease note that RadioUpnp can\'t guarantee that the radio is available:</string>
+    <string name="radio_search">Search with online radio database (max. 200 results).\nPlease consider that <b>RadioUpnp</b> is not responsible of contents; it may be outdated or invalid.</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
     <string name="no_dlna_selection">No UPnP/DLNA device selected</string>
     <string name="radio_name">RADIO NAME</string>
@@ -107,7 +107,7 @@
     <string name="Theme">Theme</string>
     <string name="radio_not_defined">Radio can\'t be found in database!</string>
     <string name="copied_to_clipboard">Information copied to clipboard!</string>
-    <string name="server_not_reachable">Server is not reachable. Please try later…</string>
+    <string name="server_not_available">Server is not available. Please try later…</string>
     <string name="Country">[Please select a country]</string>
     <string name="no_radio_found">No radio found!</string>
     <!-- Menu titles -->
