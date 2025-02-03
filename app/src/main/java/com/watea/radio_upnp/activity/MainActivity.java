@@ -101,8 +101,8 @@ import java.util.function.Consumer;
 public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
-  private static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
+  private static final int RADIO_ICON_SIZE = 300;
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<>() {
       {
@@ -390,15 +390,6 @@ public class MainActivity
       .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
   }
 
-  @NonNull
-  private Intent getNewSendIntent(@NonNull File logFile, @NonNull String packageName) {
-    final Uri logFileUri = FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile);
-    return getNewSendIntent()
-      .putExtra(Intent.EXTRA_SUBJECT, "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
-      .putExtra(Intent.EXTRA_STREAM, logFileUri)
-      .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-  }
-
   @Override
   public boolean onCreateOptionsMenu(@NonNull Menu menu) {
     final MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
@@ -430,13 +421,10 @@ public class MainActivity
         super.onOptionsItemSelected(item);
   }
 
-  @SuppressWarnings({"resource", "SameParameterValue"})
-  public int getThemeAttributeColor(int attr) {
-    final int[] attrs = {attr};
-    final TypedArray typedArray = obtainStyledAttributes(attrs);
-    final int result = typedArray.getColor(0, 0); // Get the color value
-    typedArray.recycle(); // Always recycle TypedArray
-    return result;
+  @Override
+  public void onConfigurationChanged(@NonNull Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    drawerToggle.onConfigurationChanged(newConfig);
   }
 
   // Is called also when coming back after a "Back" exit
@@ -444,6 +432,7 @@ public class MainActivity
   @SuppressLint({"InflateParams", "NonConstantResourceId"})
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    Log.d(LOG_TAG, "onCreate");
     // Fetch preferences
     sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Init radios only if needed; a session may still be there with a radioId
@@ -627,12 +616,12 @@ public class MainActivity
     upnpConnection.onServiceDisconnected(null);
     // Clear PlayerController call
     playerController.onActivityPause();
-    Log.d(LOG_TAG, "onPause done!");
   }
 
   @Override
   protected void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
+    Log.d(LOG_TAG, "onNewIntent");
     newIntent = intent;
   }
 
@@ -652,7 +641,6 @@ public class MainActivity
     }
     // PlayerController init
     playerController.onActivityResume();
-    Log.d(LOG_TAG, "onResume done!");
   }
 
   @Override
@@ -660,12 +648,6 @@ public class MainActivity
     super.onPostCreate(savedInstanceState);
     // Sync the toggle state after onRestoreInstanceState has occurred
     drawerToggle.syncState();
-  }
-
-  @Override
-  public void onConfigurationChanged(@NonNull Configuration newConfig) {
-    super.onConfigurationChanged(newConfig);
-    drawerToggle.onConfigurationChanged(newConfig);
   }
 
   @Override
@@ -680,6 +662,15 @@ public class MainActivity
     if (savedSelectedDeviceIdentity != null) {
       outState.putString(getString(R.string.key_selected_device), savedSelectedDeviceIdentity);
     }
+  }
+
+  @SuppressWarnings({"resource", "SameParameterValue"})
+  private int getThemeAttributeColor(int attr) {
+    final int[] attrs = {attr};
+    final TypedArray typedArray = obtainStyledAttributes(attrs);
+    final int result = typedArray.getColor(0, 0); // Get the color value
+    typedArray.recycle(); // Always recycle TypedArray
+    return result;
   }
 
   // Customize snackbar for both dark and light theme
@@ -699,7 +690,7 @@ public class MainActivity
       getPackageName());
   }
 
-  public void sendLogcatMail() {
+  private void sendLogcatMail() {
     // Use a background thread for logcat execution
     final Handler handler = new Handler(Looper.getMainLooper());
     Executors.newSingleThreadExecutor().execute(() -> {
@@ -743,6 +734,15 @@ public class MainActivity
         }
       }
     });
+  }
+
+  @NonNull
+  private Intent getNewSendIntent(@NonNull File logFile, @NonNull String packageName) {
+    final Uri logFileUri = FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile);
+    return getNewSendIntent()
+      .putExtra(Intent.EXTRA_SUBJECT, "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
+      .putExtra(Intent.EXTRA_STREAM, logFileUri)
+      .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
   }
 
   private void checkNavigationMenu(int id) {
