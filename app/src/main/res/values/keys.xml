@@ -38,6 +38,7 @@
     <string name="key_current_fragment">key_current_fragment</string>
     <string name="key_radio_garden_got_it">key_radio_garden_got_it</string>
     <string name="key_toolbar_got_it">key_toolbar_got_it</string>
+    <string name="key_country">key_country</string>
     <!-- Bundles -->
     <string name="key_rate">key_rate</string>
     <!-- Others -->

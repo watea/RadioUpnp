@@ -59,7 +59,7 @@ public class Radios extends ArrayList<Radio> {
   private static final String CR = "\n";
   private static final byte JSON_ARRAY_START = '[';
   private static final byte JSON_ARRAY_END = ']';
-  private static final byte[] JSON_ARRAY_COMMA = ",\n" .getBytes();
+  private static final byte[] JSON_ARRAY_COMMA = ",\n".getBytes();
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;

@@ -97,6 +97,15 @@ public class SearchFragment extends MainActivityFragment {
     }
   }
 
+  @Override
+  public void onPause() {
+    super.onPause();
+    getSharedPreferences()
+      .edit()
+      .putString(getString(R.string.key_country), getCountry())
+      .apply();
+  }
+
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
@@ -152,6 +161,8 @@ public class SearchFragment extends MainActivityFragment {
           protectedRunOnUiThread(() -> {
             countrySpinner.setAdapter(
               new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries));
+            final int position = countries.indexOf(getSharedPreferences().getString(getString(R.string.key_country), ""));
+            countrySpinner.setSelection(Math.max(position, 0));
             this.radioBrowserServer = radioBrowserServer;
             // Show search dialog first time
             if (searchId == 0) {
@@ -187,10 +198,14 @@ public class SearchFragment extends MainActivityFragment {
       .create();
   }
 
+  private String getCountry() {
+    return (countrySpinner.getSelectedItemPosition() > 0) ? countrySpinner.getSelectedItem().toString() : "";
+  }
+
   private void search() {
     final int threadSearchId = ++searchId; // New search disables preceding
     final String search = nameEditText.getText().toString();
-    final String country = (countrySpinner.getSelectedItemPosition() > 0) ? countrySpinner.getSelectedItem().toString() : "";
+    final String country = getCountry();
     tell(R.string.wait_search);
     radiosSearchAdapter.clear();
     defaultFrameLayout.setVisibility(View.VISIBLE);

@@ -25,6 +25,7 @@ package com.watea.radio_upnp.activity;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -125,6 +126,11 @@ public abstract class MainActivityFragment extends Fragment {
   protected abstract int getLayout();
 
   protected abstract void onCreateView(@NonNull View view, @Nullable ViewGroup container);
+
+  @NonNull
+  protected SharedPreferences getSharedPreferences() {
+    return getMainActivity().getSharedPreferences();
+  }
 
   @NonNull
   protected Radios getRadios() {
