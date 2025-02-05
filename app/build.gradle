@@ -62,9 +62,9 @@ dependencies {
     // GSON
     implementation 'com.google.code.gson:gson:2.11.0'
     // CandidHttpServer
-    implementation 'com.github.watea:candidhttpserver:1.0.9'
+    implementation 'com.github.watea:candidhttpserver:1.0.11'
     // AndroidSsdpClient
-    implementation 'com.github.watea:androidssdpclient:1.0.3'
+    implementation 'com.github.watea:androidssdpclient:1.0.5'
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
 }
