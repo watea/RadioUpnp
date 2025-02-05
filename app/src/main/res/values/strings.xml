@@ -25,6 +25,7 @@
     <string name="app_name">RadioUpnp</string>
     <string name="radio_service_description">Streams radio for RadioUpnp app</string>
     <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
+    <string name="alarm_service_description">Handles alarms for RadioUpnp app</string>
     <string name="copyright">Copyright &#169; 2018 Stephane Treuchot</string>
     <string name="credit">Credit:</string>
     <string name="credit_0">- Icon by shareicon.net</string>
@@ -48,6 +49,7 @@
     <string name="radio_name">RADIO NAME</string>
     <string name="searched_words">WORDS TO SEARCH</string>
     <string name="radio_service_notification_name">Radio display and control</string>
+    <string name="alarm_service_notification_name">Alarm</string>
     <string name="optional"><b>Optional:</b></string>
     <string name="legend_streaming_url">Streaming URL</string>
     <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
@@ -110,6 +112,13 @@
     <string name="server_not_available">Server is not available. Please try later…</string>
     <string name="Country">[Please select a country]</string>
     <string name="no_radio_found">No radio found!</string>
+    <string name="alarm_set">"Alarm set at: "</string>
+    <string name="alarm_permission_requested">Not enough permission to set alarm!</string>
+    <string name="alarm_cancelled">Alarm cancelled!</string>
+    <string name="alarm_not_available">Alarm not available, please try later…</string>
+    <string name="off">OFF</string>
+    <string name="on">ON</string>
+    <string name="alarm">Alarm uses last played radio:</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
@@ -144,4 +153,5 @@
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dark</string>
     <string name="light_radio_button">Light</string>
+    <string name="title_alarm">Alarm</string>
 </resources>

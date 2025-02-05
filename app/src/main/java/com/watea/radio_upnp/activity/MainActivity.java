@@ -128,6 +128,7 @@ public class MainActivity
   private PlayerController playerController;
   private SharedPreferences sharedPreferences;
   private RadioGardenController radioGardenController;
+  private AlarmController alarmController;
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
   private Theme theme = Theme.DARK;
@@ -259,6 +260,9 @@ public class MainActivity
     switch (id) {
       case R.id.action_radio_garden:
         radioGardenController.launch(false);
+        break;
+      case R.id.action_alarm:
+        alarmController.launch();
         break;
       case R.id.action_export:
         exportFile();
@@ -475,6 +479,8 @@ public class MainActivity
     findViewById(R.id.actionbar).setOnClickListener(v -> setToolbarExpanded(!isToolbarExpanded));
     // Radio Garden
     radioGardenController = new RadioGardenController(this);
+    // Alarm
+    alarmController = new AlarmController(this);
     // Import/export function
     importExportLauncher = registerForActivityResult(
       new ActivityResultContracts.StartActivityForResult(),
@@ -616,6 +622,8 @@ public class MainActivity
     upnpConnection.onServiceDisconnected(null);
     // Clear PlayerController call
     playerController.onActivityPause();
+    // Clear AlarmController call
+    alarmController.onActivityPause();
   }
 
   @Override
@@ -635,12 +643,14 @@ public class MainActivity
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     // Radio Garden share?
-    if (newIntent != null) {
+    if ((newIntent != null) && Intent.ACTION_SEND.equals(newIntent.getAction())) {
       radioGardenController.onNewIntent(newIntent);
       newIntent = null;
     }
     // PlayerController init
     playerController.onActivityResume();
+    // AlarmController init
+    alarmController.onActivityResume();
   }
 
   @Override

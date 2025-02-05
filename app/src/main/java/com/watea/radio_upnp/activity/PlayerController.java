@@ -385,7 +385,7 @@ public class PlayerController {
   private Radio getCurrentRadio() {
     final MediaMetadataCompat mediaMetadataCompat = (mediaController == null) ? null : mediaController.getMetadata();
     final String radioId = (mediaMetadataCompat == null) ? null : mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
-    return (radioId == null) ? null : radios.getRadioFrom(radioId);
+    return (radioId == null) ? null : radios.getRadioFromId(radioId);
   }
 
   private void onNewCurrentRadio() {

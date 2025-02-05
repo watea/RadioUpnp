@@ -84,6 +84,7 @@ public class RadioService
   public static final String DATE = "date";
   public static final String INFORMATION = "information";
   public static final String PLAYLIST = "playlist";
+  public static final String LAST_PLAYED = "LAST_PLAYED";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
   private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
@@ -217,7 +218,7 @@ public class RadioService
     session.setCallback(mediaSessionCompatCallback);
     setSessionToken(session.getSessionToken());
     // Notification
-    CHANNEL_ID = getResources().getString(R.string.app_name) + ".channel";
+    CHANNEL_ID = getResources().getString(R.string.app_name) + "." + LOG_TAG;
     notificationManager = NotificationManagerCompat.from(this);
     // Cancel all notifications to handle the case where the Service was killed and
     // restarted by the system
@@ -287,7 +288,11 @@ public class RadioService
     }
     // Release HTTP service
     if (radioHttpServer != null) {
-      radioHttpServer.stop();
+      try {
+        radioHttpServer.stop();
+      } catch (IOException iOException) {
+        Log.e(LOG_TAG, "HTTP server stop fails");
+      }
     }
     // Release UPnP service
     unbindService(upnpConnection);
@@ -427,6 +432,14 @@ public class RadioService
     stopSelf();
   }
 
+  @Nullable
+  private Radio getLastPlayedRadio() {
+    final String radioURL = getApplicationContext()
+      .getSharedPreferences(getString(R.string.key_preference_file), MODE_PRIVATE)
+      .getString(getString(R.string.key_last_played_radio), null);
+    return (radioURL == null) ? radios.isEmpty() ? null : radios.get(0) : radios.getRadioFromURL(radioURL);
+  }
+
   @SuppressLint("SwitchIntDef")
   @NonNull
   private Notification getNotification() {
@@ -512,27 +525,37 @@ public class RadioService
 
   // PlayerAdapter from session for actual media controls
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
+    // mediaId == null => last played radio
     @Override
     public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
-      Log.e(LOG_TAG, "MediaSessionCompatCallback.onPrepareFromMediaId");
+      Log.d(LOG_TAG, "onPrepareFromMediaId");
       // Ensure robustness
-      assert upnpService != null;
-      upnpService.getActionController().release();
+      if (upnpService != null) {
+        upnpService.getActionController().release();
+      }
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
         playerAdapter.stop();
       }
       // Try to retrieve radio
       final Radio previousRadio = radio;
-      try {
-        radio = radios.getRadioFrom(mediaId);
+      if (mediaId.equals(LAST_PLAYED)) {
+        radio = getLastPlayedRadio();
         if (radio == null) {
-          abort("onPrepareFromMediaId: radio not found");
+          abort("onPrepareFromMediaId: getLastPlayedRadio() is null");
           return;
         }
-      } catch (Exception exception) {
-        abort("onPrepareFromMediaId: radioLibrary error; " + exception);
-        return;
+      } else {
+        try {
+          radio = radios.getRadioFromId(mediaId);
+          if (radio == null) {
+            abort("onPrepareFromMediaId: radio not found");
+            return;
+          }
+        } catch (Exception exception) {
+          abort("onPrepareFromMediaId: radioLibrary error; " + exception);
+          return;
+        }
       }
       // Catch catastrophic failure
       if (radioHttpServer == null) {
@@ -541,7 +564,7 @@ public class RadioService
       }
       // UPnP not accepted if environment not OK: force local processing
       final Uri serverUri = radioHttpServer.getUri();
-      final Device selectedDevice = (serverUri == null) ? null : upnpService.getSelectedDevice();
+      final Device selectedDevice = ((serverUri == null) || (upnpService == null)) ? null : upnpService.getSelectedDevice();
       // Synchronize session data
       session.setActive(true);
       session.setExtras(new Bundle());
@@ -577,7 +600,12 @@ public class RadioService
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
-        startService(new Intent(RadioService.this, RadioService.class));
+        // Save last played radio
+        getSharedPreferences(getString(R.string.key_preference_file), MODE_PRIVATE)
+          .edit()
+          .putString(getString(R.string.key_last_played_radio), radio.getURL().toString())
+          .apply();
+        startForegroundService(new Intent(RadioService.this, RadioService.class));
       } else {
         playerAdapter.stop();
         Log.d(LOG_TAG, "onPrepareFromMediaId: playerAdapter.prepareFromMediaId failed");
@@ -634,10 +662,9 @@ public class RadioService
 
     private void abort(@NonNull String log) {
       Log.d(LOG_TAG, log);
-      assert lockKey != null;
       onPlaybackStateChange(
         PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(),
-        lockKey);
+        (lockKey == null) ? "unknown" : lockKey);
     }
   }
 }

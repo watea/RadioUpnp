@@ -28,8 +28,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -76,7 +74,6 @@ import java.util.regex.Pattern;
 // Channel: https://radio.garden/api/ara/content/listen/{channelId}/channel.mp3
 public class RadioGardenController {
   private static final String LOG_TAG = RadioGardenController.class.getSimpleName();
-  private static final Handler handler = new Handler(Looper.getMainLooper());
   private static final String MARKET = "market://details?id=";
   private static final String RADIO_GARDEN_PACKAGE = "com.jonathanpuckey.radiogarden";
   private static final String PLAY_STORE_PACKAGE = "com.android.vending";
@@ -120,39 +117,37 @@ public class RadioGardenController {
   }
 
   public void onNewIntent(@NonNull Intent intent) {
-    if (Intent.ACTION_SEND.equals(intent.getAction())) {
-      mainActivity.tell(R.string.try_to_add_from_radio_garden);
-      Log.d(LOG_TAG, "Radio Garden intent received");
-      final ClipData clipData = intent.getClipData();
-      boolean result = (clipData != null);
+    mainActivity.tell(R.string.try_to_add_from_radio_garden);
+    Log.d(LOG_TAG, "Radio Garden intent received");
+    final ClipData clipData = intent.getClipData();
+    boolean result = (clipData != null);
+    if (result) {
+      final ClipData.Item item = clipData.getItemAt(0);
+      final CharSequence text = (item == null) ? null : item.getText();
+      result = (text != null);
       if (result) {
-        final ClipData.Item item = clipData.getItemAt(0);
-        final CharSequence text = (item == null) ? null : item.getText();
-        result = (text != null);
+        Log.d(LOG_TAG, "ClipData: " + text);
+        final Matcher matcher = CLIP_DATA_PATTERN.matcher(text);
+        result = matcher.find() && (matcher.groupCount() > 2);
         if (result) {
-          Log.d(LOG_TAG, "ClipData: " + text);
-          final Matcher matcher = CLIP_DATA_PATTERN.matcher(text);
-          result = matcher.find() && (matcher.groupCount() > 2);
+          final String id = matcher.group(3);
+          result = (id != null);
           if (result) {
-            final String id = matcher.group(3);
-            result = (id != null);
-            if (result) {
-              new Thread(() -> handle(id)).start();
-            } else {
-              Log.d(LOG_TAG, "Wrong ClipData.Item content");
-            }
+            new Thread(() -> handle(id)).start();
           } else {
-            Log.d(LOG_TAG, "ClipData.Item wrong format");
+            Log.d(LOG_TAG, "Wrong ClipData.Item content");
           }
         } else {
-          Log.d(LOG_TAG, "No ClipData.Item");
+          Log.d(LOG_TAG, "ClipData.Item wrong format");
         }
       } else {
-        Log.d(LOG_TAG, "No ClipData");
+        Log.d(LOG_TAG, "No ClipData.Item");
       }
-      if (!result) {
-        tell(false);
-      }
+    } else {
+      Log.d(LOG_TAG, "No ClipData");
+    }
+    if (!result) {
+      tell(false);
     }
   }
 
@@ -203,7 +198,7 @@ public class RadioGardenController {
       Log.d(LOG_TAG, "handle asynchronous exception", exception);
     }
     // Synchronous update
-    handler.post(() -> {
+    mainActivity.runOnUiThread(() -> {
       if (isOk.get()) {
         try {
           isOk.set(MainActivity.getRadios().add(new Radio(

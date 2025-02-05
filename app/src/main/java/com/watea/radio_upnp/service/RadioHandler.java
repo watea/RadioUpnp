@@ -113,7 +113,7 @@ public class RadioHandler implements HttpServer.Handler {
       Log.d(LOG_TAG, "handle: leaving, unexpected request received: lockKey is null");
       return;
     }
-    final Radio radio = MainActivity.getRadios().getRadioFrom(path.replace("/", ""));
+    final Radio radio = MainActivity.getRadios().getRadioFromId(path.replace("/", ""));
     if (radio == null) {
       Log.d(LOG_TAG, "handle: leaving, unknown radio");
       return;

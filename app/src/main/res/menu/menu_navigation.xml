@@ -48,7 +48,14 @@
             android:icon="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />
     </group>
-
+    <group
+        android:id="@+id/alarm"
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/action_alarm"
+            android:icon="@drawable/ic_baseline_alarm_white_24dp"
+            android:title="@string/title_alarm" />
+    </group>
     <group
         android:id="@+id/exchange"
         android:checkableBehavior="single">

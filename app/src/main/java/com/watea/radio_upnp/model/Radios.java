@@ -144,8 +144,13 @@ public class Radios extends ArrayList<Radio> {
   }
 
   @Nullable
-  public synchronized Radio getRadioFrom(@NonNull String id) {
+  public synchronized Radio getRadioFromId(@NonNull String id) {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
+  }
+
+  @Nullable
+  public synchronized Radio getRadioFromURL(@NonNull String uRL) {
+    return stream().filter(radio -> uRL.equals(radio.getURL().toString())).findFirst().orElse(null);
   }
 
   public synchronized void write(@NonNull OutputStream outputStream, @NonNull String type)

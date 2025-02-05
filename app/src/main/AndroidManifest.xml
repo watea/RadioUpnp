@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -29,7 +28,7 @@
             android:name="com.watea.radio_upnp.activity.MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="true"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustPan|stateAlwaysHidden">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -59,6 +58,12 @@
             android:enabled="true"
             android:exported="false" />
 
+        <service
+            android:name="com.watea.radio_upnp.service.AlarmService"
+            android:description="@string/alarm_service_description"
+            android:enabled="true"
+            android:exported="false" />
+
         <!--
          MediaSession, prior to API 21, uses a broadcast receiver to communicate with a
          media session. It does not have to be this broadcast receiver, but it must
@@ -69,7 +74,7 @@
         -->
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
