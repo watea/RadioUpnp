@@ -70,6 +70,7 @@ public class AlarmController {
 
   public AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
+    // Create view
     final View view = View.inflate(this.mainActivity, R.layout.view_alarm, null);
     alertDialog = new AlertDialog.Builder(mainActivity)
       .setTitle(R.string.title_alarm)
@@ -78,7 +79,6 @@ public class AlarmController {
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())
       .create();
-    // Get views
     timePicker = view.findViewById(R.id.timePicker);
     timePicker.setIs24HourView(true);
     final ToggleButton toggleButton = view.findViewById(R.id.toggleButton);
