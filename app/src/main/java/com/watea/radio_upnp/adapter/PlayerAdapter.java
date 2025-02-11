@@ -296,6 +296,6 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   }
 
   public interface Listener {
-    void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey);
+    void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @Nullable String lockKey);
   }
 }

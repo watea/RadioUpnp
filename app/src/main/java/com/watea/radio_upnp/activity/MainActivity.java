@@ -53,6 +53,7 @@ import android.view.View;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
@@ -322,8 +323,16 @@ public class MainActivity
     tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
   }
 
+  public void showWarningOverlay(@NonNull String message) {
+    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+  }
+
   public void startReading(@NonNull Radio radio) {
     playerController.startReading(radio);
+  }
+
+  public Radio getCurrentRadio() {
+    return playerController.getCurrentRadio();
   }
 
   @NonNull

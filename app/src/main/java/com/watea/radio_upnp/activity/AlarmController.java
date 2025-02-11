@@ -37,14 +37,10 @@ import android.widget.ToggleButton;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.work.WorkInfo;
-import androidx.work.WorkManager;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.AlarmService;
-
-import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public class AlarmController {
   private static final String LOG_TAG = AlarmController.class.getSimpleName();
@@ -53,6 +49,8 @@ public class AlarmController {
   @NonNull
   private final TimePicker timePicker;
   @NonNull
+  private final ToggleButton toggleButton;
+  @NonNull
   private final AlertDialog alertDialog;
   @Nullable
   private AlarmService.AlarmServiceBinder alarmService = null;
@@ -60,11 +58,15 @@ public class AlarmController {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       alarmService = (AlarmService.AlarmServiceBinder) service;
+      toggleButton.setEnabled(true);
+      assert alarmService != null;
+      toggleButton.setChecked(alarmService.isEnabled());
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
       alarmService = null;
+      toggleButton.setEnabled(false);
     }
   };
 
@@ -81,19 +83,24 @@ public class AlarmController {
       .create();
     timePicker = view.findViewById(R.id.timePicker);
     timePicker.setIs24HourView(true);
-    final ToggleButton toggleButton = view.findViewById(R.id.toggleButton);
-    assert toggleButton != null;
+    toggleButton = view.findViewById(R.id.toggleButton);
+    toggleButton.setChecked(false);
+    toggleButton.setEnabled(false);
     timePicker.setOnTimeChangedListener((v, h, m) -> toggleButton.setChecked(false));
-    toggleButton.setChecked(isAlarmSet());
     toggleButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
-      if (alarmService == null) {
-        mainActivity.tell(R.string.alarm_not_available);
-        return;
-      }
+      assert alarmService != null;
       if (isChecked) {
-        alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute());
-      } else {
+        final Radio radio = mainActivity.getCurrentRadio();
+        if (radio == null) {
+          mainActivity.showWarningOverlay(mainActivity.getString(R.string.no_radio_playing));
+          toggleButton.setChecked(false);
+        } else {
+          // Notification will be shown
+          alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString());
+        }
+      } else if (alarmService.isEnabled()) {
         alarmService.cancelAlarm();
+        mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_cancelled));
       }
     });
   }
@@ -124,15 +131,5 @@ public class AlarmController {
       }
       alertDialog.show();
     }
-  }
-
-  private boolean isAlarmSet() {
-    try {
-      final List<WorkInfo> workInfos = WorkManager.getInstance(mainActivity).getWorkInfosByTag(LOG_TAG).get();
-      return workInfos.stream().anyMatch(workInfo -> (workInfo.getState() == WorkInfo.State.ENQUEUED) || (workInfo.getState() == WorkInfo.State.RUNNING));
-    } catch (ExecutionException | InterruptedException exception) {
-      Log.e(LOG_TAG, "isAlarmSet failed", exception);
-    }
-    return false;
   }
 }

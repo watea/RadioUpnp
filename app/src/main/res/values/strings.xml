@@ -113,12 +113,12 @@
     <string name="Country">[Please select a country]</string>
     <string name="no_radio_found">No radio found!</string>
     <string name="alarm_set">"Alarm set at: "</string>
-    <string name="alarm_permission_requested">Not enough permission to set alarm!</string>
     <string name="alarm_cancelled">Alarm cancelled!</string>
     <string name="alarm_not_available">Alarm not available, please try later…</string>
+    <string name="no_radio_playing">No radio is playing!</string>
     <string name="off">OFF</string>
     <string name="on">ON</string>
-    <string name="alarm">Alarm uses last played radio:</string>
+    <string name="alarm">Alarm uses now playing radio:</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

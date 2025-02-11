@@ -84,7 +84,6 @@ public class RadioService
   public static final String DATE = "date";
   public static final String INFORMATION = "information";
   public static final String PLAYLIST = "playlist";
-  public static final String LAST_PLAYED = "LAST_PLAYED";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
   private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
@@ -357,7 +356,7 @@ public class RadioService
   @SuppressLint("SwitchIntDef")
   @Override
   public void onPlaybackStateChange(
-    @NonNull final PlaybackStateCompat state, @NonNull final String lockKey) {
+    @NonNull final PlaybackStateCompat state, @Nullable final String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
       // Report the state to the MediaSession
@@ -430,14 +429,6 @@ public class RadioService
   public void onTaskRemoved(@NonNull Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
     stopSelf();
-  }
-
-  @Nullable
-  private Radio getLastPlayedRadio() {
-    final String radioURL = getApplicationContext()
-      .getSharedPreferences(getString(R.string.key_preference_file), MODE_PRIVATE)
-      .getString(getString(R.string.key_last_played_radio), null);
-    return (radioURL == null) ? radios.isEmpty() ? null : radios.get(0) : radios.getRadioFromURL(radioURL);
   }
 
   @SuppressLint("SwitchIntDef")
@@ -515,9 +506,9 @@ public class RadioService
     }
   }
 
-  private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
+  private void runIfLocked(@Nullable final String lockKey, @NonNull final Runnable runnable) {
     handler.post(() -> {
-      if (session.isActive() && lockKey.equals(this.lockKey)) {
+      if (session.isActive() && (lockKey != null) && lockKey.equals(this.lockKey)) {
         runnable.run();
       }
     });
@@ -539,27 +530,14 @@ public class RadioService
       }
       // Try to retrieve radio
       final Radio previousRadio = radio;
-      if (mediaId.equals(LAST_PLAYED)) {
-        radio = getLastPlayedRadio();
-        if (radio == null) {
-          abort("onPrepareFromMediaId: getLastPlayedRadio() is null");
-          return;
-        }
-      } else {
-        try {
-          radio = radios.getRadioFromId(mediaId);
-          if (radio == null) {
-            abort("onPrepareFromMediaId: radio not found");
-            return;
-          }
-        } catch (Exception exception) {
-          abort("onPrepareFromMediaId: radioLibrary error; " + exception);
-          return;
-        }
+      radio = radios.getRadioFromId(mediaId);
+      if (radio == null) {
+        Log.e(LOG_TAG, "onPrepareFromMediaId: radio not found");
+        return;
       }
       // Catch catastrophic failure
       if (radioHttpServer == null) {
-        abort("onPrepareFromMediaId: radioHttpServer is null");
+        Log.e(LOG_TAG, "onPrepareFromMediaId: radioHttpServer is null");
         return;
       }
       // UPnP not accepted if environment not OK: force local processing
@@ -658,13 +636,6 @@ public class RadioService
     // Same extras are reused
     private void onPrepareFromMediaId(@NonNull Radio radio) {
       onPrepareFromMediaId(Integer.toString(radio.hashCode()), mediaController.getExtras());
-    }
-
-    private void abort(@NonNull String log) {
-      Log.d(LOG_TAG, log);
-      onPlaybackStateChange(
-        PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(),
-        (lockKey == null) ? "unknown" : lockKey);
     }
   }
 }

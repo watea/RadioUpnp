@@ -23,34 +23,38 @@
 
 package com.watea.radio_upnp.service;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkManager;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.activity.MainActivity;
+import com.watea.radio_upnp.model.Radio;
 
 import java.util.Calendar;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 public class AlarmService extends Service {
   private static final String LOG_TAG = AlarmService.class.getSimpleName();
@@ -59,40 +63,9 @@ public class AlarmService extends Service {
   private final Binder binder = new AlarmServiceBinder();
   private String CHANNEL_ID;
   private MediaBrowserCompat mediaBrowser = null;
-  // Callback from media control
-  private final MediaControllerCompat.Callback mediaControllerCallback =
-    new MediaControllerCompat.Callback() {
-      // This might happen if the RadioService is killed while the Activity is in the
-      // foreground and onStart() has been called (but not onStop())
-      @Override
-      public void onSessionDestroyed() {
-        mediaBrowser.disconnect();
-        Log.d(LOG_TAG, "onSessionDestroyed: RadioService is dead!!!");
-      }
-    };
+  private AlarmManager alarmManager;  // Callback from media control
   @Nullable
   private MediaControllerCompat mediaController = null;
-  // MediaController from the MediaBrowser when it has successfully connected
-  private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback =
-    new MediaBrowserCompat.ConnectionCallback() {
-      @Override
-      public void onConnected() {
-        // Get a MediaController for the MediaSession
-        mediaController = new MediaControllerCompat(AlarmService.this, mediaBrowser.getSessionToken());
-      }
-
-      @Override
-      public void onConnectionSuspended() {
-        if (mediaController != null) {
-          mediaController.unregisterCallback(mediaControllerCallback);
-        }
-      }
-
-      @Override
-      public void onConnectionFailed() {
-        Log.d(LOG_TAG, "Connection to RadioService failed");
-      }
-    };
 
   @Override
   public void onCreate() {
@@ -128,22 +101,24 @@ public class AlarmService extends Service {
       new ComponentName(this, RadioService.class),
       mediaBrowserConnectionCallback,
       null);
-    // Launch RadioService, may fail if already called and connection not ended
-    try {
-      mediaBrowser.connect();
-    } catch (IllegalStateException illegalStateException) {
-      Log.e(LOG_TAG, "onCreate: mediaBrowser.connect() failed", illegalStateException);
-    }
-  }
+    // AlarmManager
+    alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+  }  private final MediaControllerCompat.Callback mediaControllerCallback =
+    new MediaControllerCompat.Callback() {
+      // This might happen if the RadioService is killed while the Activity is in the
+      // foreground and onStart() has been called (but not onStop())
+      @Override
+      public void onSessionDestroyed() {
+        mediaBrowserDisconnect();
+        Log.d(LOG_TAG, "onSessionDestroyed: RadioService is dead!!!");
+      }
+    };
 
   @Override
   public void onDestroy() {
     super.onDestroy();
-    // Disconnect mediaBrowser
-    mediaBrowser.disconnect();
-    // Forced suspended connection
-    mediaBrowserConnectionCallback.onConnectionSuspended();
-  }
+    mediaBrowserDisconnect();
+  }  // MediaController from the MediaBrowser when it has successfully connected
 
   @Nullable
   @Override
@@ -153,6 +128,16 @@ public class AlarmService extends Service {
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
+    if (intent.getBooleanExtra(getString(R.string.key_alarm), false)) {
+      // Launch RadioService, may fail if already called and connection not ended
+      try {
+        mediaBrowser.connect();
+      } catch (IllegalStateException illegalStateException) {
+        Log.e(LOG_TAG, "onCreate: mediaBrowser.connect() failed", illegalStateException);
+      }
+      //((AlarmServiceBinder) binder).rescheduleAlarm();
+      return super.onStartCommand(intent, flags, startId);
+    }
     startForeground(NOTIFICATION_ID, getNotification());
     return START_STICKY;
   }
@@ -164,36 +149,93 @@ public class AlarmService extends Service {
       .build();
   }
 
-  public class AlarmServiceBinder extends android.os.Binder {
-    public void launchRadio() {
-      if (mediaController == null) {
-        Log.e(LOG_TAG, "launchRadio: mediaController is null");
-      } else {
-        mediaController.getTransportControls().prepareFromMediaId(RadioService.LAST_PLAYED, new Bundle());
+  private void mediaBrowserDisconnect() {
+    // Disconnect mediaBrowser
+    mediaBrowser.disconnect();
+    // Forced suspended connection
+    mediaBrowserConnectionCallback.onConnectionSuspended();
+  }  private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback =
+    new MediaBrowserCompat.ConnectionCallback() {
+      @Override
+      public void onConnected() {
+        // Get a MediaController for the MediaSession
+        mediaController = new MediaControllerCompat(AlarmService.this, mediaBrowser.getSessionToken());
+        // Launch radio
+        Radio radio = MainActivity.getRadios().getRadioFromURL(AlarmService.this.getURL());
+        // Last chance
+        if (radio == null) {
+          radio = MainActivity.getRadios().isEmpty() ? null : MainActivity.getRadios().get(0);
+        }
+        if (radio == null) {
+          Log.e(LOG_TAG, "onConnected: alarm radio is null!");
+        } else {
+          mediaController.getTransportControls().prepareFromMediaId(radio.getId(), new Bundle());
+        }
       }
-    }
 
-    public void setAlarm(int hour, int minute) {
-      final Calendar now = Calendar.getInstance();
-      final Calendar nextAlarmTime = Calendar.getInstance();
-      nextAlarmTime.set(Calendar.HOUR_OF_DAY, hour);
-      nextAlarmTime.set(Calendar.MINUTE, minute);
-      nextAlarmTime.set(Calendar.SECOND, 0);
-      if (now.after(nextAlarmTime)) {
-        nextAlarmTime.add(Calendar.DAY_OF_MONTH, 1);
+      @Override
+      public void onConnectionSuspended() {
+        if (mediaController != null) {
+          mediaController.unregisterCallback(mediaControllerCallback);
+        }
       }
-      final long initialDelay = nextAlarmTime.getTimeInMillis() - now.getTimeInMillis();
-      final PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(
-        RadioWorker.class,
-        24,
-        TimeUnit.HOURS)
-        .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-        .addTag(LOG_TAG)
-        .build();
-      cancelWork();
-      WorkManager.getInstance(AlarmService.this).enqueue(workRequest);
+
+      @Override
+      public void onConnectionFailed() {
+        Log.d(LOG_TAG, "Connection to RadioService failed");
+      }
+    };
+
+  private String getURL() {
+    return ((AlarmServiceBinder) binder).getSharedPreferences().getString(getString(R.string.key_last_played_radio), "");
+  }
+
+  public static class AlarmReceiver extends BroadcastReceiver {
+    private static final String LOG_TAG = AlarmService.class.getSimpleName();
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      Log.d(LOG_TAG, "onReceive");
+      final Intent serviceIntent = new Intent(context, AlarmService.class);
+      serviceIntent.putExtra(context.getString(R.string.key_alarm), true);
+      context.startService(serviceIntent);
+    }
+  }
+
+  public class AlarmServiceBinder extends android.os.Binder {
+    public void setAlarm(int hour, int minute, @NonNull String radioURL) {
+      final Calendar calendar = Calendar.getInstance();
+      calendar.set(Calendar.HOUR_OF_DAY, hour);
+      calendar.set(Calendar.MINUTE, minute);
+      calendar.set(Calendar.SECOND, 0);
+      if (Calendar.getInstance().after(calendar)) {
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
+      }
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          if (alarmManager.canScheduleExactAlarms()) {
+            alarmManager.setExactAndAllowWhileIdle(
+              AlarmManager.RTC_WAKEUP,
+              calendar.getTimeInMillis(),
+              getPendingIntent());
+          } else {
+            final Intent settingsIntent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+            settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(settingsIntent);
+            Log.e(LOG_TAG, "Permission to schedule exact alarms not granted.");
+          }
+        } else {
+          alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            calendar.getTimeInMillis(),
+            getPendingIntent());
+        }
+      } catch (SecurityException securityException) {
+        Log.e(LOG_TAG, "SecurityException: Unable to set exact alarm.", securityException);
+      }
       getSharedPreferences()
         .edit()
+        .putString(getString(R.string.key_last_played_radio), radioURL)
         .putInt(getString(R.string.key_alarm_hour), hour)
         .putInt(getString(R.string.key_alarm_minute), minute)
         .putBoolean(getString(R.string.key_alarm_enabled), true)
@@ -201,15 +243,19 @@ public class AlarmService extends Service {
       startForegroundService(new Intent(AlarmService.this, AlarmService.class));
     }
 
+    public void rescheduleAlarm() {
+      setAlarm(getHour(), getMinute(), getURL());
+    }
+
     public void cancelAlarm() {
-      cancelWork();
+      mediaBrowserDisconnect();
+      alarmManager.cancel(getPendingIntent());
       getSharedPreferences()
         .edit()
         .putBoolean(getString(R.string.key_alarm_enabled), false)
         .apply();
       stopForeground(STOP_FOREGROUND_REMOVE);
       stopSelf();
-      showWarningOverlay(getString(R.string.alarm_cancelled));
     }
 
     public int getHour() {
@@ -220,12 +266,17 @@ public class AlarmService extends Service {
       return getSharedPreferences().getInt(getString(R.string.key_alarm_minute), DEFAULT_TIME);
     }
 
-    private void cancelWork() {
-      WorkManager.getInstance(AlarmService.this).cancelAllWorkByTag(LOG_TAG);
+    public boolean isEnabled() {
+      return getSharedPreferences().getBoolean(getString(R.string.key_alarm_enabled), false);
     }
 
-    private void showWarningOverlay(@NonNull String message) {
-      Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+    @NonNull
+    private PendingIntent getPendingIntent() {
+      return PendingIntent.getBroadcast(
+        AlarmService.this,
+        0,
+        new Intent(AlarmService.this, AlarmReceiver.class),
+        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     @NonNull
@@ -233,4 +284,8 @@ public class AlarmService extends Service {
       return AlarmService.this.getSharedPreferences(getString(R.string.key_preference_file), MODE_PRIVATE);
     }
   }
+
+
+
+
 }
