@@ -328,11 +328,15 @@ public class MainActivity
   }
 
   public void startReading(@NonNull Radio radio) {
+    sharedPreferences.edit().putString(getString(string.key_last_played_radio), radio.getURL().toString()).apply();
     playerController.startReading(radio);
   }
 
-  public Radio getCurrentRadio() {
-    return playerController.getCurrentRadio();
+  @Nullable
+  public Radio getLastPlayedRadio() {
+    final String url = sharedPreferences.getString(getString(R.string.key_last_played_radio), "");
+    assert radios != null;
+    return url.isEmpty() ? null : radios.getRadioFromURL(url);
   }
 
   @NonNull

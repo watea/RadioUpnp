@@ -578,11 +578,6 @@ public class RadioService
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
-        // Save last played radio
-        getSharedPreferences(getString(R.string.key_preference_file), MODE_PRIVATE)
-          .edit()
-          .putString(getString(R.string.key_last_played_radio), radio.getURL().toString())
-          .apply();
         startForegroundService(new Intent(RadioService.this, RadioService.class));
       } else {
         playerAdapter.stop();

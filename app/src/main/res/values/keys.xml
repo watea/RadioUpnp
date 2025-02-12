@@ -40,10 +40,9 @@
     <string name="key_toolbar_got_it">key_toolbar_got_it</string>
     <string name="key_country">key_country</string>
     <string name="key_last_played_radio">key_last_played_radio</string>
-    <string name="key_preference_file">key_preference_file</string>
+    <string name="key_alarm_radio">key_alarm_radio</string>
     <string name="key_alarm_hour">key_alarm_hour</string>
     <string name="key_alarm_minute">key_alarm_minute</string>
-    <string name="key_alarm_enabled">key_alarm_enabled</string>
     <string name="key_alarm">key_alarm</string>
     <!-- Bundles -->
     <string name="key_rate">key_rate</string>

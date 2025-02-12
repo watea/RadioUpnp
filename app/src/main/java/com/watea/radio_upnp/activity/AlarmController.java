@@ -25,12 +25,18 @@ package com.watea.radio_upnp.activity;
 
 import static android.content.Context.BIND_AUTO_CREATE;
 
+import android.app.AlarmManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TimePicker;
 import android.widget.ToggleButton;
 
@@ -49,24 +55,24 @@ public class AlarmController {
   @NonNull
   private final TimePicker timePicker;
   @NonNull
+  private final ImageView imageView;
+  @NonNull
   private final ToggleButton toggleButton;
   @NonNull
   private final AlertDialog alertDialog;
+  @Nullable
+  private Radio radio;
   @Nullable
   private AlarmService.AlarmServiceBinder alarmService = null;
   private final ServiceConnection alarmConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       alarmService = (AlarmService.AlarmServiceBinder) service;
-      toggleButton.setEnabled(true);
-      assert alarmService != null;
-      toggleButton.setChecked(alarmService.isEnabled());
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
       alarmService = null;
-      toggleButton.setEnabled(false);
     }
   };
 
@@ -84,25 +90,7 @@ public class AlarmController {
     timePicker = view.findViewById(R.id.timePicker);
     timePicker.setIs24HourView(true);
     toggleButton = view.findViewById(R.id.toggleButton);
-    toggleButton.setChecked(false);
-    toggleButton.setEnabled(false);
-    timePicker.setOnTimeChangedListener((v, h, m) -> toggleButton.setChecked(false));
-    toggleButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
-      assert alarmService != null;
-      if (isChecked) {
-        final Radio radio = mainActivity.getCurrentRadio();
-        if (radio == null) {
-          mainActivity.showWarningOverlay(mainActivity.getString(R.string.no_radio_playing));
-          toggleButton.setChecked(false);
-        } else {
-          // Notification will be shown
-          alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString());
-        }
-      } else if (alarmService.isEnabled()) {
-        alarmService.cancelAlarm();
-        mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_cancelled));
-      }
-    });
+    imageView = view.findViewById(R.id.imageView);
   }
 
   public void onActivityResume() {
@@ -123,13 +111,51 @@ public class AlarmController {
     if (alarmService == null) {
       mainActivity.tell(R.string.alarm_not_available);
     } else {
+      // Selected radio
+      radio = alarmService.isStarted() ? alarmService.getRadio() : mainActivity.getLastPlayedRadio();
+      final boolean isPossible = (radio != null);
+      final Bitmap bitmap = isPossible ? Radio.crop(radio.getIcon()) : mainActivity.getDefaultIcon();
+      imageView.setImageBitmap(MainActivity.iconResize(bitmap));
+      // Init toggleButton
+      toggleButton.setOnCheckedChangeListener(null);
+      toggleButton.setChecked(alarmService.isStarted());
+      toggleButton.setEnabled(isPossible);
+      // Init timePicker
+      timePicker.setOnTimeChangedListener(null);
+      timePicker.setEnabled(isPossible);
       final int hour = alarmService.getHour();
       final int minute = alarmService.getMinute();
       if ((hour >= 0) && (minute >= 0)) {
         timePicker.setHour(hour);
         timePicker.setMinute(minute);
       }
-      alertDialog.show();
+      // Set listeners and launch
+      if (isPossible) {
+        timePicker.setOnTimeChangedListener((v, h, m) -> toggleButton.setChecked(false));
+        toggleButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
+          if (alarmService == null) {
+            mainActivity.tell(R.string.alarm_not_available);
+          } else {
+            if (isChecked) {
+              // Notification will be shown
+              if (!alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
+                mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));
+              }
+            } else {
+              alarmService.cancelAlarm();
+              mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_cancelled));
+            }
+          }
+        });
+      } else {
+        mainActivity.showWarningOverlay(mainActivity.getString(R.string.no_radio_available));
+      }
+      final AlarmManager alarmManager = (AlarmManager) mainActivity.getSystemService(Context.ALARM_SERVICE);
+      if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) && (!alarmManager.canScheduleExactAlarms())) {
+        mainActivity.startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM));
+      } else {
+        alertDialog.show();
+      }
     }
   }
 }
