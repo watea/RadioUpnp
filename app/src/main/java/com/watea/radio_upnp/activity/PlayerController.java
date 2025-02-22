@@ -92,9 +92,10 @@ public class PlayerController {
   @NonNull
   private final Radios radios;
   // Callback from media control
-  private final MediaControllerCompat.Callback mediaControllerCallback = new MediaControllerCompatCallback();
+  private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();
+  // Callback from connection to MediaBrowserServiceCompat
+  private final MediaBrowserCompatConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserCompatConnectionCallback();
   // MediaController from the MediaBrowser when it has successfully connected
-  private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserCompatConnectionCallback();
   @Nullable
   private MediaControllerCompat mediaController = null;
   private final Radios.Listener radiosListener = new Radios.Listener() {

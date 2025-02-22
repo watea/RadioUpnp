@@ -68,13 +68,14 @@ public class AlarmService extends Service {
   private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
   private final Binder binder = new AlarmServiceBinder();
   // Callback from media control
-  private final MediaControllerCompat.Callback mediaControllerCallback = new MediaControllerCompatCallback();
-  // MediaController from the MediaBrowser when it has successfully connected
-  private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserCompatConnectionCallback();
+  private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();
+  // Callback from connection to MediaBrowserServiceCompat
+  private final MediaBrowserCompatConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserCompatConnectionCallback();
   private final NetworkRequest networkRequest = new NetworkRequest.Builder()
     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     .build();
-  private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
+  // Wait for internet connection
+  private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
   private String CHANNEL_ID;
   private MediaBrowserCompat mediaBrowser = null;
   // MediaController from the MediaBrowser when it has successfully connected
@@ -82,7 +83,7 @@ public class AlarmService extends Service {
   private MediaControllerCompat mediaController = null;
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
-  private boolean isStarted = false;  // Wait for network
+  private boolean isStarted = false;
 
   @Override
   public void onCreate() {
