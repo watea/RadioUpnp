@@ -63,7 +63,12 @@
             android:name="com.watea.radio_upnp.service.AlarmService"
             android:description="@string/alarm_service_description"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="com.watea.radio_upnp.ALARM_TRIGGERED" />
+            </intent-filter>
+        </service>
 
         <!--
          MediaSession, prior to API 21, uses a broadcast receiver to communicate with a

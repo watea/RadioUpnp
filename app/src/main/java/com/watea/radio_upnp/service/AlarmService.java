@@ -34,7 +34,12 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ServiceInfo;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -60,18 +65,24 @@ public class AlarmService extends Service {
   private static final String LOG_TAG = AlarmService.class.getSimpleName();
   private static final int NOTIFICATION_ID = 10;
   private static final int DEFAULT_TIME = -1;
+  private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
   private final Binder binder = new AlarmServiceBinder();
   // Callback from media control
   private final MediaControllerCompat.Callback mediaControllerCallback = new MediaControllerCompatCallback();
   // MediaController from the MediaBrowser when it has successfully connected
   private final MediaBrowserCompat.ConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserCompatConnectionCallback();
+  private final NetworkRequest networkRequest = new NetworkRequest.Builder()
+    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    .build();
+  private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
   private String CHANNEL_ID;
   private MediaBrowserCompat mediaBrowser = null;
   // MediaController from the MediaBrowser when it has successfully connected
   @Nullable
   private MediaControllerCompat mediaController = null;
   private AlarmManager alarmManager;
-  private boolean isStarted = false;
+  private ConnectivityManager connectivityManager;
+  private boolean isStarted = false;  // Wait for network
 
   @Override
   public void onCreate() {
@@ -110,6 +121,8 @@ public class AlarmService extends Service {
       null);
     // AlarmManager
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+    // ConnectivityManager
+    connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
   }
 
   @Override
@@ -119,6 +132,7 @@ public class AlarmService extends Service {
     // Robustness
     releaseAlarm();
     releaseMediaBrowser();
+    releaseConnectivityManagerCallback();
     isStarted = false;
   }
 
@@ -131,29 +145,33 @@ public class AlarmService extends Service {
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d(LOG_TAG, "onStartCommand");
-    if (intent.getBooleanExtra(getString(R.string.key_alarm), false)) {
-      // Launch RadioService, may fail if already called and connection not ended
-      try {
-        mediaBrowser.connect();
-      } catch (IllegalStateException illegalStateException) {
-        Log.e(LOG_TAG, "onStartCommand: mediaBrowser.connect() failed", illegalStateException);
-      }
+    if (ALARM_TRIGGERED.equals(intent.getAction())) {
+      // Register network callback
+      connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
       // Relaunch alarm
       final AlarmServiceBinder alarmServiceBinder = (AlarmServiceBinder) binder;
-      if (!setAlarmManagerAlarm(alarmServiceBinder.getHour(), alarmServiceBinder.getMinute())) {
+      if (!setAlarmManagerAlarm(alarmServiceBinder.getHour(), alarmServiceBinder.getMinute(), true)) {
         alarmServiceBinder.cancelAlarm();
       }
       return super.onStartCommand(intent, flags, startId);
     } else {
       if (!isStarted) {
-        startForeground(NOTIFICATION_ID, getNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          startForeground(
+            NOTIFICATION_ID,
+            getNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST);
+        } else {
+          startForeground(NOTIFICATION_ID, getNotification());
+        }
         isStarted = true;
       }
       return START_STICKY;
     }
   }
 
-  private boolean setAlarmManagerAlarm(int hour, int minute) {
+  private boolean setAlarmManagerAlarm(int hour, int minute, boolean isRelaunch) {
+    Log.d(LOG_TAG, "setAlarmManagerAlarm");
     if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) && !alarmManager.canScheduleExactAlarms()) {
       return false;
     }
@@ -162,7 +180,7 @@ public class AlarmService extends Service {
     calendar.set(Calendar.MINUTE, minute);
     calendar.set(Calendar.SECOND, 0);
     // If the time is in the past, add one day
-    if (calendar.getTimeInMillis() < System.currentTimeMillis()) {
+    if (isRelaunch || (calendar.getTimeInMillis() <= System.currentTimeMillis())) {
       calendar.add(Calendar.DAY_OF_YEAR, 1);
     }
     // Set
@@ -215,13 +233,21 @@ public class AlarmService extends Service {
     alarmManager.cancel(getPendingIntent());
   }
 
+  private void releaseConnectivityManagerCallback() {
+    try {
+      connectivityManager.unregisterNetworkCallback(networkCallback);
+    } catch (IllegalArgumentException illegalArgumentException) {
+      Log.d(LOG_TAG, "releaseConnectivityManagerCallback failed");
+    }
+  }
+
   @NonNull
   private PendingIntent getPendingIntent() {
     return PendingIntent.getBroadcast(
       AlarmService.this,
       0,
       new Intent(AlarmService.this, AlarmReceiver.class),
-      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+      PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }
 
   public static class AlarmReceiver extends BroadcastReceiver {
@@ -230,9 +256,7 @@ public class AlarmService extends Service {
     @Override
     public void onReceive(Context context, Intent intent) {
       Log.d(LOG_TAG, "onReceive");
-      final Intent serviceIntent = new Intent(context, AlarmService.class);
-      serviceIntent.putExtra(context.getString(R.string.key_alarm), true);
-      context.startForegroundService(serviceIntent);
+      context.startForegroundService(new Intent(ALARM_TRIGGERED).setClass(context, AlarmService.class));
     }
   }
 
@@ -245,7 +269,7 @@ public class AlarmService extends Service {
         .putInt(getString(R.string.key_alarm_minute), minute)
         .apply();
       releaseAlarm(); // Robustness
-      if (setAlarmManagerAlarm(hour, minute)) {
+      if (setAlarmManagerAlarm(hour, minute, false)) {
         startForegroundService(new Intent(AlarmService.this, AlarmService.class));
         return true;
       }
@@ -282,6 +306,25 @@ public class AlarmService extends Service {
     @NonNull
     private SharedPreferences getSharedPreferences() {
       return AlarmService.this.getSharedPreferences(LOG_TAG, MODE_PRIVATE);
+    }
+  }
+
+  private class ConnectivityManagerNetworkCallback extends ConnectivityManager.NetworkCallback {
+    @Override
+    public void onAvailable(@NonNull Network network) {
+      Log.d(LOG_TAG, "onAvailable");
+      // Launch RadioService, may fail if already called and connection not ended
+      try {
+        mediaBrowser.connect();
+      } catch (IllegalStateException illegalStateException) {
+        Log.e(LOG_TAG, "onStartCommand: mediaBrowser.connect() failed", illegalStateException);
+      }
+      releaseConnectivityManagerCallback();
+    }
+
+    @Override
+    public void onLost(@NonNull Network network) {
+      Log.d(LOG_TAG, "onLost");
     }
   }
 
