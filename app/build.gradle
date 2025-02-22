@@ -9,8 +9,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 35
-        versionCode 27130
-        versionName "2.71.30"
+        versionCode 27131
+        versionName "2.71.31"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -28,7 +28,6 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
-
 
     buildFeatures {
         buildConfig true
@@ -64,7 +63,7 @@ dependencies {
     // CandidHttpServer
     implementation 'com.github.watea:candidhttpserver:1.0.11'
     // AndroidSsdpClient
-    implementation 'com.github.watea:androidssdpclient:1.0.5'
+    implementation 'com.github.watea:androidssdpclient:1.0.6'
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
 }
