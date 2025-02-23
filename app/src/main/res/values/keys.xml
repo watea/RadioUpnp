@@ -43,6 +43,8 @@
     <string name="key_alarm_radio">key_alarm_radio</string>
     <string name="key_alarm_hour">key_alarm_hour</string>
     <string name="key_alarm_minute">key_alarm_minute</string>
+    <string name="key_sleep">key_sleep</string>
+    <string name="key_sleep_set">key_sleep_set</string>
     <!-- Bundles -->
     <string name="key_rate">key_rate</string>
     <!-- Others -->

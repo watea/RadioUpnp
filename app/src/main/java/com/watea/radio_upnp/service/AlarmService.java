@@ -43,6 +43,7 @@ import android.net.NetworkRequest;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.os.IBinder;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
@@ -147,6 +148,12 @@ public class AlarmService extends Service {
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d(LOG_TAG, "onStartCommand");
     if (ALARM_TRIGGERED.equals(intent.getAction())) {
+      // Wake lock
+      final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+      final PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
+        PowerManager.PARTIAL_WAKE_LOCK,
+        LOG_TAG);
+      wakeLock.acquire(10*60*1000L); // 10 min.
       // Register network callback
       connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
       // Relaunch alarm

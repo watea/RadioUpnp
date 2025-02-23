@@ -77,6 +77,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class RadioService
   extends MediaBrowserServiceCompat
@@ -84,6 +87,8 @@ public class RadioService
   public static final String DATE = "date";
   public static final String INFORMATION = "information";
   public static final String PLAYLIST = "playlist";
+  public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
+  public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
   private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
@@ -142,6 +147,8 @@ public class RadioService
       return playerAdapter.getContentType();
     }
   };
+  @Nullable
+  private ScheduledExecutorService scheduler = null;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionStop;
   private NotificationCompat.Action actionPlay;
@@ -514,6 +521,21 @@ public class RadioService
     });
   }
 
+  private void setSleepOn(boolean isSleepOn) {
+    if (mediaController != null) {
+      final Bundle mediaControllerExtras = mediaController.getExtras();
+      mediaControllerExtras.putBoolean(getString(R.string.key_sleep_set), isSleepOn);
+      session.setExtras(mediaControllerExtras);
+    }
+  }
+
+  private void releaseScheduler() {
+    if (scheduler != null) {
+      scheduler.shutdownNow();
+      setSleepOn(false);
+    }
+  }
+
   // PlayerAdapter from session for actual media controls
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     // mediaId == null => last played radio
@@ -528,6 +550,8 @@ public class RadioService
       if (playerAdapter != null) {
         playerAdapter.stop();
       }
+      // Stop scheduler if any
+      releaseScheduler();
       // Try to retrieve radio
       final Radio previousRadio = radio;
       radio = radios.getRadioFromId(mediaId);
@@ -593,8 +617,9 @@ public class RadioService
 
     @Override
     public void onPause() {
-      assert playerAdapter != null;
-      playerAdapter.pause();
+      if (playerAdapter != null) {
+        playerAdapter.pause();
+      }
     }
 
     @Override
@@ -614,12 +639,30 @@ public class RadioService
 
     @Override
     public void onStop() {
-      if (playerAdapter == null) {
-        Log.e(LOG_TAG, "onStop: but playerAdapter is null!");
-      } else {
+      if (playerAdapter != null) {
         playerAdapter.stop();
         playerAdapter = null;
         radio = null;
+      }
+    }
+
+    @Override
+    public void onCustomAction(String command, Bundle extras) {
+      switch (command) {
+        case ACTION_SLEEP_CANCEL:
+          releaseScheduler();
+          break;
+        case ACTION_SLEEP_SET:
+          scheduler = Executors.newScheduledThreadPool(1);
+          scheduler.schedule(
+            () -> new Handler(Looper.getMainLooper()).post(this::onPause),
+            extras.getInt(getString(R.string.key_sleep)),
+            TimeUnit.MINUTES);
+          scheduler.shutdown();
+          setSleepOn(true);
+          break;
+        default:
+          Log.e(LOG_TAG, "onCustomAction: unknown command!");
       }
     }
 

@@ -29,12 +29,15 @@ import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -91,6 +94,8 @@ public class PlayerController {
   private final MediaBrowserCompat mediaBrowser;
   @NonNull
   private final Radios radios;
+  @NonNull
+  private final Handler longClickHandler = new Handler();
   // Callback from media control
   private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();
   // Callback from connection to MediaBrowserServiceCompat
@@ -108,7 +113,9 @@ public class PlayerController {
   };
   @Nullable
   private Consumer<Radio> listener = null;
+  private boolean isLongPress = false;
 
+  @SuppressLint("ClickableViewAccessibility")
   public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
     this.mainActivity = mainActivity;
     // Radios list
@@ -176,41 +183,40 @@ public class PlayerController {
     playedRadioRateTextView = view.findViewById(R.id.played_radio_rate_text_view);
     progressBar = view.findViewById(R.id.progress_bar);
     playImageButton = view.findViewById(R.id.play_image_button);
-    playImageButton.setOnClickListener(v -> {
-      // Should not happen
-      if (mediaController == null) {
-        this.mainActivity.tell(R.string.radio_connection_waiting);
-      } else {
-        // Tag on button has stored state to reach
-        switch ((int) playImageButton.getTag()) {
-          case PlaybackStateCompat.STATE_PLAYING:
-            mediaController.getTransportControls().play();
-            break;
-          case PlaybackStateCompat.STATE_PAUSED:
-            mediaController.getTransportControls().pause();
-            playLongPressUserHint.show();
-            break;
-          case PlaybackStateCompat.STATE_STOPPED:
-            mediaController.getTransportControls().stop();
-            break;
-          case PlaybackStateCompat.STATE_REWINDING:
-            mediaController.getTransportControls().rewind();
-            break;
-          default:
-            // Should not happen
-            Log.e(LOG_TAG, "Internal failure, no action to perform on play button");
+    final GestureDetector gestureDetector = new GestureDetector(mainActivity, new GestureDetector.SimpleOnGestureListener() {
+      @Override
+      public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
+        if (!isLongPress) {
+          onPlayClick();
         }
+        return true;
+      }
+
+      // Double click
+      @Override
+      public boolean onDoubleTap(@NonNull MotionEvent e) {
+        onPlayDoubleClick();
+        return true;
       }
     });
-    playImageButton.setOnLongClickListener(playImageButtonView -> {
-      // Should not happen
-      if (mediaController == null) {
-        mainActivity.tell(R.string.radio_connection_waiting);
-      } else {
-        mediaController.getTransportControls().stop();
-      }
-      return true;
-    });
+    playImageButton.setOnTouchListener(
+      (v, event) -> {
+        switch (event.getAction()) {
+          case MotionEvent.ACTION_DOWN:
+            isLongPress = false;
+            longClickHandler.postDelayed(() -> {
+              isLongPress = true;
+              onPlayLongClick();
+            }, 500);
+            break;
+          case MotionEvent.ACTION_UP:
+          case MotionEvent.ACTION_CANCEL:
+            // No long click
+            longClickHandler.removeCallbacksAndMessages(null);
+            break;
+        }
+        return gestureDetector.onTouchEvent(event);
+      });
     preferredImageButton = view.findViewById(R.id.preferred_image_button);
     preferredImageButton.setOnClickListener(v -> {
       final Radio radio = getCurrentRadio();
@@ -280,6 +286,59 @@ public class PlayerController {
     final MediaMetadataCompat mediaMetadataCompat = (mediaController == null) ? null : mediaController.getMetadata();
     final String radioId = (mediaMetadataCompat == null) ? null : mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
     return (radioId == null) ? null : radios.getRadioFromId(radioId);
+  }
+
+  private void onPlayClick() {
+    if (mediaController == null) { // Should not happen
+      mainActivity.tell(R.string.radio_connection_waiting);
+    } else {
+      // Tag on button has stored state to reach
+      switch ((int) playImageButton.getTag()) {
+        case PlaybackStateCompat.STATE_PLAYING:
+          mediaController.getTransportControls().play();
+          break;
+        case PlaybackStateCompat.STATE_PAUSED:
+          mediaController.getTransportControls().pause();
+          playLongPressUserHint.show();
+          break;
+        case PlaybackStateCompat.STATE_STOPPED:
+          mediaController.getTransportControls().stop();
+          break;
+        case PlaybackStateCompat.STATE_REWINDING:
+          mediaController.getTransportControls().rewind();
+          break;
+        default:
+          // Should not happen
+          Log.e(LOG_TAG, "Internal failure, no action to perform on play button");
+      }
+    }
+  }
+
+  private void onPlayLongClick() {
+    if (mediaController == null) { // Should not happen
+      mainActivity.tell(R.string.radio_connection_waiting);
+    } else {
+      mediaController.getTransportControls().stop();
+    }
+  }
+
+  private void onPlayDoubleClick() {
+    // Should not happen
+    if (mediaController == null) {
+      mainActivity.tell(R.string.radio_connection_waiting);
+    } else {
+      final boolean isSleepSet = mediaController.getExtras().getBoolean(mainActivity.getString(R.string.key_sleep_set), false);
+      final String key = mainActivity.getString(R.string.key_sleep);
+      final int sleep = mainActivity.getSharedPreferences().getInt(key, MainActivity.SLEEP_MIN);
+      final Bundle bundle = new Bundle();
+      bundle.putInt(key, sleep);
+      mediaController.getTransportControls().sendCustomAction(isSleepSet ? RadioService.ACTION_SLEEP_CANCEL : RadioService.ACTION_SLEEP_SET, bundle); // Asynchronous
+      if (isSleepSet) {
+        mainActivity.tell(R.string.sleep_cancelled);
+      } else {
+        mainActivity.tell(sleep + " " + mainActivity.getString(R.string.sleep_set));
+      }
+    }
   }
 
   private void onNewCurrentRadio() {

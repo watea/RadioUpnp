@@ -50,6 +50,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.NumberPicker;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -102,8 +103,10 @@ import java.util.function.Consumer;
 public class MainActivity
   extends AppCompatActivity
   implements NavigationView.OnNavigationItemSelectedListener {
+  public static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final int RADIO_ICON_SIZE = 300;
+  private static final int SLEEP_MAX = 90;
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<>() {
       {
@@ -123,6 +126,7 @@ public class MainActivity
   private AlertDialog upnpAlertDialog;
   private AlertDialog parametersAlertDialog;
   private AlertDialog aboutAlertDialog;
+  private AlertDialog sleepAlertDialog;
   private UserHint toolbarUserHint;
   private CollapsingToolbarLayout actionBarLayout;
   private AppBarLayout appBarLayout;
@@ -264,6 +268,9 @@ public class MainActivity
         break;
       case R.id.action_alarm:
         alarmController.launch();
+        break;
+      case R.id.action_sleep:
+        sleepAlertDialog.show();
         break;
       case R.id.action_export:
         exportFile();
@@ -528,12 +535,26 @@ public class MainActivity
     final NavigationView navigationView = findViewById(R.id.navigation_view);
     navigationView.setNavigationItemSelectedListener(this);
     navigationMenu = navigationView.getMenu();
-    // Build alert about dialog
+    // Build about dialog
     final View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
     ((TextView) aboutView.findViewById(R.id.version_name_text_view))
       .setText(BuildConfig.VERSION_NAME);
     aboutAlertDialog = new AlertDialog.Builder(this)
       .setView(aboutView)
+      // Restore checked item
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
+      .create();
+    // Build sleep dialog
+    final View sleepView = getLayoutInflater().inflate(R.layout.view_sleep, null);
+    final NumberPicker minutePicker = sleepView.findViewById(id.numberPicker);
+    minutePicker.setMinValue(SLEEP_MIN);
+    minutePicker.setMaxValue(SLEEP_MAX);
+    minutePicker.setValue(sharedPreferences.getInt(getString(R.string.key_sleep), SLEEP_MIN));
+    minutePicker.setOnValueChangedListener((picker, oldVal, newVal) -> sharedPreferences.edit().putInt(getString(R.string.key_sleep), newVal).apply());
+    sleepAlertDialog = new AlertDialog.Builder(this)
+      .setTitle(R.string.title_sleep)
+      .setIcon(R.drawable.ic_baseline_hourglass_bottom_white_24dp)
+      .setView(sleepView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();

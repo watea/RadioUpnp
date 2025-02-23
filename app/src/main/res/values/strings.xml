@@ -120,6 +120,10 @@
     <string name="on">ON</string>
     <string name="alarm">Alarm set on last played radio:</string>
     <string name="alarm_can_not_be_set">Android does not allow to set an alarm!</string>
+    <string name="sleep">Sleep timer set/cancelled with <b>double tap</b> on play/pause control icon:</string>
+    <string name="sleep_set">minutes sleep timer set!</string>
+    <string name="sleep_cancelled">Sleep cancelled!</string>
+    <string name="minutes">minutes</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
@@ -135,6 +139,8 @@
     <string name="title_export">Export</string>
     <string name="title_radio_garden">Radio Garden</string>
     <string name="title_search">Search</string>
+    <string name="title_alarm">Alarm</string>
+    <string name="title_sleep">Sleep</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_stop">Stop</string>
@@ -154,5 +160,4 @@
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dark</string>
     <string name="light_radio_button">Light</string>
-    <string name="title_alarm">Alarm</string>
 </resources>
