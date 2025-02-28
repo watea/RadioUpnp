@@ -43,8 +43,8 @@ import android.net.NetworkRequest;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -56,8 +56,8 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 
 import java.util.Calendar;
 import java.util.Locale;
@@ -147,13 +147,16 @@ public class AlarmService extends Service {
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d(LOG_TAG, "onStartCommand");
+    if (intent == null) {
+      return super.onStartCommand(null, flags, startId);
+    }
     if (ALARM_TRIGGERED.equals(intent.getAction())) {
       // Wake lock
       final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
       final PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
         PowerManager.PARTIAL_WAKE_LOCK,
         LOG_TAG);
-      wakeLock.acquire(10*60*1000L); // 10 min.
+      wakeLock.acquire(10 * 60 * 1000L); // 10 min.
       // Register network callback
       connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
       // Relaunch alarm
@@ -304,7 +307,7 @@ public class AlarmService extends Service {
 
     @Nullable
     public Radio getRadio() {
-      return MainActivity.getRadios().getRadioFromURL(getSharedPreferences().getString(getString(R.string.key_alarm_radio), ""));
+      return Radios.getInstance().getRadioFromURL(getSharedPreferences().getString(getString(R.string.key_alarm_radio), ""));
     }
 
     public boolean isStarted() {

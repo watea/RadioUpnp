@@ -43,6 +43,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosSearchAdapter;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioURL;
 
 import org.json.JSONArray;
@@ -87,7 +88,7 @@ public class SearchFragment extends MainActivityFragment {
         radiosSearchAdapter.selectAll();
         return true;
       case R.id.action_done:
-        getRadios().addAll(radiosSearchAdapter.getSelectedRadios());
+        Radios.getInstance().addAll(radiosSearchAdapter.getSelectedRadios());
         onBackPressed();
         return true;
       default:

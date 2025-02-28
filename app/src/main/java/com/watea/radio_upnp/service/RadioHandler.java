@@ -33,8 +33,8 @@ import androidx.annotation.Nullable;
 import com.watea.candidhttpserver.HttpServer;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -113,7 +113,7 @@ public class RadioHandler implements HttpServer.Handler {
       Log.d(LOG_TAG, "handle: leaving, unexpected request received: lockKey is null");
       return;
     }
-    final Radio radio = MainActivity.getRadios().getRadioFromId(path.replace("/", ""));
+    final Radio radio = Radios.getInstance().getRadioFromId(path.replace("/", ""));
     if (radio == null) {
       Log.d(LOG_TAG, "handle: leaving, unknown radio");
       return;

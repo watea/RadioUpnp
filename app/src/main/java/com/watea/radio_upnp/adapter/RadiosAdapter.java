@@ -97,7 +97,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
     protected void setView(@NonNull Radio radio) {
       this.radio = radio;
       setImage(new BitmapDrawable(
-        radioTextView.getResources(), MainActivity.iconHalfResize(this.radio.getIcon())));
+        radioTextView.getResources(), Radio.iconHalfResize(this.radio.getIcon())));
       radioTextView.setText(this.radio.getName());
     }
   }

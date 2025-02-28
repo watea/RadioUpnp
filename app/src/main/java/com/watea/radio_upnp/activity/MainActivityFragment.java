@@ -38,7 +38,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.NetworkProxy;
 
 // Upper class for fragments of the main activity
@@ -130,11 +129,6 @@ public abstract class MainActivityFragment extends Fragment {
   @NonNull
   protected SharedPreferences getSharedPreferences() {
     return getMainActivity().getSharedPreferences();
-  }
-
-  @NonNull
-  protected Radios getRadios() {
-    return MainActivity.getRadios();
   }
 
   protected void tell(int message) {

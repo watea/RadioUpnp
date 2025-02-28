@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.model;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -31,6 +32,8 @@ import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.activity.MainActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -60,14 +63,42 @@ public class Radios extends ArrayList<Radio> {
   private static final byte JSON_ARRAY_START = '[';
   private static final byte JSON_ARRAY_END = ']';
   private static final byte[] JSON_ARRAY_COMMA = ",\n".getBytes();
+  @Nullable
+  private static Radios radios = null; // Singleton
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;
 
-  public Radios(@NonNull Context context) {
+  private Radios(@NonNull Context context) {
     super();
     fileName = context.getFilesDir().getPath() + "/" + FILE;
-    init();
+  }
+
+  @NonNull
+  public static Radios getInstance() {
+    assert radios != null;
+    return radios;
+  }
+
+  // Must be called before getInstance
+  public synchronized static void setInstance(@NonNull Context context) {
+    if (radios == null) {
+      radios = new Radios(context);
+      final SharedPreferences sharedPreferences = context.getSharedPreferences("activity." + MainActivity.class.getSimpleName(), Context.MODE_PRIVATE);
+      if (sharedPreferences.getBoolean(context.getString(R.string.key_first_start), true)) {
+        if (radios.addAll(DefaultRadios.get(context, Radio.RADIO_ICON_SIZE))) {
+          // Robustness: store immediately to avoid bad user experience in case of app crash
+          sharedPreferences
+            .edit()
+            .putBoolean(context.getString(R.string.key_first_start), false)
+            .apply();
+        } else {
+          Log.e(LOG_TAG, "Internal failure; unable to init radios");
+        }
+      } else {
+        radios.init();
+      }
+    }
   }
 
   public void addListener(@NonNull Listener listener) {

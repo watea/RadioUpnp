@@ -34,6 +34,7 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 
 import java.net.URL;
 
@@ -52,7 +53,7 @@ public class ItemModifyFragment extends ItemFragment {
     super.onCreate(savedInstanceState);
     if (savedInstanceState != null) {
       // Restore radio
-      radio = getRadios().get(savedInstanceState.getInt(getString(R.string.key_radio_index)));
+      radio = Radios.getInstance().get(savedInstanceState.getInt(getString(R.string.key_radio_index)));
     }
   }
 
@@ -61,7 +62,7 @@ public class ItemModifyFragment extends ItemFragment {
     super.onSaveInstanceState(outState);
     // Store radio; may fail
     try {
-      outState.putInt(getString(R.string.key_radio_index), getRadios().indexOf(radio));
+      outState.putInt(getString(R.string.key_radio_index), Radios.getInstance().indexOf(radio));
     } catch (Exception exception) {
       outState.clear();
       Log.e(LOG_TAG, "onSaveInstanceState: internal failure", exception);
@@ -78,7 +79,7 @@ public class ItemModifyFragment extends ItemFragment {
       radio.setWebPageURL(webPageWatcher.url);
       assert getIcon() != null;
       radio.setIcon(getIcon());
-      if (!getRadios().modify(radio)) {
+      if (!Radios.getInstance().modify(radio)) {
         tell(R.string.radio_database_update_failed);
       }
       onBackPressed();

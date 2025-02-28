@@ -43,6 +43,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 
 public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
@@ -173,7 +174,7 @@ public class MainFragment extends MainActivityFragment {
     // Adapter
     radiosMainAdapter = new RadiosMainAdapter(
       getMainActivity(),
-      () -> isPreferredRadios ? getRadios().getPreferred() : getRadios(),
+      () -> isPreferredRadios ? Radios.getInstance().getPreferred() : Radios.getInstance(),
       radiosRecyclerView,
       radiosMainAdapterListener);
     // Build alert dialogs

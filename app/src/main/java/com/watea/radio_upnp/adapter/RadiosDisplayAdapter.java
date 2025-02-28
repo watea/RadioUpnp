@@ -94,10 +94,10 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   // Must be called
   public void set(boolean isOn) {
     if (isOn) {
-      MainActivity.getRadios().addListener(radiosListener);
+      Radios.getInstance().addListener(radiosListener);
       refresh();
     } else {
-      MainActivity.getRadios().removeListener(radiosListener);
+      Radios.getInstance().removeListener(radiosListener);
     }
   }
 

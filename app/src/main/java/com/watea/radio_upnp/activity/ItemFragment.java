@@ -211,7 +211,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   protected void setRadioIcon(@NonNull Bitmap icon) {
-    final Bitmap resizedIcon = MainActivity.iconResize(Radio.crop(icon));
+    final Bitmap resizedIcon = Radio.iconResize(Radio.crop(icon));
     nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
       null, new BitmapDrawable(getResources(), resizedIcon), null, null);
     // radioIcon stored as tag

@@ -50,7 +50,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener,
     @NonNull NestedScrollView nestedScrollView) {
-    super(mainActivity, MainActivity::getRadios, R.layout.row_modify_radio, recyclerView, listener);
+    super(mainActivity, Radios::getInstance, R.layout.row_modify_radio, recyclerView, listener);
     this.nestedScrollView = nestedScrollView;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);

@@ -118,7 +118,6 @@ public class RadioService
   @Nullable
   private Radio radio = null;
   private MediaSessionCompat session;
-  private Radios radios;
   private RadioHttpServer radioHttpServer;
   @Nullable
   private PlayerAdapter playerAdapter = null;
@@ -209,6 +208,8 @@ public class RadioService
   public void onCreate() {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
+    // Create radios if needed
+    Radios.setInstance(this);
     // Launch HTTP server
     try {
       radioHttpServer = new RadioHttpServer(this, this);
@@ -248,8 +249,9 @@ public class RadioService
     } else {
       Log.d(LOG_TAG, "Existing channel reused");
     }
-    // Radio library access
-    radios = MainActivity.getRadios();
+    // Radio library
+
+
     // Bind to UPnP service
     if (!bindService(
       new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
@@ -554,7 +556,7 @@ public class RadioService
       releaseScheduler();
       // Try to retrieve radio
       final Radio previousRadio = radio;
-      radio = radios.getRadioFromId(mediaId);
+      radio = Radios.getInstance().getRadioFromId(mediaId);
       if (radio == null) {
         Log.e(LOG_TAG, "onPrepareFromMediaId: radio not found");
         return;
@@ -668,7 +670,7 @@ public class RadioService
 
     private void skipTo(int direction) {
       assert radio != null;
-      onPrepareFromMediaId(radios.getRadioFrom(radio, direction));
+      onPrepareFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
     }
 
     // Same extras are reused

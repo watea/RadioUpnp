@@ -115,7 +115,7 @@ public class AlarmController {
       radio = alarmService.isStarted() ? alarmService.getRadio() : mainActivity.getLastPlayedRadio();
       final boolean isPossible = (radio != null);
       final Bitmap bitmap = isPossible ? Radio.crop(radio.getIcon()) : mainActivity.getDefaultIcon();
-      imageView.setImageBitmap(MainActivity.iconResize(bitmap));
+      imageView.setImageBitmap(Radio.iconResize(bitmap));
       // Init toggleButton
       toggleButton.setOnCheckedChangeListener(null);
       toggleButton.setChecked(alarmService.isStarted());

@@ -35,6 +35,7 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioURL;
 
 import org.apache.commons.io.IOUtils;
@@ -201,7 +202,7 @@ public class RadioGardenController {
     mainActivity.runOnUiThread(() -> {
       if (isOk.get()) {
         try {
-          isOk.set(MainActivity.getRadios().add(new Radio(
+          isOk.set(Radios.getInstance().add(new Radio(
             data.get().getString("title"),
             (icon.get() == null) ? mainActivity.getDefaultIcon() : icon.get(),
             new URL(RADIO_GARDEN + LISTEN + id + CHANNEL_MP3),

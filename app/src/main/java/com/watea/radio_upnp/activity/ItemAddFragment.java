@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 
 public class ItemAddFragment extends ItemFragment {
   @Override
@@ -41,7 +42,7 @@ public class ItemAddFragment extends ItemFragment {
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     if (!super.onOptionsItemSelected(item)) {
       final Bitmap icon = getIcon();
-      if ((urlWatcher.url == null) || (icon == null) || !getRadios().add(
+      if ((urlWatcher.url == null) || (icon == null) || !Radios.getInstance().add(
         new Radio(getRadioName(), getIcon(), urlWatcher.url, webPageWatcher.url))) {
         tell(R.string.radio_database_update_failed);
       }

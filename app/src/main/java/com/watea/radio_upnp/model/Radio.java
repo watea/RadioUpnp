@@ -49,6 +49,7 @@ import java.net.URL;
 public class Radio {
   @NonNull
   public static final Radio DUMMY_RADIO;
+  public static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = Radio.class.getSimpleName();
   private static final String SPACER = ";";
   public static final String EXPORT_HEAD =
@@ -142,6 +143,16 @@ public class Radio {
       jSONObject.getBoolean(IS_PREFERRED));
     // Cache base 64 icon
     base64Icon = jSONObject.getString(ICON);
+  }
+
+  @NonNull
+  public static Bitmap iconResize(@NonNull Bitmap bitmap) {
+    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
+  }
+
+  @NonNull
+  public static Bitmap iconHalfResize(@NonNull Bitmap bitmap) {
+    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE / 2);
   }
 
   // Store bitmap as filename.png

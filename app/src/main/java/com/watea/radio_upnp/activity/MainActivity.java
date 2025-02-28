@@ -80,7 +80,6 @@ import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
-import com.watea.radio_upnp.model.DefaultRadios;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.NetworkProxy;
@@ -105,7 +104,6 @@ public class MainActivity
   implements NavigationView.OnNavigationItemSelectedListener {
   public static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
-  private static final int RADIO_ICON_SIZE = 300;
   private static final int SLEEP_MAX = 90;
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<>() {
@@ -117,8 +115,6 @@ public class MainActivity
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  @Nullable
-  private static Radios radios = null;
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
@@ -214,22 +210,6 @@ public class MainActivity
       upnpDevicesAdapter.setUpnpService(null);
     }
   };
-
-  @NonNull
-  public static Bitmap iconResize(@NonNull Bitmap bitmap) {
-    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
-  }
-
-  @NonNull
-  public static Bitmap iconHalfResize(@NonNull Bitmap bitmap) {
-    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE / 2);
-  }
-
-  @NonNull
-  public static Radios getRadios() {
-    assert radios != null;
-    return radios;
-  }
 
   public static void setNotification(@NonNull Context context, @NonNull String packageName) {
     final Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
@@ -342,8 +322,7 @@ public class MainActivity
   @Nullable
   public Radio getLastPlayedRadio() {
     final String url = sharedPreferences.getString(getString(R.string.key_last_played_radio), "");
-    assert radios != null;
-    return url.isEmpty() ? null : radios.getRadioFromURL(url);
+    return url.isEmpty() ? null : Radios.getInstance().getRadioFromURL(url);
   }
 
   @NonNull
@@ -457,23 +436,10 @@ public class MainActivity
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     Log.d(LOG_TAG, "onCreate");
+    // Create radios if needed
+    Radios.setInstance(this);
     // Fetch preferences
     sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    // Init radios only if needed; a session may still be there with a radioId
-    if (radios == null) {
-      radios = new Radios(this);
-    }
-    if (sharedPreferences.getBoolean(getString(R.string.key_first_start), true)) {
-      if (radios.addAll(DefaultRadios.get(this, RADIO_ICON_SIZE))) {
-        // Robustness: store immediately to avoid bad user experience in case of app crash
-        sharedPreferences
-          .edit()
-          .putBoolean(getString(R.string.key_first_start), false)
-          .apply();
-      } else {
-        Log.e(LOG_TAG, "Internal failure; unable to init radios");
-      }
-    }
     // Theme
     theme = Theme.valueOf(sharedPreferences.getString(getString(R.string.key_theme), theme.toString()));
     setTheme(getCurrentTheme());
@@ -854,8 +820,7 @@ public class MainActivity
           Log.e(LOG_TAG, "exportTo: internal failure, file not created");
           tell(R.string.export_failed);
         } else {
-          assert radios != null;
-          radios.write(outputStream, type);
+          Radios.getInstance().write(outputStream, type);
           tell(getString(R.string.export_done) + getString(R.string.app_name));
         }
       }
@@ -887,9 +852,8 @@ public class MainActivity
       if (inputStream == null) {
         Log.e(LOG_TAG, "importFrom: internal failure");
       } else {
-        assert radios != null;
         final boolean result = (importExportAction == ImportExportAction.JSON_IMPORT) ?
-          radios.importFrom(inputStream) : radios.importCsvFrom(inputStream);
+          Radios.getInstance().importFrom(inputStream) : Radios.getInstance().importCsvFrom(inputStream);
         tell(result ? R.string.import_successful : R.string.import_no_data);
         return;
       }

@@ -93,8 +93,6 @@ public class PlayerController {
   @NonNull
   private final MediaBrowserCompat mediaBrowser;
   @NonNull
-  private final Radios radios;
-  @NonNull
   private final Handler longClickHandler = new Handler();
   // Callback from media control
   private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();
@@ -118,8 +116,6 @@ public class PlayerController {
   @SuppressLint("ClickableViewAccessibility")
   public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
     this.mainActivity = mainActivity;
-    // Radios list
-    radios = MainActivity.getRadios();
     // Build alert dialogs
     playLongPressUserHint = this.mainActivity
       .new UserHint(R.string.key_play_long_press_got_it, R.string.play_long_press);
@@ -223,7 +219,7 @@ public class PlayerController {
       if (radio == null) {
         this.mainActivity.tell(R.string.radio_not_defined);
       } else {
-        radios.setPreferred(radio, !radio.isPreferred());
+        Radios.getInstance().setPreferred(radio, !radio.isPreferred());
       }
     });
     // Create MediaBrowserServiceCompat
@@ -236,8 +232,6 @@ public class PlayerController {
 
   // Must be called on activity resume
   public void onActivityResume() {
-    // Connect to other components
-    radios.addListener(radiosListener);
     // Launch RadioService, may fail if already called and connection not ended
     try {
       mediaBrowser.connect();
@@ -249,8 +243,6 @@ public class PlayerController {
   // Must be called on activity pause.
   // Handle services.
   public void onActivityPause() {
-    // Disconnect
-    radios.removeListener(radiosListener);
     // Disconnect mediaBrowser
     mediaBrowser.disconnect();
     // Forced suspended connection
@@ -285,7 +277,7 @@ public class PlayerController {
   public Radio getCurrentRadio() {
     final MediaMetadataCompat mediaMetadataCompat = (mediaController == null) ? null : mediaController.getMetadata();
     final String radioId = (mediaMetadataCompat == null) ? null : mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
-    return (radioId == null) ? null : radios.getRadioFromId(radioId);
+    return (radioId == null) ? null : Radios.getInstance().getRadioFromId(radioId);
   }
 
   private void onPlayClick() {
@@ -349,7 +341,7 @@ public class PlayerController {
     playedRadioLinearLayout.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
     if (isVisible) {
       playedRadioNameTextView.setText(radio.getName());
-      albumArtImageView.setImageBitmap(MainActivity.iconResize(radio.getIcon()));
+      albumArtImageView.setImageBitmap(Radio.iconResize(radio.getIcon()));
       setPreferredButton(radio.isPreferred());
     } else {
       setDefaultPlayImageButton();
@@ -465,6 +457,8 @@ public class PlayerController {
   private class MediaBrowserCompatConnectionCallback extends MediaBrowserCompat.ConnectionCallback {
     @Override
     public void onConnected() {
+      // Connect radios to other components
+      Radios.getInstance().addListener(radiosListener);
       // Get a MediaController for the MediaSession
       mediaController = new MediaControllerCompat(mainActivity, mediaBrowser.getSessionToken());
       // Link to the callback controller
@@ -482,6 +476,9 @@ public class PlayerController {
 
     @Override
     public void onConnectionSuspended() {
+      // Disconnect radios to other components
+      Radios.getInstance().removeListener(radiosListener);
+      // Disconnect callback
       if (mediaController != null) {
         mediaController.unregisterCallback(mediaControllerCallback);
       }
