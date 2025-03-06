@@ -142,8 +142,13 @@ public class Device extends Asset {
 
   @Nullable
   public static String getUUID(@NonNull SsdpService ssdpService) {
-    final Matcher matcher = UUID_REGEX.matcher(ssdpService.getSerialNumber());
-    return (matcher.find()) ? matcher.group(1) : null;
+    final String serialNumber = ssdpService.getSerialNumber();
+    if (serialNumber == null) {
+      return null;
+    } else {
+      final Matcher matcher = UUID_REGEX.matcher(serialNumber);
+      return (matcher.find()) ? matcher.group(1) : null;
+    }
   }
 
   public static boolean isAlive(@NonNull SsdpService.Status status) {
