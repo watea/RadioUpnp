@@ -145,6 +145,9 @@ public class SearchFragment extends MainActivityFragment {
     super.onResume();
     radioBrowserServer = null;
     appName = getMainActivity().getString(R.string.app_name);
+    final List<String> countries = new ArrayList<>();
+    final String selectCountry = getMainActivity().getString(R.string.Country);
+    final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries);
     new Thread(() -> {
       for (String radioBrowserServer : RADIO_BROWSER_SERVERS) {
         try {
@@ -152,7 +155,6 @@ public class SearchFragment extends MainActivityFragment {
             .url(radioBrowserServer + "/json/countries")
             .build();
           final JSONArray countriesArray = getJSONArray(request);
-          final List<String> countries = new ArrayList<>();
           for (int i = 0; i < countriesArray.length(); i++) {
             final String name = countriesArray.getJSONObject(i).getString("name");
             if (!name.isEmpty() && !countries.contains(name)) {
@@ -160,10 +162,9 @@ public class SearchFragment extends MainActivityFragment {
             }
           }
           countries.sort(Comparator.naturalOrder());
-          countries.add(0, getMainActivity().getString(R.string.Country));
+          countries.add(0, selectCountry);
           protectedRunOnUiThread(() -> {
-            countrySpinner.setAdapter(
-              new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries));
+            countrySpinner.setAdapter(countriesAdapter);
             final int position = countries.indexOf(getSharedPreferences().getString(getString(R.string.key_country), ""));
             countrySpinner.setSelection(Math.max(position, 0));
             this.radioBrowserServer = radioBrowserServer;
