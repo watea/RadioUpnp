@@ -223,7 +223,7 @@ public class SearchFragment extends MainActivityFragment {
       try {
         stations = getJSONArray(request);
       } catch (IOException | JSONException exception) {
-        tell(R.string.radio_search_failure);
+        protectedRunOnUiThread(() -> tell(R.string.radio_search_failure));
         return;
       }
       for (int i = 0; i < stations.length(); i++) {
