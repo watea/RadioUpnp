@@ -69,6 +69,7 @@ import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -336,17 +337,13 @@ public class MainActivity
       Log.e(LOG_TAG, "setFragment: internal failure", exception);
       throw new RuntimeException();
     }
-    final FragmentManager fragmentManager = getSupportFragmentManager();
+    final FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
     // Register back if fragment exists
     if (currentFragment != null) {
-      fragmentManager
-        .beginTransaction()
-        .remove(currentFragment) // Avoid two ScrollView at same time
-        .addToBackStack(null)
-        .commit();
+      fragmentTransaction.addToBackStack(null);
     }
     // Set
-    fragmentManager.beginTransaction().replace(R.id.content_frame, fragment).commit();
+    fragmentTransaction.replace(R.id.content_frame, fragment).commit();
     return fragment;
   }
 

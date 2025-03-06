@@ -90,11 +90,10 @@ public class ModifyFragment extends MainActivityFragment {
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     assert container != null;
-    final NestedScrollView nestedScrollView = container.findViewById(R.id.content_frame);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapter
     radiosModifyAdapter = new RadiosModifyAdapter(
-      getMainActivity(), radiosRecyclerView, radiosModifyAdapterListener, nestedScrollView);
+      getMainActivity(), radiosRecyclerView, radiosModifyAdapterListener, (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
   }
 }
