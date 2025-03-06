@@ -87,15 +87,26 @@ public class MainFragment extends MainActivityFragment {
     super.onResume();
     // Force column count
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
-    // Set view
+    // Set listeners
     radiosMainAdapter.set(true);
+    getMainActivity().setActionsConsumers(
+      radiosMainAdapter,
+      bitmap -> {
+        if (upnpMenuItem != null) {
+          upnpMenuItem.setVisible((bitmap != null));
+          if (bitmap != null) {
+            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
+          }
+        }
+      });
   }
 
   @Override
   public void onPause() {
     super.onPause();
-    // Unset view
+    // Unset listeners
     radiosMainAdapter.set(false);
+    getMainActivity().setActionsConsumers(null, null);
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -122,7 +133,6 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     upnpMenuItem = menu.findItem(R.id.action_upnp);
-    getMainActivity().initUpnpIconConsumer();
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     setPreferredMenuItem();
   }
@@ -184,17 +194,6 @@ public class MainFragment extends MainActivityFragment {
       .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
     preferredRadiosUserHint = getMainActivity()
       .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
-    // Set listeners
-    getMainActivity().setActionsConsumers(
-      radiosMainAdapter,
-      bitmap -> {
-        if (upnpMenuItem != null) {
-          upnpMenuItem.setVisible((bitmap != null));
-          if (bitmap != null) {
-            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
-          }
-        }
-      });
   }
 
   @Override
