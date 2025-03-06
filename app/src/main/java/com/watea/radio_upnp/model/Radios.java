@@ -31,6 +31,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
@@ -211,8 +213,7 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
-  public synchronized boolean importFrom(@NonNull InputStream inputStream)
-    throws IOException {
+  public synchronized boolean importFrom(@NonNull InputStream inputStream) throws IOException, JsonIOException, JsonSyntaxException {
     return read(inputStream) && write();
   }
 
@@ -244,7 +245,7 @@ public class Radios extends ArrayList<Radio> {
 
   // Only JSON can be read.
   // True if something is read.
-  private boolean read(@NonNull InputStream inputStream) throws IOException {
+  private boolean read(@NonNull InputStream inputStream) throws IOException, JsonIOException, JsonSyntaxException {
     final Gson gson = new Gson();
     // Define the type for the parsing
     final Type listType = new TypeToken<List<Map<String, Object>>>() {
@@ -293,8 +294,8 @@ public class Radios extends ArrayList<Radio> {
   private void init() {
     try (final FileInputStream fileInputStream = new FileInputStream(fileName)) {
       read(fileInputStream);
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "init: IO failure", iOException);
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "init: I/O failure", exception);
     }
   }
 

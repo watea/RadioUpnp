@@ -858,8 +858,8 @@ public class MainActivity
         tell(result ? R.string.import_successful : R.string.import_no_data);
         return;
       }
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "importFrom: I/O failure", iOException);
+    } catch (Exception exception) {
+      Log.e(LOG_TAG, "importFrom: I/O failure", exception);
     }
     tell(R.string.import_failed);
   }
