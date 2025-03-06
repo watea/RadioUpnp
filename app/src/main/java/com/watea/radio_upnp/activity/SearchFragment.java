@@ -79,6 +79,7 @@ public class SearchFragment extends MainActivityFragment {
   private RadiosSearchAdapter radiosSearchAdapter;
   private Spinner countrySpinner;
   private int searchId = 0;
+  private String appName; // Must be set in onResume()
 
   @SuppressLint("NonConstantResourceId")
   @Override
@@ -143,6 +144,7 @@ public class SearchFragment extends MainActivityFragment {
   public void onResume() {
     super.onResume();
     radioBrowserServer = null;
+    appName = getMainActivity().getString(R.string.app_name);
     new Thread(() -> {
       for (String radioBrowserServer : RADIO_BROWSER_SERVERS) {
         try {
@@ -268,7 +270,7 @@ public class SearchFragment extends MainActivityFragment {
 
   @NonNull
   private Request.Builder getRequestBuilder() {
-    return new Request.Builder().header("User-Agent", getMainActivity().getString(R.string.app_name));
+    return new Request.Builder().header("User-Agent", appName);
   }
 
   @NonNull
