@@ -329,18 +329,21 @@ public class RadioService
       if (radio != null) {
         // Media information in ARTIST and SUBTITLE.
         // Ensure session meta data is tagged to ensure only session based use.
-        final String playlist = session.getController().getMetadata().getString(PLAYLIST);
-        session.setMetadata(getTaggedMediaMetadataBuilder(radio)
-          .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
-          .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
-          .putString(PLAYLIST, addPlaylistItem(playlist, information))
-          .build());
-        // Update UPnP
-        if (playerAdapter instanceof UpnpPlayerAdapter) {
-          ((UpnpPlayerAdapter) playerAdapter).onNewInformation(information);
+        final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
+        if (mediaMetadataCompat != null) {
+          final String playlist = mediaMetadataCompat.getString(PLAYLIST);
+          session.setMetadata(getTaggedMediaMetadataBuilder(radio)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
+            .putString(PLAYLIST, addPlaylistItem(playlist, information))
+            .build());
+          // Update UPnP
+          if (playerAdapter instanceof UpnpPlayerAdapter) {
+            ((UpnpPlayerAdapter) playerAdapter).onNewInformation(information);
+          }
+          // Update notification
+          buildNotification();
         }
-        // Update notification
-        buildNotification();
       }
     });
   }
