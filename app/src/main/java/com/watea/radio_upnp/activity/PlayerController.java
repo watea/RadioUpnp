@@ -30,6 +30,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -93,7 +94,7 @@ public class PlayerController {
   @NonNull
   private final MediaBrowserCompat mediaBrowser;
   @NonNull
-  private final Handler longClickHandler = new Handler();
+  private final Handler longClickHandler = new Handler(Looper.getMainLooper());
   // Callback from media control
   private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();
   // Callback from connection to MediaBrowserServiceCompat
