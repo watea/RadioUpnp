@@ -366,14 +366,6 @@ public class MainActivity
     @Nullable Consumer<Bitmap> upnpIconConsumer) {
     playerController.setListener(currentRadioConsumer);
     this.upnpIconConsumer = upnpIconConsumer;
-    // Init
-    if (this.upnpIconConsumer != null) {
-      final Device device = (upnpService == null) ? null : upnpService.getSelectedDevice();
-      this.upnpIconConsumer.accept((device == null) ? null : device.getIcon());
-    }
-    if (currentRadioConsumer != null) {
-      currentRadioConsumer.accept(playerController.getCurrentRadio());
-    }
   }
 
   public void resetSelectedDevice() {

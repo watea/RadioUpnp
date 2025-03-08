@@ -133,6 +133,7 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public void onCreateOptionsMenu(@NonNull Menu menu) {
     upnpMenuItem = menu.findItem(R.id.action_upnp);
+    upnpMenuItem.setVisible(false);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     setPreferredMenuItem();
   }
