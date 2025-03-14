@@ -196,7 +196,16 @@ public class AlarmService extends Service {
     }
     // Set
     final PendingIntent pendingIntent = getPendingIntent();
-    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+    //alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+    final AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(
+      calendar.getTimeInMillis(),
+      pendingIntent);
+    try {
+      alarmManager.setAlarmClock(alarmClockInfo, pendingIntent);
+    } catch (SecurityException securityException) {
+      Log.e(LOG_TAG, "setAlarmManagerAlarm: internal failure", securityException);
+      return false;
+    }
     return true;
   }
 

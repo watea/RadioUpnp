@@ -37,6 +37,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.ToggleButton;
 
@@ -56,6 +57,8 @@ public class AlarmController {
   private final TimePicker timePicker;
   @NonNull
   private final ImageView imageView;
+  @NonNull
+  private final TextView textView;
   @NonNull
   private final ToggleButton toggleButton;
   @NonNull
@@ -91,6 +94,7 @@ public class AlarmController {
     timePicker.setIs24HourView(true);
     toggleButton = view.findViewById(R.id.toggleButton);
     imageView = view.findViewById(R.id.imageView);
+    textView = view.findViewById(R.id.text_view);
   }
 
   public void onActivityResume() {
@@ -123,6 +127,7 @@ public class AlarmController {
     final boolean isPossible = (radio != null);
     final Bitmap bitmap = isPossible ? Radio.crop(radio.getIcon()) : mainActivity.getDefaultIcon();
     imageView.setImageBitmap(Radio.iconResize(bitmap));
+    textView.setText(isPossible ? radio.getName() : mainActivity.getString(R.string.no_radio_available));
     // Init toggleButton
     toggleButton.setOnCheckedChangeListener(null);
     toggleButton.setChecked(alarmService.isStarted());
