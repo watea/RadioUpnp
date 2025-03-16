@@ -690,6 +690,11 @@ public class MainActivity
       getPackageName());
   }
 
+  private void tellReportError() {
+    tell(R.string.report_error);
+    checkNavigationMenu();
+  }
+
   private void sendLogcatMail() {
     // Use a background thread for logcat execution
     final Handler handler = new Handler(Looper.getMainLooper());
@@ -719,15 +724,15 @@ public class MainActivity
               startActivity(getNewSendIntent(logFile, packageName));
             } catch (Exception exception) {
               Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
-              tell(R.string.report_error);
+              tellReportError();
             }
           });
         } else {
-          handler.post(() -> tell(R.string.report_error));
+          handler.post(this::tellReportError);
         }
       } catch (IOException | InterruptedException exception) {
         Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
-        handler.post(() -> tell(R.string.report_error));
+        handler.post(this::tellReportError);
       } finally {
         if (process != null) {
           process.destroy();
@@ -764,7 +769,7 @@ public class MainActivity
       .setNeutralButton(R.string.action_csv_export, listener)
       .setPositiveButton(R.string.action_json_export, listener)
       // Restore checked item
-      .setOnDismissListener(dialogInterface -> this.checkNavigationMenu())
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create()
       .show();
   }
@@ -790,7 +795,7 @@ public class MainActivity
       .setNeutralButton(R.string.action_csv_export, listener)
       .setPositiveButton(R.string.action_json_export, listener)
       // Restore checked item
-      .setOnDismissListener(dialogInterface -> this.checkNavigationMenu())
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create()
       .show();
   }
