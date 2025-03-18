@@ -125,7 +125,7 @@
     <string name="sleep_set">minutes sleep timer set!</string>
     <string name="sleep_cancelled">Sleep cancelled!</string>
     <string name="minutes">minutes</string>
-    <string name="alarm_notice">Android may (device dependent) block alarms.\nPlease disable battery optimizations (Parameters>Battery>RadioUpnp).</string>
+    <string name="alarm_notice">Android may (device dependent) block alarms.\nIf the alarm does not work, go in <i>RadioUpnp icon: </i><b>Info>Battery</b> and disable any restriction.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

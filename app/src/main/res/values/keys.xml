@@ -27,17 +27,9 @@
     <string name="key_theme">key_theme</string>
     <string name="key_preferred_radios">key_preferred_radios</string>
     <string name="key_selected_device">key_selected_device</string>
-    <string name="key_radio_long_press_got_it">key_radio_long_press_got_it</string>
-    <string name="key_play_long_press_got_it">key_play_long_press_got_it</string>
-    <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
-    <string name="key_preferred_radios_got_it">key_preferred_radios_got_it</string>
-    <string name="key_information_press_got_it">key_information_press_got_it</string>
-    <string name="key_information_select_press_got_it">key_information_select_press_got_it</string>
     <string name="key_radio_icon_file">key_radio_icon_file</string>
     <string name="key_radio_index">key_radio_index</string>
     <string name="key_current_fragment">key_current_fragment</string>
-    <string name="key_radio_garden_got_it">key_radio_garden_got_it</string>
-    <string name="key_toolbar_got_it">key_toolbar_got_it</string>
     <string name="key_country">key_country</string>
     <string name="key_last_played_radio">key_last_played_radio</string>
     <string name="key_alarm_radio">key_alarm_radio</string>
@@ -45,6 +37,15 @@
     <string name="key_alarm_minute">key_alarm_minute</string>
     <string name="key_sleep">key_sleep</string>
     <string name="key_sleep_set">key_sleep_set</string>
+    <string name="key_radio_long_press_got_it">key_radio_long_press_got_it</string>
+    <string name="key_play_long_press_got_it">key_play_long_press_got_it</string>
+    <string name="key_dlna_enable_got_it">key_dlna_enable_got_it</string>
+    <string name="key_preferred_radios_got_it">key_preferred_radios_got_it</string>
+    <string name="key_information_press_got_it">key_information_press_got_it</string>
+    <string name="key_information_select_press_got_it">key_information_select_press_got_it</string>
+    <string name="key_alarm_got_it">key_alarm_got_it</string>
+    <string name="key_radio_garden_got_it">key_radio_garden_got_it</string>
+    <string name="key_toolbar_got_it">key_toolbar_got_it</string>
     <!-- Bundles -->
     <string name="key_rate">key_rate</string>
     <!-- Others -->

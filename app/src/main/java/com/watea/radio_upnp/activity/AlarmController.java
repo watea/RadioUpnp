@@ -63,6 +63,8 @@ public class AlarmController {
   private final ToggleButton toggleButton;
   @NonNull
   private final AlertDialog alertDialog;
+  @NonNull
+  private final MainActivity.UserHint batteryHint;
   @Nullable
   private Radio radio;
   @Nullable
@@ -83,6 +85,13 @@ public class AlarmController {
     this.mainActivity = mainActivity;
     // Create view
     final View view = View.inflate(this.mainActivity, R.layout.view_alarm, null);
+    timePicker = view.findViewById(R.id.timePicker);
+    timePicker.setIs24HourView(true);
+    toggleButton = view.findViewById(R.id.toggleButton);
+    imageView = view.findViewById(R.id.imageView);
+    textView = view.findViewById(R.id.text_view);
+    // Build alert dialogs
+    batteryHint = this.mainActivity.new UserHint(R.string.key_alarm_got_it, R.string.alarm_notice);
     alertDialog = new AlertDialog.Builder(mainActivity)
       .setTitle(R.string.title_alarm)
       .setIcon(R.drawable.ic_baseline_alarm_white_24dp)
@@ -90,11 +99,6 @@ public class AlarmController {
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())
       .create();
-    timePicker = view.findViewById(R.id.timePicker);
-    timePicker.setIs24HourView(true);
-    toggleButton = view.findViewById(R.id.toggleButton);
-    imageView = view.findViewById(R.id.imageView);
-    textView = view.findViewById(R.id.text_view);
   }
 
   public void onActivityResume() {
@@ -150,7 +154,9 @@ public class AlarmController {
         } else {
           if (isChecked) {
             // Notification will be shown
-            if (!alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
+            if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
+              batteryHint.show();
+            } else {
               mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));
             }
           } else {
