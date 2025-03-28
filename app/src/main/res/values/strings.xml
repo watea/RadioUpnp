@@ -82,7 +82,7 @@
     <string name="donation_google_android_market_description">(Google charges a fee of 15%)</string>
     <string name="donation_alert_dialog_title">Error occurred!</string>
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
-    <string name="radio_search_failure">Fetching data from server failed!</string>
+    <string name="radio_search_failure">Fetching data from server failed! Please try later&#8230;</string>
     <string name="upnp_error">UPnP service failed, please check if network is available!</string>
     <string name="kbs">kb/s</string>
     <string name="preferred">Preferred</string>
@@ -109,12 +109,12 @@
     <string name="Theme">Theme</string>
     <string name="radio_not_defined">Radio can\'t be found in database!</string>
     <string name="copied_to_clipboard">Information copied to clipboard!</string>
-    <string name="server_not_available">Server is not available. Please try later…</string>
+    <string name="server_not_available">Server is not available. Please try later&#8230;</string>
     <string name="Country">[Please select a country]</string>
     <string name="no_radio_found">No radio found!</string>
     <string name="alarm_set">"Alarm set: "</string>
     <string name="alarm_cancelled">Alarm cancelled!</string>
-    <string name="alarm_not_available">Alarm not available, please try later…</string>
+    <string name="alarm_not_available">Alarm not available, please try later&#8230;</string>
     <string name="no_radio_available">No selected radio available, please play a radio!</string>
     <string name="off">OFF</string>
     <string name="on">ON</string>

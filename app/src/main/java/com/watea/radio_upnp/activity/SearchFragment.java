@@ -58,21 +58,21 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
 public class SearchFragment extends MainActivityFragment {
   private static final String LOG_TAG = SearchFragment.class.getSimpleName();
-  private static final String[] RADIO_BROWSER_SERVERS = {
-    "https://de1.api.radio-browser.info",
-    "https://fr1.api.radio-browser.info",
-    "https://nl1.api.radio-browser.info",
-    "https://at1.api.radio-browser.info"
-  };
   private static final int MAX_RADIOS = 200;
+  private static final String RADIO_BROWSER_SERVER = new HttpUrl.Builder()
+    .scheme("https")
+    .host("all.api.radio-browser.info")
+    .build()
+    .toString();
   private final OkHttpClient httpClient = new OkHttpClient();
-  private String radioBrowserServer = null;
+  private final List<String> countries = new ArrayList<>();
   private FrameLayout defaultFrameLayout;
   private AlertDialog searchAlertDialog;
   private EditText nameEditText;
@@ -112,7 +112,7 @@ public class SearchFragment extends MainActivityFragment {
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
-      if (radioBrowserServer == null) {
+      if (countries.isEmpty()) {
         tell(R.string.server_not_available);
       } else {
         searchAlertDialog.show();
@@ -143,45 +143,38 @@ public class SearchFragment extends MainActivityFragment {
   @Override
   public void onResume() {
     super.onResume();
-    radioBrowserServer = null;
     appName = getMainActivity().getString(R.string.app_name);
-    final List<String> countries = new ArrayList<>();
+    countries.clear();
     final String selectCountry = getMainActivity().getString(R.string.Country);
     final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries);
     new Thread(() -> {
-      for (String radioBrowserServer : RADIO_BROWSER_SERVERS) {
-        try {
-          final Request request = getRequestBuilder()
-            .url(radioBrowserServer + "/json/countries")
-            .build();
-          final JSONArray countriesArray = getJSONArray(request);
-          for (int i = 0; i < countriesArray.length(); i++) {
-            final String name = countriesArray.getJSONObject(i).getString("name");
-            if (!name.isEmpty() && !countries.contains(name)) {
-              countries.add(name);
-            }
+      try {
+        final Request request = getRequestBuilder()
+          .url(RADIO_BROWSER_SERVER + "json/countries")
+          .build();
+        final JSONArray countriesArray = getJSONArray(request);
+        for (int i = 0; i < countriesArray.length(); i++) {
+          final String name = countriesArray.getJSONObject(i).getString("name");
+          if (!name.isEmpty() && !countries.contains(name)) {
+            countries.add(name);
           }
-          countries.sort(Comparator.naturalOrder());
-          countries.add(0, selectCountry);
-          protectedRunOnUiThread(() -> {
-            countrySpinner.setAdapter(countriesAdapter);
-            final int position = countries.indexOf(getSharedPreferences().getString(getString(R.string.key_country), ""));
-            countrySpinner.setSelection(Math.max(position, 0));
-            this.radioBrowserServer = radioBrowserServer;
-            // Show search dialog first time
-            if (searchId == 0) {
-              searchAlertDialog.show();
-            }
-          });
-          // Done!
-          return;
-        } catch (IOException | JSONException exception) {
-          Log.d(LOG_TAG, "onResume: radioBrowserServer fetch error");
         }
+      } catch (IOException | JSONException exception) {
+        Log.d(LOG_TAG, "onResume: radioBrowserServer fetch error", exception);
       }
+      countries.sort(Comparator.naturalOrder());
+      countries.add(0, selectCountry);
       protectedRunOnUiThread(() -> {
-        tell(R.string.server_not_available);
-        searchAlertDialog.hide();
+        countrySpinner.setAdapter(countriesAdapter);
+        final int position = countries.indexOf(getSharedPreferences().getString(getString(R.string.key_country), ""));
+        countrySpinner.setSelection(Math.max(position, 0));
+        // Warn if not available or show search dialog first time
+        if (countries.size() == 1) {
+          tell(R.string.server_not_available);
+          searchAlertDialog.hide();
+        } else if (searchId == 0) {
+          searchAlertDialog.show();
+        }
       });
     }).start();
   }
@@ -217,7 +210,7 @@ public class SearchFragment extends MainActivityFragment {
       final String searchQuery = search.isEmpty() ? "" : "name=" + search;
       final String countryQuery = country.isEmpty() ? "" : "country=" + country;
       final Request request = getRequestBuilder()
-        .url(radioBrowserServer + "/json/stations/search?limit=" + MAX_RADIOS + "&" +
+        .url(RADIO_BROWSER_SERVER + "json/stations/search?limit=" + MAX_RADIOS + "&" +
           countryQuery + (countryQuery.isEmpty() ? "" : "&") + searchQuery)
         .build();
       final JSONArray stations;
