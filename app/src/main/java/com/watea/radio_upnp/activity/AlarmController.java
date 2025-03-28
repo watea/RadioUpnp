@@ -63,8 +63,6 @@ public class AlarmController {
   private final ToggleButton toggleButton;
   @NonNull
   private final AlertDialog alertDialog;
-  @NonNull
-  private final MainActivity.UserHint batteryHint;
   @Nullable
   private Radio radio;
   @Nullable
@@ -90,8 +88,7 @@ public class AlarmController {
     toggleButton = view.findViewById(R.id.toggleButton);
     imageView = view.findViewById(R.id.imageView);
     textView = view.findViewById(R.id.text_view);
-    // Build alert dialogs
-    batteryHint = this.mainActivity.new UserHint(R.string.key_alarm_got_it, R.string.alarm_notice);
+    // Build alert dialog
     alertDialog = new AlertDialog.Builder(mainActivity)
       .setTitle(R.string.title_alarm)
       .setIcon(R.drawable.ic_baseline_alarm_white_24dp)
@@ -154,9 +151,7 @@ public class AlarmController {
         } else {
           if (isChecked) {
             // Notification will be shown
-            if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
-              batteryHint.show();
-            } else {
+            if (!alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
               mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));
             }
           } else {
