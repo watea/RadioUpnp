@@ -54,15 +54,9 @@ public class ModifyFragment extends MainActivityFragment {
   private RadiosModifyAdapter radiosModifyAdapter;
 
   @Override
-  public void onResume() {
-    super.onResume();
-    radiosModifyAdapter.set(true);
-  }
-
-  @Override
-  public void onPause() {
-    super.onPause();
-    radiosModifyAdapter.set(false);
+  public void onDestroy() {
+    super.onDestroy();
+    radiosModifyAdapter.onDestroy();
   }
 
   @NonNull

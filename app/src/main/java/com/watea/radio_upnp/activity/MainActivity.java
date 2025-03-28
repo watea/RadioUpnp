@@ -361,11 +361,14 @@ public class MainActivity
     upnpAlertDialog.show();
   }
 
-  public void setActionsConsumers(
-    @Nullable Consumer<Radio> currentRadioConsumer,
-    @Nullable Consumer<Bitmap> upnpIconConsumer) {
-    playerController.setListener(currentRadioConsumer);
+  public void setUpnpIconConsumer(@Nullable Consumer<Bitmap> upnpIconConsumer) {
     this.upnpIconConsumer = upnpIconConsumer;
+  }
+
+  @NonNull
+  public Consumer<Consumer<Radio>> getCurrentRadioSupplier() {
+    assert playerController != null;
+    return playerController;
   }
 
   public void resetSelectedDevice() {

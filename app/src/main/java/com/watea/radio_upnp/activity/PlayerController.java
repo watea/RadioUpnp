@@ -62,7 +62,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class PlayerController {
+public class PlayerController implements Consumer<Consumer<Radio>> {
   private static final String LOG_TAG = PlayerController.class.getSimpleName();
   @NonNull
   private final ImageButton playImageButton;
@@ -266,14 +266,6 @@ public class PlayerController {
     }
   }
 
-  public void setListener(@Nullable Consumer<Radio> listener) {
-    this.listener = listener;
-    // Init listener
-    if (listener != null) {
-      listener.accept(getCurrentRadio());
-    }
-  }
-
   @Nullable
   public Radio getCurrentRadio() {
     final MediaMetadataCompat mediaMetadataCompat = (mediaController == null) ? null : mediaController.getMetadata();
@@ -376,6 +368,15 @@ public class PlayerController {
   private void setPreferredButton(boolean isPreferred) {
     preferredImageButton.setImageResource(
       isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+  }
+
+  @Override
+  public void accept(Consumer<Radio> radioConsumer) {
+    listener = radioConsumer;
+    // Init listener
+    if (listener != null) {
+      listener.accept(getCurrentRadio());
+    }
   }
 
   private class MediaControllerCompatCallback extends MediaControllerCompat.Callback {

@@ -45,6 +45,8 @@ import java.util.function.Supplier;
 public class RadiosMainAdapter
   extends RadiosDisplayAdapter<RadiosMainAdapter.ViewHolder>
   implements Consumer<Radio> {
+  @NonNull
+  private final Consumer<Consumer<Radio>> currentRadioSupplier;
   @Nullable
   private Radio currentRadio = null;
 
@@ -52,8 +54,11 @@ public class RadiosMainAdapter
     @NonNull MainActivity mainActivity,
     @NonNull Supplier<List<Radio>> radiosSupplier,
     @NonNull RecyclerView recyclerView,
-    @NonNull Listener listener) {
+    @NonNull Listener listener,
+    @NonNull Consumer<Consumer<Radio>> currentRadioSupplier) {
     super(mainActivity, radiosSupplier, R.layout.row_radio, recyclerView, listener);
+    this.currentRadioSupplier = currentRadioSupplier;
+    this.currentRadioSupplier.accept(this);
   }
 
   @NonNull
@@ -68,6 +73,12 @@ public class RadiosMainAdapter
     notifyItemChanged();
     currentRadio = radio;
     notifyItemChanged();
+  }
+
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    currentRadioSupplier.accept(null);
   }
 
   private void notifyItemChanged() {

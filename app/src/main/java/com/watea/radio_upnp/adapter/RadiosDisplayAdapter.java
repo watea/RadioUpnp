@@ -82,6 +82,9 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     @NonNull Listener listener) {
     super(mainActivity, radiosSupplier, row, recyclerView);
     this.listener = listener;
+    Radios.getInstance().addListener(radiosListener);
+    // Init listener
+    onCountChange();
   }
 
   @SuppressLint("NotifyDataSetChanged")
@@ -92,13 +95,8 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   }
 
   // Must be called
-  public void set(boolean isOn) {
-    if (isOn) {
-      Radios.getInstance().addListener(radiosListener);
-      refresh();
-    } else {
-      Radios.getInstance().removeListener(radiosListener);
-    }
+  public void onDestroy() {
+    Radios.getInstance().removeListener(radiosListener);
   }
 
   private void onCountChange() {

@@ -87,26 +87,6 @@ public class MainFragment extends MainActivityFragment {
     super.onResume();
     // Force column count
     onConfigurationChanged(getMainActivity().getResources().getConfiguration());
-    // Set listeners
-    radiosMainAdapter.set(true);
-    getMainActivity().setActionsConsumers(
-      radiosMainAdapter,
-      bitmap -> {
-        if (upnpMenuItem != null) {
-          upnpMenuItem.setVisible((bitmap != null));
-          if (bitmap != null) {
-            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
-          }
-        }
-      });
-  }
-
-  @Override
-  public void onPause() {
-    super.onPause();
-    // Unset listeners
-    radiosMainAdapter.set(false);
-    getMainActivity().setActionsConsumers(null, null);
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -136,6 +116,16 @@ public class MainFragment extends MainActivityFragment {
     upnpMenuItem.setVisible(false);
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     setPreferredMenuItem();
+    // Set listener
+    getMainActivity().setUpnpIconConsumer(
+      bitmap -> {
+        if (upnpMenuItem != null) {
+          upnpMenuItem.setVisible((bitmap != null));
+          if (bitmap != null) {
+            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
+          }
+        }
+      });
   }
 
   @NonNull
@@ -187,7 +177,8 @@ public class MainFragment extends MainActivityFragment {
       getMainActivity(),
       () -> isPreferredRadios ? Radios.getInstance().getPreferred() : Radios.getInstance(),
       radiosRecyclerView,
-      radiosMainAdapterListener);
+      radiosMainAdapterListener,
+      getMainActivity().getCurrentRadioSupplier());
     // Build alert dialogs
     radioLongPressUserHint = getMainActivity()
       .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);
@@ -195,6 +186,12 @@ public class MainFragment extends MainActivityFragment {
       .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
     preferredRadiosUserHint = getMainActivity()
       .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
+  }
+
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    radiosMainAdapter.onDestroy();
   }
 
   @Override
