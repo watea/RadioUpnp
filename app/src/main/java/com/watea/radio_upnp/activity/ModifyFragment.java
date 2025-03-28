@@ -88,6 +88,9 @@ public class ModifyFragment extends MainActivityFragment {
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapter
     radiosModifyAdapter = new RadiosModifyAdapter(
-      getMainActivity(), radiosRecyclerView, radiosModifyAdapterListener, (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
+      getMainActivity(),
+      radiosRecyclerView,
+      radiosModifyAdapterListener,
+      (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
   }
 }
