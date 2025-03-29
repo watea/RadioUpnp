@@ -69,11 +69,8 @@ public class Radio {
       radio = new Radio(
         "DUMMY",
         BitmapFactory.decodeResource(Resources.getSystem(), android.R.drawable.ic_menu_help),
-        new URL("http:"),
-        null,
-        "",
-        0,
-        false);
+        new URL("http://dummy"),
+        null);
     } catch (MalformedURLException malformedURLException) {
       Log.e(LOG_TAG, "Internal failure; bad static init");
     }
@@ -86,27 +83,31 @@ public class Radio {
   private final int quality;
   @NonNull
   private String name;
-  @SuppressWarnings("NotNullFieldNotInitialized")
   @NonNull
   private Bitmap icon;
-  @Nullable
-  private String base64Icon = null; // cache
+  @NonNull
+  private String base64Icon; // cache
   @NonNull
   private URL url;
   @Nullable
   private URL webPageUrl;
   private boolean isPreferred;
 
+  // icon and base64Icon are mutually exclusive, one at least not null.
+  // base64Icon is supposed to be square.
   public Radio(
     @NonNull String name,
-    @NonNull Bitmap icon,
+    @Nullable Bitmap icon,
+    @Nullable String base64Icon,
     @NonNull URL url,
     @Nullable URL webPageUrl,
     @NonNull String mime,
     int quality,
     boolean isPreferred) {
     this.name = name;
-    setIcon(icon);
+    assert (icon == null) != (base64Icon == null);
+    this.icon = (icon == null) ? getBitmapFrom(base64Icon) : crop(icon);
+    this.base64Icon = (base64Icon == null) ? iconToBase64String() : base64Icon;
     this.url = url;
     this.webPageUrl = webPageUrl;
     this.mime = mime;
@@ -116,12 +117,19 @@ public class Radio {
 
   public Radio(
     @NonNull String name,
-    @NonNull Bitmap icon,
+    @Nullable Bitmap icon,
+    @Nullable String base64Icon,
     @NonNull URL url,
-    @Nullable URL webPageUrl,
-    @NonNull String mime,
-    int quality) {
-    this(name, icon, url, webPageUrl, mime, quality, false);
+    @Nullable URL webPageUrl) {
+    this(name, icon, base64Icon, url, webPageUrl, "", DEFAULT, false);
+  }
+
+  public Radio(
+    @NonNull String name,
+    @NonNull String base64Icon,
+    @NonNull URL url,
+    @Nullable URL webPageUrl) {
+    this(name, null, base64Icon, url, webPageUrl);
   }
 
   public Radio(
@@ -129,20 +137,19 @@ public class Radio {
     @NonNull Bitmap icon,
     @NonNull URL url,
     @Nullable URL webPageUrl) {
-    this(name, icon, url, webPageUrl, "", DEFAULT);
+    this(name, icon, null, url, webPageUrl);
   }
 
   public Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
     this(
       jSONObject.getString(NAME),
-      getBitmapFrom(jSONObject.getString(ICON)),
+      null,
+      jSONObject.getString(ICON),
       new URL(jSONObject.getString(URL)),
       getURLFrom(jSONObject.getString(WEB_PAGE_URL)),
       jSONObject.getString(MIME),
       jSONObject.getInt(QUALITY),
       jSONObject.getBoolean(IS_PREFERRED));
-    // Cache base 64 icon
-    base64Icon = jSONObject.getString(ICON);
   }
 
   @NonNull
@@ -188,7 +195,7 @@ public class Radio {
         final URL url = new URL(fields[1]);
         final URL webPageUrl = fields[2].isEmpty() ? null : new URL(fields[2]);
         final boolean isPreferred = Boolean.parseBoolean(fields[3]);
-        final Radio radio = new Radio(name, Radio.DUMMY_RADIO.getIcon(), url, webPageUrl);
+        final Radio radio = new Radio(name, Radio.DUMMY_RADIO.base64Icon, url, webPageUrl);
         radio.setIsPreferred(isPreferred);
         return radio;
       } catch (MalformedURLException malformedURLException) {
@@ -266,8 +273,7 @@ public class Radio {
 
   public void setIcon(@NonNull Bitmap icon) {
     this.icon = crop(icon);
-    // Cache not valid any more
-    base64Icon = null;
+    base64Icon = iconToBase64String();
   }
 
   public boolean isPreferred() {
@@ -310,7 +316,7 @@ public class Radio {
   public JSONObject getJSONObject() throws JSONException {
     return new JSONObject()
       .put(NAME, name)
-      .put(ICON, (base64Icon == null) ? (base64Icon = iconToBase64String()) : base64Icon)
+      .put(ICON, base64Icon)
       .put(URL, url.toString())
       .put(WEB_PAGE_URL, (webPageUrl == null) ? "" : webPageUrl.toString())
       .put(MIME, mime)
@@ -320,8 +326,8 @@ public class Radio {
 
   @NonNull
   private String iconToBase64String() {
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    icon.compress(Bitmap.CompressFormat.PNG, 100, baos);
-    return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
+    final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    icon.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+    return Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.DEFAULT);
   }
 }

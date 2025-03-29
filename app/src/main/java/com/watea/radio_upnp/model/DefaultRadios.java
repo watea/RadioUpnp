@@ -45,93 +45,67 @@ public class DefaultRadios {
       "FRANCE INTER",
       R.drawable.logo_france_inter,
       "http://direct.franceinter.fr/live/franceinter-midfi.mp3",
-      "https://www.franceinter.fr/",
-      "audio/mp3",
-      192),
+      "https://www.franceinter.fr/"),
     new DefaultRadio(
       "FRANCE CULTURE",
       R.drawable.logo_france_culture,
       "http://direct.franceculture.fr/live/franceculture-midfi.mp3",
-      "https://www.franceculture.fr/",
-      "audio/mp3",
-      192),
+      "https://www.franceculture.fr/"),
     new DefaultRadio(
       "FRANCE MUSIQUE",
       R.drawable.logo_france_musique,
       "https://icecast.radiofrance.fr/francemusique-hifi.aac?id=radiofrance&cy-pub=0",
-      "https://www.francemusique.fr/",
-      "audio/mp3",
-      192),
+      "https://www.francemusique.fr/"),
     new DefaultRadio(
       "EUROPE1",
       R.drawable.logo_europe1,
       "http://europe1.lmn.fm/europe1.mp3",
-      "https://www.europe1.fr/",
-      "audio/mp3",
-      192),
+      "https://www.europe1.fr/"),
     new DefaultRadio(
       "RFM",
       R.drawable.logo_rfm,
       "http://rfm.lmn.fm/rfm.mp3",
-      "http://www.rfm.fr/",
-      "audio/mp3",
-      192),
+      "http://www.rfm.fr/"),
     new DefaultRadio(
       "SKYROCK",
       R.drawable.logo_skyrock,
       "http://icecast.skyrock.net/s/natio_mp3_128k",
-      "https://www.skyrock.com/",
-      "audio/mp3",
-      192),
+      "https://www.skyrock.com/"),
     new DefaultRadio(
       "EUROPE2",
       R.drawable.logo_europe2,
       "http://europe2.lmn.fm/europe2.mp3",
-      "https://www.europe2.fr/",
-      "audio/mp3",
-      192),
+      "https://www.europe2.fr/"),
     new DefaultRadio(
       "FUN",
       R.drawable.logo_fun,
       "http://icecast.funradio.fr/fun-1-44-128?listen=webCwsBCggNCQgLDQUGBAcGBg",
-      "https://www.funradio.fr/",
-      "audio/mp3",
-      192),
+      "https://www.funradio.fr/"),
     new DefaultRadio(
       "RADIO PARADISE",
       R.drawable.logo_radio_paradise,
       "http://stream.radioparadise.com/flacm",
-      "https://www.radioparadise.com/",
-      "audio/mp3",
-      192),
+      "https://www.radioparadise.com/"),
     new DefaultRadio(
       "BBC World Service",
       R.drawable.logo_bbc,
       "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service",
-      "http://bbcworldservice.com",
-      "audio/mp3",
-      192),
+      "http://bbcworldservice.com"),
     new DefaultRadio(
       "FIP",
       R.drawable.logo_fip,
       "http://icecast.radiofrance.fr/fip-hifi.aac",
-      "https://www.fip.fr/",
-      "audio/mp3",
-      192),
+      "https://www.fip.fr/"),
     new DefaultRadio(
       "MAUI'S Q103",
       R.drawable.logo_q103,
       "http://radio.garden/api/ara/content/listen/ZUwwAb1A/channel.mp3",
-      "http://q103maui.com/",
-      "audio/mp3",
-      192),
+      "http://q103maui.com/"),
     new DefaultRadio(
       "DFM DAVID GUETTA",
       R.drawable.logo_dfm,
       "http://radio.garden/api/ara/content/listen/qotcIfno/channel.mp3",
-      "https://dfm.ru/",
-      "audio/mp3",
-      192));
+      "https://dfm.ru/"));
 
   @NonNull
   public static List<Radio> get(@NonNull Context context, int iconSize) {
@@ -156,23 +130,16 @@ public class DefaultRadios {
     private final String uRL;
     @NonNull
     private final String webPageURL;
-    @NonNull
-    private final String mime;
-    private final int quality;
 
     private DefaultRadio(
       @NonNull String name,
       int drawable,
       @NonNull String uRL,
-      @NonNull String webPageURL,
-      @NonNull String mime,
-      int quality) {
+      @NonNull String webPageURL) {
       this.name = name;
       this.drawable = drawable;
       this.uRL = uRL;
       this.webPageURL = webPageURL;
-      this.mime = mime;
-      this.quality = quality;
     }
 
     @NonNull
@@ -183,9 +150,7 @@ public class DefaultRadios {
         Radio.createScaledBitmap(
           BitmapFactory.decodeResource(context.getResources(), drawable), iconSize),
         new URL(uRL),
-        new URL(webPageURL),
-        mime,
-        quality);
+        new URL(webPageURL));
     }
   }
 }
