@@ -93,8 +93,7 @@ public class Radio {
   private URL webPageUrl;
   private boolean isPreferred;
 
-  // icon and base64Icon are mutually exclusive, one at least not null.
-  // base64Icon is supposed to be square.
+  // icon and base64Icon are mutually exclusive, one at least not null
   public Radio(
     @NonNull String name,
     @Nullable Bitmap icon,
@@ -106,7 +105,7 @@ public class Radio {
     boolean isPreferred) {
     this.name = name;
     assert (icon == null) != (base64Icon == null);
-    this.icon = (icon == null) ? getBitmapFrom(base64Icon) : crop(icon);
+    this.icon = crop((icon == null) ? getBitmapFrom(base64Icon) : icon);
     this.base64Icon = (base64Icon == null) ? iconToBase64String() : base64Icon;
     this.url = url;
     this.webPageUrl = webPageUrl;
@@ -183,7 +182,7 @@ public class Radio {
     final int height = icon.getHeight();
     final int width = icon.getWidth();
     final int min = Math.min(height, width);
-    return Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
+    return (height == width) ? icon : Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
   }
 
   @Nullable
