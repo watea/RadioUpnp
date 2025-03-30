@@ -40,6 +40,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosSearchAdapter;
 import com.watea.radio_upnp.model.Radio;
@@ -68,7 +69,7 @@ public class SearchFragment extends MainActivityFragment {
   private static final int MAX_RADIOS = 200;
   private static final String RADIO_BROWSER_SERVER = new HttpUrl.Builder()
     .scheme("https")
-    .host("all.api.radio-browser.info")
+    .host("de1.api.radio-browser.info")
     .build()
     .toString();
   private final OkHttpClient httpClient = new OkHttpClient();
@@ -111,13 +112,7 @@ public class SearchFragment extends MainActivityFragment {
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> {
-      if (countries.isEmpty()) {
-        tell(R.string.server_not_available);
-      } else {
-        searchAlertDialog.show();
-      }
-    };
+    return v -> showDialog(true);
   }
 
   @Override
@@ -169,12 +164,7 @@ public class SearchFragment extends MainActivityFragment {
         final int position = countries.indexOf(getSharedPreferences().getString(getString(R.string.key_country), ""));
         countrySpinner.setSelection(Math.max(position, 0));
         // Warn if not available or show search dialog first time
-        if (countries.size() == 1) {
-          tell(R.string.server_not_available);
-          searchAlertDialog.hide();
-        } else if (searchId == 0) {
-          searchAlertDialog.show();
-        }
+        showDialog((searchId == 0));
       });
     }).start();
   }
@@ -224,7 +214,7 @@ public class SearchFragment extends MainActivityFragment {
         try {
           final JSONObject station = stations.getJSONObject(i);
           final String name = station.getString("name");
-          final String streamUrl = station.getString("url");
+          final String streamUrl = station.getString("url_resolved");
           final String homepage = station.optString("homepage", "");
           final String favicon = station.optString("favicon", "");
           final AtomicReference<Bitmap> icon = new AtomicReference<>(null);
@@ -264,7 +254,7 @@ public class SearchFragment extends MainActivityFragment {
 
   @NonNull
   private Request.Builder getRequestBuilder() {
-    return new Request.Builder().header("User-Agent", appName);
+    return new Request.Builder().header("User-Agent", appName + "/" + BuildConfig.VERSION_NAME);
   }
 
   @NonNull
@@ -272,6 +262,15 @@ public class SearchFragment extends MainActivityFragment {
     try (final Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
       return (response.body() == null) ? new JSONArray() : new JSONArray(response.body().string());
+    }
+  }
+
+  private void showDialog(boolean isAllowed) {
+    if (countries.size() == 1) {
+      tell(R.string.server_not_available);
+      searchAlertDialog.hide();
+    } else if (isAllowed) {
+      searchAlertDialog.show();
     }
   }
 }
