@@ -46,7 +46,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /*
-Example for:
+-- Example for (indirect):
 http://a.files.bbci.co.uk/media/live/manifesto/audio/simulcast/hls/nonuk/sbr_low/ak/bbc_radio_one.m3u87
 
 =>
@@ -76,6 +76,39 @@ bbc_radio_one-audio=96000-264869364.ts
 bbc_radio_one-audio=96000-264869365.ts
 #EXTINF:6.4, no desc
 bbc_radio_one-audio=96000-264869366.ts
+
+
+-- Example for (direct):
+https://stream.radiofrance.fr/fiprock/fiprock_hifi.m3u8?id=radiofrance:
+
+=>
+
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:980291
+#EXT-X-TARGETDURATION:4
+#EXT-X-START:TIME-OFFSET=0
+#EXT-X-PROGRAM-DATE-TIME:2025-03-31T09:48:41Z
+#EXTINF:4.000,
+/accs3/fiprock/prod1transcoder1/fiprock_aac_hifi_4_980291_1743414521.ts?id=radiofrance
+#EXT-X-PROGRAM-DATE-TIME:2025-03-31T09:48:45Z
+#EXTINF:4.000,
+/accs3/fiprock/prod1transcoder1/fiprock_aac_hifi_4_980292_1743414525.ts?id=radiofrance
+#EXT-X-PROGRAM-DATE-TIME:2025-03-31T09:48:49Z
+#EXTINF:4.000,
+/accs3/fiprock/prod1transcoder1/fiprock_aac_hifi_4_980293_1743414529.ts?id=radiofrance
+#EXT-X-PROGRAM-DATE-TIME:2025-03-31T09:48:53Z
+#EXTINF:4.000,
+/accs3/fiprock/prod1transcoder1/fiprock_aac_hifi_4_980294_1743414533.ts?id=radiofrance
+#EXT-X-PROGRAM-DATE-TIME:2025-03-31T09:48:57Z
+#EXTINF:4.000,
+/accs3/fiprock/prod1transcoder1/fiprock_aac_hifi_4_980295_1743414537.ts?id=radiofrance
+#EXT-X-PROGRAM-DATE-TIME:2025-03-31T09:49:01Z
+#EXTINF:4.000,
+/accs3/fiprock/prod1transcoder1/fiprock_aac_hifi_4_980296_1743414541.ts?id=radiofrance
+#EXT-X-PROGRAM-DATE-TIME:2025-03-31T09:49:05Z
+#EXTINF:4.000,
+/accs3/fiprock/prod1transcoder1/fiprock_aac_hifi_4_980297_1743414545.ts?id=radiofrance
 */
 public class HlsHandler {
   private static final String LOG_TAG = HlsHandler.class.getSimpleName();
@@ -174,14 +207,19 @@ public class HlsHandler {
 
   // Fetch first found URI
   private void fetchSegmentsURI() throws IOException, URISyntaxException {
-    processURLConnection(
+    // Indirect...
+    if (!processURLConnection(
       httpURLConnection,
       testIf(STREAM_INF, (line1, line2) -> {
         rateListener.accept(findStringFor(BANDWITH, line1)); // Rate in b/s
         segmentsURI = new URI(line2);
         actualSegmentsURI = httpURLConnection.getURL().toURI().resolve(segmentsURI);
         return true;
-      }));
+      }))) {
+      // ... or direct
+      segmentsURI = httpURLConnection.getURL().toURI();
+      actualSegmentsURI = segmentsURI;
+    }
   }
 
   // Returns DEFAULT if fails
@@ -270,7 +308,7 @@ public class HlsHandler {
   }
 
   // Utility to parse file content
-  private void processURLConnection
+  private boolean processURLConnection
   (@NonNull URLConnection uRLConnection,
    @NonNull Predicate... predicates) throws IOException, URISyntaxException {
     try (final BufferedReader bufferedReader =
@@ -285,6 +323,7 @@ public class HlsHandler {
         line1 = line2;
         line2 = bufferedReader.readLine();
       }
+      return found;
     }
   }
 
