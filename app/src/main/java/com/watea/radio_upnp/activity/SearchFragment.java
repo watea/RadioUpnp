@@ -69,7 +69,7 @@ public class SearchFragment extends MainActivityFragment {
   private static final int MAX_RADIOS = 200;
   private static final String RADIO_BROWSER_SERVER = new HttpUrl.Builder()
     .scheme("https")
-    .host("de1.api.radio-browser.info")
+    .host("all.api.radio-browser.info")
     .build()
     .toString();
   private final OkHttpClient httpClient = new OkHttpClient();
