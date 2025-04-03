@@ -247,9 +247,9 @@ public class MainActivity
       case R.id.action_radio_garden:
         radioGardenController.launch(false);
         break;
-      case R.id.action_alarm:
-        alarmController.launch();
-        break;
+//      case R.id.action_alarm:
+//        alarmController.launch();
+//        break;
       case R.id.action_sleep:
         sleepAlertDialog.show();
         break;
