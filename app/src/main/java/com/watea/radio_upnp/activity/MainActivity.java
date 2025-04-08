@@ -250,9 +250,9 @@ public class MainActivity
 //      case R.id.action_alarm:
 //        alarmController.launch();
 //        break;
-      case R.id.action_sleep:
-        sleepAlertDialog.show();
-        break;
+//      case R.id.action_sleep:
+//        sleepAlertDialog.show();
+//        break;
       case R.id.action_export:
         exportFile();
         break;
