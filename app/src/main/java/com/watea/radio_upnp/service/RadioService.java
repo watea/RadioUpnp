@@ -149,7 +149,6 @@ public class RadioService
   @Nullable
   private ScheduledExecutorService scheduler = null;
   private NotificationCompat.Action actionPause;
-  private NotificationCompat.Action actionStop;
   private NotificationCompat.Action actionPlay;
   private NotificationCompat.Action actionRewind;
   private NotificationCompat.Action actionSkipToNext;
@@ -262,25 +261,21 @@ public class RadioService
       R.drawable.ic_pause_white_24dp,
       getString(R.string.action_pause),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE));
-    actionStop = new NotificationCompat.Action(
-      R.drawable.ic_stop_white_24dp,
-      getString(R.string.action_stop),
-      MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP));
     actionPlay = new NotificationCompat.Action(
       R.drawable.ic_play_arrow_white_24dp,
       getString(R.string.action_play),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY));
     actionRewind = new NotificationCompat.Action(
-      R.drawable.ic_baseline_replay_24dp,
+      R.drawable.ic_replay_white_24dp,
       getString(R.string.action_relaunch),
       MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_REWIND));
     actionSkipToNext = new NotificationCompat.Action(
-      R.drawable.ic_baseline_skip_next_white_24dp,
+      R.drawable.ic_skip_next_white_24dp,
       getString(R.string.action_skip_to_next),
       MediaButtonReceiver.buildMediaButtonPendingIntent(
         this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT));
     actionSkipToPrevious = new NotificationCompat.Action(
-      R.drawable.ic_baseline_skip_previous_white_24dp,
+      R.drawable.ic_skip_previous_white_24dp,
       getString(R.string.action_skip_to_previous),
       MediaButtonReceiver.buildMediaButtonPendingIntent(
         this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS));
@@ -383,7 +378,7 @@ public class RadioService
             startForeground(
               NOTIFICATION_ID,
               getNotification(),
-              ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST);
+              playerAdapter instanceof LocalPlayerAdapter ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
           } else {
             startForeground(NOTIFICATION_ID, getNotification());
           }
@@ -448,7 +443,7 @@ public class RadioService
   private Notification getNotification() {
     final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSilent(true)
-      .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
+      .setSmallIcon(R.drawable.ic_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
       .setContentIntent(PendingIntent.getActivity(
         this,
@@ -457,8 +452,7 @@ public class RadioService
         PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
       // When notification is deleted (when playback is paused and notification can be
       // deleted), fire MediaButtonPendingIntent with ACTION_STOP
-      .setDeleteIntent(
-        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
+      .setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
       // Show controls on lock screen even when user hides sensitive content
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
     final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
@@ -479,29 +473,29 @@ public class RadioService
     if (playbackStateCompat == null) {
       builder.setOngoing(false);
     } else {
-      mediaStyle.setShowActionsInCompactView(0, 1, 2);
       builder.addAction(actionSkipToPrevious);
       switch (playbackStateCompat.getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
-          // UPnP device doesn't support PAUSE action but STOP
           builder
-            .addAction((playerAdapter instanceof LocalPlayerAdapter) ? actionPause : actionStop)
+            .addAction(actionPause)
             .setOngoing(true);
+          mediaStyle.setShowActionsInCompactView(0, 1, 2);
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           builder
             .addAction(actionPlay)
             .setOngoing(false);
+          mediaStyle.setShowActionsInCompactView(0, 1, 2);
           break;
         case PlaybackStateCompat.STATE_ERROR:
           builder
             .addAction(actionRewind)
             .setOngoing(false);
+          mediaStyle.setShowActionsInCompactView(0, 1, 2);
           break;
         default:
-          builder
-            .addAction(actionStop)
-            .setOngoing(false);
+          builder.setOngoing(false);
+          mediaStyle.setShowActionsInCompactView(0, 1);
       }
       builder.addAction(actionSkipToNext);
     }

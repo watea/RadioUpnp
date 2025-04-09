@@ -512,7 +512,7 @@ public class MainActivity
     minutePicker.setOnValueChangedListener((picker, oldVal, newVal) -> sharedPreferences.edit().putInt(getString(R.string.key_sleep), newVal).apply());
     sleepAlertDialog = new AlertDialog.Builder(this)
       .setTitle(R.string.title_sleep)
-      .setIcon(R.drawable.ic_baseline_hourglass_bottom_white_24dp)
+      .setIcon(R.drawable.ic_hourglass_bottom_white_24dp)
       .setView(sleepView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
@@ -767,7 +767,7 @@ public class MainActivity
       };
     new AlertDialog.Builder(this)
       .setTitle(string.title_export)
-      .setIcon(R.drawable.ic_baseline_output_white_24dp)
+      .setIcon(R.drawable.ic_output_white_24dp)
       .setMessage(R.string.export_message)
       .setNeutralButton(R.string.action_csv_export, listener)
       .setPositiveButton(R.string.action_json_export, listener)
@@ -793,7 +793,7 @@ public class MainActivity
       };
     new AlertDialog.Builder(this)
       .setTitle(string.title_import)
-      .setIcon(R.drawable.ic_baseline_exit_to_app_white_24dp)
+      .setIcon(R.drawable.ic_exit_to_app_white_24dp)
       .setMessage(R.string.import_message)
       .setNeutralButton(R.string.action_csv_export, listener)
       .setPositiveButton(R.string.action_json_export, listener)

@@ -121,7 +121,7 @@ public class DonationFragment
 
   @Override
   public int getFloatingActionButtonResource() {
-    return R.drawable.ic_baseline_email_white_24dp;
+    return R.drawable.ic_email_white_24dp;
   }
 
   @Override

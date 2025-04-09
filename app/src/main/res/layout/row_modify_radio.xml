@@ -64,7 +64,7 @@
             android:layout_centerVertical="true"
             android:contentDescription="@string/action_move"
             android:gravity="center"
-            app:srcCompat="@drawable/ic_baseline_drag_indicator_24dp"
+            app:srcCompat="@drawable/ic_drag_indicator_white_24dp"
             app:tint="?attr/colorControlHighlight" />
 
     </RelativeLayout>

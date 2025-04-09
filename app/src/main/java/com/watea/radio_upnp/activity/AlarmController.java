@@ -91,7 +91,7 @@ public class AlarmController {
     // Build alert dialog
     alertDialog = new AlertDialog.Builder(mainActivity)
       .setTitle(R.string.title_alarm)
-      .setIcon(R.drawable.ic_baseline_alarm_white_24dp)
+      .setIcon(R.drawable.ic_alarm_white_24dp)
       .setView(view)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())

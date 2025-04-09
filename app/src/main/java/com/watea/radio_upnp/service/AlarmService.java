@@ -214,7 +214,7 @@ public class AlarmService extends Service {
     final AlarmServiceBinder alarmServiceBinder = (AlarmServiceBinder) binder;
     final String radioName = (alarmServiceBinder.getRadio() == null) ? getString(R.string.no_radio_available) : alarmServiceBinder.getRadio().getName();
     return new NotificationCompat.Builder(this, CHANNEL_ID)
-      .setSmallIcon(R.drawable.ic_baseline_mic_white_24dp)
+      .setSmallIcon(R.drawable.ic_mic_white_24dp)
       .setContentTitle(getString(R.string.alarm_set) + alarmServiceBinder.getHour() + "." + String.format(Locale.getDefault(), "%02d", alarmServiceBinder.getMinute()) + " / " + radioName)
       .build();
   }

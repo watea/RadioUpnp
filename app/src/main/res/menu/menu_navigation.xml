@@ -37,7 +37,7 @@
             android:title="@string/title_search" />
         <item
             android:id="@+id/action_radio_garden"
-            android:icon="@drawable/ic_baseline_location_searching_white_24dp"
+            android:icon="@drawable/ic_location_searching_white_24dp"
             android:title="@string/title_radio_garden" />
         <item
             android:id="@+id/action_add_item"
@@ -65,11 +65,11 @@
         android:checkableBehavior="single">
         <item
             android:id="@+id/action_export"
-            android:icon="@drawable/ic_baseline_output_white_24dp"
+            android:icon="@drawable/ic_output_white_24dp"
             android:title="@string/title_export" />
         <item
             android:id="@+id/action_import"
-            android:icon="@drawable/ic_baseline_exit_to_app_white_24dp"
+            android:icon="@drawable/ic_exit_to_app_white_24dp"
             android:title="@string/title_import" />
     </group>
 
@@ -78,7 +78,7 @@
         android:checkableBehavior="single">
         <item
             android:id="@+id/action_log"
-            android:icon="@drawable/ic_baseline_attach_email_white_24dp"
+            android:icon="@drawable/ic_attach_email_white_24dp"
             android:title="@string/title_log" />
         <item
             android:id="@+id/action_parameters"
@@ -90,7 +90,7 @@
             android:title="@string/title_donate" />
         <item
             android:id="@+id/action_about"
-            android:icon="@drawable/ic_baseline_question_mark_white_24dp"
+            android:icon="@drawable/ic_question_mark_white_24dp"
             android:title="@string/title_about" />
     </group>
 </menu>

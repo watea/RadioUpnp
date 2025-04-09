@@ -422,7 +422,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
           if (getCurrentRadio() == null) {
             setPlayImageButtonVisibility(false, false);
           } else {
-            playImageButton.setImageResource(R.drawable.ic_baseline_replay_24dp);
+            playImageButton.setImageResource(R.drawable.ic_replay_white_24dp);
             playImageButton.setTag(PlaybackStateCompat.STATE_REWINDING);
             setPlayImageButtonVisibility(true, false);
           }
