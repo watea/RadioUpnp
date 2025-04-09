@@ -173,24 +173,15 @@ public class AndroidUpnpService extends android.app.Service {
       listeners.clear();
     }
 
-    @Nullable
-    public Device getDevice(@NonNull String uUID) {
-      return devices.get(uUID);
-    }
-
-    public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity, boolean isInit) {
+    public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity) {
       final Device previousDevice = getSelectedDevice();
       AndroidUpnpService.this.selectedDeviceIdentity = selectedDeviceIdentity;
-      if (!isInit) {
-        listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
-      }
+      listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
     }
 
     // Null if no valid device selected
     public Device getSelectedDevice() {
-      final Device selectedDevice = (selectedDeviceIdentity == null) ? null : getDevice(selectedDeviceIdentity);
-      // UPnP only allowed if device is alive
-      return ((selectedDevice != null) && selectedDevice.isAlive()) ? selectedDevice : null;
+      return (selectedDeviceIdentity == null) ? null : devices.get(selectedDeviceIdentity);
     }
   }
 

@@ -149,7 +149,7 @@ public class UpnpDevicesAdapter
       textView.setOnClickListener(v -> {
         assert device != null;
         assert upnpService != null;
-        upnpService.setSelectedDeviceIdentity(isSelected() ? null : device.getUUID(), false);
+        upnpService.setSelectedDeviceIdentity(isSelected() ? null : device.getUUID());
       });
       defaultColor = textView.getCurrentTextColor();
       castIcon = BitmapFactory.decodeResource(textView.getResources(), R.drawable.ic_cast_blue);

@@ -289,18 +289,18 @@ public class Radio {
   }
 
   @NonNull
-  public MediaMetadataCompat.Builder getMediaMetadataBuilder() {
+  public MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull String postfix) {
     final Bitmap icon = getIcon();
     return new MediaMetadataCompat.Builder()
       .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, getId())
-      .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, icon)
-      .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, icon)
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, name)
+      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, name + postfix)
+      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, "")
+      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name + postfix)
+      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "")
       .putRating(
         MediaMetadataCompat.METADATA_KEY_RATING,
-        RatingCompat.newPercentageRating(isPreferred ? 100 : 0))
-      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name);
+        RatingCompat.newPercentageRating(isPreferred ? 100 : 0));
   }
 
   @NonNull

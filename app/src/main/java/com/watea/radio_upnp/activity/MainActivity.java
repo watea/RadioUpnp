@@ -147,15 +147,7 @@ public class MainActivity
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
       private void consumeIcon(@Nullable Device device) {
-        if (upnpService.getSelectedDevice() == device) {
-          runOnUiThread(() -> {
-            if (upnpIconConsumer != null) {
-              Bitmap icon = (device == null) ? null : device.getIcon();
-              icon = (icon == null) ? getDefaultIcon(R.drawable.ic_cast_blue) : icon;
-              upnpIconConsumer.accept((device == null) ? null : icon);
-            }
-          });
-        }
+        runOnUiThread(() -> MainActivity.this.consumeIcon(device));
       }
 
       @Override
@@ -165,12 +157,16 @@ public class MainActivity
 
       @Override
       public void onDeviceAdd(@NonNull Device device) {
-        consumeIcon(device);
+        if (upnpService.getSelectedDevice() == device) {
+          consumeIcon(device);
+        }
       }
 
       @Override
       public void onDeviceRemove(@NonNull Device device) {
-        consumeIcon(null);
+        if (upnpService.getSelectedDevice() == device) {
+          consumeIcon(null);
+        }
       }
 
       @Override
@@ -192,11 +188,11 @@ public class MainActivity
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       upnpService = (AndroidUpnpService.UpnpService) service;
       if (upnpService != null) {
+        // Init selected device
+        upnpService.setSelectedDeviceIdentity(savedSelectedDeviceIdentity);
         // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
         upnpService.addListener(upnpListener);
-        // Init selected device
-        upnpService.setSelectedDeviceIdentity(savedSelectedDeviceIdentity, true);
       }
     }
 
@@ -363,6 +359,10 @@ public class MainActivity
 
   public void setUpnpIconConsumer(@Nullable Consumer<Bitmap> upnpIconConsumer) {
     this.upnpIconConsumer = upnpIconConsumer;
+    // Update icon if needed
+    if (upnpService != null) {
+      consumeIcon(upnpService.getSelectedDevice());
+    }
   }
 
   @NonNull
@@ -375,7 +375,7 @@ public class MainActivity
     if (upnpService == null) {
       Log.e(LOG_TAG, "resetSelectedDevice: internal failure, upnpService not defined");
     } else {
-      upnpService.setSelectedDeviceIdentity(null, false);
+      upnpService.setSelectedDeviceIdentity(null);
     }
   }
 
@@ -664,6 +664,17 @@ public class MainActivity
     }
     if (savedSelectedDeviceIdentity != null) {
       outState.putString(getString(R.string.key_selected_device), savedSelectedDeviceIdentity);
+    }
+  }
+
+  private void consumeIcon(@Nullable Device device) {
+    if (upnpIconConsumer != null) {
+      if (device == null) {
+        upnpIconConsumer.accept(null);
+      } else {
+        final Bitmap icon = device.getIcon();
+        upnpIconConsumer.accept((icon == null) ? getDefaultIcon(R.drawable.ic_cast_blue) : icon);
+      }
     }
   }
 

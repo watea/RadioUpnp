@@ -196,13 +196,6 @@ public class RadioService
     return thisPackage.getName();
   }
 
-  @NonNull
-  private static MediaMetadataCompat.Builder getTaggedMediaMetadataBuilder(@NonNull Radio radio) {
-    return radio
-      .getMediaMetadataBuilder()
-      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, getSessionTag());
-  }
-
   @Override
   public void onCreate() {
     super.onCreate();
@@ -328,7 +321,6 @@ public class RadioService
         if (mediaMetadataCompat != null) {
           final String playlist = mediaMetadataCompat.getString(PLAYLIST);
           session.setMetadata(getTaggedMediaMetadataBuilder(radio)
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, information)
             .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
             .putString(PLAYLIST, addPlaylistItem(playlist, information))
             .build());
@@ -438,6 +430,13 @@ public class RadioService
     stopSelf();
   }
 
+  @NonNull
+  private MediaMetadataCompat.Builder getTaggedMediaMetadataBuilder(@NonNull Radio radio) {
+    return radio
+      .getMediaMetadataBuilder(playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "")
+      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, getSessionTag());
+  }
+
   @SuppressLint("SwitchIntDef")
   @NonNull
   private Notification getNotification() {
@@ -465,7 +464,9 @@ public class RadioService
         // Title, radio name
         .setContentTitle(description.getTitle())
         // Radio current track
-        .setContentText(description.getSubtitle());
+        .setContentText(description.getSubtitle())
+        // Remote?
+        .setSubText(playerAdapter instanceof UpnpPlayerAdapter ? getString(R.string.remote) : "");
     }
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());

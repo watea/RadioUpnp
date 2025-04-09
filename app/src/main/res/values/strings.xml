@@ -125,6 +125,7 @@
     <string name="sleep_set">minutes sleep timer set!</string>
     <string name="sleep_cancelled">Sleep cancelled!</string>
     <string name="minutes">minutes</string>
+    <string name="remote">(REMOTE)</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
