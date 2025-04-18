@@ -65,4 +65,9 @@
         android:textOff="@string/off"
         android:textOn="@string/on" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/note_alarm" />
+
 </LinearLayout>

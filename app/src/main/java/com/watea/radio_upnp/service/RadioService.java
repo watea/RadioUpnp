@@ -94,7 +94,8 @@ public class RadioService
   private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
   private static final String PLAYLIST_SEPARATOR = "##";
   private static final String PLAYLIST_ITEM_SEPARATOR = "&&";
-  private static final int NOTIFICATION_ID = 9;
+  private static final int FOREGROUND_NOTIFICATION_ID = 9;
+  private static final int SLEEP_TIMER_NOTIFICATION_ID = 42;
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
@@ -224,7 +225,7 @@ public class RadioService
     notificationManager.cancelAll();
     // Create the (mandatory) notification channel
     if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-      NotificationChannel notificationChannel = new NotificationChannel(
+      final NotificationChannel notificationChannel = new NotificationChannel(
         CHANNEL_ID,
         getString(R.string.radio_service_notification_name),
         NotificationManager.IMPORTANCE_HIGH);
@@ -241,9 +242,6 @@ public class RadioService
     } else {
       Log.d(LOG_TAG, "Existing channel reused");
     }
-    // Radio library
-
-
     // Bind to UPnP service
     if (!bindService(
       new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
@@ -368,11 +366,11 @@ public class RadioService
         case PlaybackStateCompat.STATE_BUFFERING:
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
-              NOTIFICATION_ID,
+              FOREGROUND_NOTIFICATION_ID,
               getNotification(),
               playerAdapter instanceof LocalPlayerAdapter ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
           } else {
-            startForeground(NOTIFICATION_ID, getNotification());
+            startForeground(FOREGROUND_NOTIFICATION_ID, getNotification());
           }
           break;
         case PlaybackStateCompat.STATE_PAUSED:
@@ -505,9 +503,32 @@ public class RadioService
       .build();
   }
 
+  private void showSleepTimerNotification(int minutes) {
+    try {
+      final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_hourglass_bottom_white_24dp)
+        .setContentTitle(getString(R.string.sleep_timer_title))
+        .setContentText(getString(R.string.sleep_timer_set_for, minutes))
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setOngoing(true)
+        .setOnlyAlertOnce(true)
+        .addAction(new NotificationCompat.Action(
+          R.drawable.ic_stop_white_24dp,
+          getString(R.string.cancel_sleep_timer),
+          MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE)));
+      notificationManager.notify(SLEEP_TIMER_NOTIFICATION_ID, builder.build());
+    } catch (SecurityException securityException) {
+      Log.e(LOG_TAG, "Permission denied to post sleep timer notification", securityException);
+    }
+  }
+
+  private void cancelSleepTimerNotification() {
+    notificationManager.cancel(SLEEP_TIMER_NOTIFICATION_ID);
+  }
+
   private void buildNotification() {
     try {
-      notificationManager.notify(NOTIFICATION_ID, getNotification());
+      notificationManager.notify(FOREGROUND_NOTIFICATION_ID, getNotification());
     } catch (SecurityException securityException) {
       Log.e(LOG_TAG, "Internal failure; notification not allowed");
     }
@@ -533,6 +554,7 @@ public class RadioService
     if (scheduler != null) {
       scheduler.shutdownNow();
       setSleepOn(false);
+      cancelSleepTimerNotification();
     }
   }
 
@@ -545,6 +567,10 @@ public class RadioService
       // Ensure robustness
       if (upnpService != null) {
         upnpService.getActionController().release();
+        // If from alarm, we must ensure UPnP is not used
+        if (extras.getBoolean(getString(R.string.key_alarm_radio), false)) {
+          upnpService.setSelectedDeviceIdentity(null);
+        }
       }
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       if (playerAdapter != null) {
@@ -619,6 +645,7 @@ public class RadioService
     public void onPause() {
       if (playerAdapter != null) {
         playerAdapter.pause();
+        releaseScheduler();
       }
     }
 
@@ -641,6 +668,7 @@ public class RadioService
     public void onStop() {
       if (playerAdapter != null) {
         playerAdapter.stop();
+        releaseScheduler();
         playerAdapter = null;
         radio = null;
       }
@@ -653,13 +681,15 @@ public class RadioService
           releaseScheduler();
           break;
         case ACTION_SLEEP_SET:
+          final int minutes = extras.getInt(getString(R.string.key_sleep));
           scheduler = Executors.newScheduledThreadPool(1);
           scheduler.schedule(
             () -> new Handler(Looper.getMainLooper()).post(this::onPause),
-            extras.getInt(getString(R.string.key_sleep)),
+            minutes,
             TimeUnit.MINUTES);
           scheduler.shutdown();
           setSleepOn(true);
+          showSleepTimerNotification(minutes);
           break;
         default:
           Log.e(LOG_TAG, "onCustomAction: unknown command!");

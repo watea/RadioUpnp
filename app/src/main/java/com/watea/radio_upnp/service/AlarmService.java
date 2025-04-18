@@ -171,7 +171,7 @@ public class AlarmService extends Service {
           startForeground(
             NOTIFICATION_ID,
             getNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST);
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         } else {
           startForeground(NOTIFICATION_ID, getNotification());
         }
@@ -196,7 +196,6 @@ public class AlarmService extends Service {
     }
     // Set
     final PendingIntent pendingIntent = getPendingIntent();
-    //alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
     final AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(
       calendar.getTimeInMillis(),
       pendingIntent);
@@ -228,6 +227,8 @@ public class AlarmService extends Service {
       if (mediaController == null) {
         Log.e(LOG_TAG, "radioLaunch: mediaController is null!");
       } else {
+        final Bundle bundle = new Bundle();
+        bundle.putBoolean(getString(R.string.key_alarm_radio), true);
         mediaController.getTransportControls().prepareFromMediaId(radio.getId(), new Bundle());
         return true;
       }

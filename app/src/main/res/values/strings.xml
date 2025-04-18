@@ -88,7 +88,6 @@
     <string name="preferred">Preferred</string>
     <string name="report_error">Error, report could not be generated!</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
-    <string name="notification_needed">This app is intended to be used with notifications enabled</string>
     <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically (take a few seconds)!\n</string>
     <string name="import_message">Choose import file; content (try export to see format) will be imported</string>
     <string name="export_message">[.CSV] or [.JSON] exports file in chosen directory</string>
@@ -126,6 +125,10 @@
     <string name="sleep_cancelled">Sleep cancelled!</string>
     <string name="minutes">minutes</string>
     <string name="remote">(REMOTE)</string>
+    <string name="sleep_timer_title">Sleep</string>
+    <string name="sleep_timer_set_for">"Sleep timer set for: %d minutes"</string>
+    <string name="cancel_sleep_timer">Cancel sleep</string>
+    <string name="note_alarm">Note:\n- Needs network connection\n- Only local playback, no UPnP</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

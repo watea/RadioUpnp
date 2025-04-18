@@ -25,6 +25,7 @@ package com.watea.radio_upnp.upnp;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -38,6 +39,7 @@ import androidx.annotation.Nullable;
 
 import com.watea.androidssdpclient.SsdpClient;
 import com.watea.androidssdpclient.SsdpService;
+import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.service.NetworkProxy;
 
 import org.xmlpull.v1.XmlPullParserException;
@@ -105,8 +107,6 @@ public class AndroidUpnpService extends android.app.Service {
       }
     }
   };
-  @Nullable
-  private String selectedDeviceIdentity = null;
 
   @Override
   public void onCreate() {
@@ -174,13 +174,18 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity) {
-      final Device previousDevice = getSelectedDevice();
-      AndroidUpnpService.this.selectedDeviceIdentity = selectedDeviceIdentity;
+      final SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.app_name), Context.MODE_PRIVATE);
+      sharedPreferences.edit().putString(getString(R.string.key_selected_device), selectedDeviceIdentity).apply();
+      tellSelectedDeviceIdentity(null);
+    }
+
+    public void tellSelectedDeviceIdentity(@Nullable Device previousDevice) {
       listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
     }
 
     // Null if no valid device selected
     public Device getSelectedDevice() {
+      final String selectedDeviceIdentity = getSharedPreferences(getString(R.string.app_name), Context.MODE_PRIVATE).getString(getString(R.string.key_selected_device), null);
       return (selectedDeviceIdentity == null) ? null : devices.get(selectedDeviceIdentity);
     }
   }

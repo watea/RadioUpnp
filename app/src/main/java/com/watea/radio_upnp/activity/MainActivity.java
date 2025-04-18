@@ -26,6 +26,7 @@ package com.watea.radio_upnp.activity;
 import static com.watea.radio_upnp.R.id;
 import static com.watea.radio_upnp.R.string;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.ContentValues;
@@ -34,18 +35,19 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -64,7 +66,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -106,6 +107,7 @@ public class MainActivity
   public static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final int SLEEP_MAX = 90;
+  private static final int REQUEST_CODE_POST_NOTIFICATIONS = 101;
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<>() {
       {
@@ -142,7 +144,6 @@ public class MainActivity
   private ActivityResultLauncher<Intent> importExportLauncher;
   @Nullable
   private ImportExportAction importExportAction = null;
-  private String savedSelectedDeviceIdentity;
   private Consumer<Bitmap> upnpIconConsumer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
@@ -188,11 +189,11 @@ public class MainActivity
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       upnpService = (AndroidUpnpService.UpnpService) service;
       if (upnpService != null) {
-        // Init selected device
-        upnpService.setSelectedDeviceIdentity(savedSelectedDeviceIdentity);
         // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
         upnpService.addListener(upnpListener);
+        // Init listener
+        upnpService.tellSelectedDeviceIdentity(null);
       }
     }
 
@@ -207,12 +208,6 @@ public class MainActivity
       upnpDevicesAdapter.setUpnpService(null);
     }
   };
-
-  public static void setNotification(@NonNull Context context, @NonNull String packageName) {
-    final Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-      .putExtra(Settings.EXTRA_APP_PACKAGE, packageName);
-    context.startActivity(intent);
-  }
 
   @NonNull
   public SharedPreferences getSharedPreferences() {
@@ -243,12 +238,18 @@ public class MainActivity
       case R.id.action_radio_garden:
         radioGardenController.launch(false);
         break;
-//      case R.id.action_alarm:
-//        alarmController.launch();
-//        break;
-//      case R.id.action_sleep:
-//        sleepAlertDialog.show();
-//        break;
+      case R.id.action_alarm:
+        alarmController.launch();
+        break;
+      case R.id.action_sleep:
+        // Check permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_POST_NOTIFICATIONS);
+          }
+        }
+        sleepAlertDialog.show();
+        break;
       case R.id.action_export:
         exportFile();
         break;
@@ -517,22 +518,10 @@ public class MainActivity
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
-    // Check notification
-    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-      new AlertDialog.Builder(this)
-        .setMessage(R.string.notification_needed)
-        .setPositiveButton(
-          R.string.action_go,
-          (dialogInterface, i) -> setNotification(this, getPackageName()))
-        .create()
-        .show();
-    }
     // Specific UPnP devices dialog
     final View contentUpnp = getLayoutInflater().inflate(R.layout.content_upnp, null);
     final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-    savedSelectedDeviceIdentity = (savedInstanceState == null) ?
-      null : savedInstanceState.getString(getString(R.string.key_selected_device));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       getThemeAttributeColor(android.R.attr.textColorHighlight),
       contentUpnp.findViewById(R.id.devices_default_linear_layout));
@@ -608,8 +597,6 @@ public class MainActivity
     // Shared preferences
     sharedPreferences.edit().putString(getString(string.key_theme), theme.toString()).apply();
     // Release UPnP service
-    final Device selectedDevice = (upnpService == null) ? null : upnpService.getSelectedDevice();
-    savedSelectedDeviceIdentity = (selectedDevice == null) ? null : selectedDevice.getUUID();
     unbindService(upnpConnection);
     // Force disconnection to release resources
     upnpConnection.onServiceDisconnected(null);
@@ -659,11 +646,7 @@ public class MainActivity
     final Fragment currentFragment = getCurrentFragment();
     // Stored to tag activity has been disposed
     if (currentFragment != null) {
-      outState.putString(
-        getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
-    }
-    if (savedSelectedDeviceIdentity != null) {
-      outState.putString(getString(R.string.key_selected_device), savedSelectedDeviceIdentity);
+      outState.putString(getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
     }
   }
 
