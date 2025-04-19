@@ -374,11 +374,15 @@ public class RadioService
           }
           break;
         case PlaybackStateCompat.STATE_PAUSED:
+          // Scheduler released, if any
+          releaseScheduler();
           // No relaunch on pause
           isAllowedToRewind = false;
           buildNotification();
           break;
         case PlaybackStateCompat.STATE_ERROR:
+          // Scheduler released, if any
+          releaseScheduler();
           // For user convenience, session is kept alive
           if (playerAdapter != null) {
             playerAdapter.release();
@@ -407,6 +411,8 @@ public class RadioService
           }
           break;
         default:
+          // Release everything
+          releaseScheduler();
           if (playerAdapter != null) {
             playerAdapter.release();
           }
@@ -439,7 +445,6 @@ public class RadioService
   @NonNull
   private Notification getNotification() {
     final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-      .setSilent(true)
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
       .setContentIntent(PendingIntent.getActivity(
@@ -451,7 +456,8 @@ public class RadioService
       // deleted), fire MediaButtonPendingIntent with ACTION_STOP
       .setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
       // Show controls on lock screen even when user hides sensitive content
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setSilent(true);
     final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
     if (mediaMetadataCompat == null) {
       Log.e(LOG_TAG, "Internal failure; no metadata defined for radio");
@@ -506,7 +512,7 @@ public class RadioService
   private void showSleepTimerNotification(int minutes) {
     try {
       final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_hourglass_bottom_white_24dp)
+        .setSmallIcon(R.drawable.ic_mic_white_24dp)
         .setContentTitle(getString(R.string.sleep_timer_title))
         .setContentText(getString(R.string.sleep_timer_set_for, minutes))
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -645,7 +651,6 @@ public class RadioService
     public void onPause() {
       if (playerAdapter != null) {
         playerAdapter.pause();
-        releaseScheduler();
       }
     }
 
@@ -668,7 +673,6 @@ public class RadioService
     public void onStop() {
       if (playerAdapter != null) {
         playerAdapter.stop();
-        releaseScheduler();
         playerAdapter = null;
         radio = null;
       }

@@ -317,11 +317,14 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       final int sleep = mainActivity.getSharedPreferences().getInt(key, MainActivity.SLEEP_MIN);
       final Bundle bundle = new Bundle();
       bundle.putInt(key, sleep);
-      mediaController.getTransportControls().sendCustomAction(isSleepSet ? RadioService.ACTION_SLEEP_CANCEL : RadioService.ACTION_SLEEP_SET, bundle); // Asynchronous
-      if (isSleepSet) {
-        mainActivity.tell(R.string.sleep_cancelled);
-      } else {
-        mainActivity.tell(sleep + " " + mainActivity.getString(R.string.sleep_set));
+      // Action only possible if set or playing
+      if (isSleepSet || ((int) playImageButton.getTag() == PlaybackStateCompat.STATE_PAUSED)) {
+        mediaController.getTransportControls().sendCustomAction(isSleepSet ? RadioService.ACTION_SLEEP_CANCEL : RadioService.ACTION_SLEEP_SET, bundle); // Asynchronous
+        if (isSleepSet) {
+          mainActivity.tell(R.string.sleep_cancelled);
+        } else {
+          mainActivity.tell(sleep + " " + mainActivity.getString(R.string.sleep_set));
+        }
       }
     }
   }

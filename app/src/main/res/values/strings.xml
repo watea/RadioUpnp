@@ -111,13 +111,14 @@
     <string name="server_not_available">Server is not available. Please try later&#8230;</string>
     <string name="Country">[Please select a country]</string>
     <string name="no_radio_found">No radio found!</string>
-    <string name="alarm_set">"Alarm set: "</string>
+    <string name="alarm_title">"Alarm"</string>
+    <string name="alarm_set_for">"%02d:%02d"</string>
     <string name="alarm_cancelled">Alarm cancelled!</string>
     <string name="alarm_not_available">Alarm not available, please try later&#8230;</string>
     <string name="no_radio_available">No selected radio available, please play a radio!</string>
     <string name="off">OFF</string>
     <string name="on">ON</string>
-    <string name="alarm">Alarm set on last played radio:</string>
+    <string name="alarm_radio">Alarm set on last played radio:</string>
     <string name="alarm_can_not_be_set">Android does not allow to set an alarm!</string>
     <string name="alarm_not_allowed">Please allow alarm for RadioUpnp.</string>
     <string name="sleep">Sleep timer set/cancelled with <b>double tap</b> on play/pause control icon:</string>
@@ -128,7 +129,7 @@
     <string name="sleep_timer_title">Sleep</string>
     <string name="sleep_timer_set_for">"Sleep timer set for: %d minutes"</string>
     <string name="cancel_sleep_timer">Cancel sleep</string>
-    <string name="note_alarm">Note:\n- Needs network connection\n- Only local playback, no UPnP</string>
+    <string name="alarm_note">Note:\n- Needs network connection\n- Only local playback, no UPnP</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

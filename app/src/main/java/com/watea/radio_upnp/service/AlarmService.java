@@ -60,7 +60,6 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
 import java.util.Calendar;
-import java.util.Locale;
 
 public class AlarmService extends Service {
   private static final String LOG_TAG = AlarmService.class.getSimpleName();
@@ -214,7 +213,8 @@ public class AlarmService extends Service {
     final String radioName = (alarmServiceBinder.getRadio() == null) ? getString(R.string.no_radio_available) : alarmServiceBinder.getRadio().getName();
     return new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
-      .setContentTitle(getString(R.string.alarm_set) + alarmServiceBinder.getHour() + "." + String.format(Locale.getDefault(), "%02d", alarmServiceBinder.getMinute()) + " / " + radioName)
+      .setContentTitle(getString(R.string.alarm_title))
+      .setContentText(getString(R.string.alarm_set_for, alarmServiceBinder.getHour(), alarmServiceBinder.getMinute()) + " / " + radioName)
       .build();
   }
 

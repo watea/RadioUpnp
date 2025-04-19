@@ -32,7 +32,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/alarm" />
+        android:text="@string/alarm_radio" />
 
     <ImageView
         android:id="@+id/imageView"
@@ -68,6 +68,6 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/note_alarm" />
+        android:text="@string/alarm_note" />
 
 </LinearLayout>
