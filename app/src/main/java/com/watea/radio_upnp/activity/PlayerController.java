@@ -323,7 +323,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         if (isSleepSet) {
           mainActivity.tell(R.string.sleep_cancelled);
         } else {
-          mainActivity.tell(sleep + " " + mainActivity.getString(R.string.sleep_set));
+          mainActivity.tell(mainActivity.getString(R.string.sleep_set, sleep));
         }
       }
     }
@@ -445,8 +445,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         if (extras != null) {
           final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
           if (rate != null) {
-            playedRadioRateTextView.setText(
-              !rate.isEmpty() ? rate + mainActivity.getString(R.string.kbs) : "");
+            playedRadioRateTextView.setText(rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbs));
           }
         }
         // User help for fist valid information after a few time

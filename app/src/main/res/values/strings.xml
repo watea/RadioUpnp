@@ -122,7 +122,7 @@
     <string name="alarm_can_not_be_set">Android does not allow to set an alarm!</string>
     <string name="alarm_not_allowed">Please allow alarm for RadioUpnp.</string>
     <string name="sleep">Sleep timer set/cancelled with <b>double tap</b> on play/pause control icon:</string>
-    <string name="sleep_set">minutes sleep timer set!</string>
+    <string name="sleep_set">%d minutes sleep timer set!</string>
     <string name="sleep_cancelled">Sleep cancelled!</string>
     <string name="minutes">minutes</string>
     <string name="remote">(REMOTE)</string>
