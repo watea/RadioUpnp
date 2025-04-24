@@ -109,7 +109,9 @@
     <string name="radio_not_defined">Radio can\'t be found in database!</string>
     <string name="copied_to_clipboard">Information copied to clipboard!</string>
     <string name="server_not_available">Server is not available. Please try later&#8230;</string>
-    <string name="Country">[Please select a country]</string>
+    <string name="country">[Please select a country]</string>
+    <string name="radio_tag">[Please select tag]</string>
+    <string name="bitrate">[Please select bitrate]</string>
     <string name="no_radio_found">No radio found!</string>
     <string name="alarm_title">"Alarm"</string>
     <string name="alarm_set_for">"%02d:%02d"</string>

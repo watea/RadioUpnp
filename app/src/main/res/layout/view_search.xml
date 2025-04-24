@@ -22,11 +22,8 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:clickable="true"
-    android:focusableInTouchMode="true"
     android:orientation="vertical"
     android:theme="@style/AlertDialogTheme">
 
@@ -36,20 +33,52 @@
         android:layout_margin="@dimen/app_margin"
         android:text="@string/radio_search" />
 
-    <EditText
-        android:id="@+id/name_edit_text"
-        android:layout_width="300dp"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/app_margin"
-        android:hint="@string/searched_words"
-        android:importantForAutofill="no"
-        android:inputType="textCapCharacters"
-        android:textAllCaps="true"
-        android:textSize="30sp" />
-
-    <Spinner
-        android:id="@+id/country_spinner"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+
+        <LinearLayout
+            android:id="@+id/linearLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/name_edit_text"
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/app_margin"
+                android:hint="@string/searched_words"
+                android:importantForAutofill="no"
+                android:inputType="textCapCharacters"
+                android:textAllCaps="true"
+                android:textSize="30sp" />
+
+            <Spinner
+                android:id="@+id/country_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Spinner
+                android:id="@+id/radio_tag_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Spinner
+                android:id="@+id/rate_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+    </FrameLayout>
 
 </LinearLayout>

@@ -32,4 +32,11 @@
         <item>radio_upnp.donation.2</item>
         <item>radio_upnp.donation.3</item>
     </string-array>
+    <string-array name="bitrates_array">
+        <item>64</item>
+        <item>128</item>
+        <item>192</item>
+        <item>256</item>
+        <item>320</item>
+    </string-array>
 </resources>

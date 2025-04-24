@@ -31,6 +31,8 @@
     <string name="key_radio_index">key_radio_index</string>
     <string name="key_current_fragment">key_current_fragment</string>
     <string name="key_country">key_country</string>
+    <string name="key_radio_tag">key_radio_tag</string>
+    <string name="key_bitrate">key_bitrate</string>
     <string name="key_last_played_radio">key_last_played_radio</string>
     <string name="key_alarm_radio">key_alarm_radio</string>
     <string name="key_alarm_hour">key_alarm_hour</string>
