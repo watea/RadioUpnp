@@ -104,7 +104,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   private MediaControllerCompat mediaController = null;
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
-    public void onPreferredChange(@NonNull Radio radio) {
+    public void onChange(@NonNull Radio radio) {
       if (radio == getCurrentRadio()) {
         setPreferredButton(radio.isPreferred());
       }

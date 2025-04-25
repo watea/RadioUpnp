@@ -43,7 +43,7 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   @NonNull
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
-    public void onPreferredChange(@NonNull Radio radio) {
+    public void onChange(@NonNull Radio radio) {
       notifyItemChanged(radios.indexOf(radio));
     }
 

@@ -132,7 +132,7 @@ public class Radios extends ArrayList<Radio> {
 
   @NonNull
   @Override
-  public Radio remove(int index) {
+  public synchronized Radio remove(int index) {
     final Radio result = super.remove(index);
     tellListeners(write(), listener -> listener.onRemove(index));
     return result;
@@ -140,7 +140,7 @@ public class Radios extends ArrayList<Radio> {
 
   // o != null
   @Override
-  public boolean remove(@Nullable Object o) {
+  public synchronized boolean remove(@Nullable Object o) {
     assert o != null;
     final int index = indexOf(o);
     return tellListeners(super.remove(o) && write(), listener -> listener.onRemove(index));
@@ -151,19 +151,18 @@ public class Radios extends ArrayList<Radio> {
     return tellListeners(super.addAll(c) && write(), listener -> listener.onAddAll(c));
   }
 
-  // No listener
   public synchronized boolean modify(@NonNull Radio radio) {
     final int index = indexOf(radio);
     if (index >= 0) {
       set(index, radio);
-      return write();
+      return tellListeners(write(), listener -> listener.onChange(radio));
     }
     return false;
   }
 
-  public void setPreferred(@NonNull Radio radio, boolean isPreferred) {
+  public synchronized void setPreferred(@NonNull Radio radio, boolean isPreferred) {
     radio.setIsPreferred(isPreferred);
-    tellListeners(modify(radio), listener -> listener.onPreferredChange(radio));
+    modify(radio);
   }
 
   // radio must be valid
@@ -307,7 +306,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   public interface Listener {
-    default void onPreferredChange(@NonNull Radio radio) {
+    default void onChange(@NonNull Radio radio) {
     }
 
     default void onAdd(@NonNull Radio radio) {
