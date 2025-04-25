@@ -48,11 +48,6 @@ public abstract class MainActivityFragment extends Fragment {
   private ViewGroup container;
   private int yScrollPosition = 0;
 
-  // Required empty constructor
-  public MainActivityFragment() {
-    super();
-  }
-
   protected static int getVisibleFrom(boolean isVisible) {
     return isVisible ? View.VISIBLE : View.INVISIBLE;
   }

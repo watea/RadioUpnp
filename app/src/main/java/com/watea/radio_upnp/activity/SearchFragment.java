@@ -75,7 +75,6 @@ public class SearchFragment extends MainActivityFragment {
   private static final int MAX_RADIOS = 200;
   private static final String COUNTRIES = "json/countries";
   private static final String RADIO_TAGS = "json/tags";
-  private static final String KBPS = " kbps";
   private static final String NOTHING_TAG = "";
   private static final int MIN_STATION_COUNT = MAX_RADIOS / 10;
   private static final int DEFAULT_COUNT = 1;
@@ -99,7 +98,6 @@ public class SearchFragment extends MainActivityFragment {
   private Spinner bitrateSpinner;
   private ProgressBar progressBar;
   private LinearLayout linearLayout;
-  private String appName; // Must be set in onResume()
   private boolean isServerAvailable = false;
   private int searchSessionId = 0;
 
@@ -275,7 +273,7 @@ public class SearchFragment extends MainActivityFragment {
       final String bitrate = getBitrate();
       int selectedBitrate = 0;
       try {
-        selectedBitrate = Integer.parseInt(bitrate.replace(KBPS, ""));
+        selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbs), ""));
       } catch (NumberFormatException numberFormatException) {
         Log.w(LOG_TAG, "Invalid bitrate format: " + bitrate);
       }
@@ -347,7 +345,7 @@ public class SearchFragment extends MainActivityFragment {
 
   @NonNull
   private Request.Builder getRequestBuilder() {
-    return new Request.Builder().header("User-Agent", appName + "/" + BuildConfig.VERSION_NAME);
+    return new Request.Builder().header("User-Agent", getString(R.string.app_name) + "/" + BuildConfig.VERSION_NAME);
   }
 
   @NonNull
@@ -366,29 +364,25 @@ public class SearchFragment extends MainActivityFragment {
   }
 
   private void handleSearchAlertDialog() {
-    appName = getMainActivity().getString(R.string.app_name);
     countries.clear();
     radioTags.clear();
     bitrates.clear();
-    final String selectCountry = getMainActivity().getString(R.string.country);
-    final String selectRadioTag = getMainActivity().getString(R.string.radio_tag);
-    final String selectBitrate = getMainActivity().getString(R.string.bitrate);
     linearLayout.setVisibility(View.INVISIBLE);
     progressBar.setVisibility(View.VISIBLE);
     searchAlertDialog.show();
     searchAlertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(View.GONE);
     currentSearchFuture = searchExecutor.submit(() -> {
       try {
-        fetchList(countries, COUNTRIES, NOTHING_TAG, DEFAULT_COUNT, selectCountry);
-        fetchList(radioTags, RADIO_TAGS, "stationcount", MIN_STATION_COUNT, selectRadioTag);
+        fetchList(countries, COUNTRIES, NOTHING_TAG, DEFAULT_COUNT, getString(R.string.country));
+        fetchList(radioTags, RADIO_TAGS, "stationcount", MIN_STATION_COUNT, getString(R.string.radio_tag));
         isServerAvailable = true;
       } catch (IOException | JSONException exception) {
         Log.d(LOG_TAG, "onResume: radioBrowserServer fetch error", exception);
         isServerAvailable = false;
       }
       bitrates.addAll(Arrays.asList(getResources().getStringArray(R.array.bitrates_array)));
-      bitrates.replaceAll(s -> s + KBPS);
-      bitrates.add(0, selectBitrate);
+      bitrates.replaceAll(s -> s + getString(R.string.kbs));
+      bitrates.add(0, getString(R.string.bitrate));
       protectedRunOnUiThread(() -> {
         if (isServerAvailable) {
           final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries);
