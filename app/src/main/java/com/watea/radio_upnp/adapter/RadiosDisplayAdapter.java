@@ -29,7 +29,6 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
@@ -75,12 +74,11 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   };
 
   public RadiosDisplayAdapter(
-    @NonNull MainActivity mainActivity,
     @NonNull Supplier<List<Radio>> radiosSupplier,
     int row,
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener) {
-    super(mainActivity, radiosSupplier, row, recyclerView);
+    super(radiosSupplier, row, recyclerView);
     this.listener = listener;
     Radios.getInstance().addListener(radiosListener);
     // Init listener

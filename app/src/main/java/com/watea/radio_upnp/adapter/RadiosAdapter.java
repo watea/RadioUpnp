@@ -32,7 +32,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
@@ -42,19 +41,15 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   extends RecyclerView.Adapter<V> {
   protected static final int DEFAULT = -1;
   @NonNull
-  protected final MainActivity mainActivity;
-  @NonNull
   protected final Supplier<List<Radio>> radiosSupplier;
   private final int row;
   @NonNull
   protected List<Radio> radios;
 
   public RadiosAdapter(
-    @NonNull MainActivity mainActivity,
     @NonNull Supplier<List<Radio>> radiosSupplier,
     int row,
     @NonNull RecyclerView recyclerView) {
-    this.mainActivity = mainActivity;
     this.radiosSupplier = radiosSupplier;
     this.radios = this.radiosSupplier.get();
     this.row = row;

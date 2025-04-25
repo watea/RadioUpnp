@@ -90,17 +90,17 @@ public class RadioGardenController {
 
   public RadioGardenController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
-    radioGardenAlertDialog = new AlertDialog.Builder(mainActivity)
+    radioGardenAlertDialog = new AlertDialog.Builder(this.mainActivity)
       .setTitle(R.string.title_radio_garden)
       .setIcon(R.drawable.ic_location_searching_white_24dp)
       .setView(R.layout.view_radio_garden)
       .setPositiveButton(
         R.string.action_got_it,
         (dialogInterface, i) -> {
-          mainActivity
+          this.mainActivity
             .getSharedPreferences()
             .edit()
-            .putBoolean(mainActivity.getString(R.string.key_radio_garden_got_it), true)
+            .putBoolean(this.mainActivity.getString(R.string.key_radio_garden_got_it), true)
             .apply();
           launch(true);
         })
@@ -108,7 +108,7 @@ public class RadioGardenController {
         R.string.title_radio_garden,
         (dialogInterface, i) -> launch(true))
       // Restore checked item
-      .setOnDismissListener(dialogInterface -> mainActivity.checkNavigationMenu())
+      .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())
       .create();
   }
 

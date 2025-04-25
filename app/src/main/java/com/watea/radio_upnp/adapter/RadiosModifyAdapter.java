@@ -46,11 +46,10 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
   private final NestedScrollView nestedScrollView;
 
   public RadiosModifyAdapter(
-    @NonNull MainActivity mainActivity,
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener,
     @NonNull NestedScrollView nestedScrollView) {
-    super(mainActivity, Radios::getInstance, R.layout.row_modify_radio, recyclerView, listener);
+    super(Radios::getInstance, R.layout.row_modify_radio, recyclerView, listener);
     this.nestedScrollView = nestedScrollView;
     // RecyclerView shall be defined for Adapter
     new ItemTouchHelper(new RadioItemTouchHelperCallback()).attachToRecyclerView(recyclerView);
@@ -84,7 +83,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
       @NonNull RecyclerView recyclerView,
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
-      mainActivity.setToolbarExpanded(false);
+      ((MainActivity) recyclerView.getContext()).setToolbarExpanded(false);
       return ((Radios) radios).swap(viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
     }
 

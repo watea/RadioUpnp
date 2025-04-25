@@ -92,7 +92,8 @@ public abstract class ItemFragment extends MainActivityFragment {
     try {
       final Bitmap icon = getIcon();
       if (icon != null) {
-        final File file = Radio.storeToFile(getMainActivity(), icon, Integer.toString(hashCode()));
+        assert getContext() != null;
+        final File file = Radio.storeToFile(getContext(), icon, Integer.toString(hashCode()));
         outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
       }
     } catch (FileNotFoundException fileNotFoundException) {
@@ -277,8 +278,9 @@ public abstract class ItemFragment extends MainActivityFragment {
       } catch (MalformedURLException malformedURLException) {
         url = null;
       }
+      assert getContext() != null;
       editText.setTextColor(
-        (url == null) ? ContextCompat.getColor(getMainActivity(), R.color.dark_red) : defaultColor);
+        (url == null) ? ContextCompat.getColor(getContext(), R.color.dark_red) : defaultColor);
     }
   }
 

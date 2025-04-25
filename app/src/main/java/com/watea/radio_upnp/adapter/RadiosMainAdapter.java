@@ -35,7 +35,6 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
@@ -51,12 +50,11 @@ public class RadiosMainAdapter
   private Radio currentRadio = null;
 
   public RadiosMainAdapter(
-    @NonNull MainActivity mainActivity,
     @NonNull Supplier<List<Radio>> radiosSupplier,
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener,
     @NonNull Consumer<Consumer<Radio>> currentRadioSupplier) {
-    super(mainActivity, radiosSupplier, R.layout.row_radio, recyclerView, listener);
+    super(radiosSupplier, R.layout.row_radio, recyclerView, listener);
     this.currentRadioSupplier = currentRadioSupplier;
     this.currentRadioSupplier.accept(this);
   }

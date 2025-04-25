@@ -146,18 +146,21 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   protected void onBackPressed() {
-    getMainActivity().getOnBackPressedDispatcher().onBackPressed();
+    assert getActivity() != null;
+    getActivity().getOnBackPressedDispatcher().onBackPressed();
   }
 
   protected void flushKeyboard() {
-    final View focus = getMainActivity().getCurrentFocus();
+    assert getActivity() != null;
+    final View focus = getActivity().getCurrentFocus();
     if (focus != null) {
       flushKeyboard(focus);
     }
   }
 
   protected void flushKeyboard(@NonNull View focus) {
-    ((InputMethodManager) getMainActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
+    assert getActivity() != null;
+    ((InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
       .hideSoftInputFromWindow(focus.getWindowToken(), 0);
   }
 

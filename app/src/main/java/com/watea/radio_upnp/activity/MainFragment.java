@@ -72,7 +72,8 @@ public class MainFragment extends MainActivityFragment {
         if (webPageUri == null) {
           tell(R.string.no_web_page);
         } else {
-          getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
+          assert getActivity() != null;
+          getActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
         }
         return true;
       }
@@ -85,8 +86,9 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public void onResume() {
     super.onResume();
+    assert getActivity() != null;
     // Force column count
-    onConfigurationChanged(getMainActivity().getResources().getConfiguration());
+    onConfigurationChanged(getActivity().getResources().getConfiguration());
   }
 
   @SuppressLint("NonConstantResourceId")
@@ -174,7 +176,6 @@ public class MainFragment extends MainActivityFragment {
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapter
     radiosMainAdapter = new RadiosMainAdapter(
-      getMainActivity(),
       () -> isPreferredRadios ? Radios.getInstance().getPreferred() : Radios.getInstance(),
       radiosRecyclerView,
       radiosMainAdapterListener,

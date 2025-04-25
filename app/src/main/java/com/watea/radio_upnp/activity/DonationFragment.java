@@ -148,8 +148,9 @@ public class DonationFragment
         Log.d(LOG_TAG, "Selected item in spinner: " + productName);
         final ProductDetails productDetails = ownProductDetailss.get(productName);
         assert productDetails != null;
+        assert getActivity() != null;
         billingClient.launchBillingFlow(
-          getMainActivity(),
+          getActivity(),
           BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(ImmutableList.of(
               BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -161,7 +162,8 @@ public class DonationFragment
     view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
     view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
     // Alert dialog
-    paymentAlertDialogBuilder = new AlertDialog.Builder(getMainActivity())
+    assert getContext() != null;
+    paymentAlertDialogBuilder = new AlertDialog.Builder(getContext())
       .setIcon(android.R.drawable.ic_dialog_alert)
       .setTitle(R.string.donation_alert_dialog_title)
       .setMessage(R.string.donation_alert_dialog_try_again)
@@ -231,7 +233,8 @@ public class DonationFragment
 
   @NonNull
   private View.OnClickListener getLauncher(@NonNull Uri uri) {
-    return (view -> getMainActivity().startActivity(new Intent(Intent.ACTION_VIEW, uri)));
+    assert getActivity() != null;
+    return (view -> getActivity().startActivity(new Intent(Intent.ACTION_VIEW, uri)));
   }
 
   private void logBillingResult(@NonNull String location, @NonNull BillingResult billingResult) {

@@ -125,12 +125,12 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     informationSelectPressUserHint = this.mainActivity
       .new UserHint(R.string.key_information_select_press_got_it, R.string.information_select_press, 2);
     final SimpleAdapter playlistAdapter = new SimpleAdapter(
-      mainActivity,
+      this.mainActivity,
       playInformations,
       R.layout.row_playlist,
       new String[]{RadioService.DATE, RadioService.INFORMATION},
       new int[]{R.id.row_playlist_date_text_view, R.id.row_playlist_information_text_view});
-    playlistAlertDialog = new AlertDialog.Builder(mainActivity)
+    playlistAlertDialog = new AlertDialog.Builder(this.mainActivity)
       .setAdapter(playlistAdapter, null)
       .create();
     playlistAlertDialog.getListView().setOnItemLongClickListener((parent, itemView, position, id) -> {
@@ -180,7 +180,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     playedRadioRateTextView = view.findViewById(R.id.played_radio_rate_text_view);
     progressBar = view.findViewById(R.id.progress_bar);
     playImageButton = view.findViewById(R.id.play_image_button);
-    final GestureDetector gestureDetector = new GestureDetector(mainActivity, new GestureDetector.SimpleOnGestureListener() {
+    final GestureDetector gestureDetector = new GestureDetector(this.mainActivity, new GestureDetector.SimpleOnGestureListener() {
       @Override
       public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
         if (!isLongPress) {
@@ -226,7 +226,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     // Create MediaBrowserServiceCompat
     mediaBrowser = new MediaBrowserCompat(
       this.mainActivity,
-      new ComponentName(mainActivity, RadioService.class),
+      new ComponentName(this.mainActivity, RadioService.class),
       mediaBrowserConnectionCallback,
       null);
   }

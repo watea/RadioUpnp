@@ -178,15 +178,17 @@ public class SearchFragment extends MainActivityFragment {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
-    final View searchView = getMainActivity().getLayoutInflater().inflate(R.layout.view_search, null);
+    assert getActivity() != null;
+    final View searchView = getActivity().getLayoutInflater().inflate(R.layout.view_search, null);
     progressBar = searchView.findViewById(R.id.progressBar);
     linearLayout = searchView.findViewById(R.id.linearLayout);
     nameEditText = searchView.findViewById(R.id.name_edit_text);
     countrySpinner = searchView.findViewById(R.id.country_spinner);
     radioTagSpinner = searchView.findViewById(R.id.radio_tag_spinner);
     bitrateSpinner = searchView.findViewById(R.id.rate_spinner);
-    radiosSearchAdapter = new RadiosSearchAdapter(getMainActivity(), radiosRecyclerView);
-    searchAlertDialog = new AlertDialog.Builder(getMainActivity())
+    radiosSearchAdapter = new RadiosSearchAdapter(radiosRecyclerView);
+    assert getContext() != null;
+    searchAlertDialog = new AlertDialog.Builder(getContext())
       .setView(searchView)
       .setPositiveButton(R.string.action_go, (dialogInterface, i) -> search())
       .create();
@@ -385,9 +387,10 @@ public class SearchFragment extends MainActivityFragment {
       bitrates.add(0, getString(R.string.bitrate));
       protectedRunOnUiThread(() -> {
         if (isServerAvailable) {
-          final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, countries);
-          final ArrayAdapter<String> radioTagsAdapter = new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, radioTags);
-          final ArrayAdapter<String> bitratesAdapter = new ArrayAdapter<>(getMainActivity(), android.R.layout.simple_spinner_dropdown_item, bitrates);
+          assert getContext() != null;
+          final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_dropdown_item, countries);
+          final ArrayAdapter<String> radioTagsAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_dropdown_item, radioTags);
+          final ArrayAdapter<String> bitratesAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_dropdown_item, bitrates);
           setSpinner(countrySpinner, countriesAdapter, countries, R.string.key_country);
           setSpinner(radioTagSpinner, radioTagsAdapter, radioTags, R.string.key_radio_tag);
           setSpinner(bitrateSpinner, bitratesAdapter, bitrates, R.string.key_bitrate);

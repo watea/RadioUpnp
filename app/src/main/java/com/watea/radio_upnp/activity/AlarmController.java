@@ -89,7 +89,7 @@ public class AlarmController {
     imageView = view.findViewById(R.id.imageView);
     textView = view.findViewById(R.id.text_view);
     // Build alert dialog
-    alertDialog = new AlertDialog.Builder(mainActivity)
+    alertDialog = new AlertDialog.Builder(this.mainActivity)
       .setTitle(R.string.title_alarm)
       .setIcon(R.drawable.ic_alarm_white_24dp)
       .setView(view)
