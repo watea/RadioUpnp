@@ -73,11 +73,9 @@ import okhttp3.Response;
 public class SearchFragment extends MainActivityFragment {
   private static final String LOG_TAG = SearchFragment.class.getSimpleName();
   private static final int MAX_RADIOS = 200;
+  private static final int MAX_TAGS = 200;
   private static final String COUNTRIES = "json/countries";
-  private static final String RADIO_TAGS = "json/tags";
-  private static final String NOTHING_TAG = "";
-  private static final int MIN_STATION_COUNT = MAX_RADIOS / 10;
-  private static final int DEFAULT_COUNT = 1;
+  private static final String RADIO_TAGS = "json/tags?order=stationcount&reverse=true&limit=" + MAX_TAGS;
   private static final String RADIO_BROWSER_SERVER = new HttpUrl.Builder()
     .scheme("https")
     .host("all.api.radio-browser.info")
@@ -217,20 +215,15 @@ public class SearchFragment extends MainActivityFragment {
     return (spinner.getSelectedItemPosition() > 0) ? spinner.getSelectedItem().toString() : "";
   }
 
-  private void fetchList(
-    @NonNull List<String> list,
-    @NonNull String url,
-    @NonNull String countTag,
-    int countLimit,
-    @NonNull String select) throws IOException, JSONException {
+  // countLimit < 0 means no limit
+  private void fetchList(@NonNull List<String> list, @NonNull String url, @NonNull String select) throws IOException, JSONException {
     final Request request = getRequestBuilder()
       .url(RADIO_BROWSER_SERVER + url)
       .build();
     final JSONArray array = getJSONArray(request);
     for (int i = 0; i < array.length(); i++) {
       final String name = array.getJSONObject(i).optString("name", "");
-      final int count = countTag.isEmpty() ? DEFAULT_COUNT : array.getJSONObject(i).getInt(countTag);
-      if (!name.isEmpty() && !list.contains(name) && (count >= countLimit)) {
+      if (!name.isEmpty() && !list.contains(name)) {
         list.add(name);
       }
     }
@@ -277,7 +270,7 @@ public class SearchFragment extends MainActivityFragment {
       try {
         selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbs), ""));
       } catch (NumberFormatException numberFormatException) {
-        Log.w(LOG_TAG, "Invalid bitrate format: " + bitrate);
+        Log.w(LOG_TAG, "search: invalid bitrate format: " + bitrate);
       }
       for (int i = 0; i < stations.length(); i++) {
         if (Thread.currentThread().isInterrupted()) {
@@ -296,7 +289,7 @@ public class SearchFragment extends MainActivityFragment {
             try {
               icon.set(new RadioURL(new URL(favicon)).getBitmap());
             } catch (MalformedURLException e) {
-              Log.d(LOG_TAG, "search: icon fetch error");
+              Log.w(LOG_TAG, "search: icon fetch error");
             }
             protectedRunOnUiThread(() -> {
               // Ignore old search results
@@ -312,13 +305,13 @@ public class SearchFragment extends MainActivityFragment {
                 if (defaultFrameLayout.getVisibility() == View.VISIBLE) {
                   defaultFrameLayout.setVisibility(View.INVISIBLE);
                 }
-              } catch (MalformedURLException e) {
-                Log.d(LOG_TAG, "Radio could not be created");
+              } catch (MalformedURLException malformedURLException) {
+                Log.w(LOG_TAG, "search: radio could not be created");
               }
             });
           }
-        } catch (JSONException e) {
-          Log.d(LOG_TAG, "Malformed JSON for radio");
+        } catch (JSONException jSONException) {
+          Log.d(LOG_TAG, "search: malformed JSON for radio");
         }
       }
       protectedRunOnUiThread(() -> {
@@ -375,11 +368,11 @@ public class SearchFragment extends MainActivityFragment {
     searchAlertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(View.GONE);
     currentSearchFuture = searchExecutor.submit(() -> {
       try {
-        fetchList(countries, COUNTRIES, NOTHING_TAG, DEFAULT_COUNT, getString(R.string.country));
-        fetchList(radioTags, RADIO_TAGS, "stationcount", MIN_STATION_COUNT, getString(R.string.radio_tag));
+        fetchList(countries, COUNTRIES, getString(R.string.country));
+        fetchList(radioTags, RADIO_TAGS, getString(R.string.radio_tag));
         isServerAvailable = true;
       } catch (IOException | JSONException exception) {
-        Log.d(LOG_TAG, "onResume: radioBrowserServer fetch error", exception);
+        Log.d(LOG_TAG, "handleSearchAlertDialog: radioBrowserServer fetch error", exception);
         isServerAvailable = false;
       }
       bitrates.addAll(Arrays.asList(getResources().getStringArray(R.array.bitrates_array)));
