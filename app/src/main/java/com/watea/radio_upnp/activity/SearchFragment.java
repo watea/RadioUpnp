@@ -215,7 +215,6 @@ public class SearchFragment extends MainActivityFragment {
     return (spinner.getSelectedItemPosition() > 0) ? spinner.getSelectedItem().toString() : "";
   }
 
-  // countLimit < 0 means no limit
   private void fetchList(@NonNull List<String> list, @NonNull String url, @NonNull String select) throws IOException, JSONException {
     final Request request = getRequestBuilder()
       .url(RADIO_BROWSER_SERVER + url)
