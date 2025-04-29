@@ -224,7 +224,7 @@ public class HlsHandler {
 
   // Returns DEFAULT if fails
   synchronized private int getNextSegmentIndex() throws IOException {
-    Log.d(LOG_TAG, "openNextStream");
+    Log.d(LOG_TAG, "getNextSegmentIndex");
     int index = actualSegmentURIs.indexOf(currentActualSegmentURI);
     // Wait if last segment
     while ((index >= 0) && (index == actualSegmentURIs.size() - 1)) {
@@ -233,10 +233,10 @@ public class HlsHandler {
         // Fetch new data
         index = fetchSegmentsFile() ? actualSegmentURIs.indexOf(currentActualSegmentURI) : DEFAULT;
       } catch (InterruptedException interruptedException) {
-        Log.d(LOG_TAG, "openNextStream:", interruptedException);
+        Log.d(LOG_TAG, "getNextSegmentIndex:", interruptedException);
       } catch (URISyntaxException uRISyntaxException) {
-        Log.d(LOG_TAG, "openNextStream:", uRISyntaxException);
-        throw new IOException("openNextStream: error in reading segment URI");
+        Log.d(LOG_TAG, "getNextSegmentIndex:", uRISyntaxException);
+        throw new IOException("getNextSegmentIndex: error in reading segment URI");
       }
     }
     return ((index >= 0) && (index < actualSegmentURIs.size() - 1)) ? ++index : DEFAULT;

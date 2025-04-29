@@ -45,7 +45,7 @@
     <string name="radio_no_playlist">No playlist available!</string>
     <string name="radio_search">Search with online radio database (max. 200 results).\nPlease consider that <b>RadioUpnp</b> is not responsible of contents; it may be outdated or invalid.</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
-    <string name="no_dlna_selection">No UPnP/DLNA device selected</string>
+    <string name="no_dlna_selection">No UPnP/DLNA device selected.</string>
     <string name="radio_name">RADIO NAME</string>
     <string name="searched_words">WORDS TO SEARCH</string>
     <string name="radio_service_notification_name">Radio display and control</string>
@@ -132,6 +132,7 @@
     <string name="sleep_timer_set_for">"Sleep timer set for: %d minutes"</string>
     <string name="cancel_sleep_timer">Cancel sleep</string>
     <string name="alarm_note">Note:\n- Needs network connection\n- Only local playback, no UPnP</string>
+    <string name="search_done">Search done!</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
