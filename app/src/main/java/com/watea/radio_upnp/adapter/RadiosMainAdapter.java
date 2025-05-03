@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -35,6 +36,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
@@ -93,6 +95,7 @@ public class RadiosMainAdapter
     private final int backgroundColor;
     private final int windowBackgroundColor;
     private final int textColor;
+    private final Context context;
 
     protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_radio_name_text_view);
@@ -101,12 +104,17 @@ public class RadiosMainAdapter
       windowBackgroundColor = getTextViewColor(android.R.attr.windowBackground);
       radioTextView.setOnLongClickListener(
         v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
+      context = itemView.getContext();
     }
 
     @Override
     protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
       radioTextView
-        .setCompoundDrawablesRelativeWithIntrinsicBounds(null, bitmapDrawable, null, null);
+        .setCompoundDrawablesRelativeWithIntrinsicBounds(
+          (getLayout() == MainActivity.Layout.ROW) ? bitmapDrawable : null,
+          (getLayout() == MainActivity.Layout.TILE) ? bitmapDrawable : null,
+          null,
+          null);
     }
 
     @Override
@@ -120,6 +128,13 @@ public class RadiosMainAdapter
         (ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ||
           ColorContrastChecker.isMoreThanHalfTransparent(radioBackgroundColor)) ?
           textColor : windowBackgroundColor);
+      radioTextView.getLayoutParams().width = (getLayout() == MainActivity.Layout.TILE) ?
+        context.getResources().getDimensionPixelSize(R.dimen.tile_size) :
+        ViewGroup.LayoutParams.MATCH_PARENT;
+    }
+
+    private MainActivity.Layout getLayout() {
+      return ((MainActivity) context).getLayout();
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {

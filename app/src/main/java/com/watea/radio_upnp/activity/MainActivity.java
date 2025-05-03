@@ -97,6 +97,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -136,6 +137,7 @@ public class MainActivity
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
   private Theme theme = Theme.DARK;
+  private Layout layout = Layout.TILE;
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
@@ -424,6 +426,10 @@ public class MainActivity
     drawerToggle.onConfigurationChanged(newConfig);
   }
 
+  public Layout getLayout() {
+    return layout;
+  }
+
   // Is called also when coming back after a "Back" exit
   @Override
   @SuppressLint({"InflateParams", "NonConstantResourceId"})
@@ -437,6 +443,8 @@ public class MainActivity
     // Theme
     theme = Theme.valueOf(sharedPreferences.getString(getString(R.string.key_theme), theme.toString()));
     setTheme(getCurrentTheme());
+    // Layout
+    layout = Layout.valueOf(sharedPreferences.getString(getString(R.string.key_layout), layout.toString()));
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // Inflate view
@@ -548,20 +556,33 @@ public class MainActivity
         recreate();
       }
     });
-    int radioButtonId;
+    int themeRadioButtonId;
     switch (theme) {
       case DARK:
-        radioButtonId = R.id.dark_radio_button;
+        themeRadioButtonId = R.id.dark_radio_button;
         break;
       case LIGHT:
-        radioButtonId = R.id.light_radio_button;
+        themeRadioButtonId = R.id.light_radio_button;
         break;
       default:
-        radioButtonId = R.id.system_radio_button;
+        themeRadioButtonId = R.id.system_radio_button;
     }
-    ((RadioButton) parametersView.findViewById(radioButtonId)).setChecked(true);
+    ((RadioButton) parametersView.findViewById(themeRadioButtonId)).setChecked(true);
+    final RadioGroup layoutRadioGroup = parametersView.findViewById(R.id.layout_radio_group);
+    layoutRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+      final Layout previousLayout = layout;
+      layout = (group.getCheckedRadioButtonId() == id.row_radio_button) ? Layout.ROW : Layout.TILE;
+      if (layout != previousLayout) {
+        final List<Fragment> fragments = getSupportFragmentManager().getFragments();
+        fragments.stream().filter(fragment -> fragment instanceof MainFragment).findFirst().ifPresent(mainFragment -> ((MainFragment) mainFragment).setLayoutManager());
+      }
+    });
+    final int layoutRadioButtonId = (layout == Layout.TILE) ? R.id.tile_radio_button : R.id.row_radio_button;
+    ((RadioButton) parametersView.findViewById(layoutRadioButtonId)).setChecked(true);
     parametersAlertDialog = new AlertDialog.Builder(this)
       .setView(parametersView)
+      // Restore checked item
+      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
@@ -595,7 +616,10 @@ public class MainActivity
     super.onPause();
     Log.d(LOG_TAG, "onPause");
     // Shared preferences
-    sharedPreferences.edit().putString(getString(string.key_theme), theme.toString()).apply();
+    sharedPreferences.edit()
+      .putString(getString(string.key_theme), theme.toString())
+      .putString(getString(string.key_layout), layout.toString())
+      .apply();
     // Release UPnP service
     unbindService(upnpConnection);
     // Force disconnection to release resources
@@ -866,6 +890,10 @@ public class MainActivity
 
   private enum ImportExportAction {
     JSON_IMPORT, CSV_IMPORT, JSON_EXPORT, CSV_EXPORT
+  }
+
+  public enum Layout {
+    TILE, ROW
   }
 
   public class UserHint {

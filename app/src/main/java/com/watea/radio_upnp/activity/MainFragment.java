@@ -38,6 +38,7 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
@@ -81,7 +82,8 @@ public class MainFragment extends MainActivityFragment {
   private MainActivity.UserHint dlnaEnableUserHint;
   private MainActivity.UserHint preferredRadiosUserHint;
   private boolean isPreferredRadios = false;
-  private RadiosMainAdapter radiosMainAdapter;
+  private RadiosMainAdapter radiosMainAdapter = null;
+  private RecyclerView radiosRecyclerView;
 
   @Override
   public void onResume() {
@@ -170,9 +172,8 @@ public class MainFragment extends MainActivityFragment {
 
   @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
-    final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
-    radiosRecyclerView.setLayoutManager(new VarColumnGridLayoutManager(getContext(), tileSize));
+    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    setLayoutManager();
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapter
     radiosMainAdapter = new RadiosMainAdapter(
@@ -207,6 +208,17 @@ public class MainFragment extends MainActivityFragment {
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
+  }
+
+  @SuppressLint("NotifyDataSetChanged")
+  public void setLayoutManager() {
+    final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
+    radiosRecyclerView.setLayoutManager((getMainActivity().getLayout() == MainActivity.Layout.TILE) ?
+      new VarColumnGridLayoutManager(getContext(), tileSize) :
+      new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
+    if (radiosMainAdapter != null) {
+      radiosMainAdapter.notifyDataSetChanged();
+    }
   }
 
   private void wifiTest(@NonNull Runnable runnable) {

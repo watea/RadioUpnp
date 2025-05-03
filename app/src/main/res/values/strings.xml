@@ -133,6 +133,9 @@
     <string name="cancel_sleep_timer">Cancel sleep</string>
     <string name="alarm_note">Note:\n- Needs network connection\n- Only local playback, no UPnP</string>
     <string name="search_done">Search done!</string>
+    <string name="Layout">Layout</string>
+    <string name="tile_radio_button">Tile</string>
+    <string name="row_radio_button">Row</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
