@@ -123,7 +123,7 @@ public class MainFragment extends MainActivityFragment {
     // Set listener
     getMainActivity().setUpnpIconConsumer(
       bitmap -> {
-        if (upnpMenuItem != null) {
+        if ((upnpMenuItem != null) && isAdded()) {
           upnpMenuItem.setVisible((bitmap != null));
           if (bitmap != null) {
             upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
