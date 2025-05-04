@@ -250,7 +250,7 @@ public abstract class SearchRootFragment extends MainActivityFragment {
 
   private void handleSearchAlertDialog() {
     clearDialog();
-    linearLayout.setVisibility(View.INVISIBLE);
+    linearLayout.setVisibility(View.GONE);
     progressBar.setVisibility(View.VISIBLE);
     searchAlertDialog.show();
     searchAlertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(View.GONE);

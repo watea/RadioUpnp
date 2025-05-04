@@ -23,51 +23,5 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.content.Intent;
-import android.net.Uri;
-import android.view.View;
-import android.view.ViewGroup;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import com.watea.radio_upnp.R;
-
-public class DonationFragment extends MainActivityFragment {
-  private static final Uri LIBERAPAY_URI = Uri.parse("https://liberapay.com/watea/donate");
-  private static final Uri PAYPAL_URI = Uri.parse("https://paypal.me/frwatea?country.x=FR&locale.x=fr_FR");
-
-  // Send a mail for contact
-  @NonNull
-  @Override
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> startActivity(getMainActivity().getNewSendIntent());
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_email_white_24dp;
-  }
-
-  @Override
-  public int getTitle() {
-    return R.string.title_donate;
-  }
-
-  @Override
-  protected int getLayout() {
-    return R.layout.content_donation;
-  }
-
-  @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
-    view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
-    view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
-  }
-
-  @NonNull
-  private View.OnClickListener getLauncher(@NonNull Uri uri) {
-    assert getActivity() != null;
-    return (view -> getActivity().startActivity(new Intent(Intent.ACTION_VIEW, uri)));
-  }
+public class DonationFragment extends OpenDonationFragment {
 }

@@ -38,6 +38,7 @@
 
     <Spinner
         android:id="@+id/donation_google_android_market_spinner"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -47,6 +48,8 @@
         android:theme="@style/SpinnerTheme" />
 
     <TextView
+        android:id="@+id/google_charges_text_view"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -54,6 +57,7 @@
 
     <ImageButton
         android:id="@+id/google_pay_image_button"
+        android:visibility="gone"
         android:layout_width="@dimen/pay_button_size"
         android:layout_height="@dimen/pay_button_size"
         android:layout_gravity="center"
@@ -61,6 +65,8 @@
         app:srcCompat="@drawable/ic_google_play" />
 
     <TextView
+        android:id="@+id/google_or_use_text_view"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/or_use" />

@@ -23,8 +23,6 @@
 
 package com.watea.radio_upnp.activity;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -57,11 +55,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DonationFragment
-  extends MainActivityFragment
+  extends OpenDonationFragment
   implements ConsumeResponseListener, PurchasesUpdatedListener {
   private static final String LOG_TAG = DonationFragment.class.getSimpleName();
-  private static final Uri LIBERAPAY_URI = Uri.parse("https://liberapay.com/watea/donate");
-  private static final Uri PAYPAL_URI = Uri.parse("https://paypal.me/frwatea?country.x=FR&locale.x=fr_FR");
   private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L; // 1s
   private static final long RECONNECT_TIMER_MAX_TIME_MILLISECONDS = 1000L * 60L * 15L; // 15 mins
   private static final Handler handler = new Handler(Looper.getMainLooper());
@@ -112,32 +108,16 @@ public class DonationFragment
     }
   }
 
-  // Send a mail for contact
-  @NonNull
-  @Override
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> startActivity(getMainActivity().getNewSendIntent());
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_email_white_24dp;
-  }
-
-  @Override
-  public int getTitle() {
-    return R.string.title_donate;
-  }
-
-  @Override
-  protected int getLayout() {
-    return R.layout.content_donation;
-  }
-
   @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+    super.onCreateView(view, container);
+    // Visibility
+    view.findViewById(R.id.google_charges_text_view).setVisibility(View.VISIBLE);
+    view.findViewById(R.id.google_pay_image_button).setVisibility(View.VISIBLE);
+    view.findViewById(R.id.google_or_use_text_view).setVisibility(View.VISIBLE);
     // Choose donation amount
     googleSpinner = view.findViewById(R.id.donation_google_android_market_spinner);
+    googleSpinner.setVisibility(View.VISIBLE);
     // Buttons and listeners
     view.findViewById(R.id.google_pay_image_button).setOnClickListener(buttonView -> {
       if (ownProductDetailss.isEmpty() || !billingClient.isReady()) {
@@ -159,8 +139,6 @@ public class DonationFragment
             .build());
       }
     });
-    view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
-    view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
     // Alert dialog
     assert getContext() != null;
     paymentAlertDialogBuilder = new AlertDialog.Builder(getContext())
@@ -229,12 +207,6 @@ public class DonationFragment
           Math.min(reconnectMilliseconds * 2, RECONNECT_TIMER_MAX_TIME_MILLISECONDS);
       }
     });
-  }
-
-  @NonNull
-  private View.OnClickListener getLauncher(@NonNull Uri uri) {
-    assert getActivity() != null;
-    return (view -> getActivity().startActivity(new Intent(Intent.ACTION_VIEW, uri)));
   }
 
   private void logBillingResult(@NonNull String location, @NonNull BillingResult billingResult) {
