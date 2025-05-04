@@ -580,6 +580,8 @@ public class MainActivity
     final int layoutRadioButtonId = (layout == Layout.TILE) ? R.id.tile_radio_button : R.id.row_radio_button;
     ((RadioButton) parametersView.findViewById(layoutRadioButtonId)).setChecked(true);
     parametersAlertDialog = new AlertDialog.Builder(this)
+      .setTitle(string.title_parameters)
+      .setIcon(R.drawable.ic_settings_white_24dp)
       .setView(parametersView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
