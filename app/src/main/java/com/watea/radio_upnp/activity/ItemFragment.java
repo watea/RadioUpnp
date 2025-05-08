@@ -354,10 +354,8 @@ public abstract class ItemFragment extends MainActivityFragment {
     protected void onPostSearch() {
       if (streamContent == null) {
         tell(R.string.connection_test_failed);
-      } else if (!PlayerAdapter.isHandling(streamContent)) {
-        tell(getResources().getString(R.string.mime_not_authorized) + streamContent + ".");
       } else {
-        tell(getResources().getString(R.string.connection_test_successful) + streamContent + ".");
+        tell(getResources().getString(PlayerAdapter.isHandling(streamContent) ? R.string.connection_test_successful : R.string.mime_not_authorized) + streamContent + ".");
       }
     }
   }
