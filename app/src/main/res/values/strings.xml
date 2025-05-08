@@ -33,6 +33,7 @@
     <string name="credit_2">- Apache Commons IO [Apache License 2.0]</string>
     <string name="credit_3">- Jsoup [MIT License]</string>
     <string name="credit_4">- OkHttp [Apache License 2.0]</string>
+    <string name="credit_5">- German translation by Ronny Steiner</string>
     <string name="license">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
     <string name="free_software">This is a free software; see sources for copying conditions.</string>
     <string name="version">Version: </string>
@@ -43,7 +44,7 @@
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio</string>
     <string name="radio_no_playlist">No playlist available!</string>
-    <string name="radio_search">Search with online radio database (max. 200 results).\nPlease consider that <b>RadioUpnp</b> is not responsible of contents; it may be outdated or invalid.</string>
+    <string name="radio_search">Search with online radio database (max. 200 results). Please consider that <b>RadioUpnp</b> is not responsible of contents; it may be outdated or invalid.</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
     <string name="no_dlna_selection">No UPnP/DLNA device selected.</string>
     <string name="radio_name">RADIO NAME</string>

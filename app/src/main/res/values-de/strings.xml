@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2018. Stephane Treuchot
+  ~ German translation (c) 2025. Ronny Steiner
+  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+  ~ of this software and associated documentation files (the "Software"), to deal
+  ~ in the Software without restriction, including without limitation the rights to
+  ~ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+  ~ of the Software, and to permit persons to whom the Software is furnished to
+  ~ do so, subject to the following conditions:
+  ~
+  ~ The above copyright notice and this permission notice shall be included in
+  ~ all copies or substantial portions of the Software.
+  ~
+  ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  ~ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+  ~ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  ~ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  ~ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+  ~ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  ~ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  ~ OTHER DEALINGS IN THE SOFTWARE.
+  -->
+
+<resources>
+    <string name="app_name">RadioUpnp</string>
+    <string name="radio_service_description">Streams radio for RadioUpnp app</string>
+    <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
+    <string name="alarm_service_description">Handles alarms for RadioUpnp app</string>
+    <string name="copyright">Copyright &#169; 2018 Stephane Treuchot</string>
+    <string name="credit">Credit:</string>
+    <string name="credit_0">- Icon by shareicon.net</string>
+    <string name="credit_1">- ExoPlayer [Apache License 2.0]</string>
+    <string name="credit_2">- Apache Commons IO [Apache License 2.0]</string>
+    <string name="credit_3">- Jsoup [MIT License]</string>
+    <string name="credit_4">- OkHttp [Apache License 2.0]</string>
+    <string name="credit_5">- German translation by Ronny Steiner</string>
+    <string name="license">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
+    <string name="free_software">This is a free software; see sources for copying conditions.</string>
+    <string name="version">Version: </string>
+    <string name="void_string"> </string>
+    <string name="no_web_page">Keine Webseite für diesen Sender!</string>
+    <string name="radio_connection_error">Verbindungsfehler mit dem Sender!</string>
+    <string name="no_internet">Internetverbindung nicht verfügbar!</string>
+    <string name="radio_connection_waiting">Sender-Service startet, bitte warten&#8230;</string>
+    <string name="radio_no_radio">Keine Sender</string>
+    <string name="radio_no_playlist">Wiedergabeliste nicht verfügbar!</string>
+    <string name="radio_search">Suche in der Online-Sender-Datenbank (max. 200 Ergebnisse). Bitte beachte, dass <b>RadioUpnp</b> nicht für den Inhalt verantwortlich und dieser möglicherweise veraltet oder fehlerhaft ist.</string>
+    <string name="dlna_selection">UPnP/DLNA-Geräteauswahl:\n</string>
+    <string name="no_dlna_selection">Kein UPnP/DLNA-Gerät ausgewählt.</string>
+    <string name="radio_name">SENDERNAME</string>
+    <string name="searched_words">Suchbegriff</string>
+    <string name="radio_service_notification_name">Radioanzeige und Steuerung</string>
+    <string name="alarm_service_notification_name">Wecker</string>
+    <string name="optional"><b>Optional:</b></string>
+    <string name="legend_streaming_url">Streaming-URL</string>
+    <string name="legend_streaming_url_example">http://fritz.de/livemp3</string>
+    <string name="legend_page_url">Webseiten-URL\n<small>(Klicke <b>ICON SUCHEN</b> zum Laden des Icons von der Webseite)</small></string>
+    <string name="legend_page_url_example">https://fritz.de</string>
+    <string name="icon_url">Icon-URL\n<small>(Klicke <b>ICON SUCHEN</b> zum Laden des Icons oder suche es <b>MANUELL</b>)</small></string>
+    <string name="icon_url_example">https://www.fritz.de/content/dam/rbb/rbb/logos/touch/fritz-152.png</string>
+    <string name="radio_definition_error">Senderdefinition fehlerhaft!</string>
+    <string name="device_no_device_yet">Bis jetzt kein Gerät gefunden.</string>
+    <string name="please_wait">Bitte warten&#8230;</string>
+    <string name="live_streaming">Live-Streaming</string>
+    <string name="no_icon_found">Icon-Suche unter der Icon-URL oder Webseiten-URL fehlgeschlagen!</string>
+    <string name="no_local_icon">Kein gültiges lokales Icon gefunden!</string>
+    <string name="connection_test_failed">Verbindungstest fehlerhaft!</string>
+    <string name="mime_not_authorized">Warnung! MIME-Typ ist nicht zulässig.\nAudio-Inhalt: </string>
+    <string name="connection_test_aborted">Keine Verbindung: Fehlerhafte Streaming-URL!</string>
+    <string name="connection_test_successful">Verbindungstest erfolgreich.\nAudio-Inhalt: </string>
+    <string name="lan_required">Keine LAN/WLAN-Verbindung für die UPnP/DLNA-Funktion gefunden!</string>
+    <string name="radio_long_press">Ein langer Klick öffnet die Webseite des Senders</string>
+    <string name="play_long_press">Ein langer Klick beendet die Wiedergabe</string>
+    <string name="toolbar_press">Das Klicken auf die Wiedergabeleiste schaltet die erweiterte/reduzierte Ansicht um</string>
+    <string name="information_press">Ein Klick auf das Icon des eingestellten Senders zeigt die vergangene Wiedergabeliste an</string>
+    <string name="information_select_press">Ein Klick auf den Titel kopiert die Titelinformation in die Zwischenablage, ein langer Klick kopiert die gesamte Wiedergabeliste</string>
+    <string name="dlna_enable">Ein Klick auf diesen Button startet die Suche nach UPnP/DLNA-Geräte.\n\nEventuell ist eine Anmeldung zum Verbinden notwendig.\nEine schlechte WLAN-Verbindung behindert die Übertragungsqualität.</string>
+    <string name="preferred_radios">Hier werden nur die Favoriten angezeigt.\nDie Lieblingssender werden über den Menüpunkt <b>Bearbeiten</b> eingestellt.</string>
+    <string name="wait_search">Die Suche läuft.\nDas könnte etwas dauern, bitte warten&#8230;</string>
+    <string name="icon_updated">Icon aktualisiert!</string>
+    <string name="donation_button_close">Schließen</string>
+    <string name="donation_description">Findest du diese App nützlich?\nUnterstütze deren Entwicklung mit einer Spende an den Entwickler.\nVielen Dank!</string>
+    <string name="donation_google_android_market_description">(Google erhebt eine Gebühr von 15%)</string>
+    <string name="donation_alert_dialog_title">Fehler aufgetreten!</string>
+    <string name="donation_alert_dialog_try_again">Bitte später erneut versuchen&#8230;</string>
+    <string name="radio_search_failure">Das Abrufen der Daten vom Server ist fehlgeschlagen! Bitte später probieren&#8230;</string>
+    <string name="upnp_error">UPnP-Service ist fehlgeschlagen, bitte kontrolliere die Netzwerkverbindung!</string>
+    <string name="kbs">kbit/s</string>
+    <string name="preferred">Bevorzugt</string>
+    <string name="report_error">Fehler beim Generieren des Reportes!</string>
+    <string name="radio_database_update_failed">Interner Fehler: Senderaktualisierung fehlgeschlagen!</string>
+    <string name="radio_garden_share">Die großartige App <b>Radio Garden</b> kann für die Suche nach neuen Sendern verwendet werden.\n\n<b>Teile den Sender</b> wie abgebildet und wähle anschließend <b>RadioUpnp</b> im Android-Teilen-Fenster aus.\nDer Sender wird dann automatisch nach wenigen Sekunden hinzugefügt!\n</string>
+    <string name="import_message">Wähle das Dateiformat, der Inhalt wird importiert</string>
+    <string name="export_message">[.CSV] oder [.JSON] Export-Datei im auszuwählenden Ordner erzeugen</string>
+    <string name="import_successful">Import erfolgreich!</string>
+    <string name="import_failed">Fehler beim Importieren!</string>
+    <string name="import_no_data">Import beendet: Keine Daten hinzugefügt!</string>
+    <string name="export_done">Export-Datei erstellt:\ </string>
+    <string name="export_failed">Fehler beim Exportieren!</string>
+    <string name="export_failed_not_created">Fehler beim Exportieren: Kann Datei nicht erstellen!</string>
+    <string name="radio_garden_radio_added">Radio Garden Sender hinzugefügt!</string>
+    <string name="try_to_add_from_radio_garden">Versuche den Sender von Radio Garden hinzuzufügen.\nDies könnte etwas dauern, bitte warten&#8230;</string>
+    <string name="play_store_not_installed">Der Play Store ist nicht verfügbar.\nRadio Garden kann nicht installiert werden!</string>
+    <string name="icon_search">Icon suchen</string>
+    <string name="gooogle_play">Google Play</string>
+    <string name="liberapay">liberapay.com</string>
+    <string name="paypal">paypal.com</string>
+    <string name="or_use">oder verwende</string>
+    <string name="Theme">Design</string>
+    <string name="radio_not_defined">Sender konnte in der Datenbank nicht gefunden werden!</string>
+    <string name="copied_to_clipboard">Information wurde in die Zwischenablage kopiert!</string>
+    <string name="server_not_available">Server ist nicht verfügbar. Bitte später probieren&#8230;</string>
+    <string name="country">[Bitte Land auswählen]</string>
+    <string name="radio_tag">[Bitte Tag auswählen]</string>
+    <string name="bitrate">[Bitte Bitrate auswählen]</string>
+    <string name="no_radio_found">Kein Sender gefunden!</string>
+    <string name="alarm_title">"Wecker"</string>
+    <string name="alarm_set_for">"%1$02d:%2$02d"</string>
+    <string name="alarm_cancelled">Wecker abgebrochen!</string>
+    <string name="alarm_not_available">Wecker nicht verfügbar, bitte später probieren&#8230;</string>
+    <string name="no_radio_available">Kein ausgewählter Sender vorhanden, bitte spiele einen Sender!</string>
+    <string name="off">AUS</string>
+    <string name="on">EIN</string>
+    <string name="alarm_radio">Wecker mit dem zuletzt gespielten Sender einrichten:</string>
+    <string name="alarm_can_not_be_set">Android erlaubt nicht das Einrichten eines Weckers!</string>
+    <string name="alarm_not_allowed">Bitte erlaube RadioUpnp das Einrichten von Wecker.</string>
+    <string name="sleep">Der Einschlaf-Timer wird durch einen <b>Doppelklick</b> auf die Wiedergabe/Pause-Taste aktiviert/abgebrochen:</string>
+    <string name="sleep_set">%d Minuten Einschlaf-Timer aktiviert!</string>
+    <string name="sleep_cancelled">Einschlaf-Timer abgebrochen!</string>
+    <string name="minutes">Minuten</string>
+    <string name="remote">(REMOTE)</string>
+    <string name="sleep_timer_title">Einschlafen</string>
+    <string name="sleep_timer_set_for">"Einschlaf-Timer eingestellt auf: %d Minuten"</string>
+    <string name="cancel_sleep_timer">Timer abbrechen</string>
+    <string name="alarm_note">Hinweise:\n<li>Eine Netzwerkverbindung wird benötigt (für den Sender)</li>\n<li>Wiedergabe nur lokal möglich, nicht über UPnP</li></string>
+    <string name="search_done">Suche beendet!</string>
+    <string name="Layout">Layout</string>
+    <string name="tile_radio_button">Kacheln</string>
+    <string name="row_radio_button">Zeilen</string>
+    <!-- Menu titles -->
+    <string name="title_preferred">Favoritenliste</string>
+    <string name="title_main">Wiedergabe</string>
+    <string name="title_item_add">Sender hinzufügen</string>
+    <string name="title_modify">Bearbeiten</string>
+    <string name="title_donate">Spenden</string>
+    <string name="title_parameters">Einstellungen</string>
+    <string name="title_about">Über</string>
+    <string name="title_item_modify">Bearbeiten</string>
+    <string name="title_dlna">UPnP/DLNA</string>
+    <string name="title_log">Report</string>
+    <string name="title_import">Import</string>
+    <string name="title_export">Export</string>
+    <string name="title_radio_garden">Radio Garden</string>
+    <string name="title_search">Suchen</string>
+    <string name="title_alarm">Wecker</string>
+    <string name="title_sleep">Einschlaf-Timer</string>
+    <string name="action_play">Wiedergabe</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_stop">Stopp</string>
+    <string name="action_done">OK</string>
+    <string name="action_move">Verschieben</string>
+    <string name="action_relaunch">Neustart</string>
+    <string name="action_skip_to_next">Nächster Sender</string>
+    <string name="action_skip_to_previous">Vorheriger Sender</string>
+    <string name="action_browse">Manuell</string>
+    <string name="action_go">Los!</string>
+    <string name="action_got_it">Verstanden!</string>
+    <string name="action_all">ALLE AUSWÄHLEN</string>
+    <string name="action_csv_export">.CSV</string>
+    <string name="action_json_export">.JSON</string>
+    <string name="drawer_open">Navigationsleiste öffnen</string>
+    <string name="drawer_close">Navigationsleiste schließen</string>
+    <string name="system_radio_button">System</string>
+    <string name="dark_radio_button">Dunkel</string>
+    <string name="light_radio_button">Hell</string>
+</resources>
