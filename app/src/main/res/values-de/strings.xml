@@ -137,6 +137,7 @@
     <string name="Layout">Layout</string>
     <string name="tile_radio_button">Kacheln</string>
     <string name="row_radio_button">Zeilen</string>
+    <string name="radio_information">Titelinformationen</string>
     <!-- Menu titles -->
     <string name="title_preferred">Favoritenliste</string>
     <string name="title_main">Wiedergabe</string>

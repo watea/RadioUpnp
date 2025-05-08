@@ -352,7 +352,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   private void copyToClipBoard(@NonNull String string) {
     // Copy selectedInformation to clipboard
     final ClipboardManager clipboard = (ClipboardManager) mainActivity.getSystemService(Context.CLIPBOARD_SERVICE);
-    clipboard.setPrimaryClip(ClipData.newPlainText(mainActivity.getString(R.string.key_radio_information), string));
+    clipboard.setPrimaryClip(ClipData.newPlainText(mainActivity.getString(R.string.radio_information), string));
     // Display a toast message to inform the user
     mainActivity.tell(R.string.copied_to_clipboard);
   }

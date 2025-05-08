@@ -137,6 +137,7 @@
     <string name="Layout">Layout</string>
     <string name="tile_radio_button">Tile</string>
     <string name="row_radio_button">Row</string>
+    <string name="radio_information">Radio information</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
