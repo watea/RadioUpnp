@@ -85,7 +85,7 @@
     <string name="donation_alert_dialog_try_again">Bitte später erneut versuchen&#8230;</string>
     <string name="radio_search_failure">Das Abrufen der Daten vom Server ist fehlgeschlagen! Bitte später probieren&#8230;</string>
     <string name="upnp_error">UPnP-Service ist fehlgeschlagen, bitte kontrolliere die Netzwerkverbindung!</string>
-    <string name="kbs">kbit/s</string>
+    <string name="kbps">\u00A0kbps</string>
     <string name="preferred">Bevorzugt</string>
     <string name="report_error">Fehler beim Generieren des Reportes!</string>
     <string name="radio_database_update_failed">Interner Fehler: Senderaktualisierung fehlgeschlagen!</string>

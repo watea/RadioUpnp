@@ -151,7 +151,7 @@ public class SearchFragment extends SearchRootFragment {
     final String bitrate = getBitrate();
     selectedBitrate = 0;
     try {
-      selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbs), ""));
+      selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbps), ""));
     } catch (NumberFormatException numberFormatException) {
       Log.w(LOG_TAG, "getRequest: invalid bitrate format: " + bitrate);
     }
@@ -166,7 +166,7 @@ public class SearchFragment extends SearchRootFragment {
   @Override
   protected void fetchDialogItems() throws IOException, JSONException {
     bitrates.addAll(Arrays.asList(getResources().getStringArray(R.array.bitrates_array)));
-    bitrates.replaceAll(s -> s + getString(R.string.kbs));
+    bitrates.replaceAll(s -> s + getString(R.string.kbps));
     bitrates.add(0, getString(R.string.bitrate));
     fetchList(
       countries,

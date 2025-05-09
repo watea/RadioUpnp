@@ -445,7 +445,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         if (extras != null) {
           final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
           if (rate != null) {
-            playedRadioRateTextView.setText(rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbs));
+            playedRadioRateTextView.setText(rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbps));
           }
         }
         // User help for fist valid information after a few time

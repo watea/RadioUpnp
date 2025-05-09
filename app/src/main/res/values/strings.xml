@@ -85,7 +85,7 @@
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
     <string name="radio_search_failure">Fetching data from server failed! Please try later&#8230;</string>
     <string name="upnp_error">UPnP service failed, please check if network is available!</string>
-    <string name="kbs">kb/s</string>
+    <string name="kbps">\u00A0kbps</string>
     <string name="preferred">Preferred</string>
     <string name="report_error">Error, report could not be generated!</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
