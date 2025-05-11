@@ -24,14 +24,26 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:padding="@dimen/app_margin"
     android:orientation="vertical"
     android:theme="@style/AlertDialogTheme">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/app_margin"
-        android:text="@string/radio_search" />
+        android:text="@string/radio_search_1" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:autoLink="web"
+        android:linksClickable="true"
+        android:text="@string/radio_search_2" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/radio_search_3" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -55,7 +67,6 @@
                 android:id="@+id/name_edit_text"
                 android:layout_width="300dp"
                 android:layout_height="wrap_content"
-                android:layout_margin="@dimen/app_margin"
                 android:hint="@string/searched_words"
                 android:importantForAutofill="no"
                 android:inputType="textCapCharacters"

@@ -44,7 +44,8 @@
     <string name="radio_connection_waiting">Sender-Service startet, bitte warten&#8230;</string>
     <string name="radio_no_radio">Keine Sender</string>
     <string name="radio_no_playlist">Wiedergabeliste nicht verfügbar!</string>
-    <string name="radio_search">Suche in der Online-Sender-Datenbank (max. 200 Ergebnisse). Bitte beachte, dass <b>RadioUpnp</b> nicht für den Inhalt verantwortlich und dieser möglicherweise veraltet oder fehlerhaft ist.</string>
+    <string name="radio_search_1">Suche in der Online-Sender-Datenbank (max. 200 Ergebnisse):</string>
+    <string name="radio_search_3">Bitte beachte, dass <b>RadioUpnp</b> nicht für den Inhalt verantwortlich und dieser möglicherweise veraltet oder fehlerhaft ist.</string>
     <string name="dlna_selection">UPnP/DLNA-Geräteauswahl:\n</string>
     <string name="no_dlna_selection">Kein UPnP/DLNA-Gerät ausgewählt.</string>
     <string name="radio_name">SENDERNAME</string>
@@ -85,7 +86,6 @@
     <string name="donation_alert_dialog_try_again">Bitte später erneut versuchen&#8230;</string>
     <string name="radio_search_failure">Das Abrufen der Daten vom Server ist fehlgeschlagen! Bitte später probieren&#8230;</string>
     <string name="upnp_error">UPnP-Service ist fehlgeschlagen, bitte kontrolliere die Netzwerkverbindung!</string>
-    <string name="kbps">\u00A0kbps</string>
     <string name="preferred">Bevorzugt</string>
     <string name="report_error">Fehler beim Generieren des Reportes!</string>
     <string name="radio_database_update_failed">Interner Fehler: Senderaktualisierung fehlgeschlagen!</string>
@@ -138,6 +138,9 @@
     <string name="tile_radio_button">Kacheln</string>
     <string name="row_radio_button">Zeilen</string>
     <string name="radio_information">Titelinformationen</string>
+    <string name="system_radio_button">System</string>
+    <string name="dark_radio_button">Dunkel</string>
+    <string name="light_radio_button">Hell</string>
     <!-- Menu titles -->
     <string name="title_preferred">Favoritenliste</string>
     <string name="title_main">Wiedergabe</string>
@@ -171,7 +174,4 @@
     <string name="action_json_export">.JSON</string>
     <string name="drawer_open">Navigationsleiste öffnen</string>
     <string name="drawer_close">Navigationsleiste schließen</string>
-    <string name="system_radio_button">System</string>
-    <string name="dark_radio_button">Dunkel</string>
-    <string name="light_radio_button">Hell</string>
 </resources>

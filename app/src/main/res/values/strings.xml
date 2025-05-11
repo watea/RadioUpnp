@@ -44,7 +44,9 @@
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio</string>
     <string name="radio_no_playlist">No playlist available!</string>
-    <string name="radio_search">Search with online radio database (max. 200 results). Please consider that <b>RadioUpnp</b> is not responsible of contents; it may be outdated or invalid.</string>
+    <string name="radio_search_1">Search with online radio database (max. 200 results):</string>
+    <string name="radio_search_2" translatable="false">https://www.radio-browser.info/</string>
+    <string name="radio_search_3">Please consider that <b>RadioUpnp</b> is not responsible of contents; it may be outdated or invalid.</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
     <string name="no_dlna_selection">No UPnP/DLNA device selected.</string>
     <string name="radio_name">RADIO NAME</string>
@@ -85,7 +87,7 @@
     <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
     <string name="radio_search_failure">Fetching data from server failed! Please try later&#8230;</string>
     <string name="upnp_error">UPnP service failed, please check if network is available!</string>
-    <string name="kbps">\u00A0kbps</string>
+    <string name="kbps" translatable="false">\u00A0kbps</string>
     <string name="preferred">Preferred</string>
     <string name="report_error">Error, report could not be generated!</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
@@ -138,6 +140,9 @@
     <string name="tile_radio_button">Tile</string>
     <string name="row_radio_button">Row</string>
     <string name="radio_information">Radio information</string>
+    <string name="system_radio_button">System</string>
+    <string name="dark_radio_button">Dark</string>
+    <string name="light_radio_button">Light</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
@@ -171,7 +176,4 @@
     <string name="action_json_export">.JSON</string>
     <string name="drawer_open">Open navigation drawer</string>
     <string name="drawer_close">Close navigation drawer</string>
-    <string name="system_radio_button">System</string>
-    <string name="dark_radio_button">Dark</string>
-    <string name="light_radio_button">Light</string>
 </resources>
