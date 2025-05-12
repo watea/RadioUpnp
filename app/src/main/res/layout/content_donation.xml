@@ -61,7 +61,7 @@
         android:layout_width="@dimen/pay_button_size"
         android:layout_height="@dimen/pay_button_size"
         android:layout_gravity="center"
-        android:contentDescription="@string/gooogle_play"
+        android:contentDescription="@string/google_play"
         app:srcCompat="@drawable/ic_google_play" />
 
     <TextView

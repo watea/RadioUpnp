@@ -22,7 +22,6 @@
   -->
 
 <resources>
-    <string name="app_name">RadioUpnp</string>
     <string name="radio_service_description">Streams radio for RadioUpnp app</string>
     <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
     <string name="alarm_service_description">Handles alarms for RadioUpnp app</string>
@@ -102,9 +101,6 @@
     <string name="try_to_add_from_radio_garden">Versuche den Sender von Radio Garden hinzuzufügen.\nDies könnte etwas dauern, bitte warten&#8230;</string>
     <string name="play_store_not_installed">Der Play Store ist nicht verfügbar.\nRadio Garden kann nicht installiert werden!</string>
     <string name="icon_search">Icon suchen</string>
-    <string name="gooogle_play">Google Play</string>
-    <string name="liberapay">liberapay.com</string>
-    <string name="paypal">paypal.com</string>
     <string name="or_use">oder verwende</string>
     <string name="Theme">Design</string>
     <string name="radio_not_defined">Sender konnte in der Datenbank nicht gefunden werden!</string>
@@ -170,8 +166,6 @@
     <string name="action_go">Los!</string>
     <string name="action_got_it">Verstanden!</string>
     <string name="action_all">ALLE AUSWÄHLEN</string>
-    <string name="action_csv_export">.CSV</string>
-    <string name="action_json_export">.JSON</string>
     <string name="drawer_open">Navigationsleiste öffnen</string>
     <string name="drawer_close">Navigationsleiste schließen</string>
 </resources>
