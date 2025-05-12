@@ -128,9 +128,9 @@ public class RadiosMainAdapter
         (ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ||
           ColorContrastChecker.isMoreThanHalfTransparent(radioBackgroundColor)) ?
           textColor : windowBackgroundColor);
-      radioTextView.getLayoutParams().width = (getLayout() == MainActivity.Layout.TILE) ?
-        context.getResources().getDimensionPixelSize(R.dimen.tile_size) :
-        ViewGroup.LayoutParams.MATCH_PARENT;
+      final int tileSize = context.getResources().getDimensionPixelSize(R.dimen.tile_size);
+      radioTextView.getLayoutParams().width = (getLayout() == MainActivity.Layout.TILE) ? tileSize : ViewGroup.LayoutParams.MATCH_PARENT;
+      radioTextView.getLayoutParams().height = (getLayout() == MainActivity.Layout.TILE) ? tileSize : ViewGroup.LayoutParams.WRAP_CONTENT;
     }
 
     private MainActivity.Layout getLayout() {
