@@ -38,9 +38,6 @@ import java.net.URISyntaxException;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -118,7 +115,6 @@ public class HlsHandler {
   private static final String MPEGURL = "MPEGURL";
   private static final String TARGET_DURATION = "#EXT-X-TARGETDURATION:";
   private static final int DEFAULT = -1;
-  private static final int CONNECT_DEFAULT_PAUSE = 6000; // ms
   @NonNull
   private final HttpURLConnection httpURLConnection;
   @NonNull
@@ -126,17 +122,17 @@ public class HlsHandler {
   @NonNull
   private final Consumer<String> rateListener;
   @NonNull
-  private final List<URI> actualSegmentURIs = new ArrayList<>();
-  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-  private int targetDuration = CONNECT_DEFAULT_PAUSE; // ms
+  private final List<Segment> actualSegments = new ArrayList<>();
+  private int targetDuration = DEFAULT; // ms
   @Nullable
   private URI segmentsURI = null;
   @Nullable
   private URI actualSegmentsURI = null;
   @Nullable
-  private URI currentActualSegmentURI = null;
+  private Segment currentActualSegment = null;
   @Nullable
   private InputStream currentInputStream = null;
+  private long openStreamTime = DEFAULT;
   private final InputStream inputStream = new InputStream() {
     @Override
     public int read() throws IOException {
@@ -152,7 +148,11 @@ public class HlsHandler {
       int result = currentInputStream.read(b);
       if (result < 0) {
         close();
-        openStream(getNextSegmentIndex());
+        try {
+          openStream(getNextSegmentIndex());
+        } catch (URISyntaxException uRISyntaxException) {
+          throw new IOException("Unable to get next segment");
+        }
         return read(b);
       }
       return result;
@@ -183,11 +183,6 @@ public class HlsHandler {
     return (streamContentType != null) && streamContentType.toUpperCase().contains(MPEGURL);
   }
 
-  // Must be called on release
-  public void release() {
-    executor.shutdown();
-  }
-
   // Only InputStream.read(byte[] b) and InputStream.close() method shall be used.
   // Shall only be called once.
   @NonNull
@@ -195,18 +190,12 @@ public class HlsHandler {
     // Fetch first segments
     if (fetchSegmentsFile()) {
       openStream(0);
-      // Cyclically wakeup (Shannon theorem)
-      executor.scheduleWithFixedDelay(this::wakeUp, 0, targetDuration / 2, TimeUnit.MILLISECONDS);
     }
     return inputStream;
   }
 
-  synchronized private void wakeUp() {
-    notify();
-  }
-
   // Fetch first found URI
-  private void fetchSegmentsURI() throws IOException, URISyntaxException {
+  void fetchSegmentsURI() throws IOException, URISyntaxException {
     // Indirect...
     if (!processURLConnection(
       httpURLConnection,
@@ -222,39 +211,52 @@ public class HlsHandler {
     }
   }
 
-  // Returns DEFAULT if fails
-  synchronized private int getNextSegmentIndex() throws IOException {
+  // Return DEFAULT if fails
+  private int getNextSegmentIndex() throws IOException, URISyntaxException {
     Log.d(LOG_TAG, "getNextSegmentIndex");
-    int index = actualSegmentURIs.indexOf(currentActualSegmentURI);
-    // Wait if last segment
-    while ((index >= 0) && (index == actualSegmentURIs.size() - 1)) {
-      try {
-        wait();
-        // Fetch new data
-        index = fetchSegmentsFile() ? actualSegmentURIs.indexOf(currentActualSegmentURI) : DEFAULT;
-      } catch (InterruptedException interruptedException) {
-        Log.d(LOG_TAG, "getNextSegmentIndex:", interruptedException);
-      } catch (URISyntaxException uRISyntaxException) {
-        Log.d(LOG_TAG, "getNextSegmentIndex:", uRISyntaxException);
-        throw new IOException("getNextSegmentIndex: error in reading segment URI");
+    int index = actualSegments.indexOf(currentActualSegment);
+    if (index == actualSegments.size() - 1) {
+      if (fetchSegmentsFile()) {
+        index = actualSegments.indexOf(currentActualSegment);
+        return (index < 0) ? 0 : (index == actualSegments.size() - 1) ? DEFAULT : ++index;
+      } else {
+        return DEFAULT;
       }
+    } else {
+      return ++index;
     }
-    return ((index >= 0) && (index < actualSegmentURIs.size() - 1)) ? ++index : DEFAULT;
   }
 
-  // Flush currentInputStream if index < 0
-  synchronized private void openStream(int index) throws IOException {
-    currentActualSegmentURI = (index < 0) ? null : actualSegmentURIs.get(index);
-    currentInputStream =
-      (currentActualSegmentURI == null) ? null : currentActualSegmentURI.toURL().openStream();
+  // Flush currentInputStream if index < 0, else index must be valid
+  private void openStream(int index) throws IOException {
+    Log.d(LOG_TAG, "openStream: index=" + index);
+    if (index < 0) {
+      currentInputStream = null;
+      return;
+    }
+    // Wait if needed, to avoid reading to fast
+    if (currentActualSegment != null) {
+      final long delta = System.currentTimeMillis() - openStreamTime - currentActualSegment.getDuration();
+      if (delta <= 0) {
+        try {
+          Log.d(LOG_TAG, "openStream: wait => " + (-delta) + " ms");
+          Thread.sleep(-delta);
+        } catch (InterruptedException InterruptedException) {
+          Log.d(LOG_TAG, "openStream: unable to sleep");
+        }
+      }
+    }
+    openStreamTime = System.currentTimeMillis();
+    currentActualSegment = actualSegments.get(index);
+    currentInputStream = currentActualSegment.openStream();
   }
 
   // Seek URI for segments and all segment data.
-  // Returns true if OK.
+  // Return true if OK.
   private boolean fetchSegmentsFile() throws IOException, URISyntaxException {
     Log.d(LOG_TAG, "fetchSegmentsFile");
     // Reset segments
-    actualSegmentURIs.clear();
+    actualSegments.clear();
     if (actualSegmentsURI != null) {
       assert segmentsURI != null;
       // Fetch
@@ -271,17 +273,20 @@ public class HlsHandler {
         // Segment URI & base URL for segments
         testIf(EXTINF, (line1, line2) -> {
           assert actualSegmentsURI != null;
-          actualSegmentURIs.add(actualSegmentsURI.resolve(new URI(line2)));
+          actualSegments.add(new Segment(
+            actualSegmentsURI.resolve(new URI(line2)),
+            (long) (parseDoubleFor(EXTINF, line1) * 1000)));
           return false;
         }));
     }
-    return !actualSegmentURIs.isEmpty();
+    Log.d(LOG_TAG, "actualSegments size: " + actualSegments.size() + " targetDuration: " + targetDuration + " ms");
+    return !actualSegments.isEmpty();
   }
 
-  // Utility to find an integer in a string after key
+  // Utility to find a number in a string after key
   @Nullable
   private String findStringFor(@NonNull String key, @NonNull String string) {
-    final Pattern pattern = Pattern.compile(".*" + key + "([0-9]*).*");
+    final Pattern pattern = Pattern.compile(".*" + key + "(\\d+(?:\\.\\d+)?).*");
     final Matcher matcher = pattern.matcher(string);
     return (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
   }
@@ -291,7 +296,18 @@ public class HlsHandler {
       try {
         return Integer.parseInt(string);
       } catch (NumberFormatException numberFormatException) {
-        Log.d(LOG_TAG, "parseString: found malformed number for " + string);
+        Log.d(LOG_TAG, "parseIntIn: found malformed number for " + string);
+      }
+    }
+    return DEFAULT;
+  }
+
+  private double parseDoubleIn(@Nullable String string) {
+    if (string != null) {
+      try {
+        return Double.parseDouble(string);
+      } catch (NumberFormatException numberFormatException) {
+        Log.d(LOG_TAG, "parseLongIn: found malformed number for " + string);
       }
     }
     return DEFAULT;
@@ -300,6 +316,11 @@ public class HlsHandler {
   @SuppressWarnings("SameParameterValue")
   private int parseIntFor(@NonNull String key, @NonNull String string) {
     return parseIntIn(findStringFor(key, string));
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private double parseDoubleFor(@NonNull String key, @NonNull String string) {
+    return parseDoubleIn(findStringFor(key, string));
   }
 
   @NonNull
@@ -329,5 +350,38 @@ public class HlsHandler {
 
   private interface Predicate {
     boolean test(@NonNull String line1, @NonNull String line2) throws URISyntaxException;
+  }
+
+  private static class Segment {
+    @NonNull
+    private final URI uRI;
+    private final long duration;
+
+    public Segment(@NonNull URI uRI, long duration) {
+      this.duration = duration;
+      this.uRI = uRI;
+    }
+
+    public long getDuration() {
+      return duration;
+    }
+
+    @NonNull
+    public InputStream openStream() throws IOException {
+      return uRI.toURL().openStream();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+      if (this == obj) return true;
+      if (obj == null || getClass() != obj.getClass()) return false;
+      final Segment segment = (Segment) obj;
+      return uRI.equals(segment.uRI);
+    }
+
+    @Override
+    public int hashCode() {
+      return uRI.hashCode();
+    }
   }
 }

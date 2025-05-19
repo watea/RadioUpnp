@@ -176,9 +176,6 @@ public class RadioHandler implements HttpServer.Handler {
     } catch (URISyntaxException uRISyntaxException) {
       Log.e(LOG_TAG, "handle: failed to get input stream", uRISyntaxException);
     }
-    if (hlsHandler != null) {
-      hlsHandler.release();
-    }
   }
 
   private void setHeader(@NonNull URLConnection urlConnection) {
