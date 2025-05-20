@@ -132,7 +132,7 @@ public class HlsHandler {
   private Segment currentActualSegment = null;
   @Nullable
   private InputStream currentInputStream = null;
-  private long openStreamTime = DEFAULT;
+  private long currentInputStreamTime = DEFAULT;
   private final InputStream inputStream = new InputStream() {
     @Override
     public int read() throws IOException {
@@ -148,10 +148,17 @@ public class HlsHandler {
       int result = currentInputStream.read(b);
       if (result < 0) {
         close();
+        final int index;
         try {
-          openStream(getNextSegmentIndex());
+          index = getNextSegmentIndex();
         } catch (URISyntaxException uRISyntaxException) {
-          throw new IOException("Unable to get next segment");
+          Log.e(LOG_TAG, "read: unable to get next segment index", uRISyntaxException);
+          throw new IOException();
+        }
+        if ((index < 0) || (index >= actualSegments.size())) {
+          throw new IOException("read: index is invalid");
+        } else {
+          openStream(index);
         }
         return read(b);
       }
@@ -230,24 +237,21 @@ public class HlsHandler {
   // Flush currentInputStream if index < 0, else index must be valid
   private void openStream(int index) throws IOException {
     Log.d(LOG_TAG, "openStream: index=" + index);
-    if (index < 0) {
-      currentInputStream = null;
-      return;
-    }
     // Wait if needed, to avoid reading to fast
-    if (currentActualSegment != null) {
-      final long delta = System.currentTimeMillis() - openStreamTime - currentActualSegment.getDuration();
-      if (delta <= 0) {
+    if ((currentActualSegment != null) && (currentActualSegment.getDuration() != DEFAULT)) {
+      final long delta = currentInputStreamTime + currentActualSegment.getDuration() - System.currentTimeMillis();
+      if (delta > 0) {
         try {
-          Log.d(LOG_TAG, "openStream: wait => " + (-delta) + " ms");
-          Thread.sleep(-delta);
+          Log.d(LOG_TAG, "openStream: wait => " + delta + " ms");
+          Thread.sleep(delta);
         } catch (InterruptedException InterruptedException) {
           Log.d(LOG_TAG, "openStream: unable to sleep");
         }
       }
     }
-    openStreamTime = System.currentTimeMillis();
     currentActualSegment = actualSegments.get(index);
+    currentInputStreamTime = System.currentTimeMillis();
+    assert currentActualSegment != null;
     currentInputStream = currentActualSegment.openStream();
   }
 
