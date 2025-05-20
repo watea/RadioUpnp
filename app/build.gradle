@@ -9,8 +9,8 @@ android {
         applicationId "com.watea.radio_upnp"
         minSdkVersion 26
         targetSdkVersion 35
-        versionCode 27146
-        versionName "2.71.46"
+        versionCode 27147
+        versionName "2.71.47"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -59,7 +59,7 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.activity:activity:1.10.1'
-    implementation 'androidx.media3:media3-exoplayer:1.6.1' // Exoplayer
+    implementation 'androidx.media3:media3-exoplayer:1.7.1' // Exoplayer
     implementation 'com.google.code.gson:gson:2.11.0' // GSON
     fullImplementation 'com.android.billingclient:billing:7.1.1'
     // jsoup HTML parser library @ http://jsoup.org/
