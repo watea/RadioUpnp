@@ -91,7 +91,7 @@ public class RadioService
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
-  private static final String EMPTY_MEDIA_ROOT_ID = "empty_media_root_id";
+  private static final String MEDIA_ROOT_ID = "root_id";
   private static final String PLAYLIST_SEPARATOR = "##";
   private static final String PLAYLIST_ITEM_SEPARATOR = "&&";
   private static final int FOREGROUND_NOTIFICATION_ID = 9;
@@ -217,6 +217,7 @@ public class RadioService
     // Link to callback where actual media controls are called...
     session.setCallback(mediaSessionCompatCallback);
     setSessionToken(session.getSessionToken());
+    session.setActive(true);
     // Notification
     CHANNEL_ID = getResources().getString(R.string.app_name) + "." + LOG_TAG;
     notificationManager = NotificationManagerCompat.from(this);
@@ -291,6 +292,7 @@ public class RadioService
     // Release UPnP service
     unbindService(upnpConnection);
     // Finally session
+    session.setActive(false);
     session.release();
   }
 
@@ -299,14 +301,27 @@ public class RadioService
   @Override
   public BrowserRoot onGetRoot(
     @NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
-    return new BrowserRoot(EMPTY_MEDIA_ROOT_ID, null);
+    return new BrowserRoot(MEDIA_ROOT_ID, null);
   }
 
   // Not used by app
   @Override
-  public void onLoadChildren(
-    @NonNull final String parentMediaId,
-    @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
+  public void onLoadChildren(@NonNull final String parentMediaId, @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
+    if (MEDIA_ROOT_ID.equals(parentMediaId)) {
+      final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
+      for (Radio radio : Radios.getInstance()) {
+        final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
+          .setMediaId(radio.getId())
+          .setTitle(radio.getName())
+          .setIconBitmap(radio.getIcon())
+          .build();
+        final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
+        mediaItems.add(item);
+      }
+      result.sendResult(mediaItems);
+    } else {
+      result.sendResult(null);
+    }
   }
 
   @Override
@@ -420,7 +435,6 @@ public class RadioService
             radioHttpServer.resetRadioHandlerController();
           }
           session.setMetadata(null);
-          session.setActive(false);
           stopForeground(STOP_FOREGROUND_REMOVE);
           stopSelf();
           isAllowedToRewind = false;
@@ -568,8 +582,8 @@ public class RadioService
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     // mediaId == null => last played radio
     @Override
-    public void onPrepareFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
-      Log.d(LOG_TAG, "onPrepareFromMediaId");
+    public void onPlayFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
+      Log.d(LOG_TAG, "onPlayFromMediaId");
       // Ensure robustness
       if (upnpService != null) {
         upnpService.getActionController().release();
@@ -588,19 +602,18 @@ public class RadioService
       final Radio previousRadio = radio;
       radio = Radios.getInstance().getRadioFromId(mediaId);
       if (radio == null) {
-        Log.e(LOG_TAG, "onPrepareFromMediaId: radio not found");
+        Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
         return;
       }
       // Catch catastrophic failure
       if (radioHttpServer == null) {
-        Log.e(LOG_TAG, "onPrepareFromMediaId: radioHttpServer is null");
+        Log.e(LOG_TAG, "onPlayFromMediaId: radioHttpServer is null");
         return;
       }
       // UPnP not accepted if environment not OK: force local processing
       final Uri serverUri = radioHttpServer.getUri();
       final Device selectedDevice = ((serverUri == null) || (upnpService == null)) ? null : upnpService.getSelectedDevice();
       // Synchronize session data
-      session.setActive(true);
       session.setExtras(new Bundle());
       lockKey = UUID.randomUUID().toString();
       // Tag metadata with package name to enable session discrepancy
@@ -637,14 +650,14 @@ public class RadioService
         startForegroundService(new Intent(RadioService.this, RadioService.class));
       } else {
         playerAdapter.stop();
-        Log.d(LOG_TAG, "onPrepareFromMediaId: playerAdapter.prepareFromMediaId failed");
+        Log.d(LOG_TAG, "onPlayFromMediaId: playerAdapter.prepareFromMediaId failed");
       }
     }
 
     @Override
     public void onPlay() {
       assert radio != null;
-      onPrepareFromMediaId(radio);
+      onPlayFromMediaId(radio);
     }
 
     @Override
@@ -702,12 +715,12 @@ public class RadioService
 
     private void skipTo(int direction) {
       assert radio != null;
-      onPrepareFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
+      onPlayFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
     }
 
     // Same extras are reused
-    private void onPrepareFromMediaId(@NonNull Radio radio) {
-      onPrepareFromMediaId(Integer.toString(radio.hashCode()), mediaController.getExtras());
+    private void onPlayFromMediaId(@NonNull Radio radio) {
+      onPlayFromMediaId(Integer.toString(radio.hashCode()), mediaController.getExtras());
     }
   }
 }

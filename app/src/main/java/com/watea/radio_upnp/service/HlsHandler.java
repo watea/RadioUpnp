@@ -202,7 +202,7 @@ public class HlsHandler {
   }
 
   // Fetch first found URI
-  void fetchSegmentsURI() throws IOException, URISyntaxException {
+  private void fetchSegmentsURI() throws IOException, URISyntaxException {
     // Indirect...
     if (!processURLConnection(
       httpURLConnection,

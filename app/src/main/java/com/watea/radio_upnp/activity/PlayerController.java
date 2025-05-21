@@ -232,7 +232,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   }
 
   // Must be called on activity resume
-  public void onActivityResume() {
+  public void onActivityCreate() {
     // Launch RadioService, may fail if already called and connection not ended
     try {
       mediaBrowser.connect();
@@ -241,9 +241,9 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     }
   }
 
-  // Must be called on activity pause.
+  // Must be called on activity destroy.
   // Handle services.
-  public void onActivityPause() {
+  public void onActivityDestroy() {
     // Disconnect mediaBrowser
     mediaBrowser.disconnect();
     // Forced suspended connection
@@ -255,7 +255,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       // Should not happen
       mainActivity.tell(R.string.radio_connection_waiting);
     } else {
-      mediaController.getTransportControls().prepareFromMediaId(radio.getId(), null);
+      mediaController.getTransportControls().playFromMediaId(radio.getId(), null);
     }
   }
 

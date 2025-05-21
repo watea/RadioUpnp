@@ -611,6 +611,8 @@ public class MainActivity
     });
     // Store intent
     newIntent = getIntent();
+    // PlayerController init
+    playerController.onActivityCreate();
   }
 
   @Override
@@ -626,10 +628,16 @@ public class MainActivity
     unbindService(upnpConnection);
     // Force disconnection to release resources
     upnpConnection.onServiceDisconnected(null);
-    // Clear PlayerController call
-    playerController.onActivityPause();
     // Clear AlarmController call
     alarmController.onActivityPause();
+  }
+
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+    Log.d(LOG_TAG, "onDestroy");
+    // Clear PlayerController call
+    playerController.onActivityDestroy();
   }
 
   @Override
@@ -653,8 +661,6 @@ public class MainActivity
       radioGardenController.onNewIntent(newIntent);
       newIntent = null;
     }
-    // PlayerController init
-    playerController.onActivityResume();
     // AlarmController init
     alarmController.onActivityResume();
   }

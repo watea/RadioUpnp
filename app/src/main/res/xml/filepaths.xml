@@ -22,7 +22,9 @@
   -->
 
 <paths>
+
     <files-path
         name="app_root"
         path="." />
+
 </paths>
