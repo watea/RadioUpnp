@@ -47,7 +47,8 @@
             android:name="com.watea.radio_upnp.service.RadioService"
             android:description="@string/radio_service_description"
             android:enabled="true"
-            android:exported="false"
+            android:exported="true"
+            android:permission="android.permission.BIND_MEDIA_BROWSER_SERVICE"
             android:foregroundServiceType="mediaPlayback|connectedDevice">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
@@ -101,6 +102,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
         </provider>
+
+        <meta-data
+            android:name="android.media.browse.MediaBrowserService"
+            android:resource="@xml/media_browser_service" />
+
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
 
     </application>
 
