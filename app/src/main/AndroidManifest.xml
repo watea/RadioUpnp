@@ -104,10 +104,6 @@
         </provider>
 
         <meta-data
-            android:name="android.media.browse.MediaBrowserService"
-            android:resource="@xml/media_browser_service" />
-
-        <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 

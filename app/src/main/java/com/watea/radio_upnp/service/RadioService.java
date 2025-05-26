@@ -296,7 +296,6 @@ public class RadioService
     session.release();
   }
 
-  // Not used by app
   @NonNull
   @Override
   public BrowserRoot onGetRoot(
@@ -304,7 +303,6 @@ public class RadioService
     return new BrowserRoot(MEDIA_ROOT_ID, null);
   }
 
-  // Not used by app
   @Override
   public void onLoadChildren(@NonNull final String parentMediaId, @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
     if (MEDIA_ROOT_ID.equals(parentMediaId)) {
