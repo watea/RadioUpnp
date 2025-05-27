@@ -49,8 +49,8 @@
             android:description="@string/radio_service_description"
             android:enabled="true"
             android:exported="true"
-            android:permission="android.permission.BIND_MEDIA_BROWSER_SERVICE"
-            android:foregroundServiceType="mediaPlayback|connectedDevice">
+            android:foregroundServiceType="mediaPlayback|connectedDevice"
+            tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
