@@ -36,8 +36,8 @@
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="@dimen/tile_size"
+        android:layout_height="@dimen/tile_size"
         android:layout_gravity="center_horizontal"
         android:importantForAccessibility="no"
         android:padding="@dimen/app_margin" />

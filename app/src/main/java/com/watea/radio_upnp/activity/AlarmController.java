@@ -30,7 +30,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -126,8 +125,7 @@ public class AlarmController {
     // Selected radio
     radio = alarmService.isStarted() ? alarmService.getRadio() : mainActivity.getLastPlayedRadio();
     final boolean isPossible = (radio != null);
-    final Bitmap bitmap = isPossible ? Radio.crop(radio.getIcon()) : mainActivity.getDefaultIcon();
-    imageView.setImageBitmap(Radio.iconResize(bitmap));
+    imageView.setImageBitmap(isPossible ? radio.getIcon() : mainActivity.getDefaultIcon());
     textView.setText(isPossible ? radio.getName() : mainActivity.getString(R.string.no_radio_available));
     // Init toggleButton
     toggleButton.setOnCheckedChangeListener(null);

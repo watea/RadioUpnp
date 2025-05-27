@@ -337,7 +337,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     playedRadioLinearLayout.setVisibility(MainActivityFragment.getVisibleFrom(isVisible));
     if (isVisible) {
       playedRadioNameTextView.setText(radio.getName());
-      albumArtImageView.setImageBitmap(Radio.iconResize(radio.getIcon()));
+      albumArtImageView.setImageBitmap(radio.getIcon());
       setPreferredButton(radio.isPreferred());
     } else {
       setDefaultPlayImageButton();

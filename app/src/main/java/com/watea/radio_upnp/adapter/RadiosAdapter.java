@@ -40,6 +40,7 @@ import java.util.function.Supplier;
 public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   extends RecyclerView.Adapter<V> {
   protected static final int DEFAULT = -1;
+  private static final float RADIO_ICON_HEIGHT_RATIO = 0.6f;
   @NonNull
   protected final Supplier<List<Radio>> radiosSupplier;
   private final int row;
@@ -85,15 +86,20 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
 
     // Places the Drawable relatively to radioTextView
     protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
-      radioTextView
-        .setCompoundDrawablesRelativeWithIntrinsicBounds(bitmapDrawable, null, null, null);
+      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(bitmapDrawable, null, null, null);
     }
 
     protected void setView(@NonNull Radio radio) {
       this.radio = radio;
-      setImage(new BitmapDrawable(
-        radioTextView.getResources(), Radio.iconHalfResize(this.radio.getIcon())));
-      radioTextView.setText(this.radio.getName());
+      radioTextView.post(() -> {
+        // Detached?
+        if (radioTextView.getHeight() > 0) {
+          setImage(new BitmapDrawable(
+            radioTextView.getResources(),
+            this.radio.resizeToWidth((int) (radioTextView.getHeight() * RADIO_ICON_HEIGHT_RATIO))));
+          radioTextView.setText(this.radio.getName());
+        }
+      });
     }
   }
 }

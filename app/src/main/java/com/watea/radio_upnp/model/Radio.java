@@ -156,9 +156,13 @@ public class Radio {
     return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
   }
 
+  // Crop bitmap as a square
   @NonNull
-  public static Bitmap iconHalfResize(@NonNull Bitmap bitmap) {
-    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE / 2);
+  public static Bitmap crop(@NonNull Bitmap icon) {
+    final int height = icon.getHeight();
+    final int width = icon.getWidth();
+    final int min = Math.min(height, width);
+    return (height == width) ? icon : Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
   }
 
   // Store bitmap as filename.png
@@ -174,15 +178,6 @@ public class Radio {
       throw new FileNotFoundException();
     }
     return new File(context.getFilesDir().getPath() + "/" + fileName);
-  }
-
-  // Crop bitmap as a square
-  @NonNull
-  public static Bitmap crop(@NonNull Bitmap icon) {
-    final int height = icon.getHeight();
-    final int width = icon.getWidth();
-    final int min = Math.min(height, width);
-    return (height == width) ? icon : Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
   }
 
   @Nullable
@@ -321,6 +316,13 @@ public class Radio {
       .put(MIME, mime)
       .put(QUALITY, quality)
       .put(IS_PREFERRED, isPreferred);
+  }
+
+  @NonNull
+  public Bitmap resizeToWidth(int targetWidth) {
+    final float ratio = (float) icon.getHeight() / icon.getWidth();
+    final int targetHeight = (int) (targetWidth * ratio);
+    return Bitmap.createScaledBitmap(icon, targetWidth, targetHeight, true);
   }
 
   @NonNull

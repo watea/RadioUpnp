@@ -36,7 +36,7 @@
         <TextView
             android:id="@+id/row_modify_radio_text_view"
             android:layout_width="250dp"
-            android:layout_height="wrap_content"
+            android:layout_height="@dimen/tile_size"
             android:layout_alignParentStart="true"
             android:layout_toStartOf="@+id/row_radio_preferred_image_button"
             android:clickable="false"

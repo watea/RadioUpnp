@@ -25,8 +25,8 @@
 
     android:id="@+id/row_radio_name_text_view"
     style="@style/Widget.AppCompat.Button.Borderless"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/tile_size"
     android:layout_margin="@dimen/app_horizontal_margin"
     android:ellipsize="end"
     android:maxLines="2"
