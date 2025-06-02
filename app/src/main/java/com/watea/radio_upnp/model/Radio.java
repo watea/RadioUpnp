@@ -283,11 +283,12 @@ public class Radio {
     return Integer.toString(hashCode());
   }
 
+  // METADATA_KEY_MEDIA_ID starts with appId and ends with getId()
   @NonNull
-  public MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull String postfix) {
+  public MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull String appId, @NonNull String postfix) {
     final Bitmap icon = getIcon();
     return new MediaMetadataCompat.Builder()
-      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, getId())
+      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, appId + getId())
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, name + postfix)
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, "")

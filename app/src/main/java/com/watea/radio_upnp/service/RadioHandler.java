@@ -124,6 +124,8 @@ public class RadioHandler implements HttpServer.Handler {
       new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
     Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
     final boolean isHls = HlsHandler.isHls(httpURLConnection);
+    // Reset information
+    listener.onNewInformation("", lockKey);
     // Reset rate
     final String directRate = httpURLConnection.getHeaderField("icy-br");
     listener.onNewRate((isHls || (directRate == null)) ? "" : directRate, lockKey);

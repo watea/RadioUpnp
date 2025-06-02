@@ -269,7 +269,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   @Nullable
   public Radio getCurrentRadio() {
     final MediaMetadataCompat mediaMetadataCompat = (mediaController == null) ? null : mediaController.getMetadata();
-    final String radioId = (mediaMetadataCompat == null) ? null : mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
+    final String radioId = (mediaMetadataCompat == null) ? null : RadioService.getRadioId(mainActivity, mediaMetadataCompat);
     return (radioId == null) ? null : Radios.getInstance().getRadioFromId(radioId);
   }
 
@@ -436,7 +436,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     // Manage dynamic data
     @Override
     public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
-      if ((mediaMetadata != null) && RadioService.isValid(mediaMetadata)) {
+      if ((mediaMetadata != null) && RadioService.isValid(mainActivity, mediaMetadata)) {
         // Use SubTitle as notification
         final CharSequence information = mediaMetadata.getDescription().getSubtitle();
         playedRadioInformationTextView.setText(information);
@@ -470,7 +470,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       // Sync existing MediaSession state with UI
       onNewCurrentRadio();
       final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
-      if ((mediaMetadataCompat != null) && RadioService.isValid(mediaMetadataCompat)) {
+      if ((mediaMetadataCompat != null) && RadioService.isValid(mainActivity, mediaMetadataCompat)) {
         // Order matters here for display coherence
         mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
         mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);

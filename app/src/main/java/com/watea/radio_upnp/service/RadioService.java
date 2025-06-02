@@ -29,6 +29,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ServiceInfo;
@@ -156,9 +157,15 @@ public class RadioService
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
 
-  public static boolean isValid(@NonNull MediaMetadataCompat mediaMetadataCompat) {
-    return getSessionTag()
-      .equals(mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI));
+  public static boolean isValid(@NonNull Context context, @NonNull MediaMetadataCompat mediaMetadataCompat) {
+    final String metadataKeyMediaId = mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
+    return (metadataKeyMediaId != null) && metadataKeyMediaId.startsWith(context.getString(R.string.app_name));
+  }
+
+  @Nullable
+  public static String getRadioId(@NonNull Context context, @NonNull MediaMetadataCompat mediaMetadataCompat) {
+    final String metadataKeyMediaId = mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
+    return (metadataKeyMediaId == null) ? null : metadataKeyMediaId.replace(context.getString(R.string.app_name), "");
   }
 
   @NonNull
@@ -188,13 +195,6 @@ public class RadioService
       return ((playlist == null) || playlist.isEmpty()) ?
         information : playlist + PLAYLIST_SEPARATOR + information;
     }
-  }
-
-  @NonNull
-  private static String getSessionTag() {
-    final Package thisPackage = RadioService.class.getPackage();
-    assert thisPackage != null;
-    return thisPackage.getName();
   }
 
   @Override
@@ -309,7 +309,7 @@ public class RadioService
       final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
       for (Radio radio : Radios.getInstance()) {
         final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
-          .setMediaId(radio.getId())
+          .setMediaId(getString(R.string.app_name) + radio.getId())
           .setTitle(radio.getName())
           .setIconBitmap(radio.getIcon())
           .build();
@@ -331,7 +331,7 @@ public class RadioService
         final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
         if (mediaMetadataCompat != null) {
           final String playlist = mediaMetadataCompat.getString(PLAYLIST);
-          session.setMetadata(getTaggedMediaMetadataBuilder(radio)
+          session.setMetadata(getTaggedMediaMetadataBuilder()
             .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
             .putString(PLAYLIST, addPlaylistItem(playlist, information))
             .build());
@@ -349,8 +349,6 @@ public class RadioService
   // Should be called at beginning of reading for proper display
   @Override
   public void onNewRate(@Nullable final String rate, @NonNull final String lockKey) {
-    // Flush previous information and ensure session meta data is tagged
-    onNewInformation("", lockKey);
     // We add current rate to current media data
     runIfLocked(lockKey, () -> {
       // Rate in extras
@@ -447,10 +445,12 @@ public class RadioService
   }
 
   @NonNull
-  private MediaMetadataCompat.Builder getTaggedMediaMetadataBuilder(@NonNull Radio radio) {
-    return radio
-      .getMediaMetadataBuilder(playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "")
-      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, getSessionTag());
+  private MediaMetadataCompat.Builder getTaggedMediaMetadataBuilder() {
+    return (radio == null) ?
+      new MediaMetadataCompat.Builder() :
+      radio.getMediaMetadataBuilder(
+        getString(R.string.app_name),
+        playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "");
   }
 
   @SuppressLint("SwitchIntDef")
@@ -611,14 +611,8 @@ public class RadioService
       // UPnP not accepted if environment not OK: force local processing
       final Uri serverUri = radioHttpServer.getUri();
       final Device selectedDevice = ((serverUri == null) || (upnpService == null)) ? null : upnpService.getSelectedDevice();
-      // Synchronize session data
-      session.setExtras(new Bundle());
-      lockKey = UUID.randomUUID().toString();
-      // Tag metadata with package name to enable session discrepancy
-      if (radio != previousRadio) {
-        session.setMetadata(getTaggedMediaMetadataBuilder(radio).build());
-      }
       // Set playerAdapter
+      lockKey = UUID.randomUUID().toString();
       if (selectedDevice == null) {
         playerAdapter = new LocalPlayerAdapter(
           RadioService.this,
@@ -639,6 +633,11 @@ public class RadioService
           actionController,
           contentProvider);
         session.setPlaybackToRemote(volumeProviderCompat);
+      }
+      // Synchronize session data
+      if (radio != previousRadio) {
+        session.setExtras(new Bundle());
+        session.setMetadata(getTaggedMediaMetadataBuilder().build());
       }
       // Set controller for HTTP handler
       radioHttpServer.setRadioHandlerController(radioHandlerController);
