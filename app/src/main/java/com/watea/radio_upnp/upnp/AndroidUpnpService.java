@@ -174,9 +174,10 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity) {
+      final Device previousDevice = getSelectedDevice();
       final SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.app_name), Context.MODE_PRIVATE);
       sharedPreferences.edit().putString(getString(R.string.key_selected_device), selectedDeviceIdentity).apply();
-      tellSelectedDeviceIdentity(null);
+      tellSelectedDeviceIdentity(previousDevice);
     }
 
     public void tellSelectedDeviceIdentity(@Nullable Device previousDevice) {
