@@ -173,22 +173,18 @@ public abstract class ItemFragment extends MainActivityFragment {
         }
         Bitmap bitmap = null;
         if (result.getResultCode() == Activity.RESULT_OK) {
-          final Intent data = result.getData();
-          final Uri uri = (data == null) ? null : data.getData();
-          if (uri != null) {
-            try {
-              bitmap =
-                BitmapFactory.decodeStream(context.getContentResolver().openInputStream(uri));
-              if (bitmap != null) {
-                setRadioIcon(bitmap);
-              }
-            } catch (FileNotFoundException fileNotFoundException) {
-              Log.d(LOG_TAG, "Error performing icon local search", fileNotFoundException);
-            }
+          try {
+            final Intent data = result.getData();
+            final Uri uri = (data == null) ? null : data.getData();
+            bitmap = (uri == null) ? null : BitmapFactory.decodeStream(context.getContentResolver().openInputStream(uri));
+          } catch (Exception exception) {
+            Log.d(LOG_TAG, "Error performing icon local search", exception);
           }
         }
         if (bitmap == null) {
           tell(R.string.no_local_icon);
+        } else {
+          setRadioIcon(bitmap);
         }
       });
     view.findViewById(R.id.browse_button).setOnClickListener(iconView ->
