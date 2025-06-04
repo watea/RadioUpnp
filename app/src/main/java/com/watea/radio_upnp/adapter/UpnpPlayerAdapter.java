@@ -78,7 +78,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private final Service connectionManager;
   @NonNull
   private final Service avTransportService;
-  @NonNull
+  @Nullable
   private final Service renderingControl;
   @NonNull
   private final Watchdog watchdog;
@@ -109,7 +109,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     avTransportService = Objects.requireNonNull(device.getShortService(AV_TRANSPORT_SERVICE_ID));
     // Those services are mandatory in UPnP standard
     connectionManager = Objects.requireNonNull(device.getShortService(CONNECTION_MANAGER_ID));
-    renderingControl = Objects.requireNonNull(device.getShortService(RENDERING_CONTROL_ID));
+    renderingControl = device.getShortService(RENDERING_CONTROL_ID); // May be null; UPnP violation on some devices...
     // Watchdog tests if reader is actually playing
     watchdog = new Watchdog(this.actionController, avTransportService) {
       @Override
@@ -315,7 +315,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   // On calling thread
   private void executeActionSetVolume() {
-    final Action action = renderingControl.getAction(ACTION_SET_VOLUME);
+    final Action action = (renderingControl == null) ? null : renderingControl.getAction(ACTION_SET_VOLUME);
     if (action != null) {
       Log.d(LOG_TAG, "Volume required: " + currentVolume);
       new UpnpAction(action, actionController, instanceId) {
@@ -334,7 +334,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Nullable
   private UpnpAction getActionGetVolume() {
-    final Action action = renderingControl.getAction(ACTION_GET_VOLUME);
+    final Action action = (renderingControl == null) ? null : renderingControl.getAction(ACTION_GET_VOLUME);
     return (action == null) ? null :
       new UpnpAction(action, actionController, instanceId) {
         @Override
