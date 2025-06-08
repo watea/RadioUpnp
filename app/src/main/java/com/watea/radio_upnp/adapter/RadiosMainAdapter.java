@@ -129,7 +129,9 @@ public class RadiosMainAdapter
           ColorContrastChecker.isMoreThanHalfTransparent(radioBackgroundColor)) ?
           textColor : windowBackgroundColor);
       final int tileSize = context.getResources().getDimensionPixelSize(R.dimen.tile_size);
-      radioTextView.getLayoutParams().width = (getLayout() == MainActivity.Layout.TILE) ? tileSize : ViewGroup.LayoutParams.MATCH_PARENT;
+      final boolean isTile = (getLayout() == MainActivity.Layout.TILE);
+      radioTextView.getLayoutParams().width = isTile ? tileSize : ViewGroup.LayoutParams.MATCH_PARENT;
+      radioTextView.getLayoutParams().height = isTile ? tileSize : context.getResources().getDimensionPixelSize(R.dimen.row_height);
     }
 
     private MainActivity.Layout getLayout() {
