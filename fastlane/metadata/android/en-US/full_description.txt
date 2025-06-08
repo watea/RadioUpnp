@@ -1,1 +1,35 @@
-<p><i>RadioUpnp</i> reads any internet radio. Minimalist and full customizable: make the radio player you want. Go to Add screen, fill radio data and fetch icon, or search thanks to the use of the free web radio database onrad.io, and it’s done!</p><p><i>RadioUpnp</i> is one of the rare app that streams radio to UPnP/DLNA players on your local network, and it is the only one that displays in the same time radio stream information (like song title or author).</p><p>It is a free and ad free app; you may support the developper effort in the Donate menu... thank you;)</p><p><b>Notes:</b></p><ul><li>The use of onrad.io is provided as a help to build your own reader. RadioUpnp is not reponsible for the content returned by database fetch (and the radios already set are given as examples), so please avoid evaluations requesting to add your favorite radios...</li><li>Streaming on UPnP strongly depends on your UPnP/DLNA speaker. Troubles may occur not directly related to this app.</li><li>In case of troubles, please send a report to the developer using the Menu&gt;Report function.</li></ul>
+<p><i>RadioUpnp</i> lets you enjoy web radios with uninterrupted playback, even when the app is in the background or the screen is off.</p>
+
+<p>Minimalist and fully customizable, you can easily build your own radio playlist:</p>
+<ul>
+  <li>Use the built-in Search screen to find and add radios</li>
+  <li>Use the RadioGarden app and share results directly to RadioUpnp</li>
+  <li>Still not finding your favorite radio? Add it manually via the Add/Edit screen</li>
+</ul>
+
+<p><i>RadioUpnp</i> is one of the rare apps that streams radios to UPnP/DLNA speakers while showing metadata (like track title or artist)<sup>*</sup> — ideal for smart homes or audiophile setups.</p>
+
+<p>It's completely free and ad-free. You can support development via the Donate menu. Thank you!</p>
+
+<hr>
+
+<p>🔊 <b>Foreground Playback Notice</b><br>
+Playback is always started manually by the user via a Play button.<br>
+To ensure continuous playback even when the app is in the background or the screen is locked, a <b>foreground service</b> is used with a visible and controllable notification (play/pause, next/previous).<br>
+This complies with Google's policy for <code>FOREGROUND_SERVICE_MEDIA_PLAYBACK</code>.</p>
+
+<p>📡 <b>UPnP Streaming Notice</b><br>
+When streaming to a UPnP/DLNA speaker, RadioUpnp uses a foreground service with a clear playback notification and device control.<br>
+This complies with Google's policy for <code>FOREGROUND_SERVICE_CONNECTED_DEVICE</code>.</p>
+
+<hr>
+
+<p>📌 <b>Troubleshooting Tips</b>:</p>
+<ul>
+  <li>Some phone brands (e.g. Samsung, OnePlus) may apply battery optimization that disrupts streaming. Disable optimization in battery settings for RadioUpnp.</li>
+  <li>Streaming quality and compatibility depend on your UPnP/DLNA device (supported CODECs, etc.).</li>
+  <li>If you use ad blockers or firewall apps, UPnP streaming may be blocked.</li>
+  <li>Need help? Use the in-app Report function to contact the developer.</li>
+</ul>
+
+<p><sup>*</sup> when the Icy metadata standard is supported.</p>
