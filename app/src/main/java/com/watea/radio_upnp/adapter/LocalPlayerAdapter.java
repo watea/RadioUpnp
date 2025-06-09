@@ -56,7 +56,10 @@ public class LocalPlayerAdapter extends PlayerAdapter {
             break;
           }
         case ExoPlayer.STATE_ENDED:
-          changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED);
+          // Do nothing if we are already stopped
+          if (state != PlaybackStateCompat.STATE_STOPPED) {
+            changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          }
           break;
         // Should not happen
         default:
