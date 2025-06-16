@@ -137,6 +137,7 @@
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dunkel</string>
     <string name="light_radio_button">Hell</string>
+    <string name="no_file_picker_found">Kein Dateiauswahldialog gefunden!</string>
     <!-- Menu titles -->
     <string name="title_preferred">Favoritenliste</string>
     <string name="title_main">Wiedergabe</string>

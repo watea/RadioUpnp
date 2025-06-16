@@ -28,6 +28,7 @@ import static com.watea.radio_upnp.R.string;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
@@ -784,12 +785,20 @@ public class MainActivity
     navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
   }
 
+  private void safeLaunch(@NonNull Intent intent, @NonNull ActivityResultLauncher<Intent> launcher) {
+    try {
+      launcher.launch(intent);
+    } catch (ActivityNotFoundException activityNotFoundException) {
+      tell(R.string.no_file_picker_found);
+    }
+  }
+
   private void exportFile() {
     final android.content.DialogInterface.OnClickListener listener =
       (dialog, which) -> {
-        importExportLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE));
         importExportAction = (which == DialogInterface.BUTTON_NEUTRAL) ?
           ImportExportAction.CSV_EXPORT : ImportExportAction.JSON_EXPORT;
+        safeLaunch(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), importExportLauncher);
       };
     new AlertDialog.Builder(this)
       .setTitle(string.title_export)
@@ -815,7 +824,7 @@ public class MainActivity
           intent.setType(Radios.MIME_JSON);
           importExportAction = ImportExportAction.JSON_IMPORT;
         }
-        importExportLauncher.launch(intent);
+        safeLaunch(intent, importExportLauncher);
       };
     new AlertDialog.Builder(this)
       .setTitle(string.title_import)

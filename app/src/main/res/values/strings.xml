@@ -143,6 +143,7 @@
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dark</string>
     <string name="light_radio_button">Light</string>
+    <string name="no_file_picker_found">No file picker found!</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
