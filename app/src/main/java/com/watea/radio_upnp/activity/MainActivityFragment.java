@@ -96,10 +96,8 @@ public abstract class MainActivityFragment extends Fragment {
   public void onCreateOptionsMenu(@NonNull Menu menu) {
   }
 
-  @NonNull
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> {
-    };
+  public int getMenuId() {
+    return DEFAULT_RESOURCE;
   }
 
   @NonNull
@@ -107,13 +105,10 @@ public abstract class MainActivityFragment extends Fragment {
     return v -> false;
   }
 
-  public int getFloatingActionButtonResource() {
-    return DEFAULT_RESOURCE;
-  }
+  @NonNull
+  public abstract View.OnClickListener getFloatingActionButtonOnClickListener();
 
-  public int getMenuId() {
-    return DEFAULT_RESOURCE;
-  }
+  public abstract int getFloatingActionButtonResource();
 
   public abstract int getTitle();
 
