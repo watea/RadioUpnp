@@ -34,6 +34,7 @@ import android.widget.Spinner;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.service.RadioURL;
 
@@ -48,14 +49,27 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import okhttp3.Dns;
 import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
 
 public class SearchFragment extends SearchRootFragment {
   private static final String LOG_TAG = SearchFragment.class.getSimpleName();
   private static final int MAX_RADIOS = 200;
   private static final int MAX_TAGS = 200;
+  private static final String HTTPS = "https";
+  private static final String JSON = "json";
+  private static final String ALL_HOSTS = "all.api.radio-browser.info";
+  private static final List<String> RB_HOSTS = Arrays.asList(
+    "fr1.api.radio-browser.info",
+    "de1.api.radio-browser.info",
+    "nl1.api.radio-browser.info",
+    "at1.api.radio-browser.info"
+  );
   private final List<String> countries = new ArrayList<>();
   private final List<String> radioTags = new ArrayList<>();
   private final List<String> bitrates = new ArrayList<>();
@@ -64,14 +78,6 @@ public class SearchFragment extends SearchRootFragment {
   private Spinner radioTagSpinner;
   private Spinner bitrateSpinner;
   private int selectedBitrate = 0;
-
-  @NonNull
-  private static HttpUrl.Builder getRadioBrowserBuilder() {
-    return new HttpUrl.Builder()
-      .scheme("https")
-      .host("all.api.radio-browser.info")
-      .addPathSegment("json");
-  }
 
   @Override
   public void onPause() {
@@ -97,6 +103,50 @@ public class SearchFragment extends SearchRootFragment {
     radioTagSpinner = searchView.findViewById(R.id.radio_tag_spinner);
     bitrateSpinner = searchView.findViewById(R.id.rate_spinner);
     nameEditText = searchView.findViewById(R.id.name_edit_text);
+  }
+
+  // Search for most viable host
+  @NonNull
+  private HttpUrl.Builder getRadioBrowserBuilder() {
+    for (String host : RB_HOSTS) {
+      final HttpUrl url = new HttpUrl.Builder()
+        .scheme(HTTPS)
+        .host(host)
+        .addPathSegment(JSON)
+        .build();
+      // Light ping
+      final Request request = new Request.Builder().url(url.newBuilder().addPathSegment("stats").build()).build();
+      try (final Response response = getClient().newCall(request).execute()) {
+        if (response.isSuccessful()) {
+          // First OK
+          return url.newBuilder();
+        }
+      } catch (IOException ignored) {
+        // Nothing to do
+      }
+    }
+    // Last chance
+    return new HttpUrl.Builder()
+      .scheme(HTTPS)
+      .host(ALL_HOSTS)
+      .addPathSegment(JSON);
+  }
+
+  @NonNull
+  private OkHttpClient getClient() {
+    final String userAgent = requireContext().getString(R.string.app_name)
+      + "/" + BuildConfig.VERSION_NAME
+      + " (Android)";
+    return new OkHttpClient.Builder()
+      .dns(Dns.SYSTEM)
+      .connectTimeout(5, TimeUnit.SECONDS)
+      .readTimeout(10, TimeUnit.SECONDS)
+      .addInterceptor(chain -> chain.proceed(
+        chain.request()
+          .newBuilder()
+          .header("User-Agent", userAgent)
+          .build()))
+      .build();
   }
 
   private String getCountry() {
