@@ -578,7 +578,6 @@ public class RadioService
 
   // PlayerAdapter from session for actual media controls
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
-    // mediaId == null => last played radio
     @Override
     public void onPlayFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       Log.d(LOG_TAG, "onPlayFromMediaId");
