@@ -44,7 +44,6 @@ import com.watea.radio_upnp.upnp.Watchdog;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 public class UpnpPlayerAdapter extends PlayerAdapter {
@@ -74,13 +73,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   private final ContentProvider contentProvider;
   @Nullable
   private final Uri logoUri;
-  @NonNull
+  @Nullable
   private final Service connectionManager;
-  @NonNull
+  @Nullable
   private final Service avTransportService;
   @Nullable
   private final Service renderingControl;
-  @NonNull
+  @Nullable
   private final Watchdog watchdog;
   @NonNull
   private final String information; // Not final in further use
@@ -106,12 +105,12 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     this.logoUri = logoUri;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
-    avTransportService = Objects.requireNonNull(device.getShortService(AV_TRANSPORT_SERVICE_ID));
+    avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
     // Those services are mandatory in UPnP standard
-    connectionManager = Objects.requireNonNull(device.getShortService(CONNECTION_MANAGER_ID));
-    renderingControl = device.getShortService(RENDERING_CONTROL_ID); // May be null; UPnP violation on some devices...
+    connectionManager = device.getShortService(CONNECTION_MANAGER_ID);
+    renderingControl = device.getShortService(RENDERING_CONTROL_ID);
     // Watchdog tests if reader is actually playing
-    watchdog = new Watchdog(this.actionController, avTransportService) {
+    watchdog = (avTransportService == null) ? null : new Watchdog(this.actionController, avTransportService) {
       @Override
       public void onEvent(@NonNull ReaderState readerState) {
         // Do nothing if paused as event has already been sent
@@ -232,7 +231,9 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   protected void onRelease() {
-    watchdog.kill();
+    if (watchdog != null) {
+      watchdog.kill();
+    }
   }
 
   // For further use
@@ -259,7 +260,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   private void scheduleActionPlay() {
     scheduleMandatoryAction(
-      avTransportService.getAction(ACTION_PLAY),
+      (avTransportService == null) ? null : avTransportService.getAction(ACTION_PLAY),
       action -> new UpnpAction(action, actionController, instanceId) {
         // Actual Playing state is tested by Watchdog, so nothing to do in case of success
         @Override
@@ -273,7 +274,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   private void scheduleActionStop() {
     scheduleMandatoryAction(
-      avTransportService.getAction(ACTION_STOP),
+      (avTransportService == null) ? null : avTransportService.getAction(ACTION_STOP),
       action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
@@ -293,7 +294,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   private void scheduleActionPrepareForConnection() {
     scheduleOptionalAction(
-      connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION),
+      (connectionManager == null) ? null : connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION),
       action -> new UpnpAction(action, actionController) {
         @Override
         protected void onSuccess() {
@@ -372,12 +373,13 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   private void scheduleActionSetAvTransportUri() {
     scheduleMandatoryAction(
-      avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
+      ((watchdog == null) || (avTransportService == null)) ? null : avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
       action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
           changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
           // Now instanceId is known, we launch watchdog
+          assert watchdog != null;
           watchdog.start(instanceId);
           super.onSuccess();
         }
@@ -396,7 +398,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   private void scheduleActionGetProtocolInfo() {
     scheduleMandatoryAction(
-      connectionManager.getAction(ACTION_GET_PROTOCOL_INFO),
+      (connectionManager == null) ? null : connectionManager.getAction(ACTION_GET_PROTOCOL_INFO),
       action -> new UpnpAction(action, actionController) {
         @Override
         protected void onSuccess() {
