@@ -652,7 +652,6 @@ public class RadioService
 
     @Override
     public void onPlay() {
-      assert radio != null;
       onPlayFromMediaId(radio);
     }
 
@@ -710,13 +709,22 @@ public class RadioService
     }
 
     private void skipTo(int direction) {
-      assert radio != null;
-      onPlayFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
+      if (radio == null) {
+        // Should not happen
+        Log.e(LOG_TAG, "skipTo: radio is null!");
+      } else {
+        onPlayFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
+      }
     }
 
     // Same extras are reused
-    private void onPlayFromMediaId(@NonNull Radio radio) {
-      onPlayFromMediaId(Integer.toString(radio.hashCode()), mediaController.getExtras());
+    private void onPlayFromMediaId(@Nullable Radio radio) {
+      if (radio == null) {
+        // Should not happen
+        Log.e(LOG_TAG, "onPlayFromMediaId: radio is null!");
+      } else {
+        onPlayFromMediaId(Integer.toString(radio.hashCode()), mediaController.getExtras());
+      }
     }
   }
 }
