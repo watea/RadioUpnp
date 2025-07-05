@@ -24,6 +24,7 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -43,15 +44,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Random;
+import java.util.function.Function;
 
-import okhttp3.Dns;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -61,23 +65,21 @@ public class SearchFragment extends SearchRootFragment {
   private static final String LOG_TAG = SearchFragment.class.getSimpleName();
   private static final int MAX_RADIOS = 200;
   private static final int MAX_TAGS = 200;
-  private static final String HTTPS = "https";
-  private static final String JSON = "json";
-  private static final String ALL_HOSTS = "all.api.radio-browser.info";
-  private static final List<String> RB_HOSTS = Arrays.asList(
-    "fr1.api.radio-browser.info",
-    "de1.api.radio-browser.info",
-    "nl1.api.radio-browser.info",
-    "at1.api.radio-browser.info"
-  );
   private final List<String> countries = new ArrayList<>();
   private final List<String> radioTags = new ArrayList<>();
   private final List<String> bitrates = new ArrayList<>();
+  private RadioBrowserClient radioBrowserClient;
   private EditText nameEditText;
   private Spinner countrySpinner;
   private Spinner radioTagSpinner;
   private Spinner bitrateSpinner;
   private int selectedBitrate = 0;
+
+  @Override
+  public void onAttach(@NonNull Context context) {
+    super.onAttach(context);
+    radioBrowserClient = new RadioBrowserClient(context);
+  }
 
   @Override
   public void onPause() {
@@ -90,11 +92,6 @@ public class SearchFragment extends SearchRootFragment {
       .apply();
   }
 
-  @Override
-  public int getTitle() {
-    return R.string.title_search;
-  }
-
   @SuppressLint("InflateParams")
   @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
@@ -105,87 +102,9 @@ public class SearchFragment extends SearchRootFragment {
     nameEditText = searchView.findViewById(R.id.name_edit_text);
   }
 
-  // Search for most viable host
-  @NonNull
-  private HttpUrl.Builder getRadioBrowserBuilder() {
-    for (String host : RB_HOSTS) {
-      final HttpUrl url = new HttpUrl.Builder()
-        .scheme(HTTPS)
-        .host(host)
-        .addPathSegment(JSON)
-        .build();
-      // Light ping
-      final Request request = new Request.Builder().url(url.newBuilder().addPathSegment("stats").build()).build();
-      try (final Response response = getClient().newCall(request).execute()) {
-        if (response.isSuccessful()) {
-          // First OK
-          return url.newBuilder();
-        }
-      } catch (IOException ignored) {
-        // Nothing to do
-      }
-    }
-    // Last chance
-    return new HttpUrl.Builder()
-      .scheme(HTTPS)
-      .host(ALL_HOSTS)
-      .addPathSegment(JSON);
-  }
-
-  @NonNull
-  private OkHttpClient getClient() {
-    final String userAgent = requireContext().getString(R.string.app_name)
-      + "/" + BuildConfig.VERSION_NAME
-      + " (Android)";
-    return new OkHttpClient.Builder()
-      .dns(Dns.SYSTEM)
-      .connectTimeout(5, TimeUnit.SECONDS)
-      .readTimeout(10, TimeUnit.SECONDS)
-      .addInterceptor(chain -> chain.proceed(
-        chain.request()
-          .newBuilder()
-          .header("User-Agent", userAgent)
-          .build()))
-      .build();
-  }
-
-  private String getCountry() {
-    return getSpinnerValue(countrySpinner);
-  }
-
-  private String getRadioTag() {
-    return getSpinnerValue(radioTagSpinner);
-  }
-
-  private String getBitrate() {
-    return getSpinnerValue(bitrateSpinner);
-  }
-
-  private String getSpinnerValue(@NonNull Spinner spinner) {
-    return (spinner.getSelectedItemPosition() > 0) ? spinner.getSelectedItem().toString() : "";
-  }
-
-  private void fetchList(@NonNull List<String> list, @NonNull String url, @NonNull String select) throws IOException, JSONException {
-    final Request request = getRequestBuilder().url(url).build();
-    final JSONArray array = getJSONArray(request);
-    for (int i = 0; i < array.length(); i++) {
-      final String name = array.getJSONObject(i).optString("name", "");
-      if (!name.isEmpty() && !list.contains(name)) {
-        list.add(name);
-      }
-    }
-    list.sort(Comparator.naturalOrder());
-    list.add(0, select);
-  }
-
-  private void setSpinner(
-    @NonNull Spinner spinner,
-    @NonNull ArrayAdapter<String> arrayAdapter,
-    @NonNull List<String> list,
-    int key) {
-    spinner.setAdapter(arrayAdapter);
-    final int position = list.indexOf(getSharedPreferences().getString(getString(key), ""));
-    spinner.setSelection(Math.max(position, 0));
+  @Override
+  protected JSONArray getStations() throws IOException, JSONException {
+    return getJSONArray(getRequest());
   }
 
   @Override
@@ -195,24 +114,6 @@ public class SearchFragment extends SearchRootFragment {
     bitrates.clear();
   }
 
-  @NonNull
-  @Override
-  protected Request getRequest() {
-    final String bitrate = getBitrate();
-    selectedBitrate = 0;
-    try {
-      selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbps), ""));
-    } catch (NumberFormatException numberFormatException) {
-      Log.w(LOG_TAG, "getRequest: invalid bitrate format: " + bitrate);
-    }
-    HttpUrl.Builder httpUrlBuilder = getRadioBrowserBuilder().addPathSegments("stations/search");
-    httpUrlBuilder = buildQuery(httpUrlBuilder, "country", getCountry());
-    httpUrlBuilder = buildQuery(httpUrlBuilder, "tag", getRadioTag());
-    httpUrlBuilder = buildQuery(httpUrlBuilder, "name", nameEditText.getText().toString().trim());
-    httpUrlBuilder.addQueryParameter("limit", Integer.toString(MAX_RADIOS));
-    return getRequestBuilder().url(httpUrlBuilder.build().toString()).build();
-  }
-
   @Override
   protected void fetchDialogItems() throws IOException, JSONException {
     bitrates.addAll(Arrays.asList(getResources().getStringArray(R.array.bitrates_array)));
@@ -220,11 +121,18 @@ public class SearchFragment extends SearchRootFragment {
     bitrates.add(0, getString(R.string.bitrate));
     fetchList(
       countries,
-      getRadioBrowserBuilder().addPathSegment("countries").build().toString(),
+      httpUrlBuilder -> httpUrlBuilder
+        .addPathSegment("json")
+        .addPathSegment("countries"),
       getString(R.string.country));
     fetchList(
       radioTags,
-      getRadioBrowserBuilder().addPathSegment("tags").query("order=stationcount&reverse=true&limit=" + MAX_TAGS).build().toString(),
+      httpUrlBuilder -> httpUrlBuilder
+        .addPathSegment("json")
+        .addPathSegment("tags")
+        .addQueryParameter("order", "stationcount")
+        .addQueryParameter("reverse", "true")
+        .addQueryParameter("limit", Integer.toString(MAX_TAGS)),
       getString(R.string.radio_tag));
   }
 
@@ -258,5 +166,129 @@ public class SearchFragment extends SearchRootFragment {
       return true;
     }
     return false;
+  }
+
+  private String getCountry() {
+    return getSpinnerValue(countrySpinner);
+  }
+
+  private String getRadioTag() {
+    return getSpinnerValue(radioTagSpinner);
+  }
+
+  private String getBitrate() {
+    return getSpinnerValue(bitrateSpinner);
+  }
+
+  private String getSpinnerValue(@NonNull Spinner spinner) {
+    return (spinner.getSelectedItemPosition() > 0) ? spinner.getSelectedItem().toString() : "";
+  }
+
+  private void buildQuery(@NonNull HttpUrl.Builder builder, @NonNull String key, @NonNull String query) {
+    if (!query.isEmpty()) {
+      builder.addQueryParameter(key, query);
+    }
+  }
+
+  @NonNull
+  private JSONArray getJSONArray(@NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder) throws IOException, JSONException {
+    try (final Response response = radioBrowserClient.search(baseUrlBuilder)) {
+      if (response.isSuccessful()) {
+        return (response.body() == null) ? new JSONArray() : new JSONArray(response.body().string());
+      } else {
+        throw new IOException("Unexpected code " + response);
+      }
+    }
+  }
+
+  private void fetchList(@NonNull List<String> list, @NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder, @NonNull String select) throws IOException, JSONException {
+    final JSONArray array = getJSONArray(baseUrlBuilder);
+    for (int i = 0; i < array.length(); i++) {
+      final String name = array.getJSONObject(i).optString("name", "");
+      if (!name.isEmpty() && !list.contains(name)) {
+        list.add(name);
+      }
+    }
+    list.sort(Comparator.naturalOrder());
+    list.add(0, select);
+  }
+
+  private void setSpinner(
+    @NonNull Spinner spinner,
+    @NonNull ArrayAdapter<String> arrayAdapter,
+    @NonNull List<String> list,
+    int key) {
+    spinner.setAdapter(arrayAdapter);
+    final int position = list.indexOf(getSharedPreferences().getString(getString(key), ""));
+    spinner.setSelection(Math.max(position, 0));
+  }
+
+  @NonNull
+  private Function<HttpUrl.Builder, HttpUrl.Builder> getRequest() {
+    final String bitrate = getBitrate();
+    selectedBitrate = 0;
+    try {
+      selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbps), ""));
+    } catch (NumberFormatException numberFormatException) {
+      Log.w(LOG_TAG, "getRequest: invalid bitrate format: " + bitrate);
+    }
+    return httpUrlBuilder -> {
+      httpUrlBuilder
+        .addPathSegment("json")
+        .addPathSegment("stations")
+        .addPathSegment("search");
+      buildQuery(httpUrlBuilder, "country", getCountry());
+      buildQuery(httpUrlBuilder, "tag", getRadioTag());
+      buildQuery(httpUrlBuilder, "name", nameEditText.getText().toString().trim());
+      httpUrlBuilder.addQueryParameter("limit", Integer.toString(MAX_RADIOS));
+      return httpUrlBuilder;
+    };
+  }
+
+  private static class RadioBrowserClient {
+    private static final String ALL_HOSTS = "all.api.radio-browser.info";
+    private static final long CONNECT = 5;
+    private static final long READ = 10;
+    private final OkHttpClient client;
+    private final Random random = new Random();
+
+    public RadioBrowserClient(@NonNull Context context) {
+      final String userAgent = context.getString(R.string.app_name)
+        + "/" + BuildConfig.VERSION_NAME
+        + " (Android)";
+      client = new OkHttpClient.Builder()
+        .connectTimeout(Duration.ofSeconds(CONNECT))
+        .readTimeout(Duration.ofSeconds(READ))
+        .addInterceptor(chain -> chain.proceed(
+          chain.request().newBuilder()
+            .header("User-Agent", userAgent)
+            .build()))
+        .build();
+    }
+
+    @NonNull
+    public Response search(@NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder) throws IOException {
+      IOException last = null;
+      for (int attempt = 0; attempt < 3; attempt++) {
+        try {
+          final HttpUrl base = baseUrlBuilder.apply(pickBaseUrlBuilder()).build();
+          return client.newCall(new Request.Builder().url(base).get().build()).execute();
+        } catch (IOException iOException) {
+          last = iOException;
+        }
+      }
+      throw last;
+    }
+
+    @NonNull
+    private HttpUrl.Builder pickBaseUrlBuilder() throws UnknownHostException {
+      final InetAddress[] ips = InetAddress.getAllByName(ALL_HOSTS);
+      if (ips.length == 0) {
+        throw new UnknownHostException(ALL_HOSTS);
+      }
+      final InetAddress ip = ips[random.nextInt(ips.length)];
+      final String host = ip.getCanonicalHostName();
+      return new HttpUrl.Builder().scheme("https").host(host);
+    }
   }
 }

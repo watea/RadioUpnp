@@ -37,7 +37,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosSearchAdapter;
 import com.watea.radio_upnp.model.Radio;
@@ -54,14 +53,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-
 public abstract class SearchRootFragment extends MainActivityFragment {
   private static final String LOG_TAG = SearchRootFragment.class.getSimpleName();
-  protected final OkHttpClient httpClient = new OkHttpClient();
   private final ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
   protected String name;
   protected String stream;
@@ -105,6 +98,11 @@ public abstract class SearchRootFragment extends MainActivityFragment {
         handleSearchAlertDialog();
       }
     };
+  }
+
+  @Override
+  public int getTitle() {
+    return R.string.title_search;
   }
 
   @Override
@@ -157,19 +155,6 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     searchExecutor.shutdown();
   }
 
-  @NonNull
-  protected JSONArray getJSONArray(@NonNull Request request) throws IOException, JSONException {
-    try (final Response response = httpClient.newCall(request).execute()) {
-      if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-      return (response.body() == null) ? new JSONArray() : buildJSONArray(response.body().string());
-    }
-  }
-
-  @NonNull
-  protected Request.Builder getRequestBuilder() {
-    return new Request.Builder().header("User-Agent", getString(R.string.app_name) + "/" + BuildConfig.VERSION_NAME);
-  }
-
   protected Radio buildRadio() throws MalformedURLException {
     return new Radio(
       name,
@@ -178,20 +163,9 @@ public abstract class SearchRootFragment extends MainActivityFragment {
       homepage.isEmpty() ? null : new URL(homepage));
   }
 
-  @NonNull
-  protected JSONArray buildJSONArray(@NonNull String string) throws JSONException {
-    return new JSONArray(string);
-  }
-
-  @NonNull
-  protected HttpUrl.Builder buildQuery(@NonNull HttpUrl.Builder builder, @NonNull String key, @NonNull String query) {
-    return query.isEmpty() ? builder : builder.addQueryParameter(key, query);
-  }
-
   protected abstract void clearDialog();
 
-  @NonNull
-  protected abstract Request getRequest();
+  protected abstract JSONArray getStations() throws IOException, JSONException;
 
   protected abstract void fetchDialogItems() throws IOException, JSONException;
 
@@ -209,7 +183,7 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     currentSearchFuture = searchExecutor.submit(() -> {
       final JSONArray stations;
       try {
-        stations = getJSONArray(getRequest());
+        stations = getStations();
       } catch (IOException | JSONException exception) {
         protectedRunOnUiThread(() -> tell(R.string.radio_search_failure));
         return;
