@@ -63,7 +63,7 @@ public class AlarmController {
   @NonNull
   private final AlertDialog alertDialog;
   @Nullable
-  private Radio radio;
+  private Radio radio = null;
   @Nullable
   private AlarmService.AlarmServiceBinder alarmService = null;
   private final ServiceConnection alarmConnection = new ServiceConnection() {

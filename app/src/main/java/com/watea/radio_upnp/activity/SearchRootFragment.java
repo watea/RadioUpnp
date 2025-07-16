@@ -33,6 +33,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -64,6 +65,7 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   private ProgressBar progressBar;
   private LinearLayout linearLayout;
   private int searchSessionId = 0;
+  @Nullable
   private Future<?> currentSearchFuture = null;
   private AlertDialog searchAlertDialog;
   private RadiosSearchAdapter radiosSearchAdapter;

@@ -93,7 +93,6 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   private final List<Map<String, String>> playInformations = new ArrayList<>();
   @NonNull
   private final MediaBrowserCompat mediaBrowser;
-  @NonNull
   private final Handler longClickHandler = new Handler(Looper.getMainLooper());
   // Callback from media control
   private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();

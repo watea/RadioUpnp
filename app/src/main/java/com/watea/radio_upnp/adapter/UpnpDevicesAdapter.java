@@ -55,7 +55,7 @@ public class UpnpDevicesAdapter
   @NonNull
   private final View defaultView;
   @Nullable
-  private AndroidUpnpService.UpnpService upnpService;
+  private AndroidUpnpService.UpnpService upnpService = null;
 
   public UpnpDevicesAdapter(int selectedColor, @NonNull View defaultView) {
     this.selectedColor = selectedColor;

@@ -26,6 +26,7 @@ package com.watea.radio_upnp.upnp;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,6 +40,7 @@ public abstract class Watchdog {
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   @NonNull
   private final ActionController actionController;
+  @Nullable
   private final Action action;
   private int failureCount = 0;
 
@@ -73,6 +75,7 @@ public abstract class Watchdog {
   public abstract void onEvent(@NonNull ReaderState readerState);
 
   private void executeActionWatchdog(@NonNull String instanceId) {
+    assert action != null;
     new UpnpAction(action, actionController, instanceId) {
       @Override
       protected void onSuccess() {

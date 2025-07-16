@@ -61,11 +61,17 @@ public class Service extends Asset {
   public static final String CONTROL_URL = "controlURL";
   private static final String LOG_TAG = Service.class.getSimpleName();
   private final AtomicReference<Action> currentAction = new AtomicReference<>();
+  @NonNull
   private final Device device;
+  @NonNull
   private final URL baseURL;
+  @NonNull
   private final String serviceType;
+  @NonNull
   private final String serviceId;
+  @NonNull
   private final URI controlURL;
+  @NonNull
   private final URI descriptionURL;
   private final Set<Action> actions = new HashSet<>();
 

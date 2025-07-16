@@ -40,7 +40,6 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   extends RadiosAdapter<V> {
   @NonNull
   protected final Listener listener;
-  @NonNull
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onChange(@NonNull Radio radio) {

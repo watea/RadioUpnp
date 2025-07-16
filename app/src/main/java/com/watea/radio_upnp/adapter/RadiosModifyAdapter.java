@@ -43,6 +43,7 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
 public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapter.ViewHolder> {
+  @NonNull
   private final NestedScrollView nestedScrollView;
 
   public RadiosModifyAdapter(

@@ -111,7 +111,7 @@ public class Device extends Asset {
   @NonNull
   private final URL location;
   @Nullable
-  private String deviceType;
+  private String deviceType = null;
   @Nullable
   private String friendlyName = null;
   @Nullable

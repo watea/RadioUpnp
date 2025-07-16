@@ -147,6 +147,7 @@ public class MainActivity
   private ActivityResultLauncher<Intent> importExportLauncher;
   @Nullable
   private ImportExportAction importExportAction = null;
+  @Nullable
   private Consumer<Bitmap> upnpIconConsumer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
