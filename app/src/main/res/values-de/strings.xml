@@ -79,7 +79,7 @@
     <string name="wait_search">Die Suche läuft.\nDas könnte etwas dauern, bitte warten&#8230;</string>
     <string name="icon_updated">Icon aktualisiert!</string>
     <string name="donation_button_close">Schließen</string>
-    <string name="donation_description">Findest du diese App nützlich?\nUnterstütze deren Entwicklung mit einer Spende an den Entwickler.\nVielen Dank!</string>
+    <string name="donation_description">Finden Sie diese App nützlich?\nUnterstützen Sie deren Entwicklung mit einer Spende an den Entwickler.\nVielen Dank!</string>
     <string name="donation_google_android_market_description">(Google erhebt eine Gebühr von 15%)</string>
     <string name="donation_alert_dialog_title">Fehler aufgetreten!</string>
     <string name="donation_alert_dialog_try_again">Bitte später erneut versuchen&#8230;</string>
@@ -138,6 +138,7 @@
     <string name="dark_radio_button">Dunkel</string>
     <string name="light_radio_button">Hell</string>
     <string name="no_file_picker_found">Kein Dateiauswahldialog gefunden!</string>
+    <string name="donation_error">Interner Fehler, bitte versuchen Sie es später noch einmal!</string>
     <!-- Menu titles -->
     <string name="title_preferred">Favoritenliste</string>
     <string name="title_main">Wiedergabe</string>
