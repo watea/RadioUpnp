@@ -81,7 +81,6 @@ public class MainFragment extends MainActivityFragment {
     };
   private MainActivity.UserHint dlnaEnableUserHint;
   private MainActivity.UserHint preferredRadiosUserHint;
-  private boolean isPreferredRadios = false;
   private RadiosMainAdapter radiosMainAdapter = null;
   private RecyclerView radiosRecyclerView;
 
@@ -98,7 +97,7 @@ public class MainFragment extends MainActivityFragment {
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     switch (item.getItemId()) {
       case R.id.action_preferred:
-        isPreferredRadios = !isPreferredRadios;
+        Radios.setPreferred(!Radios.isPreferred());
         radiosMainAdapter.refresh();
         setPreferredMenuItem();
         preferredRadiosUserHint.show();
@@ -177,7 +176,7 @@ public class MainFragment extends MainActivityFragment {
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
     // Adapter
     radiosMainAdapter = new RadiosMainAdapter(
-      () -> isPreferredRadios ? Radios.getInstance().getPreferred() : Radios.getInstance(),
+      Radios.getInstance()::getActuallySelectedRadios,
       radiosRecyclerView,
       radiosMainAdapterListener,
       getMainActivity().getCurrentRadioSupplier());
@@ -200,14 +199,14 @@ public class MainFragment extends MainActivityFragment {
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     if (savedInstanceState != null) {
-      isPreferredRadios = savedInstanceState.getBoolean(getString(R.string.key_preferred_radios));
+      Radios.setPreferred(savedInstanceState.getBoolean(getString(R.string.key_preferred_radios)));
     }
   }
 
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    outState.putBoolean(getString(R.string.key_preferred_radios), isPreferredRadios);
+    outState.putBoolean(getString(R.string.key_preferred_radios), Radios.isPreferred());
   }
 
   @SuppressLint("NotifyDataSetChanged")
@@ -231,7 +230,7 @@ public class MainFragment extends MainActivityFragment {
 
   private void setPreferredMenuItem() {
     preferredMenuItem.setIcon(
-      isPreferredRadios ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+      Radios.isPreferred() ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
   }
 
   private static class VarColumnGridLayoutManager extends GridLayoutManager {

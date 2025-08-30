@@ -67,6 +67,7 @@ public class Radios extends ArrayList<Radio> {
   private static final byte[] JSON_ARRAY_COMMA = ",\n".getBytes();
   @Nullable
   private static Radios radios = null; // Singleton
+  private static boolean isPreferred = false;
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;
@@ -80,6 +81,14 @@ public class Radios extends ArrayList<Radio> {
   public static Radios getInstance() {
     assert radios != null;
     return radios;
+  }
+
+  public static boolean isPreferred() {
+    return isPreferred;
+  }
+
+  public static void setPreferred(boolean isPreferred) {
+    Radios.isPreferred = isPreferred;
   }
 
   // Must be called before getInstance
@@ -112,8 +121,8 @@ public class Radios extends ArrayList<Radio> {
   }
 
   @NonNull
-  public List<Radio> getPreferred() {
-    return stream().filter(Radio::isPreferred).collect(Collectors.toList());
+  public List<Radio> getActuallySelectedRadios() {
+    return isPreferred ? stream().filter(Radio::isPreferred).collect(Collectors.toList()) : this;
   }
 
   public synchronized boolean swap(int from, int to) {
@@ -165,14 +174,14 @@ public class Radios extends ArrayList<Radio> {
     modify(radio);
   }
 
-  // radio must be valid
+  // radio must be valid. direction must be -1 or 1. Use actually selected radios.
   @NonNull
   public synchronized Radio getRadioFrom(@NonNull Radio radio, int direction) {
     final int size = size();
     assert size > 0;
     final int index = indexOf(radio);
     assert index >= 0;
-    return get((size + index + direction) % size);
+    return getActuallySelectedRadios().get((size + index + direction) % size);
   }
 
   @Nullable
