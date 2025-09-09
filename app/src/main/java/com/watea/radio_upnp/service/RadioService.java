@@ -305,8 +305,8 @@ public class RadioService
 
   @Override
   public void onLoadChildren(@NonNull final String parentMediaId, @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
+    final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
     if (MEDIA_ROOT_ID.equals(parentMediaId)) {
-      final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
       for (Radio radio : Radios.getInstance()) {
         final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
           .setMediaId(getString(R.string.app_name) + radio.getId())
@@ -316,10 +316,8 @@ public class RadioService
         final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
         mediaItems.add(item);
       }
-      result.sendResult(mediaItems);
-    } else {
-      result.sendResult(null);
     }
+    result.sendResult(mediaItems);
   }
 
   @Override
