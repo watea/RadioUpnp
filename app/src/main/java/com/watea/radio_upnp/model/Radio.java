@@ -153,7 +153,7 @@ public class Radio {
 
   @NonNull
   public static Bitmap iconResize(@NonNull Bitmap bitmap) {
-    return Radio.createScaledBitmap(bitmap, RADIO_ICON_SIZE);
+    return createScaledBitmap(bitmap, RADIO_ICON_SIZE);
   }
 
   // Crop bitmap as a square
@@ -266,7 +266,7 @@ public class Radio {
   }
 
   public void setIcon(@NonNull Bitmap icon) {
-    this.icon = crop(icon);
+    this.icon = iconResize(crop(icon));
     base64Icon = iconToBase64String();
   }
 
