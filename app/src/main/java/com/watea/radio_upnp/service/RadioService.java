@@ -298,20 +298,21 @@ public class RadioService
 
   @NonNull
   @Override
-  public BrowserRoot onGetRoot(
-    @NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
+  public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
+    Log.d(LOG_TAG, "onGetRoot: with clientPackageName = " + clientPackageName);
     return new BrowserRoot(MEDIA_ROOT_ID, null);
   }
 
   @Override
   public void onLoadChildren(@NonNull final String parentMediaId, @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
+    Log.d(LOG_TAG, "onLoadChildren: with parentMediaId = " + parentMediaId);
     final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
     if (MEDIA_ROOT_ID.equals(parentMediaId)) {
-      for (Radio radio : Radios.getInstance()) {
+      for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
         final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
           .setMediaId(getString(R.string.app_name) + radio.getId())
           .setTitle(radio.getName())
-          .setIconBitmap(radio.getIcon())
+          //.setIconBitmap(radio.getIcon())
           .build();
         final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
         mediaItems.add(item);
