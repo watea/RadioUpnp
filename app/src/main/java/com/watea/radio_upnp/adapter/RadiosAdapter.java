@@ -33,6 +33,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -42,18 +43,18 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   protected static final int DEFAULT = -1;
   private static final float RADIO_ICON_HEIGHT_RATIO = 0.6f;
   @NonNull
-  protected final Supplier<List<Radio>> radiosSupplier;
+  private final Supplier<List<Radio>> radiosSupplier;
   private final int row;
   @NonNull
-  protected List<Radio> radios;
+  private List<Radio> radios;
 
   public RadiosAdapter(
     @NonNull Supplier<List<Radio>> radiosSupplier,
     int row,
     @NonNull RecyclerView recyclerView) {
     this.radiosSupplier = radiosSupplier;
-    this.radios = this.radiosSupplier.get();
     this.row = row;
+    radios = radiosSupplier.get();
     // Adapter shall be defined for RecyclerView
     recyclerView.setAdapter(this);
   }
@@ -66,6 +67,19 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   @Override
   public int getItemCount() {
     return radios.size();
+  }
+
+  @NonNull
+  protected List<Radio> getRadios() {
+    return radios;
+  }
+
+  protected int indexOf(@NonNull Radio radio) {
+    return radios.indexOf(radio);
+  }
+
+  protected void setRadios() {
+    radios = radiosSupplier.get();
   }
 
   @NonNull

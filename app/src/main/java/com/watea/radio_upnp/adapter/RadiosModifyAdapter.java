@@ -85,12 +85,12 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
       ((MainActivity) recyclerView.getContext()).setToolbarExpanded(false);
-      return ((Radios) radios).swap(viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
+      return ((Radios) getRadios()).swap(viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
     }
 
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-      ((Radios) radios).remove(viewHolder.getAbsoluteAdapterPosition());
+      ((Radios) getRadios()).remove(viewHolder.getAbsoluteAdapterPosition());
     }
 
     @Override
@@ -130,7 +130,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_modify_radio_text_view);
       (preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button))
-        .setOnClickListener(v -> ((Radios) radios).setPreferred(radio, !radio.isPreferred()));
+        .setOnClickListener(v -> ((Radios) getRadios()).setPreferred(radio, !radio.isPreferred()));
     }
 
     @Override

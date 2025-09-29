@@ -49,8 +49,8 @@
             android:description="@string/radio_service_description"
             android:enabled="true"
             android:exported="true"
-            android:permission="android.permission.BIND_MEDIA_BROWSER_SERVICE"
-            android:foregroundServiceType="mediaPlayback|connectedDevice">
+            android:foregroundServiceType="mediaPlayback|connectedDevice"
+            tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
@@ -91,7 +91,6 @@
 
         <receiver
             android:name=".service.AlarmService$AlarmReceiver"
-            android:enabled="true"
             android:exported="false" />
 
         <provider
@@ -111,10 +110,6 @@
         <meta-data
             android:name="androidx.car.app.TintableAttributionIcon"
             android:resource="@drawable/ic_mic_white_24dp" />
-
-        <meta-data
-            android:name="androidx.car.app.minCarAppApiLevel"
-            android:value="1" />
 
     </application>
 

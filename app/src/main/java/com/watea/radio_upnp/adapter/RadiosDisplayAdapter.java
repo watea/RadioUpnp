@@ -23,7 +23,6 @@
 
 package com.watea.radio_upnp.adapter;
 
-import android.annotation.SuppressLint;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -43,13 +42,13 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onChange(@NonNull Radio radio) {
-      notifyItemChanged(radios.indexOf(radio));
+      notifyItemChanged(indexOf(radio));
     }
 
     @Override
     public void onAdd(@NonNull Radio radio) {
       onCountChange();
-      final int index = radios.indexOf(radio);
+      final int index = indexOf(radio);
       if (index != DEFAULT) {
         notifyItemRangeInserted(index, 1);
       }
@@ -70,6 +69,11 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     public void onAddAll(@NonNull Collection<? extends Radio> c) {
       c.forEach(this::onAdd);
     }
+
+    @Override
+    public void onPreferredChange() {
+      RadiosDisplayAdapter.this.onPreferredChange();
+    }
   };
 
   public RadiosDisplayAdapter(
@@ -84,20 +88,16 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     onCountChange();
   }
 
-  @SuppressLint("NotifyDataSetChanged")
-  public void refresh() {
-    radios = radiosSupplier.get();
-    onCountChange();
-    notifyDataSetChanged();
-  }
-
   // Must be called
   public void onDestroy() {
     Radios.getInstance().removeListener(radiosListener);
   }
 
-  private void onCountChange() {
-    listener.onCountChange(radios.isEmpty());
+  protected void onPreferredChange() {
+  }
+
+  protected void onCountChange() {
+    listener.onCountChange(getRadios().isEmpty());
   }
 
   public interface Listener {

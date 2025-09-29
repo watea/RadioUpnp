@@ -98,7 +98,6 @@ public class MainFragment extends MainActivityFragment {
     switch (item.getItemId()) {
       case R.id.action_preferred:
         Radios.setPreferred(!Radios.isPreferred());
-        radiosMainAdapter.refresh();
         setPreferredMenuItem();
         preferredRadiosUserHint.show();
         return true;

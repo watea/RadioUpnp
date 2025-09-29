@@ -52,8 +52,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.car.app.connection.CarConnection;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.lifecycle.Observer;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
@@ -76,6 +78,16 @@ public class AlarmService extends Service {
     .build();
   // Wait for internet connection
   private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
+
+  private final Observer<Integer> carConnectionObserver = type -> {
+    if (type == CarConnection.CONNECTION_TYPE_PROJECTION) {
+      Log.d(LOG_TAG, "Android Auto CONNECTED");
+      isAndroidAutoConnected = true;
+    } else {
+      Log.d(LOG_TAG, "Android Auto DISCONNECTED");
+      isAndroidAutoConnected = false;
+    }
+  };
   private String CHANNEL_ID;
   private MediaBrowserCompat mediaBrowser = null;
   // MediaController from the MediaBrowser when it has successfully connected
@@ -84,6 +96,9 @@ public class AlarmService extends Service {
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
   private boolean isStarted = false;
+  private boolean isAndroidAutoConnected = false;
+  @Nullable
+  private CarConnection carConnection = null;
 
   @Override
   public void onCreate() {
@@ -124,6 +139,9 @@ public class AlarmService extends Service {
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
     // ConnectivityManager
     connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+    // Android Auto
+    carConnection = new CarConnection(this);
+    carConnection.getType().observeForever(carConnectionObserver);
   }
 
   @Override
@@ -134,6 +152,9 @@ public class AlarmService extends Service {
     releaseAlarm();
     releaseMediaBrowser();
     releaseConnectivityManagerCallback();
+    if (carConnection != null) {
+      carConnection.getType().removeObserver(carConnectionObserver);
+    }
     isStarted = false;
   }
 
@@ -368,7 +389,7 @@ public class AlarmService extends Service {
       // Link to the callback controller
       mediaController.registerCallback(mediaControllerCallback);
       // Launch radio
-      if (!radioLaunch()) {
+      if (isAndroidAutoConnected || !radioLaunch()) {
         // Something went wrong, cancel alarm
         ((AlarmServiceBinder) binder).cancelAlarm();
       }

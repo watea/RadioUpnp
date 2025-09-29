@@ -84,4 +84,6 @@ dependencies {
     implementation 'com.github.watea:androidssdpclient:1.0.6'
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    // Car App Library
+    implementation "androidx.car.app:app:1.7.0"
 }

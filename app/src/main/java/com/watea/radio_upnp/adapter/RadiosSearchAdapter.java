@@ -47,14 +47,14 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
   }
 
   public void add(@NonNull Radio radio) {
-    radios.add(radio);
-    radios.sort(Comparator.comparing(Radio::getName));
-    notifyItemInserted(radios.indexOf(radio));
+    getRadios().add(radio);
+    getRadios().sort(Comparator.comparing(Radio::getName));
+    notifyItemInserted(indexOf(radio));
   }
 
   @SuppressLint("NotifyDataSetChanged")
   public void clear() {
-    radios.clear();
+    getRadios().clear();
     selectedRadios.clear();
     notifyDataSetChanged();
   }
@@ -72,7 +72,7 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
 
   @SuppressLint("NotifyDataSetChanged")
   public void selectAll() {
-    selectedRadios.addAll(radios);
+    selectedRadios.addAll(getRadios());
     notifyDataSetChanged();
   }
 

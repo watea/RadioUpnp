@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -81,9 +82,17 @@ public class RadiosMainAdapter
     currentRadioSupplier.accept(null);
   }
 
+  @SuppressLint("NotifyDataSetChanged")
+  @Override
+  protected void onPreferredChange() {
+    setRadios();
+    onCountChange();
+    notifyDataSetChanged();
+  }
+
   private void notifyItemChanged() {
     if (currentRadio != null) {
-      notifyItemChanged(radios.indexOf(currentRadio));
+      notifyItemChanged(indexOf(currentRadio));
     }
   }
 

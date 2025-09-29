@@ -54,6 +54,7 @@ public class Radio {
   private static final String SPACER = ";";
   public static final String EXPORT_HEAD =
     export("name") + export("url") + export("webPageUrl") + export("isPreferred");
+  private static final String ID = "id";
   private static final String NAME = "name";
   private static final String ICON = "icon";
   private static final String URL = "url";
@@ -62,6 +63,24 @@ public class Radio {
   private static final String QUALITY = "quality";
   private static final String IS_PREFERRED = "is_preferred";
   private static final int DEFAULT = -1;
+  private static int lastId = DEFAULT;
+  private static boolean backwardCompatible = false;
+  @NonNull
+  private final String id;
+  @NonNull
+  private final String mime;
+  private final int quality;
+  @NonNull
+  private String name;
+  @NonNull
+  private Bitmap icon;
+  @NonNull
+  private String base64Icon; // cache
+  @NonNull
+  private URL url;
+  @Nullable
+  private URL webPageUrl;
+  private boolean isPreferred;
 
   static {
     Radio radio = null;
@@ -78,23 +97,27 @@ public class Radio {
     DUMMY_RADIO = radio;
   }
 
-  @NonNull
-  private final String mime;
-  private final int quality;
-  @NonNull
-  private String name;
-  @NonNull
-  private Bitmap icon;
-  @NonNull
-  private String base64Icon; // cache
-  @NonNull
-  private URL url;
-  @Nullable
-  private URL webPageUrl;
-  private boolean isPreferred;
+  public static String getNextId() {
+    return Integer.toString(++lastId);
+  }
+
+  // Backward compatibility: generates an ID if not existing
+  public static String getId(@NonNull JSONObject jsonObject) {
+    try {
+      return jsonObject.getString(ID);
+    } catch (JSONException jSONException) {
+      backwardCompatible = true;
+      return getNextId();
+    }
+  }
+
+  public static boolean isBackwardCompatible() {
+    return backwardCompatible;
+  }
 
   // icon and base64Icon are mutually exclusive, one at least not null
   public Radio(
+    @NonNull String id,
     @NonNull String name,
     @Nullable Bitmap icon,
     @Nullable String base64Icon,
@@ -103,6 +126,7 @@ public class Radio {
     @NonNull String mime,
     int quality,
     boolean isPreferred) {
+    this.id = id;
     this.name = name;
     assert (icon == null) != (base64Icon == null);
     this.icon = crop((icon == null) ? getBitmapFrom(base64Icon) : icon);
@@ -112,6 +136,7 @@ public class Radio {
     this.mime = mime;
     this.quality = quality;
     this.isPreferred = isPreferred;
+    lastId = Math.max(lastId, Integer.parseInt(this.id));
   }
 
   public Radio(
@@ -120,7 +145,7 @@ public class Radio {
     @Nullable String base64Icon,
     @NonNull URL url,
     @Nullable URL webPageUrl) {
-    this(name, icon, base64Icon, url, webPageUrl, "", DEFAULT, false);
+    this(getNextId(), name, icon, base64Icon, url, webPageUrl, "", DEFAULT, false);
   }
 
   public Radio(
@@ -141,6 +166,7 @@ public class Radio {
 
   public Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
     this(
+      getId(jSONObject),
       jSONObject.getString(NAME),
       null,
       jSONObject.getString(ICON),
@@ -189,7 +215,7 @@ public class Radio {
         final URL url = new URL(fields[1]);
         final URL webPageUrl = fields[2].isEmpty() ? null : new URL(fields[2]);
         final boolean isPreferred = Boolean.parseBoolean(fields[3]);
-        final Radio radio = new Radio(name, Radio.DUMMY_RADIO.base64Icon, url, webPageUrl);
+        final Radio radio = new Radio(name, DUMMY_RADIO.base64Icon, url, webPageUrl);
         radio.setIsPreferred(isPreferred);
         return radio;
       } catch (MalformedURLException malformedURLException) {
@@ -280,20 +306,24 @@ public class Radio {
 
   @NonNull
   public String getId() {
-    return Integer.toString(hashCode());
+    return id;
   }
 
   // METADATA_KEY_MEDIA_ID starts with appId and ends with getId()
   @NonNull
-  public MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull String appId, @NonNull String postfix) {
-    final Bitmap icon = getIcon();
+  public MediaMetadataCompat.Builder getMediaMetadataBuilder(
+    @NonNull String appId,
+    @NonNull String postfix,
+    @NonNull String information) {
     return new MediaMetadataCompat.Builder()
       .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, appId + getId())
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, name + postfix)
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, "")
-      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, name + postfix)
-      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "")
+      .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, icon)
+      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, name + postfix)
+      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, name + postfix)
+      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, name + postfix)
+      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, information)
+      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, information)
       .putRating(
         MediaMetadataCompat.METADATA_KEY_RATING,
         RatingCompat.newPercentageRating(isPreferred ? 100 : 0));
@@ -310,6 +340,7 @@ public class Radio {
   @NonNull
   public JSONObject getJSONObject() throws JSONException {
     return new JSONObject()
+      .put(ID, id)
       .put(NAME, name)
       .put(ICON, base64Icon)
       .put(URL, url.toString())

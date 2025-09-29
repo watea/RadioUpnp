@@ -89,6 +89,7 @@ public class Radios extends ArrayList<Radio> {
 
   public static void setPreferred(boolean isPreferred) {
     Radios.isPreferred = isPreferred;
+    getInstance().tellListeners(true, Listener::onPreferredChange);
   }
 
   // Must be called before getInstance
@@ -177,11 +178,17 @@ public class Radios extends ArrayList<Radio> {
   // radio must be valid. direction must be -1 or 1. Use actually selected radios.
   @NonNull
   public synchronized Radio getRadioFrom(@NonNull Radio radio, int direction) {
-    final int size = size();
-    assert size > 0;
-    final int index = indexOf(radio);
-    assert index >= 0;
-    return getActuallySelectedRadios().get((size + index + direction) % size);
+    try {
+      final int size = size();
+      assert size > 0;
+      final int index = indexOf(radio);
+      assert index >= 0;
+      return getActuallySelectedRadios().get((size + index + direction) % size);
+    } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
+      // May happen if selected radio has been kept by external device
+      Log.e(LOG_TAG, "getRadioFrom: internal failure", indexOutOfBoundsException);
+      return radio;
+    }
   }
 
   @Nullable
@@ -305,6 +312,10 @@ public class Radios extends ArrayList<Radio> {
     } catch (Exception exception) {
       Log.e(LOG_TAG, "init: I/O failure", exception);
     }
+    // If IDs have been generated for backward compatibility, we shall store result
+    if (Radio.isBackwardCompatible()) {
+      write();
+    }
   }
 
   private boolean tellListeners(boolean test, @NonNull Consumer<Listener> consumer) {
@@ -328,6 +339,9 @@ public class Radios extends ArrayList<Radio> {
     }
 
     default void onAddAll(@NonNull Collection<? extends Radio> c) {
+    }
+
+    default void onPreferredChange() {
     }
   }
 }

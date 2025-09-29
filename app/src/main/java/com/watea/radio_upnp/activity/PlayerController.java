@@ -436,9 +436,8 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     @Override
     public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
       if ((mediaMetadata != null) && RadioService.isValid(mainActivity, mediaMetadata)) {
-        // Use SubTitle as notification
-        final CharSequence information = mediaMetadata.getDescription().getSubtitle();
-        playedRadioInformationTextView.setText(information);
+        // Use title metadata
+        playedRadioInformationTextView.setText(mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
         // Rate in extras
         final Bundle extras = (mediaController == null) ? null : mediaController.getExtras();
         if (extras != null) {

@@ -90,6 +90,7 @@ public class RadioService
   public static final String PLAYLIST = "playlist";
   public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
+  public static final String ACTION_RELOAD = "ACTION_RELOAD";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
   private static final String MEDIA_ROOT_ID = "root_id";
@@ -114,6 +115,12 @@ public class RadioService
     @Override
     public void onServiceDisconnected(ComponentName name) {
       upnpService = null;
+    }
+  };
+  private final Radios.Listener radiosListener = new Radios.Listener() {
+    @Override
+    public void onPreferredChange() {
+      notifyChildrenChanged(MEDIA_ROOT_ID);
     }
   };
   private NotificationManagerCompat notificationManager;
@@ -203,6 +210,7 @@ public class RadioService
     Log.d(LOG_TAG, "onCreate");
     // Create radios if needed
     Radios.setInstance(this);
+    Radios.getInstance().addListener(radiosListener);
     // Launch HTTP server
     try {
       radioHttpServer = new RadioHttpServer(this, this);
@@ -309,10 +317,12 @@ public class RadioService
     final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
     if (MEDIA_ROOT_ID.equals(parentMediaId)) {
       for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
+        final String radioId = radio.getId();
+        Log.d(LOG_TAG, "Children: Id = " + radioId);
         final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
-          .setMediaId(getString(R.string.app_name) + radio.getId())
+          .setMediaId(radioId)
           .setTitle(radio.getName())
-          //.setIconBitmap(radio.getIcon())
+          .setIconBitmap(radio.getIcon())
           .build();
         final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
         mediaItems.add(item);
@@ -325,13 +335,10 @@ public class RadioService
   public void onNewInformation(@NonNull final String information, @NonNull final String lockKey) {
     runIfLocked(lockKey, () -> {
       if (radio != null) {
-        // Media information in ARTIST and SUBTITLE.
-        // Ensure session meta data is tagged to ensure only session based use.
         final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
         if (mediaMetadataCompat != null) {
           final String playlist = mediaMetadataCompat.getString(PLAYLIST);
-          session.setMetadata(getTaggedMediaMetadataBuilder()
-            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, information)
+          session.setMetadata(getMediaMetadataBuilder(radio, information)
             .putString(PLAYLIST, addPlaylistItem(playlist, information))
             .build());
           // Update UPnP
@@ -444,12 +451,11 @@ public class RadioService
   }
 
   @NonNull
-  private MediaMetadataCompat.Builder getTaggedMediaMetadataBuilder() {
-    return (radio == null) ?
-      new MediaMetadataCompat.Builder() :
-      radio.getMediaMetadataBuilder(
+  private MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull Radio radio, @NonNull String information) {
+    return radio.getMediaMetadataBuilder(
         getString(R.string.app_name),
-        playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "");
+        playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "",
+        information);
   }
 
   @SuppressLint("SwitchIntDef")
@@ -469,20 +475,6 @@ public class RadioService
       // Show controls on lock screen even when user hides sensitive content
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setSilent(true);
-    final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
-    if (mediaMetadataCompat == null) {
-      Log.e(LOG_TAG, "Internal failure; no metadata defined for radio");
-    } else {
-      final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
-      builder
-        .setLargeIcon(description.getIconBitmap())
-        // Title, radio name
-        .setContentTitle(description.getTitle())
-        // Radio current track
-        .setContentText(description.getSubtitle())
-        // Remote?
-        .setSubText(playerAdapter instanceof UpnpPlayerAdapter ? getString(R.string.remote) : "");
-    }
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
     final PlaybackStateCompat playbackStateCompat = mediaController.getPlaybackState();
@@ -579,7 +571,7 @@ public class RadioService
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
     public void onPlayFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
-      Log.d(LOG_TAG, "onPlayFromMediaId");
+      Log.d(LOG_TAG, "onPlayFromMediaId with mediaId: " + mediaId);
       // Ensure robustness
       if (upnpService != null) {
         upnpService.getActionController().release();
@@ -635,7 +627,7 @@ public class RadioService
       // Synchronize session data
       if (radio != previousRadio) {
         session.setExtras(new Bundle());
-        session.setMetadata(getTaggedMediaMetadataBuilder().build());
+        session.setMetadata(getMediaMetadataBuilder(radio, "").build());
       }
       // Set controller for HTTP handler
       radioHttpServer.setRadioHandlerController(radioHandlerController);
@@ -702,6 +694,9 @@ public class RadioService
           setSleepOn(true);
           showSleepTimerNotification(minutes);
           break;
+        case ACTION_RELOAD:
+          notifyChildrenChanged(MEDIA_ROOT_ID);
+          break;
         default:
           Log.e(LOG_TAG, "onCustomAction: unknown command!");
       }
@@ -722,7 +717,7 @@ public class RadioService
         // Should not happen
         Log.e(LOG_TAG, "onPlayFromMediaId: radio is null!");
       } else {
-        onPlayFromMediaId(Integer.toString(radio.hashCode()), mediaController.getExtras());
+        onPlayFromMediaId(radio.getId(), mediaController.getExtras());
       }
     }
   }
