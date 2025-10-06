@@ -99,7 +99,7 @@ public class Radios extends ArrayList<Radio> {
           Log.e(LOG_TAG, "Internal failure; unable to init radios");
         }
       } else {
-        radios.init();
+        new Thread(radios::init).start();
       }
     }
   }
@@ -110,7 +110,7 @@ public class Radios extends ArrayList<Radio> {
 
   public static void setPreferred(boolean isPreferred) {
     Radios.isPreferred = isPreferred;
-    getInstance().tellListeners(true, Listener::onPreferredChange);
+    getInstance().tellListeners(true, false, Listener::onPreferredChange);
   }
 
   public void addListener(@NonNull Listener listener) {
@@ -132,7 +132,7 @@ public class Radios extends ArrayList<Radio> {
       return false;
     }
     set(from, set(to, get(from)));
-    return tellListeners(true, listener -> listener.onMove(from, to));
+    return tellListeners(listener -> listener.onMove(from, to));
   }
 
   @Override
@@ -144,7 +144,7 @@ public class Radios extends ArrayList<Radio> {
   @Override
   public synchronized Radio remove(int index) {
     final Radio result = super.remove(index);
-    tellListeners(write(), listener -> listener.onRemove(index));
+    tellListeners(listener -> listener.onRemove(index));
     return result;
   }
 
@@ -153,19 +153,19 @@ public class Radios extends ArrayList<Radio> {
   public synchronized boolean remove(@Nullable Object o) {
     assert o != null;
     final int index = indexOf(o);
-    return tellListeners(super.remove(o) && write(), listener -> listener.onRemove(index));
+    return tellListeners(super.remove(o), true, listener -> listener.onRemove(index));
   }
 
   @Override
   public synchronized boolean addAll(@NonNull Collection<? extends Radio> c) {
-    return tellListeners(super.addAll(c) && write(), listener -> listener.onAddAll(c));
+    return tellListeners(super.addAll(c), true, listener -> listener.onAddAll(c));
   }
 
   public synchronized boolean modify(@NonNull Radio radio) {
     final int index = indexOf(radio);
     if (index >= 0) {
       set(index, radio);
-      return tellListeners(write(), listener -> listener.onChange(radio));
+      return tellListeners(listener -> listener.onChange(radio));
     }
     return false;
   }
@@ -247,8 +247,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   private boolean add(@NonNull Radio radio, boolean isToWrite) {
-    return tellListeners(
-      super.add(radio) && (!isToWrite || write()), listener -> listener.onAdd(radio));
+    return tellListeners(super.add(radio), isToWrite, listener -> listener.onAdd(radio));
   }
 
   // Only JSON can be read.
@@ -311,11 +310,18 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
-  private boolean tellListeners(boolean test, @NonNull Consumer<Listener> consumer) {
+  private boolean tellListeners(boolean test, boolean isToWrite, @NonNull Consumer<Listener> consumer) {
     if (test) {
       listeners.forEach(consumer);
+      if (isToWrite) {
+        new Thread(this::write).start();
+      }
     }
     return test;
+  }
+
+  private boolean tellListeners(@NonNull Consumer<Listener> consumer) {
+    return tellListeners(true, true, consumer);
   }
 
   public interface Listener {
