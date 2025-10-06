@@ -104,6 +104,12 @@ public class RadioService
     new MediaSessionCompatCallback();
   private final ActionController actionController = new ActionController();
   private final ContentProvider contentProvider = new ContentProvider();
+  private final Radios.Listener radiosListener = new Radios.Listener() {
+    @Override
+    public void onPreferredChange() {
+      notifyChildrenChanged(MEDIA_ROOT_ID);
+    }
+  };
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -115,12 +121,6 @@ public class RadioService
     @Override
     public void onServiceDisconnected(ComponentName name) {
       upnpService = null;
-    }
-  };
-  private final Radios.Listener radiosListener = new Radios.Listener() {
-    @Override
-    public void onPreferredChange() {
-      notifyChildrenChanged(MEDIA_ROOT_ID);
     }
   };
   private NotificationManagerCompat notificationManager;
@@ -453,9 +453,9 @@ public class RadioService
   @NonNull
   private MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull Radio radio, @NonNull String information) {
     return radio.getMediaMetadataBuilder(
-        getString(R.string.app_name),
-        playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "",
-        information);
+      getString(R.string.app_name),
+      playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "",
+      information);
   }
 
   @SuppressLint("SwitchIntDef")
@@ -475,6 +475,20 @@ public class RadioService
       // Show controls on lock screen even when user hides sensitive content
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setSilent(true);
+    final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
+    if (mediaMetadataCompat == null) {
+      Log.e(LOG_TAG, "Internal failure; no metadata defined for radio");
+    } else {
+      final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
+      builder
+        .setLargeIcon(description.getIconBitmap())
+        // Title, radio name
+        .setContentTitle(description.getTitle())
+        // Radio current track
+        .setContentText(description.getSubtitle())
+        // Remote?
+        .setSubText(playerAdapter instanceof UpnpPlayerAdapter ? getString(R.string.remote) : "");
+    }
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
     final PlaybackStateCompat playbackStateCompat = mediaController.getPlaybackState();
@@ -707,7 +721,12 @@ public class RadioService
         // Should not happen
         Log.e(LOG_TAG, "skipTo: radio is null!");
       } else {
-        onPlayFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
+        final Radio nextRadio = Radios.getInstance().getRadioFrom(radio, direction);
+        if (nextRadio == null) {
+          Log.d(LOG_TAG, "skipTo: next radio is null!");
+        } else {
+          onPlayFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
+        }
       }
     }
 

@@ -83,15 +83,6 @@ public class Radios extends ArrayList<Radio> {
     return radios;
   }
 
-  public static boolean isPreferred() {
-    return isPreferred;
-  }
-
-  public static void setPreferred(boolean isPreferred) {
-    Radios.isPreferred = isPreferred;
-    getInstance().tellListeners(true, Listener::onPreferredChange);
-  }
-
   // Must be called before getInstance
   public synchronized static void setInstance(@NonNull Context context) {
     if (radios == null) {
@@ -111,6 +102,15 @@ public class Radios extends ArrayList<Radio> {
         radios.init();
       }
     }
+  }
+
+  public static boolean isPreferred() {
+    return isPreferred;
+  }
+
+  public static void setPreferred(boolean isPreferred) {
+    Radios.isPreferred = isPreferred;
+    getInstance().tellListeners(true, Listener::onPreferredChange);
   }
 
   public void addListener(@NonNull Listener listener) {
@@ -176,19 +176,12 @@ public class Radios extends ArrayList<Radio> {
   }
 
   // radio must be valid. direction must be -1 or 1. Use actually selected radios.
-  @NonNull
+  @Nullable
   public synchronized Radio getRadioFrom(@NonNull Radio radio, int direction) {
-    try {
-      final int size = size();
-      assert size > 0;
-      final int index = indexOf(radio);
-      assert index >= 0;
-      return getActuallySelectedRadios().get((size + index + direction) % size);
-    } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
-      // May happen if selected radio has been kept by external device
-      Log.e(LOG_TAG, "getRadioFrom: internal failure", indexOutOfBoundsException);
-      return radio;
-    }
+    final List<Radio> actuallySelectedRadios = getActuallySelectedRadios();
+    final int size = actuallySelectedRadios.size();
+    final int index = (size == 0) ? -1 : actuallySelectedRadios.indexOf(radio);
+    return (index < 0) ? null : actuallySelectedRadios.get((size + index + direction) % size);
   }
 
   @Nullable
