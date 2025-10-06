@@ -480,14 +480,18 @@ public class RadioService
       Log.e(LOG_TAG, "Internal failure; no metadata defined for radio");
     } else {
       final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
+      final CharSequence subTitle = description.getSubtitle();
+      final CharSequence title = description.getTitle();
       builder
         .setLargeIcon(description.getIconBitmap())
         // Title, radio name
-        .setContentTitle(description.getTitle())
-        // Radio current track
-        .setContentText(description.getSubtitle())
+        .setContentTitle(title)
         // Remote?
         .setSubText(playerAdapter instanceof UpnpPlayerAdapter ? getString(R.string.remote) : "");
+      // Radio current track
+      if ((subTitle != null) && !subTitle.equals(title)) {
+        builder.setContentText(subTitle);
+      }
     }
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
