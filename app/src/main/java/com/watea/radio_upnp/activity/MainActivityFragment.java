@@ -29,6 +29,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,7 +37,9 @@ import android.view.inputmethod.InputMethodManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 
 import com.watea.radio_upnp.service.NetworkProxy;
 
@@ -68,6 +71,26 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    requireActivity().addMenuProvider(new MenuProvider() {
+      @Override
+      public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+        MainActivityFragment.this.onCreateMenu(menu, menuInflater);
+      }
+
+      @Override
+      public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+        if (menuItem.getItemId() == android.R.id.home) {
+          onBackPressed();
+          return true;
+        }
+        return MainActivityFragment.this.onMenuItemSelected(menuItem);
+      }
+    }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+  }
+
+  @Override
   public void onResume() {
     super.onResume();
     // Restore scroll
@@ -84,22 +107,6 @@ public abstract class MainActivityFragment extends Fragment {
     yScrollPosition = container.getScrollY();
   }
 
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    if (item.getItemId() == android.R.id.home) {
-      onBackPressed();
-      return true;
-    }
-    return super.onOptionsItemSelected(item);
-  }
-
-  public void onCreateOptionsMenu(@NonNull Menu menu) {
-  }
-
-  public int getMenuId() {
-    return DEFAULT_RESOURCE;
-  }
-
   @NonNull
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> false;
@@ -111,6 +118,13 @@ public abstract class MainActivityFragment extends Fragment {
   public abstract int getFloatingActionButtonResource();
 
   public abstract int getTitle();
+
+  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+  }
+
+  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+    return false;
+  }
 
   protected abstract int getLayout();
 

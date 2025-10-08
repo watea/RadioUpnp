@@ -55,14 +55,14 @@ public class OpenDonationFragment extends MainActivityFragment {
   }
 
   @Override
-  protected int getLayout() {
-    return R.layout.content_donation;
-  }
-
-  @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
     view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
+  }
+
+  @Override
+  protected int getLayout() {
+    return R.layout.content_donation;
   }
 
   @NonNull

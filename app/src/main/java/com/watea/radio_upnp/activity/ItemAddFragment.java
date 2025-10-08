@@ -39,8 +39,8 @@ public class ItemAddFragment extends ItemFragment {
   }
 
   @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    if (!super.onOptionsItemSelected(item)) {
+  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+    if (!super.onMenuItemSelected(item)) {
       final Bitmap icon = getIcon();
       if ((urlWatcher.url == null) || (icon == null) || !Radios.getInstance().add(
         new Radio(getRadioName(), getIcon(), urlWatcher.url, webPageWatcher.url))) {

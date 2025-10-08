@@ -30,6 +30,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -92,44 +93,6 @@ public class MainFragment extends MainActivityFragment {
     onConfigurationChanged(getActivity().getResources().getConfiguration());
   }
 
-  @SuppressLint("NonConstantResourceId")
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    switch (item.getItemId()) {
-      case R.id.action_preferred:
-        Radios.setPreferred(!Radios.isPreferred());
-        setPreferredMenuItem();
-        preferredRadiosUserHint.show();
-        return true;
-      case R.id.action_upnp:
-        getMainActivity().resetSelectedDevice();
-        tell(R.string.no_dlna_selection);
-        return true;
-      default:
-        // If we got here, the user's action was not recognized.
-        // Invoke the superclass to handle it.
-        return super.onOptionsItemSelected(item);
-    }
-  }
-
-  @Override
-  public void onCreateOptionsMenu(@NonNull Menu menu) {
-    upnpMenuItem = menu.findItem(R.id.action_upnp);
-    upnpMenuItem.setVisible(false);
-    preferredMenuItem = menu.findItem(R.id.action_preferred);
-    setPreferredMenuItem();
-    // Set listener
-    getMainActivity().setUpnpIconConsumer(
-      bitmap -> {
-        if ((upnpMenuItem != null) && isAdded()) {
-          upnpMenuItem.setVisible((bitmap != null));
-          if (bitmap != null) {
-            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
-          }
-        }
-      });
-  }
-
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
@@ -154,18 +117,8 @@ public class MainFragment extends MainActivityFragment {
   }
 
   @Override
-  public int getMenuId() {
-    return R.menu.menu_main;
-  }
-
-  @Override
   public int getTitle() {
     return R.string.title_main;
-  }
-
-  @Override
-  protected int getLayout() {
-    return R.layout.content_main;
   }
 
   @Override
@@ -216,6 +169,48 @@ public class MainFragment extends MainActivityFragment {
       new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
     if (radiosMainAdapter != null) {
       radiosMainAdapter.notifyDataSetChanged();
+    }
+  }
+
+  @Override
+  protected int getLayout() {
+    return R.layout.content_main;
+  }
+
+  @Override
+  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+    menuInflater.inflate(R.menu.menu_main, menu);
+    upnpMenuItem = menu.findItem(R.id.action_upnp);
+    upnpMenuItem.setVisible(false);
+    preferredMenuItem = menu.findItem(R.id.action_preferred);
+    setPreferredMenuItem();
+    // Set listener
+    getMainActivity().setUpnpIconConsumer(
+      bitmap -> {
+        if ((upnpMenuItem != null) && isAdded()) {
+          upnpMenuItem.setVisible((bitmap != null));
+          if (bitmap != null) {
+            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
+          }
+        }
+      });
+  }
+
+  @SuppressLint("NonConstantResourceId")
+  @Override
+  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+    switch (item.getItemId()) {
+      case R.id.action_preferred:
+        Radios.setPreferred(!Radios.isPreferred());
+        setPreferredMenuItem();
+        preferredRadiosUserHint.show();
+        return true;
+      case R.id.action_upnp:
+        getMainActivity().resetSelectedDevice();
+        tell(R.string.no_dlna_selection);
+        return true;
+      default:
+        return false;
     }
   }
 

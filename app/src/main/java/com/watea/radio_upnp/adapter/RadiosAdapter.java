@@ -33,7 +33,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.Radios;
 
 import java.util.List;
 import java.util.function.Supplier;

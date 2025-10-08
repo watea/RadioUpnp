@@ -100,6 +100,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
@@ -392,34 +393,10 @@ public class MainActivity
   }
 
   @Override
-  public boolean onCreateOptionsMenu(@NonNull Menu menu) {
-    final MainActivityFragment currentFragment = (MainActivityFragment) getCurrentFragment();
-    if (currentFragment == null) {
-      Log.e(LOG_TAG, "onCreateOptionsMenu: currentFragment not defined");
-    } else {
-      final int menuId = currentFragment.getMenuId();
-      if (menuId != MainActivityFragment.DEFAULT_RESOURCE) {
-        getMenuInflater().inflate(menuId, menu);
-        currentFragment.onCreateOptionsMenu(menu);
-      }
-    }
-    return true;
-  }
-
-  @Override
   public boolean onOptionsItemSelected(@NonNull MenuItem item) {
     // Pass the event to ActionBarDrawerToggle, if it returns
     // true, then it has handled the app icon touch event
-    assert getCurrentFragment() != null;
-    return
-      drawerToggle.onOptionsItemSelected(item) ||
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        getCurrentFragment().onOptionsItemSelected(item) ||
-        // If we got here, the user's action was not recognized.
-        // Invoke the superclass to handle it.
-        super.onOptionsItemSelected(item);
+    return drawerToggle.onOptionsItemSelected(item) || super.onOptionsItemSelected(item);
   }
 
   @Override
@@ -729,47 +706,49 @@ public class MainActivity
   private void sendLogcatMail() {
     // Use a background thread for logcat execution
     final Handler handler = new Handler(Looper.getMainLooper());
-    Executors.newSingleThreadExecutor().execute(() -> {
-      final File logFile = new File(getFilesDir(), "logcat.txt");
-      final String packageName = getPackageName();
-      final String[] command = new String[]{
-        "logcat",
-        "-d",
-        "-v",
-        "threadtime",
-        "-f",
-        logFile.toString(),
-        "com.watea.*:D"
-      };
-      Process process = null;
-      try {
-        // Execute logcat command
-        process = Runtime.getRuntime().exec(command);
-        // Wait for logcat to finish
-        process.waitFor();
-        // Check if logcat was successful
-        if (logFile.exists() && logFile.length() > 0) {
-          // Prepare mail on the main thread
-          handler.post(() -> {
-            try {
-              startActivity(getNewSendIntent(logFile, packageName));
-            } catch (Exception exception) {
-              Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
-              tellReportError();
-            }
-          });
-        } else {
+    try (final ExecutorService executorService = Executors.newSingleThreadExecutor()) {
+      executorService.execute(() -> {
+        final File logFile = new File(getFilesDir(), "logcat.txt");
+        final String packageName = getPackageName();
+        final String[] command = new String[]{
+          "logcat",
+          "-d",
+          "-v",
+          "threadtime",
+          "-f",
+          logFile.toString(),
+          "com.watea.*:D"
+        };
+        Process process = null;
+        try {
+          // Execute logcat command
+          process = Runtime.getRuntime().exec(command);
+          // Wait for logcat to finish
+          process.waitFor();
+          // Check if logcat was successful
+          if (logFile.exists() && logFile.length() > 0) {
+            // Prepare mail on the main thread
+            handler.post(() -> {
+              try {
+                startActivity(getNewSendIntent(logFile, packageName));
+              } catch (Exception exception) {
+                Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
+                tellReportError();
+              }
+            });
+          } else {
+            handler.post(this::tellReportError);
+          }
+        } catch (IOException | InterruptedException exception) {
+          Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
           handler.post(this::tellReportError);
+        } finally {
+          if (process != null) {
+            process.destroy();
+          }
         }
-      } catch (IOException | InterruptedException exception) {
-        Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
-        handler.post(this::tellReportError);
-      } finally {
-        if (process != null) {
-          process.destroy();
-        }
-      }
-    });
+      });
+    }
   }
 
   @NonNull

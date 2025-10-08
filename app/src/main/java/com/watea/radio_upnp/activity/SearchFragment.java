@@ -194,7 +194,7 @@ public class SearchFragment extends SearchRootFragment {
   private JSONArray getJSONArray(@NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder) throws IOException, JSONException {
     try (final Response response = radioBrowserClient.search(baseUrlBuilder)) {
       if (response.isSuccessful()) {
-        return (response.body() == null) ? new JSONArray() : new JSONArray(response.body().string());
+        return new JSONArray(response.body().string());
       } else {
         throw new IOException("Unexpected code " + response);
       }

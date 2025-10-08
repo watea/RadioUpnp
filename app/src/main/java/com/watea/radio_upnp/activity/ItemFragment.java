@@ -34,6 +34,8 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -107,24 +109,6 @@ public abstract class ItemFragment extends MainActivityFragment {
     super.onPause();
   }
 
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    flushKeyboard();
-    if (item.getItemId() == R.id.action_done) {
-      if (urlWatcher.url == null) {
-        tell(R.string.radio_definition_error);
-      } else {
-        // Action shall be implemented by actual class
-        return false;
-      }
-    } else {
-      // If we got here, the user's action was not recognized.
-      // Invoke the superclass to handle it.
-      return super.onOptionsItemSelected(item);
-    }
-    return true;
-  }
-
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
@@ -142,16 +126,6 @@ public abstract class ItemFragment extends MainActivityFragment {
   @Override
   public int getFloatingActionButtonResource() {
     return R.drawable.ic_radio_white_24dp;
-  }
-
-  @Override
-  public int getMenuId() {
-    return R.menu.menu_item_modify;
-  }
-
-  @Override
-  protected int getLayout() {
-    return R.layout.content_item;
   }
 
   @Override
@@ -194,6 +168,26 @@ public abstract class ItemFragment extends MainActivityFragment {
     iconWatcher = new UrlWatcher(iconEditText);
     // Default icon
     setRadioIcon((restoredBitmap == null) ? getMainActivity().getDefaultIcon() : restoredBitmap);
+  }
+
+  @Override
+  protected int getLayout() {
+    return R.layout.content_item;
+  }
+
+  @Override
+  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+    menuInflater.inflate(R.menu.menu_item_modify, menu);
+  }
+
+  @Override
+  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+    flushKeyboard();
+    if ((item.getItemId() == R.id.action_done) && (urlWatcher.url == null)) {
+      tell(R.string.radio_definition_error);
+      return true;
+    }
+    return false;
   }
 
   @NonNull

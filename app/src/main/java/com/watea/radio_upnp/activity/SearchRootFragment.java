@@ -26,6 +26,8 @@ package com.watea.radio_upnp.activity;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -71,24 +73,6 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   private RadiosSearchAdapter radiosSearchAdapter;
   private boolean isServerAvailable = false;
 
-  @SuppressLint("NonConstantResourceId")
-  @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    switch (item.getItemId()) {
-      case R.id.action_all:
-        radiosSearchAdapter.selectAll();
-        return true;
-      case R.id.action_done:
-        Radios.getInstance().addAll(radiosSearchAdapter.getSelectedRadios());
-        onBackPressed();
-        return true;
-      default:
-        // If we got here, the user's action was not recognized.
-        // Invoke the superclass to handle it.
-        return super.onOptionsItemSelected(item);
-    }
-  }
-
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
@@ -105,11 +89,6 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   @Override
   public int getTitle() {
     return R.string.title_search;
-  }
-
-  @Override
-  public int getMenuId() {
-    return R.menu.menu_search;
   }
 
   @Override
@@ -155,6 +134,25 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     super.onDestroy();
     cancelSearch();
     searchExecutor.shutdown();
+  }
+
+  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+    menuInflater.inflate(R.menu.menu_search, menu);
+  }
+
+  @SuppressLint("NonConstantResourceId")
+  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+    switch (item.getItemId()) {
+      case R.id.action_all:
+        radiosSearchAdapter.selectAll();
+        return true;
+      case R.id.action_done:
+        Radios.getInstance().addAll(radiosSearchAdapter.getSelectedRadios());
+        onBackPressed();
+        return true;
+      default:
+        return false;
+    }
   }
 
   protected Radio buildRadio() throws MalformedURLException {

@@ -76,11 +76,6 @@ public class ModifyFragment extends MainActivityFragment {
   }
 
   @Override
-  protected int getLayout() {
-    return R.layout.content_main;
-  }
-
-  @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     assert container != null;
@@ -91,5 +86,10 @@ public class ModifyFragment extends MainActivityFragment {
       radiosRecyclerView,
       radiosModifyAdapterListener,
       (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
+  }
+
+  @Override
+  protected int getLayout() {
+    return R.layout.content_main;
   }
 }

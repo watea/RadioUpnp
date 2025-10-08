@@ -70,25 +70,6 @@ public class ItemModifyFragment extends ItemFragment {
   }
 
   @Override
-  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    if (!super.onOptionsItemSelected(item)) {
-      assert radio != null;
-      radio.setName(getRadioName());
-      assert urlWatcher.url != null;
-      radio.setURL(urlWatcher.url);
-      radio.setWebPageURL(webPageWatcher.url);
-      assert getIcon() != null;
-      radio.setIcon(getIcon());
-      if (!Radios.getInstance().modify(radio)) {
-        tell(R.string.radio_database_update_failed);
-      }
-      onBackPressed();
-    }
-    // Always true
-    return true;
-  }
-
-  @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     super.onCreateView(view, container);
     assert radio != null;
@@ -104,5 +85,24 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public int getTitle() {
     return R.string.title_item_modify;
+  }
+
+  @Override
+  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+    if (!super.onMenuItemSelected(item)) {
+      assert radio != null;
+      radio.setName(getRadioName());
+      assert urlWatcher.url != null;
+      radio.setURL(urlWatcher.url);
+      radio.setWebPageURL(webPageWatcher.url);
+      assert getIcon() != null;
+      radio.setIcon(getIcon());
+      if (!Radios.getInstance().modify(radio)) {
+        tell(R.string.radio_database_update_failed);
+      }
+      onBackPressed();
+    }
+    // Always true
+    return true;
   }
 }

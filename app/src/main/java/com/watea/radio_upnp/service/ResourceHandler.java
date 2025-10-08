@@ -57,7 +57,7 @@ public class ResourceHandler implements HttpServer.Handler {
     @NonNull HttpServer.Response response,
     @NonNull OutputStream responseStream) throws IOException {
     final String requestedPath = request.getPath();
-    if ((bitmap == null) || !requestedPath.endsWith(uri)) {
+    if ((bitmap == null) || (uri == null) || !requestedPath.endsWith(uri)) {
       return;
     }
     Log.d(LOG_TAG, "handle: accepted " + requestedPath);
