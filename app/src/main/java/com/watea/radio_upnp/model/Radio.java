@@ -315,6 +315,7 @@ public class Radio {
     @NonNull String appId,
     @NonNull String postfix,
     @NonNull String information) {
+    information = name.equals(information) ? "" : information;
     return new MediaMetadataCompat.Builder()
       .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, appId + getId())
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
