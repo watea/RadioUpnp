@@ -322,7 +322,6 @@ public class Radio {
       .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, icon)
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, name + postfix)
       .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, name + postfix)
-      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, name + postfix)
       .putString(MediaMetadataCompat.METADATA_KEY_TITLE, information)
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, information)
       .putRating(
