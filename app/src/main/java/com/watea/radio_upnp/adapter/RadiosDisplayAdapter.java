@@ -47,9 +47,9 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
 
     @Override
     public void onAdd(@NonNull Radio radio) {
-      onCountChange();
       final int index = indexOf(radio);
       if (index != DEFAULT) {
+        onCountChange();
         notifyItemRangeInserted(index, 1);
       }
     }

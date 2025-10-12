@@ -99,7 +99,7 @@ public class Radios extends ArrayList<Radio> {
           Log.e(LOG_TAG, "Internal failure; unable to init radios");
         }
       } else {
-        new Thread(radios::init).start();
+        radios.init();
       }
     }
   }
@@ -225,8 +225,7 @@ public class Radios extends ArrayList<Radio> {
     return read(inputStream) && write();
   }
 
-  public synchronized boolean importCsvFrom(@NonNull InputStream inputStream)
-    throws IOException {
+  public synchronized boolean importCsvFrom(@NonNull InputStream inputStream) throws IOException {
     return readCsv(inputStream) && write();
   }
 
@@ -306,7 +305,7 @@ public class Radios extends ArrayList<Radio> {
     }
     // If IDs have been generated for backward compatibility, we shall store result
     if (Radio.isBackwardCompatible()) {
-      write();
+      new Thread(this::write).start();
     }
   }
 
