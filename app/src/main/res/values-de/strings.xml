@@ -93,7 +93,6 @@
     <string name="export_message">[.CSV] oder [.JSON] Export-Datei im auszuwählenden Ordner erzeugen</string>
     <string name="import_successful">Import erfolgreich!</string>
     <string name="import_failed">Fehler beim Importieren!</string>
-    <string name="import_no_data">Import beendet: Keine Daten hinzugefügt!</string>
     <string name="export_done">Export-Datei erstellt:\ </string>
     <string name="export_failed">Fehler beim Exportieren!</string>
     <string name="export_failed_not_created">Fehler beim Exportieren: Kann Datei nicht erstellen!</string>

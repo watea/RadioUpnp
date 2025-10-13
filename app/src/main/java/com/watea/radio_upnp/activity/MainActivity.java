@@ -865,9 +865,10 @@ public class MainActivity
       if (inputStream == null) {
         Log.e(LOG_TAG, "importFrom: internal failure");
       } else {
-        final boolean result = (importExportAction == ImportExportAction.JSON_IMPORT) ?
-          Radios.getInstance().importFrom(inputStream) : Radios.getInstance().importCsvFrom(inputStream);
-        tell(result ? R.string.import_successful : R.string.import_no_data);
+        Radios.getInstance().importFrom(
+          (importExportAction == ImportExportAction.JSON_IMPORT),
+          inputStream,
+          result -> tell(result ? R.string.import_successful : string.import_failed));
         return;
       }
     } catch (Exception exception) {

@@ -95,8 +95,7 @@
     <string name="import_message">Choose import file; content (try export to see format) will be imported</string>
     <string name="export_message">[.CSV] or [.JSON] exports file in chosen directory</string>
     <string name="import_successful">Import successful!</string>
-    <string name="import_failed">Import failed!</string>
-    <string name="import_no_data">Import done; no data added!</string>
+    <string name="import_failed">Import failure occurred!</string>
     <string name="export_done">Export file created: </string>
     <string name="export_failed">Export failed!</string>
     <string name="export_failed_not_created">Export failed; unable to create file!</string>

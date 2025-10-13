@@ -25,14 +25,14 @@ package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
@@ -56,6 +56,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+// All public methods are must be called from UI thread
 public class Radios extends ArrayList<Radio> {
   public static final String MIME_JSON = "application/json";
   public static final String MIME_CSV = "text/csv";
@@ -68,6 +69,7 @@ public class Radios extends ArrayList<Radio> {
   @Nullable
   private static Radios radios = null; // Singleton
   private static boolean isPreferred = false;
+  private final Handler handler = new Handler(Looper.getMainLooper());
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;
@@ -84,7 +86,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   // Must be called before getInstance
-  public synchronized static void setInstance(@NonNull Context context) {
+  public static void setInstance(@NonNull Context context) {
     if (radios == null) {
       radios = new Radios(context);
       final SharedPreferences sharedPreferences = context.getSharedPreferences("activity." + MainActivity.class.getSimpleName(), Context.MODE_PRIVATE);
@@ -99,7 +101,16 @@ public class Radios extends ArrayList<Radio> {
           Log.e(LOG_TAG, "Internal failure; unable to init radios");
         }
       } else {
-        radios.init();
+        // Init
+        new Thread(() -> {
+          try (final FileInputStream fileInputStream = new FileInputStream(radios.fileName)) {
+            // If IDs have been generated for backward compatibility, we shall store result
+            radios.read(fileInputStream, result -> {
+            }, Radio.isBackwardCompatible());
+          } catch (Exception exception) {
+            Log.e(LOG_TAG, "init: I/O failure", exception);
+          }
+        }).start();
       }
     }
   }
@@ -115,6 +126,8 @@ public class Radios extends ArrayList<Radio> {
 
   public void addListener(@NonNull Listener listener) {
     listeners.add(listener);
+    // We tell the listener about all already known radios
+    forEach(listener::onAdd);
   }
 
   public void removeListener(@NonNull Listener listener) {
@@ -126,7 +139,7 @@ public class Radios extends ArrayList<Radio> {
     return isPreferred ? stream().filter(Radio::isPreferred).collect(Collectors.toList()) : this;
   }
 
-  public synchronized boolean swap(int from, int to) {
+  public boolean swap(int from, int to) {
     final int max = size() - 1;
     if ((from > max) || (to > max)) {
       return false;
@@ -136,13 +149,13 @@ public class Radios extends ArrayList<Radio> {
   }
 
   @Override
-  public synchronized boolean add(Radio radio) {
+  public boolean add(Radio radio) {
     return add(radio, true);
   }
 
   @NonNull
   @Override
-  public synchronized Radio remove(int index) {
+  public Radio remove(int index) {
     final Radio result = super.remove(index);
     tellListeners(listener -> listener.onRemove(index));
     return result;
@@ -150,18 +163,18 @@ public class Radios extends ArrayList<Radio> {
 
   // o != null
   @Override
-  public synchronized boolean remove(@Nullable Object o) {
+  public boolean remove(@Nullable Object o) {
     assert o != null;
     final int index = indexOf(o);
     return tellListeners(super.remove(o), true, listener -> listener.onRemove(index));
   }
 
   @Override
-  public synchronized boolean addAll(@NonNull Collection<? extends Radio> c) {
+  public boolean addAll(@NonNull Collection<? extends Radio> c) {
     return tellListeners(super.addAll(c), true, listener -> listener.onAddAll(c));
   }
 
-  public synchronized boolean modify(@NonNull Radio radio) {
+  public boolean modify(@NonNull Radio radio) {
     final int index = indexOf(radio);
     if (index >= 0) {
       set(index, radio);
@@ -170,14 +183,14 @@ public class Radios extends ArrayList<Radio> {
     return false;
   }
 
-  public synchronized void setPreferred(@NonNull Radio radio, boolean isPreferred) {
+  public void setPreferred(@NonNull Radio radio, boolean isPreferred) {
     radio.setIsPreferred(isPreferred);
     modify(radio);
   }
 
   // radio must be valid. direction must be -1 or 1. Use actually selected radios.
   @Nullable
-  public synchronized Radio getRadioFrom(@NonNull Radio radio, int direction) {
+  public Radio getRadioFrom(@NonNull Radio radio, int direction) {
     final List<Radio> actuallySelectedRadios = getActuallySelectedRadios();
     final int size = actuallySelectedRadios.size();
     final int index = (size == 0) ? -1 : actuallySelectedRadios.indexOf(radio);
@@ -185,16 +198,16 @@ public class Radios extends ArrayList<Radio> {
   }
 
   @Nullable
-  public synchronized Radio getRadioFromId(@NonNull String id) {
+  public Radio getRadioFromId(@NonNull String id) {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
   }
 
   @Nullable
-  public synchronized Radio getRadioFromURL(@NonNull String uRL) {
+  public Radio getRadioFromURL(@NonNull String uRL) {
     return stream().filter(radio -> uRL.equals(radio.getURL().toString())).findFirst().orElse(null);
   }
 
-  public synchronized void write(@NonNull OutputStream outputStream, @NonNull String type)
+  public void write(@NonNull OutputStream outputStream, @NonNull String type)
     throws JSONException, IOException {
     switch (type) {
       case MIME_CSV:
@@ -221,16 +234,24 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
-  public synchronized boolean importFrom(@NonNull InputStream inputStream) throws IOException, JsonIOException, JsonSyntaxException {
-    return read(inputStream) && write();
+  public void importFrom(
+    boolean isJSON,
+    @NonNull InputStream inputStream,
+    @NonNull Consumer<Boolean> callback) {
+    new Thread(() -> {
+      if (isJSON) {
+        read(inputStream, callback, true);
+      } else {
+        readCsv(inputStream, callback);
+      }
+    }).start();
   }
 
-  public synchronized boolean importCsvFrom(@NonNull InputStream inputStream) throws IOException {
-    return readCsv(inputStream) && write();
+  private void putOnUiThread(@NonNull Runnable runnable) {
+    handler.post(runnable);
   }
 
-  private boolean readCsv(@NonNull InputStream inputStream) throws IOException {
-    boolean result = false;
+  private void readCsv(@NonNull InputStream inputStream, @NonNull Consumer<Boolean> callback) {
     try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
       String line;
       // Skip header line
@@ -238,74 +259,73 @@ public class Radios extends ArrayList<Radio> {
       while ((line = reader.readLine()) != null) {
         final Radio radio = Radio.getRadioFromCsv(line);
         if (radio != null) {
-          result = add(radio, false) || result;
+          putOnUiThread(() -> add(radio, false));
         }
       }
+      callback.accept(true);
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "readCsv: internal failure creating radio", iOException);
+      callback.accept(false);
     }
-    return result;
+    write();
   }
 
-  private boolean add(@NonNull Radio radio, boolean isToWrite) {
-    return tellListeners(super.add(radio), isToWrite, listener -> listener.onAdd(radio));
-  }
-
-  // Only JSON can be read.
-  // True if something is read.
-  private boolean read(@NonNull InputStream inputStream) throws IOException, JsonIOException, JsonSyntaxException {
-    final Gson gson = new Gson();
-    // Define the type for the parsing
-    final Type listType = new TypeToken<List<Map<String, Object>>>() {
-    }.getType();
-    boolean result = false;
-    // Parse JSON file
-    try (final InputStreamReader reader = new InputStreamReader(inputStream)) {
-      final List<Map<String, Object>> jsonObjects = gson.fromJson(reader, listType);
-      for (final Map<String, Object> jsonObject : jsonObjects) {
-        result = addRadioFrom(new JSONObject(jsonObject)) || result;
+  // Only JSON can be read
+  private void read(
+    @NonNull InputStream inputStream,
+    @NonNull Consumer<Boolean> callback,
+    boolean andWrite) {
+    try {
+      final Gson gson = new Gson();
+      // Define the type for the parsing
+      final Type listType = new TypeToken<List<Map<String, Object>>>() {
+      }.getType();
+      // Parse JSON file
+      try (final InputStreamReader reader = new InputStreamReader(inputStream)) {
+        final List<Map<String, Object>> jsonObjects = gson.fromJson(reader, listType);
+        for (final Map<String, Object> jsonObject : jsonObjects) {
+          Log.d(LOG_TAG, "read: jsonObject" + jsonObject);
+          putOnUiThread(() -> addRadioFrom(new JSONObject(jsonObject)));
+        }
       }
+      callback.accept(true);
+    } catch (IOException malformedURLException) {
+      Log.e(LOG_TAG, "read: internal failure creating radio", malformedURLException);
+      callback.accept(false);
     }
-    return result;
+    if (andWrite) {
+      write();
+    }
   }
 
   // Write JSON
-  private boolean write() {
+  private void write() {
     try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
       write(fileOutputStream, MIME_JSON);
     } catch (IOException | JSONException iOException) {
       Log.e(LOG_TAG, "write: internal failure", iOException);
-      return false;
     }
-    return true;
+  }
+
+  // Shall be called in UI thread
+  private boolean add(@NonNull Radio radio, boolean isToWrite) {
+    return tellListeners(super.add(radio), isToWrite, listener -> listener.onAdd(radio));
   }
 
   // Avoid duplicate radio.
   // No write.
-  private boolean addRadioFrom(@NonNull JSONObject jSONObject) {
-    boolean result = false;
+  private void addRadioFrom(@NonNull JSONObject jSONObject) {
     try {
       final Radio radio = new Radio(jSONObject);
       if (stream()
         .map(Radio::getURL)
         .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {
-        result = add(radio, false);
+        add(radio, false);
       }
     } catch (JSONException jSONException) {
       Log.e(LOG_TAG, "addRadioFrom: internal JSON failure", jSONException);
     } catch (MalformedURLException malformedURLException) {
       Log.e(LOG_TAG, "addRadioFrom: internal failure creating radio", malformedURLException);
-    }
-    return result;
-  }
-
-  private void init() {
-    try (final FileInputStream fileInputStream = new FileInputStream(fileName)) {
-      read(fileInputStream);
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "init: I/O failure", exception);
-    }
-    // If IDs have been generated for backward compatibility, we shall store result
-    if (Radio.isBackwardCompatible()) {
-      new Thread(this::write).start();
     }
   }
 
