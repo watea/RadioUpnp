@@ -57,7 +57,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-// All public methods are must be called from UI thread
+// All public methods must be called from UI thread, if not otherwise specified
 public class Radios extends ArrayList<Radio> {
   public static final String MIME_JSON = "application/json";
   public static final String MIME_CSV = "text/csv";
@@ -239,7 +239,8 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
-  // isJSON: true if JSON, false if CSV
+  // isJSON: true if JSON, false if CSV.
+  // Intended to be called in other thread.
   public void importFrom(
     boolean isJSON,
     @NonNull InputStream inputStream,
