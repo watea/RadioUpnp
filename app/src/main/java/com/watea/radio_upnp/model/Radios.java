@@ -54,6 +54,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 // All public methods are must be called from UI thread
@@ -105,10 +106,14 @@ public class Radios extends ArrayList<Radio> {
         new Thread(() -> {
           try (final FileInputStream fileInputStream = new FileInputStream(radios.fileName)) {
             // If IDs have been generated for backward compatibility, we shall store result
-            radios.read(fileInputStream, result -> {
-            }, Radio.isBackwardCompatible());
+            radios.importFrom(
+              true,
+              fileInputStream,
+              Radio::isBackwardCompatible,
+              unused -> {
+              });
           } catch (Exception exception) {
-            Log.e(LOG_TAG, "init: I/O failure", exception);
+            Log.e(LOG_TAG, "init: internal failure", exception);
           }
         }).start();
       }
@@ -234,24 +239,26 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
+  // isJSON: true if JSON, false if CSV
   public void importFrom(
     boolean isJSON,
     @NonNull InputStream inputStream,
+    @NonNull Supplier<Boolean> isToWrite,
     @NonNull Consumer<Boolean> callback) {
-    new Thread(() -> {
-      if (isJSON) {
-        read(inputStream, callback, true);
-      } else {
-        readCsv(inputStream, callback);
+    final boolean result = isJSON ? read(inputStream) : readCsv(inputStream);
+    putOnUiThread(() -> {
+      callback.accept(result);
+      if (isToWrite.get()) {
+        new Thread(this::write).start();
       }
-    }).start();
+    });
   }
 
   private void putOnUiThread(@NonNull Runnable runnable) {
     handler.post(runnable);
   }
 
-  private void readCsv(@NonNull InputStream inputStream, @NonNull Consumer<Boolean> callback) {
+  private boolean readCsv(@NonNull InputStream inputStream) {
     try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
       String line;
       // Skip header line
@@ -262,19 +269,15 @@ public class Radios extends ArrayList<Radio> {
           putOnUiThread(() -> add(radio, false));
         }
       }
-      callback.accept(true);
+      return true;
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "readCsv: internal failure creating radio", iOException);
-      callback.accept(false);
+      return false;
     }
-    write();
   }
 
   // Only JSON can be read
-  private void read(
-    @NonNull InputStream inputStream,
-    @NonNull Consumer<Boolean> callback,
-    boolean andWrite) {
+  private boolean read(@NonNull InputStream inputStream) {
     try {
       final Gson gson = new Gson();
       // Define the type for the parsing
@@ -288,13 +291,10 @@ public class Radios extends ArrayList<Radio> {
           putOnUiThread(() -> addRadioFrom(new JSONObject(jsonObject)));
         }
       }
-      callback.accept(true);
-    } catch (IOException malformedURLException) {
-      Log.e(LOG_TAG, "read: internal failure creating radio", malformedURLException);
-      callback.accept(false);
-    }
-    if (andWrite) {
-      write();
+      return true;
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "read: internal failure creating radio", iOException);
+      return false;
     }
   }
 

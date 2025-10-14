@@ -861,20 +861,22 @@ public class MainActivity
   }
 
   private void importFrom(@NonNull Uri uri, @NonNull ImportExportAction importExportAction) {
-    try (final InputStream inputStream = getContentResolver().openInputStream(uri)) {
-      if (inputStream == null) {
-        Log.e(LOG_TAG, "importFrom: internal failure");
-      } else {
-        Radios.getInstance().importFrom(
-          (importExportAction == ImportExportAction.JSON_IMPORT),
-          inputStream,
-          result -> tell(result ? R.string.import_successful : string.import_failed));
-        return;
+    new Thread(() -> {
+      try (final InputStream inputStream = getContentResolver().openInputStream(uri)) {
+        if (inputStream == null) {
+          Log.e(LOG_TAG, "importFrom: internal failure");
+        } else {
+          Radios.getInstance().importFrom(
+            (importExportAction == ImportExportAction.JSON_IMPORT),
+            inputStream,
+            () -> true,
+            result -> tell(result ? R.string.import_successful : string.import_failed));
+        }
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "importFrom: I/O failure", exception);
+        runOnUiThread(() -> tell(R.string.import_failed));
       }
-    } catch (Exception exception) {
-      Log.e(LOG_TAG, "importFrom: I/O failure", exception);
-    }
-    tell(R.string.import_failed);
+    }).start();
   }
 
   @Nullable
