@@ -288,7 +288,6 @@ public class Radios extends ArrayList<Radio> {
       try (final InputStreamReader reader = new InputStreamReader(inputStream)) {
         final List<Map<String, Object>> jsonObjects = gson.fromJson(reader, listType);
         for (final Map<String, Object> jsonObject : jsonObjects) {
-          Log.d(LOG_TAG, "read: jsonObject" + jsonObject);
           putOnUiThread(() -> addRadioFrom(new JSONObject(jsonObject)));
         }
       }
@@ -301,6 +300,7 @@ public class Radios extends ArrayList<Radio> {
 
   // Write JSON
   private void write() {
+    Log.d(LOG_TAG, "write: entering");
     try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
       write(fileOutputStream, MIME_JSON);
     } catch (IOException | JSONException iOException) {
