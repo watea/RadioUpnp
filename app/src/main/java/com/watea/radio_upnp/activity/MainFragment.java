@@ -47,8 +47,6 @@ import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
-import java.util.Objects;
-
 public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;

@@ -197,8 +197,6 @@ public class MainActivity
         // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
         upnpService.addListener(upnpListener);
-        // Init listener
-        upnpService.tellSelectedDeviceIdentity(null);
       }
     }
 
