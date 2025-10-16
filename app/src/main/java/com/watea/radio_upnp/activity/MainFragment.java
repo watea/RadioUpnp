@@ -47,6 +47,8 @@ import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
+import java.util.Objects;
+
 public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;
@@ -151,6 +153,7 @@ public class MainFragment extends MainActivityFragment {
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     if (savedInstanceState != null) {
+      Radios.setInstance(requireContext());
       Radios.setPreferred(savedInstanceState.getBoolean(getString(R.string.key_preferred_radios)));
     }
   }

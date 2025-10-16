@@ -300,7 +300,7 @@ public class Radios extends ArrayList<Radio> {
 
   // Write JSON
   private void write() {
-    Log.d(LOG_TAG, "write: entering");
+    Log.d(LOG_TAG, "write");
     try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
       write(fileOutputStream, MIME_JSON);
     } catch (IOException | JSONException iOException) {
