@@ -151,7 +151,7 @@ public class MainFragment extends MainActivityFragment {
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     if (savedInstanceState != null) {
-      Radios.setInstance(requireContext());
+      Radios.setInstance(requireContext(), getMainActivity().getLoadingAlertDialog());
       Radios.setPreferred(savedInstanceState.getBoolean(getString(R.string.key_preferred_radios)));
     }
   }

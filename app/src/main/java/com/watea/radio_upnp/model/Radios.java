@@ -31,6 +31,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -87,7 +88,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   // Must be called before getInstance
-  public static void setInstance(@NonNull Context context) {
+  public static void setInstance(@NonNull Context context, @Nullable AlertDialog loadingAlertDialog) {
     if (radios == null) {
       radios = new Radios(context);
       final SharedPreferences sharedPreferences = context.getSharedPreferences("activity." + MainActivity.class.getSimpleName(), Context.MODE_PRIVATE);
@@ -102,6 +103,9 @@ public class Radios extends ArrayList<Radio> {
           Log.e(LOG_TAG, "Internal failure; unable to init radios");
         }
       } else {
+        if (loadingAlertDialog != null) {
+          loadingAlertDialog.show();
+        }
         // Init
         new Thread(() -> {
           try (final FileInputStream fileInputStream = new FileInputStream(radios.fileName)) {
@@ -111,6 +115,9 @@ public class Radios extends ArrayList<Radio> {
               fileInputStream,
               Radio::isBackwardCompatible,
               unused -> {
+                if ((loadingAlertDialog != null)  && loadingAlertDialog.isShowing()) {
+                  loadingAlertDialog.dismiss();
+                }
               });
           } catch (Exception exception) {
             Log.e(LOG_TAG, "init: internal failure", exception);

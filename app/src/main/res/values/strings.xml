@@ -144,6 +144,7 @@
     <string name="light_radio_button">Light</string>
     <string name="no_file_picker_found">No file picker found!</string>
     <string name="donation_error">Internal error, please try again later!</string>
+    <string name="loading_radios">Loading, please wait&#8230;</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

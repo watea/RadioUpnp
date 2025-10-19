@@ -125,6 +125,7 @@ public class MainActivity
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
+  private AlertDialog loadingAlertDialog;
   private AlertDialog upnpAlertDialog;
   private AlertDialog parametersAlertDialog;
   private AlertDialog aboutAlertDialog;
@@ -407,6 +408,10 @@ public class MainActivity
     return layout;
   }
 
+  public AlertDialog getLoadingAlertDialog() {
+    return loadingAlertDialog;
+  }
+
   // Is called also when coming back after a "Back" exit
   @Override
   @SuppressLint({"InflateParams", "NonConstantResourceId"})
@@ -414,7 +419,12 @@ public class MainActivity
     super.onCreate(savedInstanceState);
     Log.d(LOG_TAG, "onCreate");
     // Create radios if needed
-    Radios.setInstance(this);
+    Radios.setInstance(
+      this,
+      loadingAlertDialog = new AlertDialog.Builder(this)
+        .setCancelable(false)
+        .setView(R.layout.view_loading)
+        .create());
     // Fetch preferences
     sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Theme
@@ -480,6 +490,7 @@ public class MainActivity
     final NavigationView navigationView = findViewById(R.id.navigation_view);
     navigationView.setNavigationItemSelectedListener(this);
     navigationMenu = navigationView.getMenu();
+    // Build load dialog: done in Radios.setInstance call
     // Build about dialog
     final View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
     ((TextView) aboutView.findViewById(R.id.version_name_text_view))

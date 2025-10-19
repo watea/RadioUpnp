@@ -209,7 +209,7 @@ public class RadioService
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Create radios if needed
-    Radios.setInstance(this);
+    Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
     // Launch HTTP server
     try {
