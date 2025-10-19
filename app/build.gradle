@@ -11,8 +11,8 @@ android {
         minSdk = 26
         compileSdk = 36
         targetSdk = 36
-        versionCode = 27170
-        versionName = "2.71.70"
+        versionCode = 27171
+        versionName = "2.71.71"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -79,7 +79,7 @@ dependencies {
     // AndroidSsdpClient
     implementation 'com.github.watea:androidssdpclient:1.0.6'
     // okhttp
-    implementation 'com.squareup.okhttp3:okhttp:5.2.0'
+    implementation 'com.squareup.okhttp3:okhttp:5.2.1'
     // Car App Library
     implementation "androidx.car.app:app:1.7.0"
 }
