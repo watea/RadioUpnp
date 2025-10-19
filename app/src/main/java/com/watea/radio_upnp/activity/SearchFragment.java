@@ -84,12 +84,15 @@ public class SearchFragment extends SearchRootFragment {
   @Override
   public void onPause() {
     super.onPause();
-    getSharedPreferences()
-      .edit()
-      .putString(getString(R.string.key_country), getCountry())
-      .putString(getString(R.string.key_radio_tag), getRadioTag())
-      .putString(getString(R.string.key_bitrate), getBitrate())
-      .apply();
+    // Preferences are stored only if session is valid
+    if (isServerAvailable()) {
+      getSharedPreferences()
+        .edit()
+        .putString(getString(R.string.key_country), getCountry())
+        .putString(getString(R.string.key_radio_tag), getRadioTag())
+        .putString(getString(R.string.key_bitrate), getBitrate())
+        .apply();
+    }
   }
 
   @SuppressLint("InflateParams")

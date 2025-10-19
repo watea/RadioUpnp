@@ -136,6 +136,10 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     searchExecutor.shutdown();
   }
 
+  protected boolean isServerAvailable() {
+    return isServerAvailable;
+  }
+
   protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
     menuInflater.inflate(R.menu.menu_search, menu);
   }
