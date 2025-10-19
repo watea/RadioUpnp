@@ -138,7 +138,7 @@
     <string name="light_radio_button">Hell</string>
     <string name="no_file_picker_found">Kein Dateiauswahldialog gefunden!</string>
     <string name="donation_error">Interner Fehler, bitte versuchen Sie es später noch einmal!</string>
-    <string name="loading_radios">Lade, bitte warten#8230;</string>
+    <string name="loading_radios">Lade, bitte warten&#8230;</string>
     <!-- Menu titles -->
     <string name="title_preferred">Favoritenliste</string>
     <string name="title_main">Wiedergabe</string>
