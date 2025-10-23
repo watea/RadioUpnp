@@ -106,13 +106,13 @@
                 android:resource="@xml/filepaths" />
         </provider>
 
-<!--        <meta-data-->
-<!--            android:name="com.google.android.gms.car.application"-->
-<!--            android:resource="@xml/automotive_app_desc" />-->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
 
-<!--        <meta-data-->
-<!--            android:name="androidx.car.app.TintableAttributionIcon"-->
-<!--            android:resource="@drawable/ic_mic_white_24dp" />-->
+        <meta-data
+            android:name="androidx.car.app.TintableAttributionIcon"
+            android:resource="@drawable/ic_mic_white_24dp" />
 
     </application>
 
