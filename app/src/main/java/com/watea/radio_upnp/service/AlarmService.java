@@ -250,7 +250,7 @@ public class AlarmService extends Service {
       } else {
         final Bundle bundle = new Bundle();
         bundle.putBoolean(getString(R.string.key_alarm_radio), true);
-        mediaController.getTransportControls().prepareFromMediaId(radio.getId(), new Bundle());
+        mediaController.getTransportControls().playFromMediaId(radio.getId(), new Bundle());
         return true;
       }
     }
