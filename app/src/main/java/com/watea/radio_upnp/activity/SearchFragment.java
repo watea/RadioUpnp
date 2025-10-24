@@ -252,8 +252,11 @@ public class SearchFragment extends SearchRootFragment {
     private static final String ALL_HOSTS = "all.api.radio-browser.info";
     private static final long CONNECT = 5;
     private static final long READ = 10;
+    @NonNull
     private final OkHttpClient client;
     private final Random random = new Random();
+    @Nullable
+    private HttpUrl.Builder lastValidHttpUrlBuilder = null; // Cache
 
     public RadioBrowserClient(@NonNull Context context) {
       final String userAgent = context.getString(R.string.app_name)
@@ -272,14 +275,22 @@ public class SearchFragment extends SearchRootFragment {
     @NonNull
     public Response search(@NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder) throws IOException {
       IOException last = null;
-      for (int attempt = 0; attempt < 3; attempt++) {
+      for (int attempt = 0; attempt < 10; attempt++) {
         try {
-          final HttpUrl base = baseUrlBuilder.apply(pickBaseUrlBuilder()).build();
-          return client.newCall(new Request.Builder().url(base).get().build()).execute();
+          final HttpUrl base = baseUrlBuilder.apply(lastValidHttpUrlBuilder = (lastValidHttpUrlBuilder == null) ? pickBaseUrlBuilder() : lastValidHttpUrlBuilder).build();
+          final Response response =  client.newCall(new Request.Builder().url(base).get().build()).execute();
+          if (response.isSuccessful()) {
+            return response;
+          } else {
+            last = new IOException("Unexpected code " + response);
+            lastValidHttpUrlBuilder = null;
+            response.close();
+          }
         } catch (IOException iOException) {
           last = iOException;
         }
       }
+      lastValidHttpUrlBuilder = null;
       throw last;
     }
 
