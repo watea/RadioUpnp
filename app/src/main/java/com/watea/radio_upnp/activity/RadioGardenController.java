@@ -82,7 +82,7 @@ public class RadioGardenController {
   private static final String CHANNEL = "channel/";
   private static final String LISTEN = "listen/";
   private static final String CHANNEL_MP3 = "/channel.mp3";
-  private static final Pattern CLIP_DATA_PATTERN = Pattern.compile("Listen to (.+) from (.+) live on Radio Garden: https://radio.garden/listen/.+/(.+)");
+  private static final Pattern CLIP_DATA_PATTERN = Pattern.compile("https://radio\\.garden/listen/[^/]+/(\\w+)");
   @NonNull
   private final AlertDialog radioGardenAlertDialog;
   @NonNull
@@ -129,9 +129,9 @@ public class RadioGardenController {
       if (result) {
         Log.d(LOG_TAG, "ClipData: " + text);
         final Matcher matcher = CLIP_DATA_PATTERN.matcher(text);
-        result = matcher.find() && (matcher.groupCount() > 2);
+        result = matcher.find() && (matcher.groupCount() > 0);
         if (result) {
-          final String id = matcher.group(3);
+          final String id = matcher.group(1);
           result = (id != null);
           if (result) {
             new Thread(() -> handle(id)).start();
