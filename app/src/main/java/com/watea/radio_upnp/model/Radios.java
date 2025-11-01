@@ -115,7 +115,7 @@ public class Radios extends ArrayList<Radio> {
               fileInputStream,
               Radio::isBackwardCompatible,
               unused -> {
-                if ((loadingAlertDialog != null)  && loadingAlertDialog.isShowing()) {
+                if ((loadingAlertDialog != null) && loadingAlertDialog.isShowing()) {
                   loadingAlertDialog.dismiss();
                 }
               });
@@ -247,7 +247,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   // isJSON: true if JSON, false if CSV.
-  // Intended to be called in other thread.
+  // Intended to be called in own thread.
   public void importFrom(
     boolean isJSON,
     @NonNull InputStream inputStream,

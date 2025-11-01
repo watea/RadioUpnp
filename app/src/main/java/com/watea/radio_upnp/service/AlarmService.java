@@ -78,16 +78,6 @@ public class AlarmService extends Service {
     .build();
   // Wait for internet connection
   private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
-
-  private final Observer<Integer> carConnectionObserver = type -> {
-    if (type == CarConnection.CONNECTION_TYPE_PROJECTION) {
-      Log.d(LOG_TAG, "Android Auto CONNECTED");
-      isAndroidAutoConnected = true;
-    } else {
-      Log.d(LOG_TAG, "Android Auto DISCONNECTED");
-      isAndroidAutoConnected = false;
-    }
-  };
   private String CHANNEL_ID;
   private MediaBrowserCompat mediaBrowser = null;
   // MediaController from the MediaBrowser when it has successfully connected
@@ -97,6 +87,15 @@ public class AlarmService extends Service {
   private ConnectivityManager connectivityManager;
   private boolean isStarted = false;
   private boolean isAndroidAutoConnected = false;
+  private final Observer<Integer> carConnectionObserver = type -> {
+    if (type == CarConnection.CONNECTION_TYPE_PROJECTION) {
+      Log.d(LOG_TAG, "Android Auto CONNECTED");
+      isAndroidAutoConnected = true;
+    } else {
+      Log.d(LOG_TAG, "Android Auto DISCONNECTED");
+      isAndroidAutoConnected = false;
+    }
+  };
   @Nullable
   private CarConnection carConnection = null;
 

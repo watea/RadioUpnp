@@ -412,9 +412,9 @@ public class MainActivity
   public AlertDialog getLoadingAlertDialog() {
     return (loadingAlertDialog == null) ?
       loadingAlertDialog = new AlertDialog.Builder(this)
-      .setCancelable(false)
-      .setView(R.layout.view_loading)
-      .create() :
+        .setCancelable(false)
+        .setView(R.layout.view_loading)
+        .create() :
       loadingAlertDialog;
   }
 

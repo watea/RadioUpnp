@@ -64,23 +64,7 @@ public class Radio {
   private static final String IS_PREFERRED = "is_preferred";
   private static final int DEFAULT = -1;
   private static int lastId = DEFAULT;
-  private static boolean backwardCompatible = false;
-  @NonNull
-  private final String id;
-  @NonNull
-  private final String mime;
-  private final int quality;
-  @NonNull
-  private String name;
-  @NonNull
-  private Bitmap icon;
-  @NonNull
-  private String base64Icon; // cache
-  @NonNull
-  private URL url;
-  @Nullable
-  private URL webPageUrl;
-  private boolean isPreferred;
+  private static boolean isBackwardCompatible = false;
 
   static {
     Radio radio = null;
@@ -97,23 +81,22 @@ public class Radio {
     DUMMY_RADIO = radio;
   }
 
-  public static String getNextId() {
-    return Integer.toString(++lastId);
-  }
-
-  // Backward compatibility: generates an ID if not existing
-  public static String getId(@NonNull JSONObject jsonObject) {
-    try {
-      return jsonObject.getString(ID);
-    } catch (JSONException jSONException) {
-      backwardCompatible = true;
-      return getNextId();
-    }
-  }
-
-  public static boolean isBackwardCompatible() {
-    return backwardCompatible;
-  }
+  @NonNull
+  private final String id;
+  @NonNull
+  private final String mime;
+  private final int quality;
+  @NonNull
+  private String name;
+  @NonNull
+  private Bitmap icon;
+  @NonNull
+  private String base64Icon; // cache
+  @NonNull
+  private URL url;
+  @Nullable
+  private URL webPageUrl;
+  private boolean isPreferred;
 
   // icon and base64Icon are mutually exclusive, one at least not null
   public Radio(
@@ -175,6 +158,24 @@ public class Radio {
       jSONObject.getString(MIME),
       jSONObject.getInt(QUALITY),
       jSONObject.getBoolean(IS_PREFERRED));
+  }
+
+  public static String getNextId() {
+    return Integer.toString(++lastId);
+  }
+
+  // Backward compatibility: generates an ID if not existing
+  public static String getId(@NonNull JSONObject jsonObject) {
+    try {
+      return jsonObject.getString(ID);
+    } catch (JSONException jSONException) {
+      isBackwardCompatible = true;
+      return getNextId();
+    }
+  }
+
+  public static boolean isBackwardCompatible() {
+    return isBackwardCompatible;
   }
 
   @NonNull

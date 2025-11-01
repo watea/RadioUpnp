@@ -278,7 +278,7 @@ public class SearchFragment extends SearchRootFragment {
       for (int attempt = 0; attempt < 10; attempt++) {
         try {
           final HttpUrl base = baseUrlBuilder.apply(lastValidHttpUrlBuilder = (lastValidHttpUrlBuilder == null) ? pickBaseUrlBuilder() : lastValidHttpUrlBuilder).build();
-          final Response response =  client.newCall(new Request.Builder().url(base).get().build()).execute();
+          final Response response = client.newCall(new Request.Builder().url(base).get().build()).execute();
           if (response.isSuccessful()) {
             return response;
           } else {
