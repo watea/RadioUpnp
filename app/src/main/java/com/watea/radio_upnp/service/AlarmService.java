@@ -88,13 +88,8 @@ public class AlarmService extends Service {
   private boolean isStarted = false;
   private boolean isAndroidAutoConnected = false;
   private final Observer<Integer> carConnectionObserver = type -> {
-    if (type == CarConnection.CONNECTION_TYPE_PROJECTION) {
-      Log.d(LOG_TAG, "Android Auto CONNECTED");
-      isAndroidAutoConnected = true;
-    } else {
-      Log.d(LOG_TAG, "Android Auto DISCONNECTED");
-      isAndroidAutoConnected = false;
-    }
+    isAndroidAutoConnected = (type == CarConnection.CONNECTION_TYPE_PROJECTION);
+    Log.d(LOG_TAG, "Android Auto " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
   };
   @Nullable
   private CarConnection carConnection = null;
