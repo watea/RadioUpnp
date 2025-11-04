@@ -293,9 +293,23 @@ public class Radios extends ArrayList<Radio> {
       }.getType();
       // Parse JSON file
       try (final InputStreamReader reader = new InputStreamReader(inputStream)) {
-        final List<Map<String, Object>> jsonObjects = gson.fromJson(reader, listType);
-        for (final Map<String, Object> jsonObject : jsonObjects) {
-          putOnUiThread(() -> addRadioFrom(new JSONObject(jsonObject)));
+        final List<Map<String, Object>> jSONObjects = gson.fromJson(reader, listType);
+        for (final Map<String, Object> jSONObject : jSONObjects) {
+          try {
+            final Radio radio = new Radio(new JSONObject(jSONObject));
+            // Avoid duplicate radio
+            putOnUiThread(() -> {
+              if (stream()
+                .map(Radio::getURL)
+                .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {
+                add(radio, false);
+              }
+            });
+          } catch (JSONException jSONException) {
+            Log.e(LOG_TAG, "read: internal JSON failure", jSONException);
+          } catch (MalformedURLException malformedURLException) {
+            Log.e(LOG_TAG, "read: internal failure creating radio", malformedURLException);
+          }
         }
       }
       return true;
@@ -318,23 +332,6 @@ public class Radios extends ArrayList<Radio> {
   // Shall be called in UI thread
   private boolean add(@NonNull Radio radio, boolean isToWrite) {
     return tellListeners(super.add(radio), isToWrite, listener -> listener.onAdd(radio));
-  }
-
-  // Avoid duplicate radio.
-  // No write.
-  private void addRadioFrom(@NonNull JSONObject jSONObject) {
-    try {
-      final Radio radio = new Radio(jSONObject);
-      if (stream()
-        .map(Radio::getURL)
-        .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {
-        add(radio, false);
-      }
-    } catch (JSONException jSONException) {
-      Log.e(LOG_TAG, "addRadioFrom: internal JSON failure", jSONException);
-    } catch (MalformedURLException malformedURLException) {
-      Log.e(LOG_TAG, "addRadioFrom: internal failure creating radio", malformedURLException);
-    }
   }
 
   private boolean tellListeners(boolean test, boolean isToWrite, @NonNull Consumer<Listener> consumer) {
