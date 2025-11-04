@@ -160,11 +160,13 @@ public class Radio {
       jSONObject.getBoolean(IS_PREFERRED));
   }
 
+  @NonNull
   public static String getNextId() {
     return Integer.toString(++lastId);
   }
 
   // Backward compatibility: generates an ID if not existing
+  @NonNull
   public static String getId(@NonNull JSONObject jsonObject) {
     try {
       return jsonObject.getString(ID);
