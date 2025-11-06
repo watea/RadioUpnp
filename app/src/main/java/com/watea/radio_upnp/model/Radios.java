@@ -71,6 +71,7 @@ public class Radios extends ArrayList<Radio> {
   @Nullable
   private static Radios radios = null; // Singleton
   private static boolean isPreferred = false;
+  private static boolean isInit = false;
   private final Handler handler = new Handler(Looper.getMainLooper());
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
@@ -99,6 +100,7 @@ public class Radios extends ArrayList<Radio> {
             .edit()
             .putBoolean(context.getString(R.string.key_first_start), false)
             .apply();
+          onInit();
         } else {
           Log.e(LOG_TAG, "Internal failure; unable to init radios");
         }
@@ -118,6 +120,7 @@ public class Radios extends ArrayList<Radio> {
                 if ((loadingAlertDialog != null) && loadingAlertDialog.isShowing()) {
                   loadingAlertDialog.dismiss();
                 }
+                onInit();
               });
           } catch (Exception exception) {
             Log.e(LOG_TAG, "init: internal failure", exception);
@@ -134,6 +137,15 @@ public class Radios extends ArrayList<Radio> {
   public static void setPreferred(boolean isPreferred) {
     Radios.isPreferred = isPreferred;
     getInstance().tellListeners(true, false, Listener::onPreferredChange);
+  }
+
+  public static boolean isInit() {
+    return isInit;
+  }
+
+  private static void onInit() {
+    isInit = true;
+    getInstance().tellListeners(true, false, Listener::onInitEnd);
   }
 
   public void addListener(@NonNull Listener listener) {
@@ -365,6 +377,9 @@ public class Radios extends ArrayList<Radio> {
     }
 
     default void onPreferredChange() {
+    }
+
+    default void onInitEnd() {
     }
   }
 }

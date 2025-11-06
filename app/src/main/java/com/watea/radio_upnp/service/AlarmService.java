@@ -80,9 +80,6 @@ public class AlarmService extends Service {
   private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
   private String CHANNEL_ID;
   private MediaBrowserCompat mediaBrowser = null;
-  // MediaController from the MediaBrowser when it has successfully connected
-  @Nullable
-  private MediaControllerCompat mediaController = null;
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
   private boolean isStarted = false;
@@ -233,24 +230,6 @@ public class AlarmService extends Service {
       .build();
   }
 
-  private boolean radioLaunch() {
-    final Radio radio = ((AlarmServiceBinder) binder).getRadio();
-    if (radio == null) {
-      Log.e(LOG_TAG, "radioLaunch: alarm radio is null!");
-    } else {
-      Log.d(LOG_TAG, "radioLaunch: alarm on radio => " + radio.getName());
-      if (mediaController == null) {
-        Log.e(LOG_TAG, "radioLaunch: mediaController is null!");
-      } else {
-        final Bundle bundle = new Bundle();
-        bundle.putBoolean(getString(R.string.key_alarm_radio), true);
-        mediaController.getTransportControls().playFromMediaId(radio.getId(), new Bundle());
-        return true;
-      }
-    }
-    return false;
-  }
-
   private void releaseMediaBrowser() {
     mediaBrowser.disconnect();
     // Robustness: force suspended connection
@@ -345,7 +324,7 @@ public class AlarmService extends Service {
       try {
         mediaBrowser.connect();
       } catch (IllegalStateException illegalStateException) {
-        Log.e(LOG_TAG, "onStartCommand: mediaBrowser.connect() failed", illegalStateException);
+        Log.e(LOG_TAG, "onAvailable: mediaBrowser.connect() failed", illegalStateException);
       }
       releaseConnectivityManagerCallback();
     }
@@ -376,30 +355,66 @@ public class AlarmService extends Service {
   }
 
   private class MediaBrowserCompatConnectionCallback extends MediaBrowserCompat.ConnectionCallback {
+    @Nullable
+    private MediaControllerCompat mediaController = null;
+    private final Radios.Listener radiosListener = new Radios.Listener() {
+      @Override
+      public void onInitEnd() {
+        launch();
+        Radios.getInstance().removeListener(this);
+      }
+    };
+
+    private void launch() {
+      if (!isAndroidAutoConnected) {
+        final Radio radio = ((AlarmServiceBinder) binder).getRadio();
+        if (radio == null) {
+          Log.e(LOG_TAG, "launch: alarm radio is null!");
+        } else {
+          Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
+          if (mediaController == null) {
+            Log.e(LOG_TAG, "launch: mediaController is null!");
+          } else {
+            final Bundle bundle = new Bundle();
+            bundle.putBoolean(getString(R.string.key_alarm_radio), true);
+            mediaController.getTransportControls().playFromMediaId(radio.getId(), new Bundle());
+            return;
+          }
+        }
+      }
+      // Something went wrong, cancel alarm
+      ((AlarmServiceBinder) binder).cancelAlarm();
+    }
+
     @Override
     public void onConnected() {
+      Log.d(LOG_TAG, "onConnected");
       // Get a MediaController for the MediaSession
       mediaController = new MediaControllerCompat(AlarmService.this, mediaBrowser.getSessionToken());
       // Link to the callback controller
       mediaController.registerCallback(mediaControllerCallback);
       // Launch radio
-      if (isAndroidAutoConnected || !radioLaunch()) {
-        // Something went wrong, cancel alarm
-        ((AlarmServiceBinder) binder).cancelAlarm();
+      if (Radios.isInit()) {
+        launch();
+      } else {
+        Radios.getInstance().addListener(radiosListener);
       }
     }
 
     @Override
     public void onConnectionSuspended() {
+      Log.d(LOG_TAG, "onConnectionSuspended");
       if (mediaController != null) {
         mediaController.unregisterCallback(mediaControllerCallback);
+        // Robustness
+        Radios.getInstance().removeListener(radiosListener);
       }
       mediaController = null;
     }
 
     @Override
     public void onConnectionFailed() {
-      Log.d(LOG_TAG, "Connection to RadioService failed");
+      Log.d(LOG_TAG, "onConnectionFailed");
     }
   }
 }
