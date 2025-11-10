@@ -11,18 +11,6 @@
 
 <p>It's completely free and ad-free. You can support development via the Donate menu. Thank you!</p>
 
-<hr>
-
-<p>🔊 <b>Foreground Playback Notice</b><br>
-Playback is always started manually by the user via a Play button.<br>
-To ensure continuous playback even when the app is in the background or the screen is locked, a <b>foreground service</b> is used with a visible and controllable notification (play/pause, next/previous).<br>
-This complies with Google's policy for <code>FOREGROUND_SERVICE_MEDIA_PLAYBACK</code>.</p>
-
-<p>📡 <b>UPnP Streaming Notice</b><br>
-When streaming to a UPnP/DLNA speaker, RadioUpnp uses a foreground service with a clear playback notification and device control.<br>
-This complies with Google's policy for <code>FOREGROUND_SERVICE_CONNECTED_DEVICE</code>.</p>
-
-<hr>
 
 <p>📌 <b>Troubleshooting Tips</b>:</p>
 <ul>

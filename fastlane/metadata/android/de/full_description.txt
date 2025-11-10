@@ -1,0 +1,23 @@
+<p>Mit <i>RadioUpnp</i> können Sie Webradios ohne Unterbrechung genießen, selbst wenn die App im Hintergrund läuft oder der Bildschirm ausgeschaltet ist.</p>
+
+<p>Minimalistisch und vollständig anpassbar, können Sie ganz einfach Ihre eigene Radio-Wiedergabeliste erstellen:</p>
+<ul>
+  <li>Verwenden Sie die integrierte Suche, um Radios zu finden und hinzuzufügen</li>
+  <li>Nutzen Sie die RadioGarden-App und teilen Sie die Ergebnisse direkt mit RadioUpnp</li>
+  <li>Finden Sie Ihren Lieblingssender immer noch nicht? Fügen Sie ihn manuell über den Bildschirm „Hinzufügen/Bearbeiten“ hinzu</li>
+</ul>
+
+<p><i>RadioUpnp</i> ist eine der wenigen Apps, die Radios an UPnP/DLNA-Lautsprecher streamt und dabei Metadaten (wie Titel oder Künstler) anzeigt<sup>*</sup> – ideal für Smart Homes oder audiophile Setups.</p>
+
+<p>Die App ist komplett kostenlos und werbefrei. Sie können die Entwicklung über das Spenden-Menü unterstützen. Vielen Dank!</p>
+
+
+<p>📌 <b>Tipps zur Fehlerbehebung</b>:</p>
+<ul>
+  <li>Einige Handy-Marken (z. B. Samsung, OnePlus) wenden Akku-Optimierungen an, die das Streaming stören können. Deaktivieren Sie die Optimierung für RadioUpnp in den Akku-Einstellungen.</li>
+  <li>Die Streaming-Qualität und Kompatibilität hängen von Ihrem UPnP/DLNA-Gerät ab (unterstützte CODECs usw.).</li>
+  <li>Wenn Sie Werbeblocker oder Firewall-Apps verwenden, kann das UPnP-Streaming blockiert werden.</li>
+  <li>Benötigen Sie Hilfe? Nutzen Sie die Melde-Funktion in der App, um den Entwickler zu kontaktieren.</li>
+</ul>
+
+<p><sup>*</sup> wenn der Icy-Metadatenstandard unterstützt wird.</p>
