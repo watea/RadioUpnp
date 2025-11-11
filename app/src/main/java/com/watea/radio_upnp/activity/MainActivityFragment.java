@@ -73,21 +73,24 @@ public abstract class MainActivityFragment extends Fragment {
   @Override
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
-    requireActivity().addMenuProvider(new MenuProvider() {
-      @Override
-      public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
-        MainActivityFragment.this.onCreateMenu(menu, menuInflater);
-      }
-
-      @Override
-      public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
-        if (menuItem.getItemId() == android.R.id.home) {
-          onBackPressed();
-          return true;
+    requireActivity().addMenuProvider(
+      new MenuProvider() {
+        @Override
+        public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+          MainActivityFragment.this.onCreateMenu(menu, menuInflater);
         }
-        return MainActivityFragment.this.onMenuItemSelected(menuItem);
-      }
-    }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+
+        @Override
+        public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+          if (menuItem.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
+          }
+          return MainActivityFragment.this.onMenuItemSelected(menuItem);
+        }
+      },
+      getViewLifecycleOwner(),
+      Lifecycle.State.RESUMED);
   }
 
   @Override
