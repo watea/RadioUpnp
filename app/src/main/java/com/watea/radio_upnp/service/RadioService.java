@@ -378,8 +378,7 @@ public class RadioService
       // Manage the started state of this service, and session activity
       switch (state.getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
-          // Relaunch now allowed
-          isAllowedToRewind = true;
+          isAllowedToRewind = true; // Relaunch now allowed
         case PlaybackStateCompat.STATE_BUFFERING:
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -391,19 +390,12 @@ public class RadioService
           }
           break;
         case PlaybackStateCompat.STATE_PAUSED:
-          // Scheduler released, if any
-          releaseScheduler();
-          // No relaunch on pause
-          isAllowedToRewind = false;
+          releasePlayerAdapter();
+          isAllowedToRewind = false; // No relaunch on pause
           buildNotification();
           break;
         case PlaybackStateCompat.STATE_ERROR:
-          // Scheduler released, if any
-          releaseScheduler();
-          // For user convenience, session is kept alive
-          if (playerAdapter != null) {
-            playerAdapter.release();
-          }
+          releasePlayerAdapter();
           if (radioHttpServer != null) {
             radioHttpServer.resetRadioHandlerController();
           }
@@ -429,10 +421,7 @@ public class RadioService
           break;
         default:
           // Release everything
-          releaseScheduler();
-          if (playerAdapter != null) {
-            playerAdapter.release();
-          }
+          releasePlayerAdapter();
           if (radioHttpServer != null) {
             radioHttpServer.resetRadioHandlerController();
           }
@@ -578,6 +567,13 @@ public class RadioService
       scheduler.shutdownNow();
       setSleepOn(false);
       cancelSleepTimerNotification();
+    }
+  }
+
+  private void releasePlayerAdapter() {
+    releaseScheduler();
+    if (playerAdapter != null) {
+      playerAdapter.release();
     }
   }
 
