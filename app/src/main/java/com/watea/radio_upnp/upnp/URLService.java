@@ -25,7 +25,6 @@ package com.watea.radio_upnp.upnp;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -47,7 +46,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class URLService {
-  private static final String LOG_TAG = URLService.class.getSimpleName();
   private static final int TIMEOUT = 3000; // ms, for connection and read
   private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
   @NonNull
@@ -101,7 +99,6 @@ public class URLService {
       String encoding = uRLConnection.getContentEncoding();
       encoding = (encoding == null) ? "UTF-8" : encoding;
       content = IOUtils.toString(inputStream, encoding);
-      Log.d(LOG_TAG, "fetchContent:\n" + content);
       return this;
     }
   }
