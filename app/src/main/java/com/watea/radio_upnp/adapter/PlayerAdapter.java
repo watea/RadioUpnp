@@ -77,7 +77,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   private final AudioManager audioManager;
   @NonNull
   private final Listener listener;
-  @Nullable
+  @NonNull
   private final AudioFocusRequest audioFocusRequest;
   protected int state = PlaybackStateCompat.STATE_NONE;
   protected boolean isPaused = false;
@@ -104,9 +104,6 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     this.lockKey = lockKey;
     this.radioUri = radioUri;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
-    if (audioManager == null) {
-      Log.e(LOG_TAG, "Internal failure: audioManager is null");
-    }
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
       .setOnAudioFocusChangeListener(this, new Handler(Looper.getMainLooper()))
@@ -272,23 +269,14 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   }
 
   private void releaseAudioFocus() {
-    if (audioFocusRequest != null) {
-      Log.d(LOG_TAG, "Audio focus released");
-      audioManager.abandonAudioFocusRequest(audioFocusRequest);
-    }
+    Log.d(LOG_TAG, "Audio focus released");
+    audioManager.abandonAudioFocusRequest(audioFocusRequest);
   }
 
   private boolean requestAudioFocus() {
-    boolean request;
-    assert audioFocusRequest != null;
-    request = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
-      audioManager.requestAudioFocus(audioFocusRequest));
-    if (request) {
-      Log.d(LOG_TAG, "Audio focus request succeeded");
-      return true;
-    }
-    Log.d(LOG_TAG, "Audio focus request failed");
-    return false;
+    final boolean request = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED == audioManager.requestAudioFocus(audioFocusRequest));
+    Log.d(LOG_TAG, "Audio focus request " + (request ? "succeeded" : "failed"));
+    return request;
   }
 
   private boolean isAvailableAction(long action) {
