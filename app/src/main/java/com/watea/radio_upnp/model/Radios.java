@@ -348,7 +348,7 @@ public class Radios extends ArrayList<Radio> {
 
   private boolean tellListeners(boolean test, boolean isToWrite, @NonNull Consumer<Listener> consumer) {
     if (test) {
-      listeners.forEach(consumer);
+      new ArrayList<>(listeners).forEach(consumer); // Safe way for listeners.forEach(consumer)
       if (isToWrite) {
         new Thread(this::write).start();
       }
