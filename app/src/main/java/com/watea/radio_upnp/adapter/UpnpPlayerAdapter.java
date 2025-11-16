@@ -405,7 +405,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           final String sink = getResponse("Sink");
           if (sink != null) {
             final List<String> protocolInfos = new ArrayList<>();
-            for (String protocolInfo : sink.split(",")) {
+            for (final String protocolInfo : sink.split(",")) {
               if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
                 Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
                 protocolInfos.add(protocolInfo);

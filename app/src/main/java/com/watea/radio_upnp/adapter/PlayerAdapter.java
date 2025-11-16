@@ -117,7 +117,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   }
 
   public static boolean isHandling(@NonNull String protocolInfo) {
-    for (String audioContentPrefix : AUDIO_CONTENT_PREFIXS) {
+    for (final String audioContentPrefix : AUDIO_CONTENT_PREFIXS) {
       if (protocolInfo.contains(audioContentPrefix))
         return true;
     }

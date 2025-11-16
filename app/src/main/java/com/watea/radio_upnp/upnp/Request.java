@@ -184,7 +184,7 @@ public abstract class Request {
       .append(" xmlns:u=\"")
       .append(serviceType)
       .append("\">");
-    for (UpnpAction.Argument upnpActionArgument : properties) {
+    for (final UpnpAction.Argument upnpActionArgument : properties) {
       soapBody.append("<")
         .append(upnpActionArgument.getKey())
         .append(">")

@@ -271,7 +271,7 @@ public class MainActivity
         break;
       default:
         // Shall not fail to find!
-        for (Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
+        for (final Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
           if (id.equals(FRAGMENT_MENU_IDS.get(fragment))) {
             setFragment(fragment);
           }

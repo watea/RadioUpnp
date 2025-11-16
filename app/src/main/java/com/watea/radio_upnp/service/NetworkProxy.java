@@ -80,7 +80,7 @@ public class NetworkProxy {
       final LinkProperties linkProperties =
         connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
       if (linkProperties != null) {
-        for (LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
+        for (final LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
           final InetAddress inetAddress = linkAddress.getAddress();
           if (inetAddress instanceof java.net.Inet4Address) {
             return inetAddress.getHostAddress();

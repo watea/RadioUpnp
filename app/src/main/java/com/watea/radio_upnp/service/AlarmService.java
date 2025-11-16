@@ -79,7 +79,7 @@ public class AlarmService extends Service {
   // Wait for internet connection
   private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
   private String CHANNEL_ID;
-  private MediaBrowserCompat mediaBrowser = null;
+  private MediaBrowserCompat mediaBrowser;
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
   private boolean isStarted = false;

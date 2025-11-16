@@ -92,7 +92,7 @@ public class RadioURL {
     try {
       final Element head = Jsoup.connect(url.toString()).get().head();
       // Parse site data, try to accelerate
-      for (Element element : head.getAllElements()) {
+      for (final Element element : head.getAllElements()) {
         if (element != head) {
           final String string = element.toString();
           // Don't parse too big string

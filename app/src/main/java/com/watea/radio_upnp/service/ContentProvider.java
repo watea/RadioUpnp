@@ -75,7 +75,7 @@ public class ContentProvider {
     final List<String> deviceProtocolInfos = protocolInfos.get(device);
     if (deviceProtocolInfos != null) {
       final Pattern pattern = Pattern.compile("http-get:\\*:(" + contentType + "):.*");
-      for (String protocolInfo : deviceProtocolInfos) {
+      for (final String protocolInfo : deviceProtocolInfos) {
         final Matcher matcher = pattern.matcher(protocolInfo);
         if (matcher.find()) {
           return matcher.group(1);
