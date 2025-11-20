@@ -26,18 +26,18 @@
     <string name="radio_service_description">Streams radio for RadioUpnp app</string>
     <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
     <string name="alarm_service_description">Handles alarms for RadioUpnp app</string>
-    <string name="copyright">Copyright &#169; 2018 Stephane Treuchot</string>
+    <string name="copyright" translatable="false">Copyright &#169; 2018 Stephane Treuchot</string>
     <string name="credit">Credit:</string>
-    <string name="credit_0">- Icon by shareicon.net</string>
-    <string name="credit_1">- ExoPlayer [Apache License 2.0]</string>
-    <string name="credit_2">- Apache Commons IO [Apache License 2.0]</string>
-    <string name="credit_3">- Jsoup [MIT License]</string>
-    <string name="credit_4">- OkHttp [Apache License 2.0]</string>
-    <string name="credit_5">- German translation by Ronny Steiner</string>
-    <string name="license">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
+    <string name="credit_0" translatable="false">- Icon by shareicon.net</string>
+    <string name="credit_1" translatable="false">- ExoPlayer [Apache License 2.0]</string>
+    <string name="credit_2" translatable="false">- Apache Commons IO [Apache License 2.0]</string>
+    <string name="credit_3" translatable="false">- Jsoup [MIT License]</string>
+    <string name="credit_4" translatable="false">- OkHttp [Apache License 2.0]</string>
+    <string name="credit_5" translatable="false">- German translation by Ronny Steiner</string>
+    <string name="license" translatable="false">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
     <string name="free_software">This is a free software; see sources for copying conditions.</string>
     <string name="version">Version: </string>
-    <string name="void_string"> </string>
+    <string name="void_string" translatable="false"> </string>
     <string name="no_web_page">No web page for this radio!</string>
     <string name="radio_connection_error">Radio connection error!</string>
     <string name="no_internet">Internet connexion not available!</string>
@@ -133,7 +133,6 @@
     <string name="sleep_timer_title">Sleep</string>
     <string name="sleep_timer_set_for">"Sleep timer set for: %d minutes"</string>
     <string name="cancel_sleep_timer">Cancel sleep</string>
-    <string name="alarm_note">Note:\n- Needs network connection\n- Only local playback, no UPnP</string>
     <string name="search_done">Search done!</string>
     <string name="Layout">Layout</string>
     <string name="tile_radio_button">Tile</string>
@@ -145,6 +144,7 @@
     <string name="no_file_picker_found">No file picker found!</string>
     <string name="donation_error">Internal error, please try again later!</string>
     <string name="loading_radios">Loading, please wait&#8230;</string>
+    <string name="battery_optimization">If alarm doesn\'t work, please disable any battery optimization. May vary depending on device.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

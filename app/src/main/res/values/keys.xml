@@ -48,6 +48,7 @@
     <string name="key_information_select_press_got_it" translatable="false">key_information_select_press_got_it</string>
     <string name="key_radio_garden_got_it" translatable="false">key_radio_garden_got_it</string>
     <string name="key_toolbar_got_it" translatable="false">key_toolbar_got_it</string>
+    <string name="key_battery_optimization_press_got_it" translatable="false">key_battery_optimization_press_got_it</string>
     <!-- Bundles -->
     <string name="key_rate" translatable="false">key_rate</string>
 </resources>

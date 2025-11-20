@@ -62,6 +62,8 @@ public class AlarmController {
   private final ToggleButton toggleButton;
   @NonNull
   private final AlertDialog alertDialog;
+  @NonNull
+  private final MainActivity.UserHint batteryOptimisationUserHint;
   @Nullable
   private Radio radio = null;
   @Nullable
@@ -87,7 +89,9 @@ public class AlarmController {
     toggleButton = view.findViewById(R.id.toggleButton);
     imageView = view.findViewById(R.id.imageView);
     textView = view.findViewById(R.id.text_view);
-    // Build alert dialog
+    // Build alert dialogs
+    batteryOptimisationUserHint = mainActivity
+      .new UserHint(R.string.key_battery_optimization_press_got_it, R.string.battery_optimization);
     alertDialog = new AlertDialog.Builder(this.mainActivity)
       .setTitle(R.string.title_alarm)
       .setIcon(R.drawable.ic_alarm_white_24dp)
@@ -149,7 +153,9 @@ public class AlarmController {
         } else {
           if (isChecked) {
             // Notification will be shown
-            if (!alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
+            if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
+              batteryOptimisationUserHint.show();
+            } else {
               mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));
             }
           } else {

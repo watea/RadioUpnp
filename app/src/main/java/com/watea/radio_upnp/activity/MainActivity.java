@@ -934,5 +934,9 @@ public class MainActivity
         alertDialog.show();
       }
     }
+
+    public void addNeutralButton(@NonNull String text, @NonNull DialogInterface.OnClickListener listener) {
+      alertDialog.setButton(DialogInterface.BUTTON_NEUTRAL, text, listener);
+    }
   }
 }

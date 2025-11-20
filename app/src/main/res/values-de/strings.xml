@@ -25,18 +25,9 @@
     <string name="radio_service_description">Streams radio for RadioUpnp app</string>
     <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
     <string name="alarm_service_description">Handles alarms for RadioUpnp app</string>
-    <string name="copyright">Copyright &#169; 2018 Stephane Treuchot</string>
     <string name="credit">Credit:</string>
-    <string name="credit_0">- Icon by shareicon.net</string>
-    <string name="credit_1">- ExoPlayer [Apache License 2.0]</string>
-    <string name="credit_2">- Apache Commons IO [Apache License 2.0]</string>
-    <string name="credit_3">- Jsoup [MIT License]</string>
-    <string name="credit_4">- OkHttp [Apache License 2.0]</string>
-    <string name="credit_5">- German translation by Ronny Steiner</string>
-    <string name="license">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
-    <string name="free_software">This is a free software; see sources for copying conditions.</string>
+    <string name="free_software">Dies ist eine freie Software; die Lizenzbedingungen finden Sie in den Quelldateien.</string>
     <string name="version">Version: </string>
-    <string name="void_string"> </string>
     <string name="no_web_page">Keine Webseite für diesen Sender!</string>
     <string name="radio_connection_error">Verbindungsfehler mit dem Sender!</string>
     <string name="no_internet">Internetverbindung nicht verfügbar!</string>
@@ -127,7 +118,6 @@
     <string name="sleep_timer_title">Einschlafen</string>
     <string name="sleep_timer_set_for">"Einschlaf-Timer eingestellt auf: %d Minuten"</string>
     <string name="cancel_sleep_timer">Timer abbrechen</string>
-    <string name="alarm_note">Hinweise:\n<li>Eine Netzwerkverbindung wird benötigt (für den Sender)</li>\n<li>Wiedergabe nur lokal möglich, nicht über UPnP</li></string>
     <string name="search_done">Suche beendet!</string>
     <string name="Layout">Layout</string>
     <string name="tile_radio_button">Kacheln</string>
@@ -139,6 +129,7 @@
     <string name="no_file_picker_found">Kein Dateiauswahldialog gefunden!</string>
     <string name="donation_error">Interner Fehler, bitte versuchen Sie es später noch einmal!</string>
     <string name="loading_radios">Lade, bitte warten&#8230;</string>
+    <string name="battery_optimization">Wenn der Wecker nicht funktioniert, deaktivieren Sie bitte jegliche Akku-Optimierung. Die Schritte können je nach Gerät variieren.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Favoritenliste</string>
     <string name="title_main">Wiedergabe</string>
