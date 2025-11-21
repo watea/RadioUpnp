@@ -66,10 +66,10 @@ dependencies {
     implementation 'androidx.gridlayout:gridlayout:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.13.0'
-    implementation 'androidx.activity:activity:1.11.0'
+    implementation 'androidx.activity:activity:1.12.0'
     implementation 'androidx.media3:media3-exoplayer:1.8.0' // Exoplayer
     implementation 'com.google.code.gson:gson:2.13.2' // GSON
-    fullImplementation 'com.android.billingclient:billing:8.0.0'
+    fullImplementation 'com.android.billingclient:billing:8.1.0'
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.21.2'
     // apache
@@ -79,7 +79,7 @@ dependencies {
     // AndroidSsdpClient
     implementation 'com.github.watea:androidssdpclient:1.0.6'
     // okhttp
-    implementation 'com.squareup.okhttp3:okhttp:5.2.1'
+    implementation 'com.squareup.okhttp3:okhttp:5.3.2'
     // Car App Library
     implementation "androidx.car.app:app:1.7.0"
 }
