@@ -144,7 +144,7 @@
     <string name="no_file_picker_found">No file picker found!</string>
     <string name="donation_error">Internal error, please try again later!</string>
     <string name="loading_radios">Loading, please wait&#8230;</string>
-    <string name="battery_optimization">If alarm doesn\'t work, please disable any battery optimization. May vary depending on device.</string>
+    <string name="battery_optimization">If the alarm doesn’t work, please disable any battery optimizations. This may vary depending on your device.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>
