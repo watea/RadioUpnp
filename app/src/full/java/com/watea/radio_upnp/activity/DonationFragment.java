@@ -100,7 +100,8 @@ public class DonationFragment extends OpenDonationFragment
   public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
     if ((billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) && (purchases != null)) {
       for (Purchase purchase : purchases) {
-        handlePurchase(purchase);
+        final ConsumeParams consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build();
+        billingClient.consumeAsync(consumeParams, this);
       }
     } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
       Log.i(LOG_TAG, "Purchase canceled by user");
@@ -119,31 +120,31 @@ public class DonationFragment extends OpenDonationFragment
   }
 
   private void initGoogleBillingClient() {
-    billingClient = BillingClient.newBuilder(requireContext())
-      .setListener(this)
-      .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
-      .build();
-    billingClient.startConnection(new BillingClientStateListener() {
-      @Override
-      public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
-        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-          Log.d(LOG_TAG, "Billing Client ready");
-          queryGoogleProducts();
-        } else {
-          Log.e(LOG_TAG, "Billing Setup Failed: " + billingResult.getDebugMessage());
+    try {
+      billingClient = BillingClient.newBuilder(requireContext())
+        .setListener(this)
+        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+        .build();
+      billingClient.startConnection(new BillingClientStateListener() {
+        @Override
+        public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+          if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+            Log.d(LOG_TAG, "Billing Client ready");
+            queryGoogleProducts();
+          } else {
+            Log.e(LOG_TAG, "Billing Setup Failed: " + billingResult.getDebugMessage());
+          }
         }
-      }
 
-      @Override
-      public void onBillingServiceDisconnected() {
-        Log.w(LOG_TAG, "Billing Service Disconnected, will retry");
-        reconnect();
-      }
-    });
-  }
-
-  private void reconnect() {
-    handler.postDelayed(this::initGoogleBillingClient, RECONNECT_TIMER_START_MILLISECONDS);
+        @Override
+        public void onBillingServiceDisconnected() {
+          Log.w(LOG_TAG, "Billing Service Disconnected, will retry");
+          handler.postDelayed(DonationFragment.this::initGoogleBillingClient, RECONNECT_TIMER_START_MILLISECONDS);
+        }
+      });
+    } catch (IllegalStateException illegalStateException) {
+      Log.d(LOG_TAG, "Billing Client creation failed", illegalStateException);
+    }
   }
 
   private void queryGoogleProducts() {
@@ -173,10 +174,5 @@ public class DonationFragment extends OpenDonationFragment
         Log.e(LOG_TAG, "Query Product Details failed: " + billingResult.getDebugMessage());
       }
     });
-  }
-
-  private void handlePurchase(@NonNull Purchase purchase) {
-    final ConsumeParams consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build();
-    billingClient.consumeAsync(consumeParams, this);
   }
 }
