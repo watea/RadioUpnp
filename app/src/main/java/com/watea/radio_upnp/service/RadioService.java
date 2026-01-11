@@ -59,12 +59,11 @@ import androidx.media.session.MediaButtonReceiver;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
-import com.watea.radio_upnp.adapter.LocalPlayerAdapter;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
-import com.watea.radio_upnp.adapter.UpnpPlayerAdapter;
+import com.watea.radio_upnp.model.LocalSessionDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.upnp.ActionController;
+import com.watea.radio_upnp.model.UpnpSessionDevice;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
@@ -102,7 +101,6 @@ public class RadioService
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback =
     new MediaSessionCompatCallback();
-  private final ActionController actionController = new ActionController();
   private final ContentProvider contentProvider = new ContentProvider();
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
@@ -110,6 +108,14 @@ public class RadioService
       notifyChildrenChanged(MEDIA_ROOT_ID);
     }
   };
+  private PlayerAdapter playerAdapter;
+  private final VolumeProviderCompat volumeProviderCompat =
+    new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
+      @Override
+      public void onAdjustVolume(int direction) {
+        playerAdapter.adjustVolume(direction);
+      }
+    };
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -124,21 +130,8 @@ public class RadioService
     }
   };
   private NotificationManagerCompat notificationManager;
-  @Nullable
-  private Radio radio = null;
   private MediaSessionCompat session;
   private RadioHttpServer radioHttpServer;
-  @Nullable
-  private PlayerAdapter playerAdapter = null;
-  private final VolumeProviderCompat volumeProviderCompat =
-    new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
-      @Override
-      public void onAdjustVolume(int direction) {
-        if (playerAdapter != null) {
-          playerAdapter.adjustVolume(direction);
-        }
-      }
-    };
   private boolean isAllowedToRewind = false;
   @Nullable
   private String lockKey = null;
@@ -219,6 +212,8 @@ public class RadioService
       Log.e(LOG_TAG, "HTTP server creation fails", iOException);
       radioHttpServer = null;
     }
+    // Player
+    playerAdapter = new PlayerAdapter(this, this);
     // Create a new MediaSession and controller...
     session = new MediaSessionCompat(this, LOG_TAG);
     mediaController = session.getController();
@@ -286,9 +281,7 @@ public class RadioService
     super.onDestroy();
     Log.d(LOG_TAG, "onDestroy");
     // Stop player to be clean on resources (if not, audio focus is not well handled)
-    if (playerAdapter != null) {
-      playerAdapter.stop();
-    }
+    playerAdapter.stop();
     // Release HTTP service
     if (radioHttpServer != null) {
       try {
@@ -334,6 +327,7 @@ public class RadioService
   @Override
   public void onNewInformation(@NonNull final String information, @NonNull final String lockKey) {
     runIfLocked(lockKey, () -> {
+      final Radio radio = playerAdapter.getRadio();
       if (radio != null) {
         final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
         if (mediaMetadataCompat != null) {
@@ -341,10 +335,7 @@ public class RadioService
           session.setMetadata(getMediaMetadataBuilder(radio, information)
             .putString(PLAYLIST, addPlaylistItem(playlist, information))
             .build());
-          // Update UPnP
-          if (playerAdapter instanceof UpnpPlayerAdapter) {
-            ((UpnpPlayerAdapter) playerAdapter).onNewInformation(information);
-          }
+          playerAdapter.onNewInformation(information);
           // Update notification
           buildNotification();
         }
@@ -384,7 +375,7 @@ public class RadioService
             startForeground(
               FOREGROUND_NOTIFICATION_ID,
               getNotification(),
-              playerAdapter instanceof LocalPlayerAdapter ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+              playerAdapter.isRemote() ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
           } else {
             startForeground(FOREGROUND_NOTIFICATION_ID, getNotification());
           }
@@ -443,7 +434,7 @@ public class RadioService
   private MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull Radio radio, @NonNull String information) {
     return radio.getMediaMetadataBuilder(
       getString(R.string.app_name),
-      playerAdapter instanceof UpnpPlayerAdapter ? " " + getString(R.string.remote) : "",
+      playerAdapter.isRemote() ? " " + getString(R.string.remote) : "",
       information);
   }
 
@@ -476,7 +467,7 @@ public class RadioService
         // Radio current track
         .setContentText(description.getSubtitle())
         // Remote?
-        .setSubText(playerAdapter instanceof UpnpPlayerAdapter ? getString(R.string.remote) : "");
+        .setSubText(playerAdapter.isRemote() ? getString(R.string.remote) : "");
     }
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
@@ -572,9 +563,7 @@ public class RadioService
 
   private void releasePlayerAdapter() {
     releaseScheduler();
-    if (playerAdapter != null) {
-      playerAdapter.release();
-    }
+    playerAdapter.release();
   }
 
   // PlayerAdapter from session for actual media controls
@@ -591,14 +580,12 @@ public class RadioService
         }
       }
       // Stop player to be clean on resources (if not, audio focus is not well handled)
-      if (playerAdapter != null) {
-        playerAdapter.stop();
-      }
+      playerAdapter.stop();
       // Stop scheduler if any
       releaseScheduler();
       // Try to retrieve radio
-      final Radio previousRadio = radio;
-      radio = Radios.getInstance().getRadioFromId(mediaId);
+      final Radio previousRadio = playerAdapter.getRadio();
+      final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
       if (radio == null) {
         Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
         return;
@@ -613,25 +600,29 @@ public class RadioService
       final Device selectedDevice = ((serverUri == null) || (upnpService == null)) ? null : upnpService.getSelectedDevice();
       // Set playerAdapter
       lockKey = UUID.randomUUID().toString();
-      if (selectedDevice == null) {
-        playerAdapter = new LocalPlayerAdapter(
+      final boolean isLocal = (selectedDevice == null);
+      playerAdapter.setSessionDevice(isLocal ?
+        new LocalSessionDevice(
           RadioService.this,
-          RadioService.this,
-          radio,
+          playerAdapter::getState,
+          playerAdapter::changeAndNotifyState,
           lockKey,
-          RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey));
-        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
-      } else {
-        playerAdapter = new UpnpPlayerAdapter(
-          RadioService.this,
-          RadioService.this,
           radio,
+          RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey)) :
+        new UpnpSessionDevice(
+          RadioService.this,
+          playerAdapter::getState,
+          playerAdapter::changeAndNotifyState,
           lockKey,
+          radio,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
           radioHttpServer.createLogoFile(radio),
           selectedDevice,
-          actionController,
-          contentProvider);
+          upnpService.getActionController(),
+          contentProvider));
+      if (isLocal) {
+        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
+      } else {
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Synchronize session data
@@ -653,14 +644,12 @@ public class RadioService
 
     @Override
     public void onPlay() {
-      onPlayFromMediaId(radio);
+      onPlayFromMediaId(playerAdapter.getRadio());
     }
 
     @Override
     public void onPause() {
-      if (playerAdapter != null) {
-        playerAdapter.pause();
-      }
+      playerAdapter.pause();
     }
 
     @Override
@@ -680,11 +669,8 @@ public class RadioService
 
     @Override
     public void onStop() {
-      if (playerAdapter != null) {
-        playerAdapter.stop();
-        playerAdapter = null;
-        radio = null;
-      }
+      playerAdapter.stop();
+      playerAdapter.setSessionDevice(null);
     }
 
     @Override
@@ -713,6 +699,7 @@ public class RadioService
     }
 
     private void skipTo(int direction) {
+      final Radio radio = playerAdapter.getRadio();
       if (radio == null) {
         // Should not happen
         Log.e(LOG_TAG, "skipTo: radio is null!");

@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.adapter;
+package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.net.Uri;
@@ -33,10 +33,11 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 
-import com.watea.radio_upnp.model.Radio;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-public class LocalPlayerAdapter extends PlayerAdapter {
-  private static final String LOG_TAG = LocalPlayerAdapter.class.getSimpleName();
+public class LocalSessionDevice extends SessionDevice {
+  private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
   @NonNull
   private final ExoPlayer exoPlayer;
   private final Player.Listener playerListener = new Player.Listener() {
@@ -45,38 +46,44 @@ public class LocalPlayerAdapter extends PlayerAdapter {
       Log.d(LOG_TAG, "onPlaybackStateChanged: State=" + playbackState);
       switch (playbackState) {
         case ExoPlayer.STATE_BUFFERING:
-          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+          listener.accept(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case ExoPlayer.STATE_READY:
-          changeAndNotifyState(PlaybackStateCompat.STATE_PLAYING);
+          listener.accept(PlaybackStateCompat.STATE_PLAYING);
           break;
         case ExoPlayer.STATE_IDLE:
-          if (isPaused) {
-            changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
+          if (isPaused()) {
+            listener.accept(PlaybackStateCompat.STATE_PAUSED);
             break;
           }
         case ExoPlayer.STATE_ENDED:
           // Do nothing if we are already stopped
-          if (state != PlaybackStateCompat.STATE_STOPPED) {
-            changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          if (sessionStateSupplier.get() != PlaybackStateCompat.STATE_STOPPED) {
+            listener.accept(PlaybackStateCompat.STATE_ERROR);
           }
           break;
         // Should not happen
         default:
           Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          listener.accept(PlaybackStateCompat.STATE_ERROR);
       }
     }
   };
 
-  public LocalPlayerAdapter(
+  public LocalSessionDevice(
     @NonNull Context context,
-    @NonNull Listener listener,
-    @NonNull Radio radio,
+    @NonNull Supplier<Integer> sessionStateSupplier,
+    @NonNull Consumer<Integer> listener,
     @NonNull String lockKey,
+    @NonNull Radio radio,
     @NonNull Uri radioUri) {
-    super(context, listener, radio, lockKey, radioUri);
-    exoPlayer = new ExoPlayer.Builder(this.context).build();
+    super(context, sessionStateSupplier, listener, lockKey, radio, radioUri);
+    exoPlayer = new ExoPlayer.Builder(context).build();
+  }
+
+  @Override
+  public boolean isRemote() {
+    return false;
   }
 
   @Override
@@ -84,29 +91,29 @@ public class LocalPlayerAdapter extends PlayerAdapter {
     exoPlayer.setVolume(volume);
   }
 
+  // Not supported
+  @Override
+  public void adjustVolume(int direction) {
+  }
+
   @Override
   public long getAvailableActions() {
-    long actions = super.getAvailableActions();
-    switch (state) {
+    long availableActions = DEFAULT_AVAILABLE_ACTIONS;
+    switch (sessionStateSupplier.get()) {
       case PlaybackStateCompat.STATE_PLAYING:
-        actions |= PlaybackStateCompat.ACTION_PAUSE;
+        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
         break;
       case PlaybackStateCompat.STATE_PAUSED:
       case PlaybackStateCompat.STATE_BUFFERING:
-        actions |= PlaybackStateCompat.ACTION_PLAY;
+        availableActions |= PlaybackStateCompat.ACTION_PLAY;
         break;
       case PlaybackStateCompat.STATE_ERROR:
-        actions |= PlaybackStateCompat.ACTION_REWIND;
+        availableActions |= PlaybackStateCompat.ACTION_REWIND;
         break;
       default:
         // Nothing else
     }
-    return actions;
-  }
-
-  @Override
-  protected boolean isRemote() {
-    return false;
+    return availableActions;
   }
 
   // Note: as the MediaItem is the local server in the current architecture,
@@ -114,7 +121,7 @@ public class LocalPlayerAdapter extends PlayerAdapter {
   // Some attempt to use direct radio connection and m3u8 option are not
   // successful till now, deeper search on exoplayer API is necessary.
   @Override
-  protected void onPrepareFromMediaId() {
+  public void prepareFromMediaId() {
     exoPlayer.setMediaItem(MediaItem.fromUri(radioUri));
     exoPlayer.addListener(playerListener);
     exoPlayer.prepare();
@@ -122,22 +129,24 @@ public class LocalPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected void onPlay() {
-    onPrepareFromMediaId();
+  public void play() {
+    super.play();
+    prepareFromMediaId();
   }
 
   @Override
-  protected void onPause() {
+  public void pause() {
+    super.pause();
     exoPlayer.stop();
   }
 
   @Override
-  protected void onStop() {
+  public void stop() {
     exoPlayer.stop();
   }
 
   @Override
-  protected void onRelease() {
+  public void release() {
     exoPlayer.removeListener(playerListener);
     exoPlayer.release();
   }

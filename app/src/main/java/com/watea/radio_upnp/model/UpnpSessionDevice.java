@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.adapter;
+package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.media.AudioManager;
@@ -33,7 +33,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.ContentProvider;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
@@ -44,10 +43,12 @@ import com.watea.radio_upnp.upnp.Watchdog;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
-public class UpnpPlayerAdapter extends PlayerAdapter {
-  private static final String LOG_TAG = UpnpPlayerAdapter.class.getSimpleName();
+public class UpnpSessionDevice extends SessionDevice {
+  private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
   private static final String RENDERING_CONTROL_ID = "RenderingControl";
   private static final String CONNECTION_MANAGER_ID = "ConnectionManager";
@@ -88,17 +89,18 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   @NonNull
   private String instanceId = "0";
 
-  public UpnpPlayerAdapter(
+  public UpnpSessionDevice(
     @NonNull Context context,
-    @NonNull Listener listener,
-    @NonNull Radio radio,
+    @NonNull Supplier<Integer> sessionStateSupplier,
+    @NonNull Consumer<Integer> listener,
     @NonNull String lockKey,
+    @NonNull Radio radio,
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull Device device,
     @NonNull ActionController actionController,
     @NonNull ContentProvider contentProvider) {
-    super(context, listener, radio, lockKey, radioUri);
+    super(context, sessionStateSupplier, listener, lockKey, radio, radioUri);
     this.device = device;
     this.actionController = actionController;
     this.contentProvider = contentProvider;
@@ -114,13 +116,21 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       @Override
       public void onEvent(@NonNull ReaderState readerState) {
         // Do nothing if paused as event has already been sent
-        if (!isPaused) {
-          changeAndNotifyState(
-            (readerState == Watchdog.ReaderState.PLAYING) ?
-              PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR);
+        if (!isPaused()) {
+          listener.accept((readerState == ReaderState.PLAYING) ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR);
         }
       }
     };
+  }
+
+  @Override
+  public boolean isRemote() {
+    return false;
+  }
+
+  // Not implemented
+  @Override
+  public void setVolume(float volume) {
   }
 
   @Override
@@ -139,19 +149,19 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
   @Override
   public long getAvailableActions() {
-    long actions = super.getAvailableActions();
-    switch (state) {
+    long availableActions = DEFAULT_AVAILABLE_ACTIONS;
+    switch (sessionStateSupplier.get()) {
       case PlaybackStateCompat.STATE_PLAYING:
-        actions |= PlaybackStateCompat.ACTION_PAUSE;
+        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
         break;
       case PlaybackStateCompat.STATE_PAUSED:
       case PlaybackStateCompat.STATE_BUFFERING:
-        actions |= PlaybackStateCompat.ACTION_PLAY;
+        availableActions |= PlaybackStateCompat.ACTION_PLAY;
         break;
       default:
         // Nothing else
     }
-    return actions;
+    return availableActions;
   }
 
   // Special handling for MIME type
@@ -187,16 +197,11 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
   }
 
   @Override
-  protected boolean isRemote() {
-    return true;
-  }
-
-  @Override
-  protected void onPrepareFromMediaId() {
-    changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+  public void prepareFromMediaId() {
+    listener.accept(PlaybackStateCompat.STATE_BUFFERING);
     // First we need to know radio content type
     contentProvider.fetchContentType(radio, () -> {
-      if (state == PlaybackStateCompat.STATE_BUFFERING) {
+      if (sessionStateSupplier.get() == PlaybackStateCompat.STATE_BUFFERING) {
         // Do prepare if action available
         scheduleActionPrepareForConnection();
         // Fetch ProtocolInfo if not available
@@ -207,37 +212,35 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         scheduleActionPlay();
       } else {
         // Something went wrong
-        changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+        listener.accept(PlaybackStateCompat.STATE_ERROR);
       }
     });
   }
 
   @Override
-  protected void onPlay() {
-    changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+  public void play() {
+    super.play();
+    listener.accept(PlaybackStateCompat.STATE_BUFFERING);
     scheduleActionSetAvTransportUri();
     scheduleActionPlay();
   }
 
   @Override
-  protected void onPause() {
+  public void pause() {
+    super.pause();
     scheduleActionStop();
   }
 
   @Override
-  protected void onStop() {
+  public void stop() {
     scheduleActionStop();
   }
 
   @Override
-  protected void onRelease() {
+  public void release() {
     if (watchdog != null) {
       watchdog.kill();
     }
-  }
-
-  // For further use
-  public void onNewInformation(@NonNull String ignoredInformation) {
   }
 
   private void scheduleMandatoryAction(
@@ -245,7 +248,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
     if (action == null) {
       // Shall not happen
       Log.e(LOG_TAG, "scheduleMandatoryAction: mandatory UPnP action not found");
-      changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+      listener.accept(PlaybackStateCompat.STATE_ERROR);
     } else {
       function.apply(action).schedule();
     }
@@ -265,7 +268,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
         // Actual Playing state is tested by Watchdog, so nothing to do in case of success
         @Override
         protected void onFailure() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          listener.accept(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
       }
@@ -278,15 +281,15 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
-          if (isPaused) {
-            changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
+          if (isPaused()) {
+            listener.accept(PlaybackStateCompat.STATE_PAUSED);
           }
           super.onSuccess();
         }
 
         @Override
         protected void onFailure() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          listener.accept(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
       });
@@ -377,7 +380,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
       action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_BUFFERING);
+          listener.accept(PlaybackStateCompat.STATE_BUFFERING);
           // Now instanceId is known, we launch watchdog
           assert watchdog != null;
           watchdog.start(instanceId);
@@ -386,7 +389,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
         @Override
         protected void onFailure() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          listener.accept(PlaybackStateCompat.STATE_ERROR);
           // Release other UPnP actions on this device
           actionController.release(action.getDevice());
           super.onFailure();
@@ -406,7 +409,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
           if (sink != null) {
             final List<String> protocolInfos = new ArrayList<>();
             for (final String protocolInfo : sink.split(",")) {
-              if (UpnpPlayerAdapter.isHandling(protocolInfo)) {
+              if (UpnpSessionDevice.isHandling(protocolInfo)) {
                 Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
                 protocolInfos.add(protocolInfo);
               }
@@ -418,7 +421,7 @@ public class UpnpPlayerAdapter extends PlayerAdapter {
 
         @Override
         protected void onFailure() {
-          changeAndNotifyState(PlaybackStateCompat.STATE_ERROR);
+          listener.accept(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
       });

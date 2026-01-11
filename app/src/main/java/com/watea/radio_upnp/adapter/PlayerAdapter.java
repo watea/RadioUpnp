@@ -32,7 +32,6 @@ import android.content.IntentFilter;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -43,36 +42,21 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.SessionDevice;
 
-import java.util.Arrays;
-import java.util.List;
-
-// Abstract player implementation that handles playing music with proper handling of headphones
-// and audio focus
-public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
-  protected static final String AUDIO_CONTENT_TYPE = "audio/";
-  protected static final String DEFAULT_CONTENT_TYPE = AUDIO_CONTENT_TYPE + "mpeg";
-  protected static final String APPLICATION_CONTENT_TYPE = "application/";
+// Player implementation that handles playing music with proper handling of headphones and audio focus
+public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   private static final String LOG_TAG = PlayerAdapter.class.getSimpleName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-  private static final List<String> AUDIO_CONTENT_PREFIXS =
-    Arrays.asList(AUDIO_CONTENT_TYPE, APPLICATION_CONTENT_TYPE);
   private static final AudioAttributes PLAYBACK_ATTRIBUTES = new AudioAttributes.Builder()
     .setUsage(AudioAttributes.USAGE_MEDIA)
     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
     .build();
   @NonNull
   protected final Context context;
-  // Current tag, always set before playing
-  @NonNull
-  protected final String lockKey;
-  @NonNull
-  protected final Radio radio;
-  @NonNull
-  protected final Uri radioUri;
   @NonNull
   private final AudioManager audioManager;
   @NonNull
@@ -80,7 +64,8 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   @NonNull
   private final AudioFocusRequest audioFocusRequest;
   protected int state = PlaybackStateCompat.STATE_NONE;
-  protected boolean isPaused = false;
+  @Nullable
+  private SessionDevice sessionDevice = null;
   private boolean playOnAudioFocus = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
@@ -92,17 +77,9 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   };
   private boolean audioNoisyReceiverRegistered = false;
 
-  public PlayerAdapter(
-    @NonNull Context context,
-    @NonNull Listener listener,
-    @NonNull Radio radio,
-    @NonNull String lockKey,
-    @NonNull Uri radioUri) {
+  public PlayerAdapter(@NonNull Context context, @NonNull Listener listener) {
     this.context = context;
     this.listener = listener;
-    this.radio = radio;
-    this.lockKey = lockKey;
-    this.radioUri = radioUri;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
@@ -116,20 +93,20 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
       .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 
-  public static boolean isHandling(@NonNull String protocolInfo) {
-    for (final String audioContentPrefix : AUDIO_CONTENT_PREFIXS) {
-      if (protocolInfo.contains(audioContentPrefix))
-        return true;
-    }
-    return false;
+  public void setSessionDevice(@Nullable SessionDevice sessionDevice) {
+    this.sessionDevice = sessionDevice;
   }
 
   // Must be called
   public synchronized final boolean prepareFromMediaId() {
-    Log.d(LOG_TAG, "prepareFromMediaId " + radio.getName());
-    if (isRemote() || requestAudioFocus()) {
-      onPrepareFromMediaId();
-      return true;
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on prepareFromMediaId; no session device defined");
+    } else {
+      Log.d(LOG_TAG, "prepareFromMediaId " + sessionDevice.getRadio().getName());
+      if (isRemote() || requestAudioFocus()) {
+        onPrepareFromMediaId();
+        return true;
+      }
     }
     return false;
   }
@@ -140,7 +117,6 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
         registerAudioNoisyReceiver();
       }
       if (isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
-        isPaused = false;
         onPlay();
       }
     }
@@ -151,7 +127,6 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
       releaseAudioFocus();
     }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
-      isPaused = true;
       onPause();
     }
   }
@@ -177,17 +152,19 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   }
 
   public void setVolume(float volume) {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on setVolume; no session device defined");
+    } else {
+      sessionDevice.setVolume(volume);
+    }
   }
 
   public void adjustVolume(int direction) {
-  }
-
-  // Set the current capabilities available on this session
-  public long getAvailableActions() {
-    return PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
-      PlaybackStateCompat.ACTION_STOP |
-      PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-      PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on adjustVolume; no session device defined");
+    } else {
+      sessionDevice.adjustVolume(direction);
+    }
   }
 
   @Override
@@ -218,35 +195,97 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
     }
   }
 
-  // Default is unknown
   @NonNull
   public String getContentType() {
-    return "";
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on getContentType; no session device defined");
+      return "";
+    } else {
+      return sessionDevice.getContentType();
+    }
   }
 
-  protected abstract boolean isRemote();
+  @Nullable
+  public Radio getRadio() {
+    return (sessionDevice == null) ? null : sessionDevice.getRadio();
+  }
 
-  protected abstract void onPrepareFromMediaId();
+  public void changeAndNotifyState(int newState) {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on changeAndNotifyState; no session device defined");
+    } else {
+      Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + sessionDevice.getLockKey());
+      if (state == newState) {
+        Log.d(LOG_TAG, "=> no change");
+      } else {
+        state = newState;
+        listener.onPlaybackStateChange(
+          getPlaybackStateCompatBuilder(state).setActions(sessionDevice.getAvailableActions()).build(), sessionDevice.getLockKey());
+      }
+    }
+  }
+
+  public int getState() {
+    return state;
+  }
+
+  public void onNewInformation(@NonNull String information) {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on onNewInformation; no session device defined");
+    } else {
+      sessionDevice.onNewInformation(information);
+    }
+  }
+
+  public boolean isRemote() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on isRemote; no session device defined");
+      return false;
+    } else {
+      return sessionDevice.isRemote();
+    }
+  }
+
+  private void onPrepareFromMediaId() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on onPrepareFromMediaId; no session device defined");
+    } else {
+      sessionDevice.prepareFromMediaId();
+    }
+  }
 
   // Called when media is ready to be played and indicates the app has audio focus
-  protected abstract void onPlay();
+  private void onPlay() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on onPlay; no session device defined");
+    } else {
+      sessionDevice.play();
+    }
+  }
 
   // Called when media must be paused
-  protected abstract void onPause();
+  private void onPause() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on onPause; no session device defined");
+    } else {
+      sessionDevice.pause();
+    }
+  }
 
   // Called when the media must be stopped. The player should clean up resources at this point
-  protected abstract void onStop();
-
-  protected abstract void onRelease();
-
-  protected void changeAndNotifyState(int newState) {
-    Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + lockKey);
-    if (state == newState) {
-      Log.d(LOG_TAG, "=> no change");
+  private void onStop() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on onStop; no session device defined");
     } else {
-      state = newState;
-      listener.onPlaybackStateChange(
-        getPlaybackStateCompatBuilder(state).setActions(getAvailableActions()).build(), lockKey);
+      sessionDevice.stop();
+    }
+  }
+
+  private void onRelease() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on onRelease; no session device defined");
+    } else {
+      sessionDevice.release();
     }
   }
 
@@ -280,7 +319,7 @@ public abstract class PlayerAdapter implements AudioManager.OnAudioFocusChangeLi
   }
 
   private boolean isAvailableAction(long action) {
-    return ((getAvailableActions() & action) > 0L);
+    return (sessionDevice != null) && ((sessionDevice.getAvailableActions() & action) > 0L);
   }
 
   public interface Listener {
