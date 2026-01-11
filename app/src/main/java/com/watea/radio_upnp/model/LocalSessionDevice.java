@@ -58,7 +58,7 @@ public class LocalSessionDevice extends SessionDevice {
           }
         case ExoPlayer.STATE_ENDED:
           // Do nothing if we are already stopped
-          if (sessionStateSupplier.get() != PlaybackStateCompat.STATE_STOPPED) {
+          if (isPaused()) {
             listener.accept(PlaybackStateCompat.STATE_ERROR);
           }
           break;
