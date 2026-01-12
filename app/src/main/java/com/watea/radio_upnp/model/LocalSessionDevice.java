@@ -34,7 +34,6 @@ import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class LocalSessionDevice extends SessionDevice {
   private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
@@ -46,38 +45,37 @@ public class LocalSessionDevice extends SessionDevice {
       Log.d(LOG_TAG, "onPlaybackStateChanged: State=" + playbackState);
       switch (playbackState) {
         case ExoPlayer.STATE_BUFFERING:
-          listener.accept(PlaybackStateCompat.STATE_BUFFERING);
+          onState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case ExoPlayer.STATE_READY:
-          listener.accept(PlaybackStateCompat.STATE_PLAYING);
+          onState(PlaybackStateCompat.STATE_PLAYING);
           break;
         case ExoPlayer.STATE_IDLE:
           if (isPaused()) {
-            listener.accept(PlaybackStateCompat.STATE_PAUSED);
+            onState(PlaybackStateCompat.STATE_PAUSED);
             break;
           }
         case ExoPlayer.STATE_ENDED:
           // Do nothing if we are already stopped
           if (isPaused()) {
-            listener.accept(PlaybackStateCompat.STATE_ERROR);
+            onState(PlaybackStateCompat.STATE_ERROR);
           }
           break;
         // Should not happen
         default:
           Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
-          listener.accept(PlaybackStateCompat.STATE_ERROR);
+          onState(PlaybackStateCompat.STATE_ERROR);
       }
     }
   };
 
   public LocalSessionDevice(
     @NonNull Context context,
-    @NonNull Supplier<Integer> sessionStateSupplier,
     @NonNull Consumer<Integer> listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri) {
-    super(context, sessionStateSupplier, listener, lockKey, radio, radioUri);
+    super(context, listener, lockKey, radio, radioUri);
     exoPlayer = new ExoPlayer.Builder(context).build();
   }
 
@@ -99,7 +97,7 @@ public class LocalSessionDevice extends SessionDevice {
   @Override
   public long getAvailableActions() {
     long availableActions = DEFAULT_AVAILABLE_ACTIONS;
-    switch (sessionStateSupplier.get()) {
+    switch (getState()) {
       case PlaybackStateCompat.STATE_PLAYING:
         availableActions |= PlaybackStateCompat.ACTION_PAUSE;
         break;
@@ -122,6 +120,7 @@ public class LocalSessionDevice extends SessionDevice {
   // successful till now, deeper search on exoplayer API is necessary.
   @Override
   public void prepareFromMediaId() {
+    super.prepareFromMediaId();
     exoPlayer.setMediaItem(MediaItem.fromUri(radioUri));
     exoPlayer.addListener(playerListener);
     exoPlayer.prepare();
@@ -142,6 +141,7 @@ public class LocalSessionDevice extends SessionDevice {
 
   @Override
   public void stop() {
+    super.stop();
     exoPlayer.stop();
   }
 

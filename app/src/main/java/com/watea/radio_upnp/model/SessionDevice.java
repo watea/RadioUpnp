@@ -32,7 +32,6 @@ import androidx.annotation.NonNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public abstract class SessionDevice {
   public static final String AUDIO_CONTENT_TYPE = "audio/";
@@ -48,19 +47,16 @@ public abstract class SessionDevice {
   protected final String lockKey; // Current tag
   protected final Radio radio;
   protected final Uri radioUri;
-  protected final Supplier<Integer> sessionStateSupplier;
   protected final Consumer<Integer> listener;
-  private boolean isPaused = false;
+  private int state = PlaybackStateCompat.STATE_NONE;
 
   public SessionDevice(
     @NonNull Context context,
-    @NonNull Supplier<Integer> sessionStateSupplier,
     @NonNull Consumer<Integer> listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri) {
     this.context = context;
-    this.sessionStateSupplier = sessionStateSupplier;
     this.listener = listener;
     this.lockKey = lockKey;
     this.radio = radio;
@@ -75,6 +71,10 @@ public abstract class SessionDevice {
     return false;
   }
 
+  public int getState() {
+    return state;
+  }
+
   @NonNull
   public Radio getRadio() {
     return radio;
@@ -85,34 +85,43 @@ public abstract class SessionDevice {
     return lockKey;
   }
 
-  public boolean isPaused() {
-    return isPaused;
-  }
-
   // Default is unknown
   public String getContentType() {
     return "";
-  }
-
-  public void play() {
-    isPaused = false;
-  }
-
-  public void pause() {
-    isPaused = true;
   }
 
   @SuppressWarnings("unused")
   public void onNewInformation(@NonNull String information) {
   }
 
+  public boolean isPaused() {
+    return (state == PlaybackStateCompat.STATE_PAUSED);
+  }
+
+  public void play() {
+    state = PlaybackStateCompat.STATE_PLAYING;
+  }
+
+  public void pause() {
+    state = PlaybackStateCompat.STATE_PAUSED;
+  }
+
+  public void stop() {
+    state = PlaybackStateCompat.STATE_STOPPED;
+  }
+
+  public void onState(int state) {
+    this.state = state;
+    listener.accept(this.state);
+  }
+
+  public void prepareFromMediaId() {
+    state = PlaybackStateCompat.STATE_BUFFERING;
+  }
+
   public abstract boolean isRemote();
 
-  public abstract void prepareFromMediaId();
-
   public abstract void release();
-
-  public abstract void stop();
 
   public abstract void setVolume(float volume);
 

@@ -80,10 +80,11 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class RadioService
   extends MediaBrowserServiceCompat
-  implements PlayerAdapter.Listener, RadioHandler.Listener {
+  implements PlayerAdapter.StateController, RadioHandler.Listener {
   public static final String DATE = "date";
   public static final String INFORMATION = "information";
   public static final String PLAYLIST = "playlist";
@@ -116,6 +117,7 @@ public class RadioService
         playerAdapter.adjustVolume(direction);
       }
     };
+  private final Consumer<Integer> sessionDeviceListener = state -> playerAdapter.changeAndNotifyState(state);
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -360,8 +362,7 @@ public class RadioService
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
-  public void onPlaybackStateChange(
-    @NonNull final PlaybackStateCompat state, @Nullable final String lockKey) {
+  public void onPlaybackStateChange(@NonNull final PlaybackStateCompat state, @Nullable final String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
       // Report the state to the MediaSession
@@ -422,6 +423,11 @@ public class RadioService
           isAllowedToRewind = false;
       }
     });
+  }
+
+  @Override
+  public int getPlaybackState() {
+    return session.getController().getPlaybackState().getState();
   }
 
   @Override
@@ -604,15 +610,13 @@ public class RadioService
       playerAdapter.setSessionDevice(isLocal ?
         new LocalSessionDevice(
           RadioService.this,
-          playerAdapter::getState,
-          playerAdapter::changeAndNotifyState,
+          sessionDeviceListener,
           lockKey,
           radio,
           RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey)) :
         new UpnpSessionDevice(
           RadioService.this,
-          playerAdapter::getState,
-          playerAdapter::changeAndNotifyState,
+          sessionDeviceListener,
           lockKey,
           radio,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
@@ -629,6 +633,7 @@ public class RadioService
       if (radio != previousRadio) {
         session.setExtras(new Bundle());
         session.setMetadata(getMediaMetadataBuilder(radio, "").build());
+        session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_NONE).build());
       }
       // Set controller for HTTP handler
       radioHttpServer.setRadioHandlerController(radioHandlerController);

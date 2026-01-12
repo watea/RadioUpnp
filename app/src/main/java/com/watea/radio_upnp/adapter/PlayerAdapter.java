@@ -56,14 +56,13 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
     .build();
   @NonNull
-  protected final Context context;
+  private final Context context;
   @NonNull
   private final AudioManager audioManager;
   @NonNull
-  private final Listener listener;
+  private final StateController stateController;
   @NonNull
   private final AudioFocusRequest audioFocusRequest;
-  protected int state = PlaybackStateCompat.STATE_NONE;
   @Nullable
   private SessionDevice sessionDevice = null;
   private boolean playOnAudioFocus = false;
@@ -77,9 +76,9 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   };
   private boolean audioNoisyReceiverRegistered = false;
 
-  public PlayerAdapter(@NonNull Context context, @NonNull Listener listener) {
+  public PlayerAdapter(@NonNull Context context, @NonNull StateController stateController) {
     this.context = context;
-    this.listener = listener;
+    this.stateController = stateController;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
@@ -112,22 +111,28 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public synchronized final void play() {
-    if (isRemote() || requestAudioFocus()) {
-      if (!isRemote()) {
-        registerAudioNoisyReceiver();
-      }
-      if (isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
+    if (isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
+      if (isRemote() || requestAudioFocus()) {
+        if (!isRemote()) {
+          registerAudioNoisyReceiver();
+        }
         onPlay();
       }
+    } else {
+      Log.e(LOG_TAG, "Internal failure on play; not allowed");
     }
   }
 
   public synchronized final void pause() {
-    if (!isRemote() && !playOnAudioFocus) {
-      releaseAudioFocus();
-    }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
+      if (!isRemote() && !playOnAudioFocus) {
+        releaseAudioFocus();
+      }
+      // Pause immediately
+      changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
       onPause();
+    } else {
+      Log.e(LOG_TAG, "Internal failure on pause; not allowed");
     }
   }
 
@@ -210,23 +215,17 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     return (sessionDevice == null) ? null : sessionDevice.getRadio();
   }
 
-  public void changeAndNotifyState(int newState) {
+  public void changeAndNotifyState(int state) {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on changeAndNotifyState; no session device defined");
     } else {
-      Log.d(LOG_TAG, "New state/lock key received: " + newState + "/" + sessionDevice.getLockKey());
-      if (state == newState) {
+      Log.d(LOG_TAG, "New state/lock key received: " + state + "/" + sessionDevice.getLockKey());
+      if (stateController.getPlaybackState() == state) {
         Log.d(LOG_TAG, "=> no change");
       } else {
-        state = newState;
-        listener.onPlaybackStateChange(
-          getPlaybackStateCompatBuilder(state).setActions(sessionDevice.getAvailableActions()).build(), sessionDevice.getLockKey());
+        stateController.onPlaybackStateChange(getPlaybackStateCompatBuilder(state).build(), sessionDevice.getLockKey());
       }
     }
-  }
-
-  public int getState() {
-    return state;
   }
 
   public void onNewInformation(@NonNull String information) {
@@ -290,7 +289,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   private boolean isPlaying() {
-    return (state == PlaybackStateCompat.STATE_PLAYING);
+    return (stateController.getPlaybackState() == PlaybackStateCompat.STATE_PLAYING);
   }
 
   private void registerAudioNoisyReceiver() {
@@ -322,7 +321,9 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     return (sessionDevice != null) && ((sessionDevice.getAvailableActions() & action) > 0L);
   }
 
-  public interface Listener {
+  public interface StateController {
     void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @Nullable String lockKey);
+
+    int getPlaybackState();
   }
 }

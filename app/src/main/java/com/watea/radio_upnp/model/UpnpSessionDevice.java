@@ -45,7 +45,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class UpnpSessionDevice extends SessionDevice {
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
@@ -91,7 +90,6 @@ public class UpnpSessionDevice extends SessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
-    @NonNull Supplier<Integer> sessionStateSupplier,
     @NonNull Consumer<Integer> listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
@@ -100,7 +98,7 @@ public class UpnpSessionDevice extends SessionDevice {
     @NonNull Device device,
     @NonNull ActionController actionController,
     @NonNull ContentProvider contentProvider) {
-    super(context, sessionStateSupplier, listener, lockKey, radio, radioUri);
+    super(context, listener, lockKey, radio, radioUri);
     this.device = device;
     this.actionController = actionController;
     this.contentProvider = contentProvider;
@@ -116,8 +114,8 @@ public class UpnpSessionDevice extends SessionDevice {
       @Override
       public void onEvent(@NonNull ReaderState readerState) {
         // Do nothing if paused as event has already been sent
-        if (!isPaused()) {
-          listener.accept((readerState == ReaderState.PLAYING) ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR);
+        if (!(isPaused() || (readerState == ReaderState.PLAYING))) {
+          onState(PlaybackStateCompat.STATE_ERROR);
         }
       }
     };
@@ -150,7 +148,7 @@ public class UpnpSessionDevice extends SessionDevice {
   @Override
   public long getAvailableActions() {
     long availableActions = DEFAULT_AVAILABLE_ACTIONS;
-    switch (sessionStateSupplier.get()) {
+    switch (getState()) {
       case PlaybackStateCompat.STATE_PLAYING:
         availableActions |= PlaybackStateCompat.ACTION_PAUSE;
         break;
@@ -198,10 +196,11 @@ public class UpnpSessionDevice extends SessionDevice {
 
   @Override
   public void prepareFromMediaId() {
-    listener.accept(PlaybackStateCompat.STATE_BUFFERING);
+    super.prepareFromMediaId();
+    onState(PlaybackStateCompat.STATE_BUFFERING);
     // First we need to know radio content type
     contentProvider.fetchContentType(radio, () -> {
-      if (sessionStateSupplier.get() == PlaybackStateCompat.STATE_BUFFERING) {
+      if (getState() == PlaybackStateCompat.STATE_BUFFERING) {
         // Do prepare if action available
         scheduleActionPrepareForConnection();
         // Fetch ProtocolInfo if not available
@@ -212,7 +211,7 @@ public class UpnpSessionDevice extends SessionDevice {
         scheduleActionPlay();
       } else {
         // Something went wrong
-        listener.accept(PlaybackStateCompat.STATE_ERROR);
+        onState(PlaybackStateCompat.STATE_ERROR);
       }
     });
   }
@@ -220,7 +219,7 @@ public class UpnpSessionDevice extends SessionDevice {
   @Override
   public void play() {
     super.play();
-    listener.accept(PlaybackStateCompat.STATE_BUFFERING);
+    onState(PlaybackStateCompat.STATE_BUFFERING);
     scheduleActionSetAvTransportUri();
     scheduleActionPlay();
   }
@@ -233,6 +232,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
   @Override
   public void stop() {
+    super.stop();
     scheduleActionStop();
   }
 
@@ -248,7 +248,7 @@ public class UpnpSessionDevice extends SessionDevice {
     if (action == null) {
       // Shall not happen
       Log.e(LOG_TAG, "scheduleMandatoryAction: mandatory UPnP action not found");
-      listener.accept(PlaybackStateCompat.STATE_ERROR);
+      onState(PlaybackStateCompat.STATE_ERROR);
     } else {
       function.apply(action).schedule();
     }
@@ -265,10 +265,15 @@ public class UpnpSessionDevice extends SessionDevice {
     scheduleMandatoryAction(
       (avTransportService == null) ? null : avTransportService.getAction(ACTION_PLAY),
       action -> new UpnpAction(action, actionController, instanceId) {
-        // Actual Playing state is tested by Watchdog, so nothing to do in case of success
+        @Override
+        protected void onSuccess() {
+          onState(PlaybackStateCompat.STATE_PLAYING);
+          super.onSuccess();
+        }
+
         @Override
         protected void onFailure() {
-          listener.accept(PlaybackStateCompat.STATE_ERROR);
+          onState(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
       }
@@ -282,14 +287,14 @@ public class UpnpSessionDevice extends SessionDevice {
         @Override
         protected void onSuccess() {
           if (isPaused()) {
-            listener.accept(PlaybackStateCompat.STATE_PAUSED);
+            onState(PlaybackStateCompat.STATE_PAUSED);
           }
           super.onSuccess();
         }
 
         @Override
         protected void onFailure() {
-          listener.accept(PlaybackStateCompat.STATE_ERROR);
+          onState(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
       });
@@ -380,7 +385,7 @@ public class UpnpSessionDevice extends SessionDevice {
       action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
-          listener.accept(PlaybackStateCompat.STATE_BUFFERING);
+          onState(PlaybackStateCompat.STATE_BUFFERING);
           // Now instanceId is known, we launch watchdog
           assert watchdog != null;
           watchdog.start(instanceId);
@@ -389,7 +394,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
         @Override
         protected void onFailure() {
-          listener.accept(PlaybackStateCompat.STATE_ERROR);
+          onState(PlaybackStateCompat.STATE_ERROR);
           // Release other UPnP actions on this device
           actionController.release(action.getDevice());
           super.onFailure();
@@ -421,7 +426,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
         @Override
         protected void onFailure() {
-          listener.accept(PlaybackStateCompat.STATE_ERROR);
+          onState(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
       });
