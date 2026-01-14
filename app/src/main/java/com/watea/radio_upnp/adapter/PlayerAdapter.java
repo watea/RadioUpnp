@@ -129,7 +129,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
         releaseAudioFocus();
       }
       // Pause immediately
-      changeAndNotifyState(PlaybackStateCompat.STATE_PAUSED);
+      notifyState(PlaybackStateCompat.STATE_PAUSED);
       onPause();
     } else {
       Log.e(LOG_TAG, "Internal failure on pause; not allowed");
@@ -138,7 +138,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   public synchronized final void stop() {
     // Stop immediately
-    changeAndNotifyState(PlaybackStateCompat.STATE_STOPPED);
+    notifyState(PlaybackStateCompat.STATE_STOPPED);
     if (!isRemote()) {
       releaseAudioFocus();
       unregisterAudioNoisyReceiver();
@@ -215,7 +215,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     return (sessionDevice == null) ? null : sessionDevice.getRadio();
   }
 
-  public void changeAndNotifyState(int state) {
+  public void notifyState(int state) {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on changeAndNotifyState; no session device defined");
     } else {
@@ -223,7 +223,9 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
       if (stateController.getPlaybackState() == state) {
         Log.d(LOG_TAG, "=> no change");
       } else {
-        stateController.onPlaybackStateChange(getPlaybackStateCompatBuilder(state).build(), sessionDevice.getLockKey());
+        stateController.onPlaybackStateChange(
+          getPlaybackStateCompatBuilder(state).setActions(sessionDevice.getAvailableActions()).build(),
+          sessionDevice.getLockKey());
       }
     }
   }

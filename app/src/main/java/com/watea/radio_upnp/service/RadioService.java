@@ -117,7 +117,7 @@ public class RadioService
         playerAdapter.adjustVolume(direction);
       }
     };
-  private final Consumer<Integer> sessionDeviceListener = state -> playerAdapter.changeAndNotifyState(state);
+  private final Consumer<Integer> sessionDeviceListener = state -> playerAdapter.notifyState(state);
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
