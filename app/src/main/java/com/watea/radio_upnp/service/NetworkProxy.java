@@ -27,12 +27,14 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
+import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 
 public class NetworkProxy {
@@ -70,22 +72,31 @@ public class NetworkProxy {
 
   @Nullable
   public Uri getUri(int port) {
-    final String ipAddress = getIpAddress();
+    final String ipAddress = getWifiIpAddress();
     return (ipAddress == null) ? null : getUri(ipAddress, port);
   }
 
   @Nullable
-  public String getIpAddress() {
-    if (connectivityManager != null) {
-      final LinkProperties linkProperties =
-        connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
-      if (linkProperties != null) {
-        for (final LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
-          final InetAddress inetAddress = linkAddress.getAddress();
-          if (inetAddress instanceof java.net.Inet4Address) {
-            return inetAddress.getHostAddress();
-          }
-        }
+  public String getWifiIpAddress() {
+    if (connectivityManager == null) {
+      return null;
+    }
+    final Network network = connectivityManager.getActiveNetwork();
+    if (network == null) {
+      return null;
+    }
+    final NetworkCapabilities caps = connectivityManager.getNetworkCapabilities(network);
+    if ((caps == null) || !caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+      return null;
+    }
+    final LinkProperties props = connectivityManager.getLinkProperties(network);
+    if (props == null) {
+      return null;
+    }
+    for (LinkAddress linkAddress : props.getLinkAddresses()) {
+      final InetAddress inetAddress = linkAddress.getAddress();
+      if ((inetAddress instanceof Inet4Address) && !inetAddress.isLoopbackAddress()) {
+        return inetAddress.getHostAddress();
       }
     }
     return null;
