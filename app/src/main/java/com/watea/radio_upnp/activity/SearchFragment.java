@@ -82,8 +82,8 @@ public class SearchFragment extends SearchRootFragment {
   }
 
   @Override
-  public void onPause() {
-    super.onPause();
+  public void onStop() {
+    super.onStop();
     // Preferences are stored only if session is valid
     if (isServerAvailable()) {
       getSharedPreferences()

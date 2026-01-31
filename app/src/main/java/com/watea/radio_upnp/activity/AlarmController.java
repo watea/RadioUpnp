@@ -101,7 +101,7 @@ public class AlarmController {
       .create();
   }
 
-  public void onActivityResume() {
+  public void onActivityStart() {
     // Bind to AlarmService
     if (!mainActivity.bindService(
       new Intent(mainActivity, AlarmService.class), alarmConnection, BIND_AUTO_CREATE)) {
@@ -109,7 +109,7 @@ public class AlarmController {
     }
   }
 
-  public void onActivityPause() {
+  public void onActivityStop() {
     mainActivity.unbindService(alarmConnection);
     // Force suspended connection
     alarmConnection.onServiceDisconnected(null);

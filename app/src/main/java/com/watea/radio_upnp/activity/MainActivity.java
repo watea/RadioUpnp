@@ -604,9 +604,8 @@ public class MainActivity
   }
 
   @Override
-  protected void onPause() {
-    super.onPause();
-    Log.d(LOG_TAG, "onPause");
+  protected void onStop() {
+    super.onStop();
     // Shared preferences
     sharedPreferences.edit()
       .putString(getString(string.key_theme), theme.toString())
@@ -617,7 +616,7 @@ public class MainActivity
     // Force disconnection to release resources
     upnpConnection.onServiceDisconnected(null);
     // Clear AlarmController call
-    alarmController.onActivityPause();
+    alarmController.onActivityStop();
   }
 
   @Override
@@ -636,21 +635,26 @@ public class MainActivity
   }
 
   @Override
-  protected void onResume() {
-    super.onResume();
-    Log.d(LOG_TAG, "onResume");
+  protected void onStart() {
+    super.onStart();
     // Bind to UPnP service
     if (!bindService(
       new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
+    // AlarmController init
+    alarmController.onActivityStart();
+  }
+
+  @Override
+  protected void onResume() {
+    super.onResume();
+    Log.d(LOG_TAG, "onResume");
     // Radio Garden share?
     if ((newIntent != null) && Intent.ACTION_SEND.equals(newIntent.getAction())) {
       radioGardenController.onNewIntent(newIntent);
       newIntent = null;
     }
-    // AlarmController init
-    alarmController.onActivityResume();
   }
 
   @Override
