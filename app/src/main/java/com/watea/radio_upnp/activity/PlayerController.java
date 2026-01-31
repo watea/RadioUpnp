@@ -230,7 +230,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       null);
   }
 
-  // Must be called on activity resume
+  // Must be called on activity create
   public void onActivityCreate() {
     // Launch RadioService, may fail if already called and connection not ended
     try {

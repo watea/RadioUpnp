@@ -32,7 +32,7 @@
         style="?android:attr/progressBarStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="@dimen/app_margin"/>
+        android:layout_marginEnd="@dimen/app_margin" />
 
     <TextView
         android:id="@+id/loading_text"
