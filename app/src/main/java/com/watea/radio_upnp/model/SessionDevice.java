@@ -110,11 +110,6 @@ public abstract class SessionDevice {
     state = PlaybackStateCompat.STATE_STOPPED;
   }
 
-  public void onState(int state) {
-    this.state = state;
-    listener.accept(this.state);
-  }
-
   public void prepareFromMediaId() {
     state = PlaybackStateCompat.STATE_BUFFERING;
   }
@@ -129,4 +124,9 @@ public abstract class SessionDevice {
 
   // Set the current capabilities available on this session
   public abstract long getAvailableActions();
+
+  protected void onState(int state) {
+    this.state = state;
+    listener.accept(this.state);
+  }
 }
