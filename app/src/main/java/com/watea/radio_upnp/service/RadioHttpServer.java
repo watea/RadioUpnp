@@ -36,18 +36,16 @@ import java.io.IOException;
 
 public class RadioHttpServer extends HttpServer {
   @NonNull
-  private final RadioHandler radioHandler;
+  private final Context context;
   @NonNull
   private final ResourceHandler resourceHandler = new ResourceHandler();
-  @NonNull
-  private final Context context;
 
   public RadioHttpServer(
     @NonNull Context context,
-    @NonNull RadioHandler.Listener radioHandlerListener) throws IOException {
+    @NonNull RadioHandler.Listener radioHandlerListener,
+    @NonNull RadioHandler.Controller radioHandlerController) throws IOException {
     this.context = context;
-    radioHandler = new RadioHandler(this.context, radioHandlerListener);
-    addHandler(radioHandler);
+    addHandler(new RadioHandler(this.context, radioHandlerListener, radioHandlerController));
     addHandler(resourceHandler);
   }
 
@@ -59,14 +57,6 @@ public class RadioHttpServer extends HttpServer {
   @NonNull
   public Uri getLoopbackUri() {
     return NetworkProxy.getLoopbackUri(getListeningPort());
-  }
-
-  public void resetRadioHandlerController() {
-    radioHandler.resetController();
-  }
-
-  public void setRadioHandlerController(@NonNull RadioHandler.Controller radioHandlerController) {
-    radioHandler.setController(radioHandlerController);
   }
 
   @Nullable

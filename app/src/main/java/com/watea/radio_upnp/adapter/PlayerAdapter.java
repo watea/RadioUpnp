@@ -131,6 +131,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
       // Pause immediately
       notifyState(PlaybackStateCompat.STATE_PAUSED);
       onPause();
+      onRelease(); // We release also in Pause
     } else {
       Log.e(LOG_TAG, "Internal failure on pause; not allowed");
     }

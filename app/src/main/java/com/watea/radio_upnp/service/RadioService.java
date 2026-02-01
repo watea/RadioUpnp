@@ -149,6 +149,12 @@ public class RadioService
     public String getContentType() {
       return playerAdapter.getContentType();
     }
+
+    @Override
+    public boolean isActiv() {
+      final int state = (session == null) ? PlaybackStateCompat.STATE_ERROR : session.getController().getPlaybackState().getState();
+      return !((state == PlaybackStateCompat.STATE_ERROR) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_STOPPED));
+    }
   };
   @Nullable
   private ScheduledExecutorService scheduler = null;
@@ -208,7 +214,7 @@ public class RadioService
     Radios.getInstance().addListener(radiosListener);
     // Launch HTTP server
     try {
-      radioHttpServer = new RadioHttpServer(this, this);
+      radioHttpServer = new RadioHttpServer(this, this, radioHandlerController);
       radioHttpServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation fails", iOException);
@@ -382,15 +388,12 @@ public class RadioService
           }
           break;
         case PlaybackStateCompat.STATE_PAUSED:
-          releasePlayerAdapter();
+          releaseScheduler();
           isAllowedToRewind = false; // No relaunch on pause
           buildNotification();
           break;
         case PlaybackStateCompat.STATE_ERROR:
-          releasePlayerAdapter();
-          if (radioHttpServer != null) {
-            radioHttpServer.resetRadioHandlerController();
-          }
+          releaseScheduler();
           // Try to relaunch just once
           if (isAllowedToRewind) {
             isAllowedToRewind = false;
@@ -413,10 +416,8 @@ public class RadioService
           break;
         default:
           // Release everything
-          releasePlayerAdapter();
-          if (radioHttpServer != null) {
-            radioHttpServer.resetRadioHandlerController();
-          }
+          playerAdapter.release();
+          releaseScheduler();
           session.setMetadata(null);
           stopForeground(STOP_FOREGROUND_REMOVE);
           stopSelf();
@@ -567,11 +568,6 @@ public class RadioService
     }
   }
 
-  private void releasePlayerAdapter() {
-    releaseScheduler();
-    playerAdapter.release();
-  }
-
   // PlayerAdapter from session for actual media controls
   private class MediaSessionCompatCallback extends MediaSessionCompat.Callback {
     @Override
@@ -635,8 +631,6 @@ public class RadioService
         session.setMetadata(getMediaMetadataBuilder(radio, "").build());
         session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_NONE).build());
       }
-      // Set controller for HTTP handler
-      radioHttpServer.setRadioHandlerController(radioHandlerController);
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {

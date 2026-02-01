@@ -54,30 +54,18 @@ public class RadioHandler implements HttpServer.Handler {
   private static final String LOG_TAG = RadioHandler.class.getSimpleName();
   private static final int METADATA_MAX = 256;
   private static final String KEY = "key";
-  private static final Controller DEFAULT_CONTROLLER = new Controller() {
-    @NonNull
-    @Override
-    public String getKey() {
-      return "";
-    }
-
-    @NonNull
-    @Override
-    public String getContentType() {
-      return "";
-    }
-  };
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
   @NonNull
   private final String userAgent;
   @NonNull
   private final Listener listener;
   @NonNull
-  private Controller controller = DEFAULT_CONTROLLER;
+  private final Controller controller;
 
-  public RadioHandler(@NonNull Context context, @NonNull Listener listener) {
+  public RadioHandler(@NonNull Context context, @NonNull Listener listener, @NonNull Controller controller) {
     this.userAgent = context.getString(R.string.app_name);
     this.listener = listener;
+    this.controller = controller;
   }
 
   // Add ID and lock key to given URI as query parameter
@@ -88,15 +76,6 @@ public class RadioHandler implements HttpServer.Handler {
       .appendEncodedPath(radio.getId())
       .appendQueryParameter(KEY, lockKey)
       .build();
-  }
-
-  // Must be called
-  public synchronized void setController(@NonNull Controller controller) {
-    this.controller = controller;
-  }
-
-  public synchronized void resetController() {
-    controller = DEFAULT_CONTROLLER;
   }
 
   @Override
@@ -202,6 +181,8 @@ public class RadioHandler implements HttpServer.Handler {
     // Empty if unknown
     @NonNull
     String getContentType();
+
+    boolean isActiv();
   }
 
   private class ConnectionHandler {
@@ -228,7 +209,7 @@ public class RadioHandler implements HttpServer.Handler {
       final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
       int metadataBlockBytesRead = 0;
       int metadataSize = 0;
-      while (lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
+      while (controller.isActiv() && lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
         // Only stream data are transferred
         if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
           outputStream.write(buffer[0]);
