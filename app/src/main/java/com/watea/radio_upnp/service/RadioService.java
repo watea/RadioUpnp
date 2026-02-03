@@ -164,6 +164,8 @@ public class RadioService
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
+  @NonNull
+  private String lastPlaylist = ""; // For Pause management
 
   public static boolean isValid(@NonNull Context context, @NonNull MediaMetadataCompat mediaMetadataCompat) {
     final String metadataKeyMediaId = mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
@@ -339,10 +341,8 @@ public class RadioService
       if (radio != null) {
         final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
         if (mediaMetadataCompat != null) {
-          final String playlist = mediaMetadataCompat.getString(PLAYLIST);
-          session.setMetadata(getMediaMetadataBuilder(radio, information)
-            .putString(PLAYLIST, addPlaylistItem(playlist, information))
-            .build());
+          lastPlaylist = addPlaylistItem(mediaMetadataCompat.getString(PLAYLIST), information);
+          buildSessionMetadata(radio, information);
           playerAdapter.onNewInformation(information);
           // Update notification
           buildNotification();
@@ -422,6 +422,7 @@ public class RadioService
           stopForeground(STOP_FOREGROUND_REMOVE);
           stopSelf();
           isAllowedToRewind = false;
+          lastPlaylist = "";
       }
     });
   }
@@ -435,6 +436,10 @@ public class RadioService
   public void onTaskRemoved(@NonNull Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
     stopSelf();
+  }
+
+  private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information) {
+    session.setMetadata(getMediaMetadataBuilder(radio, information).putString(PLAYLIST, lastPlaylist).build());
   }
 
   @NonNull
@@ -586,7 +591,6 @@ public class RadioService
       // Stop scheduler if any
       releaseScheduler();
       // Try to retrieve radio
-      final Radio previousRadio = playerAdapter.getRadio();
       final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
       if (radio == null) {
         Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
@@ -626,11 +630,9 @@ public class RadioService
         session.setPlaybackToRemote(volumeProviderCompat);
       }
       // Synchronize session data
-      if (radio != previousRadio) {
-        session.setExtras(new Bundle());
-        session.setMetadata(getMediaMetadataBuilder(radio, "").build());
-        session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_NONE).build());
-      }
+      session.setExtras(new Bundle());
+      session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_NONE).build());
+      buildSessionMetadata(radio, "");
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
@@ -669,7 +671,6 @@ public class RadioService
     @Override
     public void onStop() {
       playerAdapter.stop();
-      playerAdapter.setSessionDevice(null);
     }
 
     @Override

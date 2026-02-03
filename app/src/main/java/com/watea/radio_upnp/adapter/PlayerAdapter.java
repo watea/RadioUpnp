@@ -92,7 +92,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
       .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 
-  public void setSessionDevice(@Nullable SessionDevice sessionDevice) {
+  public void setSessionDevice(@NonNull SessionDevice sessionDevice) {
     this.sessionDevice = sessionDevice;
   }
 
