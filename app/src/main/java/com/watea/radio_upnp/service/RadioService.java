@@ -164,8 +164,6 @@ public class RadioService
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
-  @NonNull
-  private String lastPlaylist = ""; // For Pause management
 
   public static boolean isValid(@NonNull Context context, @NonNull MediaMetadataCompat mediaMetadataCompat) {
     final String metadataKeyMediaId = mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
@@ -341,8 +339,7 @@ public class RadioService
       if (radio != null) {
         final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
         if (mediaMetadataCompat != null) {
-          lastPlaylist = addPlaylistItem(mediaMetadataCompat.getString(PLAYLIST), information);
-          buildSessionMetadata(radio, information);
+          buildSessionMetadata(radio, information, addPlaylistItem(mediaMetadataCompat.getString(PLAYLIST), information));
           playerAdapter.onNewInformation(information);
           // Update notification
           buildNotification();
@@ -422,7 +419,6 @@ public class RadioService
           stopForeground(STOP_FOREGROUND_REMOVE);
           stopSelf();
           isAllowedToRewind = false;
-          lastPlaylist = "";
       }
     });
   }
@@ -438,8 +434,8 @@ public class RadioService
     stopSelf();
   }
 
-  private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information) {
-    session.setMetadata(getMediaMetadataBuilder(radio, information).putString(PLAYLIST, lastPlaylist).build());
+  private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information, @NonNull String playlist) {
+    session.setMetadata(getMediaMetadataBuilder(radio, information).putString(PLAYLIST, playlist).build());
   }
 
   @NonNull
@@ -586,6 +582,8 @@ public class RadioService
           upnpService.setSelectedDeviceIdentity(null);
         }
       }
+      // Retrieve last radio
+      final Radio lastRadio = playerAdapter.getRadio();
       // Stop player to be clean on resources (if not, audio focus is not well handled)
       playerAdapter.stop();
       // Stop scheduler if any
@@ -632,7 +630,9 @@ public class RadioService
       // Synchronize session data
       session.setExtras(new Bundle());
       session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_NONE).build());
-      buildSessionMetadata(radio, "");
+      final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
+      final String lastPlaylist = (mediaMetadataCompat == null) ? "" : mediaMetadataCompat.getString(PLAYLIST);
+      buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
