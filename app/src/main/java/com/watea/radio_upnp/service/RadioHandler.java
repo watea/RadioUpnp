@@ -175,14 +175,11 @@ public class RadioHandler implements HttpServer.Handler {
   }
 
   public interface Controller {
-    @NonNull
-    String getKey();
-
     // Empty if unknown
     @NonNull
     String getContentType();
 
-    boolean isActiv();
+    boolean isActiv(@NonNull String lockKey);
   }
 
   private class ConnectionHandler {
@@ -209,7 +206,7 @@ public class RadioHandler implements HttpServer.Handler {
       final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
       int metadataBlockBytesRead = 0;
       int metadataSize = 0;
-      while (controller.isActiv() && lockKey.equals(controller.getKey()) && (inputStream.read(buffer) > 0)) {
+      while (controller.isActiv(lockKey) && (inputStream.read(buffer) > 0)) {
         // Only stream data are transferred
         if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
           outputStream.write(buffer[0]);

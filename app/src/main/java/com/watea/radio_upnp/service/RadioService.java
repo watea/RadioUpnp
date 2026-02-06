@@ -140,20 +140,17 @@ public class RadioService
   private final RadioHandler.Controller radioHandlerController = new RadioHandler.Controller() {
     @NonNull
     @Override
-    public String getKey() {
-      return lockKey;
-    }
-
-    @NonNull
-    @Override
     public String getContentType() {
       return playerAdapter.getContentType();
     }
 
     @Override
-    public boolean isActiv() {
-      final int state = (session == null) ? PlaybackStateCompat.STATE_ERROR : session.getController().getPlaybackState().getState();
-      return !((state == PlaybackStateCompat.STATE_ERROR) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_STOPPED));
+    public boolean isActiv(@NonNull String lockKey) {
+      if (lockKey.equals(RadioService.this.lockKey)) {
+        final int state = (session == null) ? PlaybackStateCompat.STATE_ERROR : session.getController().getPlaybackState().getState();
+        return !((state == PlaybackStateCompat.STATE_ERROR) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_STOPPED));
+      }
+      return false;
     }
   };
   @Nullable
@@ -397,8 +394,7 @@ public class RadioService
             handler.postDelayed(() -> {
                 try {
                   // Still in error?
-                  if (mediaController.getPlaybackState().getState() ==
-                    PlaybackStateCompat.STATE_ERROR) {
+                  if (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_ERROR) {
                     mediaSessionCompatCallback.onRewind();
                   }
                 } catch (Exception exception) {
