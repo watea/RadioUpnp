@@ -364,7 +364,7 @@ public class RadioService
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
-  public void onPlaybackStateChange(@NonNull final PlaybackStateCompat state, @Nullable final String lockKey) {
+  public void onPlaybackStateChange(@NonNull final PlaybackStateCompat state, @NonNull final String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
       // Report the state to the MediaSession
@@ -543,9 +543,9 @@ public class RadioService
     }
   }
 
-  private void runIfLocked(@Nullable final String lockKey, @NonNull final Runnable runnable) {
+  private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
     handler.post(() -> {
-      if (session.isActive() && (lockKey != null) && lockKey.equals(this.lockKey)) {
+      if (session.isActive() && lockKey.equals(this.lockKey)) {
         runnable.run();
       }
     });
