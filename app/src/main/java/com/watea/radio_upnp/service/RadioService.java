@@ -148,7 +148,9 @@ public class RadioService
     public boolean isActiv(@NonNull String lockKey) {
       if (lockKey.equals(RadioService.this.lockKey)) {
         final int state = (session == null) ? PlaybackStateCompat.STATE_ERROR : session.getController().getPlaybackState().getState();
-        return !((state == PlaybackStateCompat.STATE_ERROR) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_STOPPED));
+        return
+          !((state == PlaybackStateCompat.STATE_ERROR) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_STOPPED)) &&
+            lockKey.equals(RadioService.this.lockKey); // We test again to be multi-thread safe without using any synchronized
       }
       return false;
     }
