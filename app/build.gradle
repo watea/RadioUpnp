@@ -11,8 +11,8 @@ android {
         minSdk = 26
         compileSdk = 36
         targetSdk = 36
-        versionCode = 272050
-        versionName = "2.72.050"
+        versionCode = 272051
+        versionName = "2.72.051"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -66,8 +66,8 @@ dependencies {
     implementation 'androidx.gridlayout:gridlayout:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.13.0'
-    implementation 'androidx.activity:activity:1.12.2'
-    implementation 'androidx.media3:media3-exoplayer:1.9.1' // Exoplayer
+    implementation 'androidx.activity:activity:1.12.3'
+    implementation 'androidx.media3:media3-exoplayer:1.9.2' // Exoplayer
     implementation 'com.google.code.gson:gson:2.13.2' // GSON
     fullImplementation 'com.android.billingclient:billing:8.3.0'
     // jsoup HTML parser library @ http://jsoup.org/
