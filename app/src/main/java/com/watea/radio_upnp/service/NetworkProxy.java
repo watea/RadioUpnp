@@ -78,25 +78,20 @@ public class NetworkProxy {
 
   @Nullable
   public String getWifiIpAddress() {
-    if (connectivityManager == null) {
-      return null;
-    }
-    final Network network = connectivityManager.getActiveNetwork();
-    if (network == null) {
-      return null;
-    }
-    final NetworkCapabilities caps = connectivityManager.getNetworkCapabilities(network);
-    if ((caps == null) || !caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-      return null;
-    }
-    final LinkProperties props = connectivityManager.getLinkProperties(network);
-    if (props == null) {
-      return null;
-    }
-    for (LinkAddress linkAddress : props.getLinkAddresses()) {
-      final InetAddress inetAddress = linkAddress.getAddress();
-      if ((inetAddress instanceof Inet4Address) && !inetAddress.isLoopbackAddress()) {
-        return inetAddress.getHostAddress();
+    if (connectivityManager != null) {
+      for (final Network network : connectivityManager.getAllNetworks()) {
+        final NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(network);
+        if ((networkCapabilities != null) && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+          final LinkProperties linkProperties = connectivityManager.getLinkProperties(network);
+          if (linkProperties != null) {
+            for (final LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
+              final InetAddress inetAddress = linkAddress.getAddress();
+              if (inetAddress instanceof Inet4Address && !inetAddress.isLoopbackAddress()) {
+                return inetAddress.getHostAddress(); // IP LAN
+              }
+            }
+          }
+        }
       }
     }
     return null;
