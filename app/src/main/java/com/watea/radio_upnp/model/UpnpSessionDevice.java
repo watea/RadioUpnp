@@ -123,7 +123,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
   @Override
   public boolean isRemote() {
-    return false;
+    return true;
   }
 
   // Not implemented
