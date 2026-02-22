@@ -177,7 +177,7 @@ public class RadioURL {
       }
       httpURLConnection.setConnectTimeout(TIMEOUT);
       httpURLConnection.setReadTimeout(TIMEOUT);
-      httpURLConnection.setInstanceFollowRedirects(true);
+      httpURLConnection.setInstanceFollowRedirects(false);
       if (httpURLConnection instanceof HttpsURLConnection) {
         ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
       }
