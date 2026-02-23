@@ -185,9 +185,17 @@ public class AndroidUpnpService extends android.app.Service {
     }
 
     // Null if no valid device selected
+    @Nullable
     public Device getSelectedDevice() {
       final String selectedDeviceIdentity = getSharedPreferences(getString(R.string.app_name), Context.MODE_PRIVATE).getString(getString(R.string.key_selected_device), null);
       return (selectedDeviceIdentity == null) ? null : devices.get(selectedDeviceIdentity);
+    }
+
+    // Null if no active device selected
+    @Nullable
+    public Device getActiveSelectedDevice() {
+      final Device result = getSelectedDevice();
+      return ((result == null) || result.isAlive()) ? result : null;
     }
   }
 

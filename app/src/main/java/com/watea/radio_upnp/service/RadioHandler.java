@@ -82,7 +82,7 @@ public class RadioHandler implements HttpServer.Handler {
   public void handle(
     @NonNull HttpServer.Request request,
     @NonNull HttpServer.Response response,
-    @NonNull OutputStream responseStream) throws IOException {
+    @NonNull OutputStream responseStream) {
     Log.d(LOG_TAG, "handle: entering");
     final String method = request.getMethod();
     final String path = request.getPath();
@@ -97,65 +97,75 @@ public class RadioHandler implements HttpServer.Handler {
       Log.d(LOG_TAG, "handle: leaving, unknown radio");
       return;
     }
+    // We are handling a valid request
     final boolean isGet = (method.equals("GET"));
-    // Create WAN connection
-    final HttpURLConnection httpURLConnection =
-      new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
-    Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
-    final boolean isHls = HlsHandler.isHls(httpURLConnection);
-    // Reset information
-    listener.onNewInformation("", lockKey);
-    // Reset rate
-    final String directRate = httpURLConnection.getHeaderField("icy-br");
-    listener.onNewRate((isHls || (directRate == null)) ? "" : directRate, lockKey);
-    // Build hlsHandler
-    final HlsHandler hlsHandler;
     try {
-      hlsHandler = isHls ?
-        new HlsHandler(
-          httpURLConnection,
-          this::setHeader,
-          rate ->
-            listener.onNewRate((rate == null) ? "" : rate.substring(0, rate.length() - 3), lockKey))
-        : null;
-    } catch (URISyntaxException uRISyntaxException) {
-      Log.e(LOG_TAG, "handle: hlsHandler failed to be be created", uRISyntaxException);
-      return;
-    }
-    try (final InputStream inputStream =
-           isHls ? hlsHandler.getInputStream() : httpURLConnection.getInputStream()) {
-      final ConnectionHandler connectionHandler = isHls ?
-        new ConnectionHandler(httpURLConnection, inputStream, lockKey) {
-          @Override
-          @NonNull
-          protected Charset getCharset() {
-            return Charset.defaultCharset();
-          }
+      // Create WAN connection
+      final HttpURLConnection httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
+      Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
+      final boolean isHls = HlsHandler.isHls(httpURLConnection);
+      // Reset information
+      listener.onNewInformation("", lockKey);
+      // Reset rate
+      final String directRate = httpURLConnection.getHeaderField("icy-br");
+      listener.onNewRate((isHls || (directRate == null)) ? "" : directRate, lockKey);
+      // Build hlsHandler
+      final HlsHandler hlsHandler;
+      try {
+        hlsHandler = isHls ?
+          new HlsHandler(
+            httpURLConnection,
+            this::setHeader,
+            rate ->
+              listener.onNewRate((rate == null) ? "" : rate.substring(0, rate.length() - 3), lockKey))
+          : null;
+      } catch (URISyntaxException uRISyntaxException) {
+        Log.e(LOG_TAG, "handle: hlsHandler failed to be be created", uRISyntaxException);
+        return;
+      }
+      try (final InputStream inputStream =
+             isHls ? hlsHandler.getInputStream() : httpURLConnection.getInputStream()) {
+        final ConnectionHandler connectionHandler = isHls ?
+          new ConnectionHandler(httpURLConnection, inputStream, lockKey) {
+            @Override
+            @NonNull
+            protected Charset getCharset() {
+              return Charset.defaultCharset();
+            }
 
-          // ICY data are not processed
-          @Override
-          protected int getMetadataOffset() {
-            return 0;
-          }
-        } :
-        new ConnectionHandler(httpURLConnection, inputStream, lockKey);
-      // Build response
-      String contentType = controller.getContentType();
-      // Force ContentType as some UPnP devices require it
-      if (contentType.isEmpty()) {
-        contentType = httpURLConnection.getContentType();
+            // ICY data are not processed
+            @Override
+            protected int getMetadataOffset() {
+              return 0;
+            }
+          } :
+          new ConnectionHandler(httpURLConnection, inputStream, lockKey);
+        // Build response
+        String contentType = controller.getContentType();
+        // Force ContentType as some UPnP devices require it
+        if (contentType.isEmpty()) {
+          contentType = httpURLConnection.getContentType();
+        }
+        // DLNA header, as found in documentation, not sure it is useful (should not)
+        response.addHeader(HttpServer.Response.CONTENT_TYPE, contentType);
+        response.addHeader("contentFeatures.dlna.org", "*");
+        response.addHeader("transferMode.dlna.org", "Streaming");
+        response.send();
+        if (isGet) {
+          connectionHandler.handle(responseStream);
+        }
+        Log.d(LOG_TAG, "handle: leaving with response");
+        // If we get here, everything went fine
+        return;
+      } catch (URISyntaxException uRISyntaxException) {
+        Log.e(LOG_TAG, "handle: failed to get input stream", uRISyntaxException);
       }
-      // DLNA header, as found in documentation, not sure it is useful (should not)
-      response.addHeader(HttpServer.Response.CONTENT_TYPE, contentType);
-      response.addHeader("contentFeatures.dlna.org", "*");
-      response.addHeader("transferMode.dlna.org", "Streaming");
-      response.send();
-      if (isGet) {
-        connectionHandler.handle(responseStream);
-      }
-      Log.d(LOG_TAG, "handle: leaving with response");
-    } catch (URISyntaxException uRISyntaxException) {
-      Log.e(LOG_TAG, "handle: failed to get input stream", uRISyntaxException);
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "handle: failed", iOException);
+    }
+    // If we get here, something went wrong
+    if (controller.isActive(lockKey)) {
+      listener.onHandleError(lockKey);
     }
   }
 
@@ -167,11 +177,11 @@ public class RadioHandler implements HttpServer.Handler {
   }
 
   public interface Listener {
-    default void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-    }
+    void onNewInformation(@NonNull String information, @NonNull String lockKey);
 
-    default void onNewRate(@Nullable String rate, @NonNull String lockKey) {
-    }
+    void onNewRate(@Nullable String rate, @NonNull String lockKey);
+
+    void onHandleError(@NonNull String lockKey);
   }
 
   public interface Controller {
@@ -179,7 +189,7 @@ public class RadioHandler implements HttpServer.Handler {
     @NonNull
     String getContentType();
 
-    boolean isActiv(@NonNull String lockKey);
+    boolean isActive(@NonNull String lockKey);
   }
 
   private class ConnectionHandler {
@@ -206,7 +216,7 @@ public class RadioHandler implements HttpServer.Handler {
       final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
       int metadataBlockBytesRead = 0;
       int metadataSize = 0;
-      while (controller.isActiv(lockKey) && (inputStream.read(buffer) > 0)) {
+      while (controller.isActive(lockKey) && (inputStream.read(buffer) > 0)) {
         // Only stream data are transferred
         if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
           outputStream.write(buffer[0]);

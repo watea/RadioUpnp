@@ -39,7 +39,6 @@ import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
-import com.watea.radio_upnp.upnp.Watchdog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,8 +52,7 @@ public class UpnpSessionDevice extends SessionDevice {
   private static final String CONNECTION_MANAGER_ID = "ConnectionManager";
   private static final String PROTOCOL_INFO_HEADER = "http-get:*:";
   private static final String PROTOCOL_INFO_ALL = ":*";
-  private static final String DEFAULT_PROTOCOL_INFO =
-    PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
+  private static final String DEFAULT_PROTOCOL_INFO = PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
   private static final String ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
@@ -79,8 +77,6 @@ public class UpnpSessionDevice extends SessionDevice {
   private final Service avTransportService;
   @Nullable
   private final Service renderingControl;
-  @Nullable
-  private final Watchdog watchdog;
   @NonNull
   private final String information; // Not final in further use
   private int currentVolume;
@@ -109,16 +105,6 @@ public class UpnpSessionDevice extends SessionDevice {
     // Those services are mandatory in UPnP standard
     connectionManager = device.getShortService(CONNECTION_MANAGER_ID);
     renderingControl = device.getShortService(RENDERING_CONTROL_ID);
-    // Watchdog tests if reader is actually playing
-    watchdog = (avTransportService == null) ? null : new Watchdog(this.actionController, avTransportService) {
-      @Override
-      public void onEvent(@NonNull ReaderState readerState) {
-        // Do nothing if paused as event has already been sent
-        if (!(isPaused() || (readerState == ReaderState.PLAYING))) {
-          onState(PlaybackStateCompat.STATE_ERROR);
-        }
-      }
-    };
   }
 
   @Override
@@ -238,9 +224,6 @@ public class UpnpSessionDevice extends SessionDevice {
 
   @Override
   public void release() {
-    if (watchdog != null) {
-      watchdog.kill();
-    }
   }
 
   private void scheduleMandatoryAction(
@@ -381,14 +364,11 @@ public class UpnpSessionDevice extends SessionDevice {
 
   private void scheduleActionSetAvTransportUri() {
     scheduleMandatoryAction(
-      ((watchdog == null) || (avTransportService == null)) ? null : avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
+      (avTransportService == null) ? null : avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
       action -> new UpnpAction(action, actionController, instanceId) {
         @Override
         protected void onSuccess() {
           onState(PlaybackStateCompat.STATE_BUFFERING);
-          // Now instanceId is known, we launch watchdog
-          assert watchdog != null;
-          watchdog.start(instanceId);
           super.onSuccess();
         }
 

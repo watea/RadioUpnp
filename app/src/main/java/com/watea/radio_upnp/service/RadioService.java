@@ -145,9 +145,9 @@ public class RadioService
     }
 
     @Override
-    public boolean isActiv(@NonNull String lockKey) {
+    public boolean isActive(@NonNull String lockKey) {
       if (lockKey.equals(RadioService.this.lockKey)) {
-        final int state = (session == null) ? PlaybackStateCompat.STATE_ERROR : session.getController().getPlaybackState().getState();
+        final int state = getPlaybackState();
         return
           !((state == PlaybackStateCompat.STATE_ERROR) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_STOPPED)) &&
             lockKey.equals(RadioService.this.lockKey); // We test again to be multi-thread safe without using any synchronized
@@ -208,19 +208,6 @@ public class RadioService
   public void onCreate() {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
-    // Create radios if needed
-    Radios.setInstance(this, null);
-    Radios.getInstance().addListener(radiosListener);
-    // Launch HTTP server
-    try {
-      radioHttpServer = new RadioHttpServer(this, this, radioHandlerController);
-      radioHttpServer.start();
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "HTTP server creation fails", iOException);
-      radioHttpServer = null;
-    }
-    // Player
-    playerAdapter = new PlayerAdapter(this, this);
     // Create a new MediaSession and controller...
     session = new MediaSessionCompat(this, LOG_TAG);
     mediaController = session.getController();
@@ -257,6 +244,19 @@ public class RadioService
     if (!bindService(
       new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
+    }
+    // Create radios if needed
+    Radios.setInstance(this, null);
+    Radios.getInstance().addListener(radiosListener);
+    // Player
+    playerAdapter = new PlayerAdapter(this, this);
+    // Launch HTTP server
+    try {
+      radioHttpServer = new RadioHttpServer(this, this, radioHandlerController);
+      radioHttpServer.start();
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "HTTP server creation fails", iOException);
+      radioHttpServer = null;
     }
     // Prepare notification
     actionPause = new NotificationCompat.Action(
@@ -334,6 +334,9 @@ public class RadioService
   @Override
   public void onNewInformation(@NonNull final String information, @NonNull final String lockKey) {
     runIfLocked(lockKey, () -> {
+      // A bit tricky: information must be refreshed at start of reading, we enable rewind
+      isAllowedToRewind = true;
+      Log.d(LOG_TAG, "isAllowedToRewind => true");
       final Radio radio = playerAdapter.getRadio();
       if (radio != null) {
         final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
@@ -361,6 +364,12 @@ public class RadioService
     });
   }
 
+  @Override
+  public void onHandleError(@NonNull String lockKey) {
+    Log.d(LOG_TAG, "onHandleError: " + lockKey);
+    onPlaybackStateChange(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
+  }
+
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
@@ -372,7 +381,6 @@ public class RadioService
       // Manage the started state of this service, and session activity
       switch (state.getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
-          isAllowedToRewind = true; // Relaunch now allowed
         case PlaybackStateCompat.STATE_BUFFERING:
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -385,7 +393,6 @@ public class RadioService
           break;
         case PlaybackStateCompat.STATE_PAUSED:
           releaseScheduler();
-          isAllowedToRewind = false; // No relaunch on pause
           buildNotification();
           break;
         case PlaybackStateCompat.STATE_ERROR:
@@ -416,7 +423,6 @@ public class RadioService
           session.setMetadata(null);
           stopForeground(STOP_FOREGROUND_REMOVE);
           stopSelf();
-          isAllowedToRewind = false;
       }
     });
   }
@@ -599,7 +605,7 @@ public class RadioService
       }
       // UPnP not accepted if environment not OK: force local processing
       final Uri serverUri = radioHttpServer.getUri();
-      final Device selectedDevice = ((serverUri == null) || (upnpService == null)) ? null : upnpService.getSelectedDevice();
+      final Device selectedDevice = ((serverUri == null) || (upnpService == null)) ? null : upnpService.getActiveSelectedDevice();
       // Set playerAdapter
       lockKey = UUID.randomUUID().toString();
       final boolean isLocal = (selectedDevice == null);
