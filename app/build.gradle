@@ -60,7 +60,7 @@ android {
 }
 
 dependencies {
-    // Android
+    // AndroidX
     implementation 'androidx.core:core:1.17.0'
     implementation 'androidx.media:media:1.7.1'
     implementation 'androidx.gridlayout:gridlayout:1.1.0'
@@ -68,10 +68,12 @@ dependencies {
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'androidx.activity:activity:1.12.4'
     implementation 'androidx.media3:media3-exoplayer:1.9.2' // Exoplayer
-    implementation 'com.google.code.gson:gson:2.13.2' // GSON
     implementation "androidx.mediarouter:mediarouter:1.8.1"
+    implementation "androidx.car.app:app:1.7.0" // Car App Library
+    // Cast
     implementation 'com.google.android.gms:play-services-cast-framework:22.3.0'
-    fullImplementation 'com.android.billingclient:billing:8.3.0'
+    // GSON
+    implementation 'com.google.code.gson:gson:2.13.2'
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.22.1'
     // apache
@@ -82,6 +84,6 @@ dependencies {
     implementation 'com.github.watea:androidssdpclient:1.0.6'
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.3.2'
-    // Car App Library
-    implementation "androidx.car.app:app:1.7.0"
+    // Billing
+    fullImplementation 'com.android.billingclient:billing:8.3.0'
 }
