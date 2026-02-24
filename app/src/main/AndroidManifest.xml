@@ -116,6 +116,10 @@
             android:name="androidx.car.app.TintableAttributionIcon"
             android:resource="@drawable/ic_mic_white_24dp" />
 
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.watea.radio_upnp.service.CastOptionsProvider" />
+
     </application>
 
     <queries>

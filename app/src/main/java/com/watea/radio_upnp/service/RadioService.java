@@ -57,9 +57,11 @@ import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.VolumeProviderCompat;
 import androidx.media.session.MediaButtonReceiver;
 
+import com.google.android.gms.cast.framework.CastSession;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
+import com.watea.radio_upnp.model.CastSessionDevice;
 import com.watea.radio_upnp.model.LocalSessionDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
@@ -164,6 +166,32 @@ public class RadioService
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
+  private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
+    @Override
+    public void onCastStarting() {
+      Log.d(LOG_TAG, "onCastStarting");
+      // UPnP no longer possible
+      if (upnpService != null) {
+        upnpService.setSelectedDeviceIdentity(null);
+      }
+    }
+
+    @Override
+    public void onCastStarted() {
+      final int state = getPlaybackState();
+      Log.d(LOG_TAG, "onCastStarted with state: " + state);
+      if ((state == PlaybackStateCompat.STATE_NONE) || (state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_PLAYING)) {
+        mediaSessionCompatCallback.onPlay();
+      }
+    }
+
+    @Override
+    public void onCastStop() {
+      Log.d(LOG_TAG, "onCastStop");
+      mediaSessionCompatCallback.onStop();
+    }
+  };
+  private CastManager castManager;
 
   public static boolean isValid(@NonNull Context context, @NonNull MediaMetadataCompat mediaMetadataCompat) {
     final String metadataKeyMediaId = mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
@@ -246,6 +274,9 @@ public class RadioService
       new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
+    // Cast
+    castManager = CastManager.getInstance();
+    castManager.setContext(this, castManagerCallback);
     // Create radios if needed
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
@@ -300,6 +331,8 @@ public class RadioService
     }
     // Release UPnP service
     unbindService(upnpConnection);
+    // Release Cast
+    castManager.resetContext(this);
     // Finally session
     session.setActive(false);
     session.release();
@@ -717,8 +750,18 @@ public class RadioService
     @NonNull
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull Uri serverUri) {
       assert lockKey != null;
+      final CastSession castSession = castManager.getCastSession();
       final Device selectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      if (selectedDevice != null) {
+      if (castSession != null) {
+        return new CastSessionDevice(
+          RadioService.this,
+          sessionDeviceListener,
+          lockKey,
+          radio,
+          RadioHandler.getHandledUri(serverUri, radio, lockKey),
+          radioHttpServer.createLogoFile(radio),
+          castSession);
+      } else if (selectedDevice != null) {
         return new UpnpSessionDevice(
           RadioService.this,
           sessionDeviceListener,

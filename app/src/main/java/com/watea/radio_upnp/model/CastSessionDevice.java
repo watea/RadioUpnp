@@ -1,0 +1,205 @@
+/*
+ * Copyright (c) 2026. Stephane Treuchot
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to
+ * do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+package com.watea.radio_upnp.model;
+
+import android.content.Context;
+import android.net.Uri;
+import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.google.android.gms.cast.MediaInfo;
+import com.google.android.gms.cast.MediaLoadRequestData;
+import com.google.android.gms.cast.MediaMetadata;
+import com.google.android.gms.cast.MediaStatus;
+import com.google.android.gms.cast.framework.CastSession;
+import com.google.android.gms.cast.framework.media.RemoteMediaClient;
+import com.google.android.gms.common.images.WebImage;
+import com.watea.radio_upnp.R;
+
+import java.io.IOException;
+import java.util.function.Consumer;
+
+public class CastSessionDevice extends SessionDevice {
+  private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
+  private static final double VOLUME_STEP = 0.05; // 5%
+  @NonNull
+  private final CastSession castSession;
+  @Nullable
+  private final Uri logoUri;
+  @Nullable
+  private RemoteMediaClient remoteMediaClient;
+  private final RemoteMediaClient.Callback remoteCallback = new RemoteMediaClient.Callback() {
+    @Override
+    public void onStatusUpdated() {
+      if ((remoteMediaClient == null) || (remoteMediaClient.getMediaStatus() == null)) {
+        return;
+      }
+      final int playerState = remoteMediaClient.getPlayerState();
+      Log.d(LOG_TAG, "onStatusUpdated: State=" + playerState);
+      switch (playerState) {
+        case MediaStatus.PLAYER_STATE_PLAYING:
+          onState(PlaybackStateCompat.STATE_PLAYING);
+          break;
+        case MediaStatus.PLAYER_STATE_PAUSED:
+          onState(PlaybackStateCompat.STATE_PAUSED);
+          break;
+        case MediaStatus.PLAYER_STATE_BUFFERING:
+        case MediaStatus.PLAYER_STATE_LOADING:
+        case MediaStatus.PLAYER_STATE_IDLE:
+          onState(PlaybackStateCompat.STATE_BUFFERING);
+          break;
+        default:
+          onState(PlaybackStateCompat.STATE_STOPPED);
+      }
+    }
+  };
+
+  public CastSessionDevice(
+    @NonNull Context context,
+    @NonNull Consumer<Integer> listener,
+    @NonNull String lockKey,
+    @NonNull Radio radio,
+    @NonNull Uri radioUri,
+    @Nullable Uri logoUri,
+    @NonNull CastSession castSession) {
+    super(context, listener, lockKey, radio, radioUri);
+    this.logoUri = logoUri;
+    this.castSession = castSession;
+  }
+
+  @Override
+  public boolean isRemote() {
+    return true;
+  }
+
+  @Override
+  public void setVolume(float volume) {
+    try {
+      castSession.setVolume(volume); // 0.0 to 1.0
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "Failed to set volume", iOException);
+    }
+  }
+
+  @Override
+  public void adjustVolume(int direction) {
+    try {
+      final double current = castSession.getVolume();
+      if (direction > 0) {
+        castSession.setVolume(Math.min(1.0, current + VOLUME_STEP));
+      } else if (direction < 0) {
+        castSession.setVolume(Math.max(0.0, current - VOLUME_STEP));
+      }
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "Failed to adjust volume", iOException);
+    }
+  }
+
+  @Override
+  public long getAvailableActions() {
+    long availableActions = DEFAULT_AVAILABLE_ACTIONS;
+    switch (getState()) {
+      case PlaybackStateCompat.STATE_PLAYING:
+        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
+        break;
+      case PlaybackStateCompat.STATE_PAUSED:
+      case PlaybackStateCompat.STATE_BUFFERING:
+      case MediaStatus.PLAYER_STATE_LOADING:
+        availableActions |= PlaybackStateCompat.ACTION_PLAY;
+        break;
+      default:
+        // Nothing else
+    }
+    return availableActions;
+  }
+
+  @Override
+  public void prepareFromMediaId() {
+    super.prepareFromMediaId();
+    remoteMediaClient = castSession.getRemoteMediaClient();
+    if (remoteMediaClient != null) {
+      remoteMediaClient.registerCallback(remoteCallback);
+      load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), logoUri, true);
+    }
+  }
+
+  @Override
+  public void play() {
+    super.play();
+    if (remoteMediaClient != null) {
+      remoteMediaClient.play();
+    }
+  }
+
+  @Override
+  public void pause() {
+    super.pause();
+    if (remoteMediaClient != null) {
+      remoteMediaClient.pause();
+    }
+  }
+
+  @Override
+  public void stop() {
+    super.stop();
+    if (remoteMediaClient != null) {
+      remoteMediaClient.stop();
+      load(remoteMediaClient, "", "", null, false);
+    }
+  }
+
+  @Override
+  public void release() {
+    if (remoteMediaClient != null) {
+      remoteMediaClient.unregisterCallback(remoteCallback);
+      remoteMediaClient = null;
+    }
+  }
+
+  private void load(
+    @NonNull RemoteMediaClient remoteMediaClient,
+    @NonNull String keyTitle,
+    @NonNull String keySubtitle,
+    @Nullable Uri logoUri,
+    boolean isAutoPlay) {
+    final MediaMetadata movieMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
+    movieMetadata.putString(MediaMetadata.KEY_TITLE, keyTitle);
+    movieMetadata.putString(MediaMetadata.KEY_SUBTITLE, keySubtitle);
+    if (logoUri != null) {
+      movieMetadata.addImage(new WebImage(logoUri));
+    }
+    final MediaInfo mediaInfo = new MediaInfo.Builder(radioUri.toString())
+      .setStreamType(MediaInfo.STREAM_TYPE_LIVE) // Radio
+      .setMetadata(movieMetadata)
+      .build();
+    final MediaLoadRequestData requestData = new MediaLoadRequestData.Builder()
+      .setMediaInfo(mediaInfo)
+      .setAutoplay(isAutoPlay)
+      .build();
+    remoteMediaClient.load(requestData);
+  }
+}

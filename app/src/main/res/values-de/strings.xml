@@ -130,6 +130,7 @@
     <string name="donation_error">Interner Fehler, bitte versuchen Sie es später noch einmal!</string>
     <string name="loading_radios">Lade, bitte warten&#8230;</string>
     <string name="battery_optimization">Wenn der Wecker nicht funktioniert, deaktivieren Sie bitte jegliche Akku-Optimierung. Die Schritte können je nach Gerät variieren.</string>
+    <string name="cast_already_running">UPnP kann nicht verwendet werden, wenn eine Google Cast-Sitzung aktiv ist.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Favoritenliste</string>
     <string name="title_main">Wiedergabe</string>
