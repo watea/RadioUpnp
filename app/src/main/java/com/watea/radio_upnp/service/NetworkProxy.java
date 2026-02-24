@@ -35,6 +35,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 
 public class NetworkProxy {
@@ -78,23 +79,41 @@ public class NetworkProxy {
 
   @Nullable
   public String getWifiIpAddress() {
-    if (connectivityManager != null) {
-      for (final Network network : connectivityManager.getAllNetworks()) {
-        final NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(network);
-        if ((networkCapabilities != null) && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-          final LinkProperties linkProperties = connectivityManager.getLinkProperties(network);
-          if (linkProperties != null) {
-            for (final LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
-              final InetAddress inetAddress = linkAddress.getAddress();
-              if (inetAddress instanceof Inet4Address && !inetAddress.isLoopbackAddress()) {
-                return inetAddress.getHostAddress(); // IP LAN
-              }
-            }
-          }
-        }
+    if (connectivityManager == null) {
+      return null;
+    }
+    final Network activeNetwork = connectivityManager.getActiveNetwork();
+    if (activeNetwork == null) {
+      return null;
+    }
+    final NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
+    if ((capabilities == null) || !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+      return null;
+    }
+    final LinkProperties linkProperties = connectivityManager.getLinkProperties(activeNetwork);
+    if (linkProperties == null) {
+      return null;
+    }
+    String ipv6Fallback = null;
+    for (final LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
+      final InetAddress inetAddress = linkAddress.getAddress();
+      if (inetAddress.isLoopbackAddress() ||
+        inetAddress.isAnyLocalAddress() ||
+        inetAddress.isMulticastAddress() ||
+        inetAddress.isLinkLocalAddress()) {
+        continue;
+      }
+      // IPv4?
+      if (inetAddress instanceof Inet4Address && inetAddress.isSiteLocalAddress()) {
+        return inetAddress.getHostAddress();
+      }
+      // IPv6 fallback
+      if (inetAddress instanceof Inet6Address) {
+        assert inetAddress.getHostAddress() != null;
+        ipv6Fallback = stripZoneId(inetAddress.getHostAddress());
       }
     }
-    return null;
+    return ipv6Fallback;
   }
 
   public boolean isOnNetworkCapability(int networkCapability) {
@@ -105,5 +124,11 @@ public class NetworkProxy {
         connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
       return (capabilities != null) && capabilities.hasTransport(networkCapability);
     }
+  }
+
+  @NonNull
+  private String stripZoneId(@NonNull String address) {
+    final int percent = address.indexOf('%');
+    return (percent > 0) ? address.substring(0, percent) : address;
   }
 }
