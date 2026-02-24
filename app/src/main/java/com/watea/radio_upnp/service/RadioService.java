@@ -63,6 +63,7 @@ import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.model.LocalSessionDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
+import com.watea.radio_upnp.model.SessionDevice;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
@@ -469,7 +470,7 @@ public class RadioService
       .setSilent(true);
     final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
     if (mediaMetadataCompat == null) {
-      Log.e(LOG_TAG, "Internal failure; no metadata defined for radio");
+      Log.d(LOG_TAG, "getNotification: no metadata defined for radio");
     } else {
       final MediaDescriptionCompat description = mediaMetadataCompat.getDescription();
       builder
@@ -599,37 +600,22 @@ public class RadioService
         return;
       }
       // Catch catastrophic failure
-      if (radioHttpServer == null) {
-        Log.e(LOG_TAG, "onPlayFromMediaId: radioHttpServer is null");
+      final Uri serverUri = (radioHttpServer == null) ? null : radioHttpServer.getUri();
+      if (serverUri == null) {
+        Log.e(LOG_TAG, "onPlayFromMediaId: serverUri is null");
         return;
       }
-      // UPnP not accepted if environment not OK: force local processing
-      final Uri serverUri = radioHttpServer.getUri();
-      final Device selectedDevice = ((serverUri == null) || (upnpService == null)) ? null : upnpService.getActiveSelectedDevice();
-      // Set playerAdapter
+      // Set session tag
       lockKey = UUID.randomUUID().toString();
-      final boolean isLocal = (selectedDevice == null);
-      playerAdapter.setSessionDevice(isLocal ?
-        new LocalSessionDevice(
-          RadioService.this,
-          sessionDeviceListener,
-          lockKey,
-          radio,
-          RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey)) :
-        new UpnpSessionDevice(
-          RadioService.this,
-          sessionDeviceListener,
-          lockKey,
-          radio,
-          RadioHandler.getHandledUri(serverUri, radio, lockKey),
-          radioHttpServer.createLogoFile(radio),
-          selectedDevice,
-          upnpService.getActionController(),
-          contentProvider));
-      if (isLocal) {
-        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
-      } else {
+      // PlayerAdapter settings
+      final SessionDevice sessionDevice = getSessionDevice(radio, serverUri);
+      Log.d(LOG_TAG, "onPlayFromMediaId: sessionDevice => " + sessionDevice.getClass().getSimpleName());
+      playerAdapter.setSessionDevice(sessionDevice);
+      // Volume
+      if (sessionDevice.isRemote()) {
         session.setPlaybackToRemote(volumeProviderCompat);
+      } else {
+        session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);
       }
       // Synchronize session data
       session.setExtras(new Bundle());
@@ -724,6 +710,32 @@ public class RadioService
         Log.e(LOG_TAG, "onPlayFromMediaId: radio is null!");
       } else {
         onPlayFromMediaId(radio.getId(), mediaController.getExtras());
+      }
+    }
+
+    // UPnP or Cast not accepted if environment not OK: force local processing
+    @NonNull
+    private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull Uri serverUri) {
+      assert lockKey != null;
+      final Device selectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
+      if (selectedDevice != null) {
+        return new UpnpSessionDevice(
+          RadioService.this,
+          sessionDeviceListener,
+          lockKey,
+          radio,
+          RadioHandler.getHandledUri(serverUri, radio, lockKey),
+          radioHttpServer.createLogoFile(radio),
+          selectedDevice,
+          upnpService.getActionController(),
+          contentProvider);
+      } else {
+        return new LocalSessionDevice(
+          RadioService.this,
+          sessionDeviceListener,
+          lockKey,
+          radio,
+          RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey));
       }
     }
   }
