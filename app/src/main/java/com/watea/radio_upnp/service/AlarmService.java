@@ -375,8 +375,6 @@ public class AlarmService extends Service {
           if (mediaController == null) {
             Log.e(LOG_TAG, "launch: mediaController is null!");
           } else {
-            final Bundle bundle = new Bundle();
-            bundle.putBoolean(getString(R.string.key_alarm_radio), true);
             mediaController.getTransportControls().playFromMediaId(radio.getId(), new Bundle());
             return;
           }

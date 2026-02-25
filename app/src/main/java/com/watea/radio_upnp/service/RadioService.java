@@ -612,14 +612,6 @@ public class RadioService
     @Override
     public void onPlayFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       Log.d(LOG_TAG, "onPlayFromMediaId with mediaId: " + mediaId);
-      // Ensure robustness
-      if (upnpService != null) {
-        upnpService.getActionController().release();
-        // If from alarm, we must ensure UPnP is not used
-        if (extras.getBoolean(getString(R.string.key_alarm_radio), false)) {
-          upnpService.setSelectedDeviceIdentity(null);
-        }
-      }
       // Retrieve last radio
       final Radio lastRadio = playerAdapter.getRadio();
       // Stop player to be clean on resources (if not, audio focus is not well handled)

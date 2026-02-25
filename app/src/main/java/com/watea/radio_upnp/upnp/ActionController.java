@@ -31,10 +31,6 @@ import java.util.List;
 public class ActionController {
   private final List<UpnpAction> upnpActions = new ArrayList<>();
 
-  public synchronized void release() {
-    upnpActions.clear();
-  }
-
   public synchronized void release(@NonNull Device device) {
     upnpActions.removeIf(upnpAction -> upnpAction.hasDevice(device));
   }
