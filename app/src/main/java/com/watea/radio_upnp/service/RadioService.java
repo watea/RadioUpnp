@@ -625,15 +625,14 @@ public class RadioService
         return;
       }
       // Catch catastrophic failure
-      final Uri serverUri = (radioHttpServer == null) ? null : radioHttpServer.getUri();
-      if (serverUri == null) {
-        Log.e(LOG_TAG, "onPlayFromMediaId: serverUri is null");
+      if (radioHttpServer == null) {
+        Log.e(LOG_TAG, "onPlayFromMediaId: radioHttpServer is null");
         return;
       }
       // Set session tag
       lockKey = UUID.randomUUID().toString();
       // PlayerAdapter settings
-      final SessionDevice sessionDevice = getSessionDevice(radio, serverUri);
+      final SessionDevice sessionDevice = getSessionDevice(radio);
       Log.d(LOG_TAG, "onPlayFromMediaId: sessionDevice => " + sessionDevice.getClass().getSimpleName());
       playerAdapter.setSessionDevice(sessionDevice);
       // Volume
@@ -740,11 +739,12 @@ public class RadioService
 
     // UPnP or Cast not accepted if environment not OK: force local processing
     @NonNull
-    private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull Uri serverUri) {
+    private SessionDevice getSessionDevice(@NonNull Radio radio) {
       assert lockKey != null;
+      final Uri serverUri = radioHttpServer.getUri();
       final CastSession castSession = castManager.getCastSession();
       final Device selectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      if (castSession != null) {
+      if ((serverUri != null) && (castSession != null)) {
         return new CastSessionDevice(
           RadioService.this,
           sessionDeviceListener,
@@ -753,7 +753,7 @@ public class RadioService
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
           radioHttpServer.createLogoFile(radio),
           castSession);
-      } else if (selectedDevice != null) {
+      } else if ((serverUri != null) && (selectedDevice != null)) {
         return new UpnpSessionDevice(
           RadioService.this,
           sessionDeviceListener,
