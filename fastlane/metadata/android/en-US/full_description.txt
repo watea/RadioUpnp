@@ -1,23 +1,22 @@
-<p><i>RadioUpnp</i> lets you enjoy web radios with uninterrupted playback, even when the app is in the background or the screen is off.</p>
+<p><i>RadioUpnp</i> lets you enjoy web radios with uninterrupted playback.</p>
 
-<p>Minimalist and fully customizable, you can easily build your own radio playlist:</p>
+<p><b>Now with Google Cast support!</b> Stream your favorite radios directly to Cast-enabled devices, UPnP, or DLNA speakers — perfect for smart homes or audiophile setups.</p>
+
+<p>Minimalist and fully customizable, you can easily build your own playlist:</p>
+
 <ul>
-  <li>Use the built-in Search screen to find and add radios</li>
-  <li>Use the RadioGarden app and share results directly to RadioUpnp</li>
-  <li>Still not finding your favorite radio? Add it manually via the Add/Edit screen</li>
+  <li>Search and add radios directly in the app.</li>
+  <li>Share results from RadioGarden straight to <i>RadioUpnp</i>.</li>
+  <li>Still missing a station? Add it manually.</li>
 </ul>
 
-<p><i>RadioUpnp</i> is one of the rare apps that streams radios to UPnP/DLNA speakers while showing metadata (like track title or artist)<sup>*</sup> — ideal for smart homes or audiophile setups.</p>
-
-<p>It's completely free and ad-free. You can support development via the Donate menu. Thank you!</p>
-
+<p>Completely free and ad-free. Support development via the <b>Donate</b> menu. Thank you!</p>
 
 <p>📌 <b>Troubleshooting Tips</b>:</p>
+
 <ul>
-  <li>Some phone brands (e.g. Samsung, OnePlus) may apply battery optimization that disrupts streaming. Disable optimization in battery settings for RadioUpnp.</li>
+  <li>Some phone brands (e.g. Samsung, OnePlus) may apply battery optimization that disrupts streaming. Disable optimization in battery settings for <i>RadioUpnp</i>.</li>
   <li>Streaming quality and compatibility depend on your UPnP/DLNA device (supported CODECs, etc.).</li>
   <li>If you use ad blockers or firewall apps, UPnP streaming may be blocked.</li>
   <li>Need help? Use the in-app Report function to contact the developer.</li>
 </ul>
-
-<p><sup>*</sup> when the Icy metadata standard is supported.</p>

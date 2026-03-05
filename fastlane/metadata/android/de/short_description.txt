@@ -1,1 +1,1 @@
-Sauber gestalteter Internetradio-Player mit integrierter UPnP / DLNA-Funktion
+Minimalistisches Internetradio mit UPnP/DLNA- und Google-Cast-Unterstützung

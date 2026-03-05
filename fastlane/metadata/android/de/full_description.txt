@@ -1,23 +1,22 @@
-<p>Mit <i>RadioUpnp</i> können Sie Webradios ohne Unterbrechung genießen, selbst wenn die App im Hintergrund läuft oder der Bildschirm ausgeschaltet ist.</p>
+<p><i>RadioUpnp</i> ermöglicht es Ihnen, Webradios mit unterbrechungsfreier Wiedergabe zu genießen.</p>
 
-<p>Minimalistisch und vollständig anpassbar, können Sie ganz einfach Ihre eigene Radio-Wiedergabeliste erstellen:</p>
+<p><b>Jetzt mit Google Cast-Unterstützung!</b> Streamen Sie Ihre Lieblingsradios direkt auf Cast-fähige Geräte, UPnP- oder DLNA-Lautsprecher – perfekt für Smart Homes oder audiophile Setups.</p>
+
+<p>Minimalistisch und vollständig anpassbar können Sie ganz einfach Ihre eigene Playlist erstellen:</p>
+
 <ul>
-  <li>Verwenden Sie die integrierte Suche, um Radios zu finden und hinzuzufügen</li>
-  <li>Nutzen Sie die RadioGarden-App und teilen Sie die Ergebnisse direkt mit RadioUpnp</li>
-  <li>Finden Sie Ihren Lieblingssender immer noch nicht? Fügen Sie ihn manuell über den Bildschirm „Hinzufügen/Bearbeiten“ hinzu</li>
+  <li>Suchen und fügen Sie Radiosender direkt in der App hinzu.</li>
+  <li>Teilen Sie Ergebnisse aus der RadioGarden-App direkt mit <i>RadioUpnp</i>.</li>
+  <li>Fehlt noch ein Sender? Fügen Sie ihn einfach manuell hinzu.</li>
 </ul>
 
-<p><i>RadioUpnp</i> ist eine der wenigen Apps, die Radios an UPnP/DLNA-Lautsprecher streamt und dabei Metadaten (wie Titel oder Künstler) anzeigt<sup>*</sup> – ideal für Smart Homes oder audiophile Setups.</p>
-
-<p>Die App ist komplett kostenlos und werbefrei. Sie können die Entwicklung über das Spenden-Menü unterstützen. Vielen Dank!</p>
-
+<p>Völlig kostenlos und ohne Werbung. Unterstützen Sie die Entwicklung über das <b>Donate</b>-Menü. Vielen Dank!</p>
 
 <p>📌 <b>Tipps zur Fehlerbehebung</b>:</p>
-<ul>
-  <li>Einige Handy-Marken (z. B. Samsung, OnePlus) wenden Akku-Optimierungen an, die das Streaming stören können. Deaktivieren Sie die Optimierung für RadioUpnp in den Akku-Einstellungen.</li>
-  <li>Die Streaming-Qualität und Kompatibilität hängen von Ihrem UPnP/DLNA-Gerät ab (unterstützte CODECs usw.).</li>
-  <li>Wenn Sie Werbeblocker oder Firewall-Apps verwenden, kann das UPnP-Streaming blockiert werden.</li>
-  <li>Benötigen Sie Hilfe? Nutzen Sie die Melde-Funktion in der App, um den Entwickler zu kontaktieren.</li>
-</ul>
 
-<p><sup>*</sup> wenn der Icy-Metadatenstandard unterstützt wird.</p>
+<ul>
+  <li>Einige Smartphone-Marken (z. B. Samsung, OnePlus) können Batterieoptimierungen anwenden, die das Streaming unterbrechen. Deaktivieren Sie die Optimierung in den Batterieeinstellungen für <i>RadioUpnp</i>.</li>
+  <li>Streaming-Qualität und Kompatibilität hängen von Ihrem UPnP-/DLNA-Gerät ab (unterstützte CODECs usw.).</li>
+  <li>Wenn Sie Werbeblocker oder Firewall-Apps verwenden, kann das UPnP-Streaming blockiert werden.</li>
+  <li>Brauchen Sie Hilfe? Nutzen Sie die integrierte Report-Funktion, um den Entwickler zu kontaktieren.</li>
+</ul>
