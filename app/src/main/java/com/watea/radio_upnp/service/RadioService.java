@@ -105,8 +105,7 @@ public class RadioService
   private static final int SLEEP_TIMER_NOTIFICATION_ID = 42;
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
-  private final MediaSessionCompatCallback mediaSessionCompatCallback =
-    new MediaSessionCompatCallback();
+  private final MediaSessionCompatCallback mediaSessionCompatCallback = new MediaSessionCompatCallback();
   private final ContentProvider contentProvider = new ContentProvider();
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
