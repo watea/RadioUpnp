@@ -49,8 +49,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   private static final String LOG_TAG = PlayerAdapter.class.getSimpleName();
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
-  private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
-    new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+  private static final IntentFilter AUDIO_NOISY_INTENT_FILTER = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
   private static final AudioAttributes PLAYBACK_ATTRIBUTES = new AudioAttributes.Builder()
     .setUsage(AudioAttributes.USAGE_MEDIA)
     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
