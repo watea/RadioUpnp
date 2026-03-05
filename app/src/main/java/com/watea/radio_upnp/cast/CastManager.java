@@ -1,4 +1,4 @@
-package com.watea.radio_upnp.service;
+package com.watea.radio_upnp.cast;
 
 import android.content.Context;
 

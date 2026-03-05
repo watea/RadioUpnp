@@ -85,7 +85,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.service.CastManager;
+import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;

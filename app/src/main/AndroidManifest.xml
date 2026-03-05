@@ -118,7 +118,7 @@
 
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
-            android:value="com.watea.radio_upnp.service.CastOptionsProvider" />
+            android:value="com.watea.radio_upnp.cast.CastOptionsProvider" />
 
     </application>
 

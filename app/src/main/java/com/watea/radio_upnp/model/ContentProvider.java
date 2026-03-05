@@ -21,12 +21,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.service;
+package com.watea.radio_upnp.model;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.service.RadioURL;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.util.HashMap;

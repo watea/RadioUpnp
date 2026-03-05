@@ -33,7 +33,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.service.ContentProvider;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
