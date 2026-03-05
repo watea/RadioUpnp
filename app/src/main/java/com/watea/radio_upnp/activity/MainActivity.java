@@ -87,7 +87,7 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.service.NetworkProxy;
-import com.watea.radio_upnp.upnp.AndroidUpnpService;
+import com.watea.radio_upnp.service.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
 import org.json.JSONException;

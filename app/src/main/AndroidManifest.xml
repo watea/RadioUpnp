@@ -59,7 +59,7 @@
         </service>
 
         <service
-            android:name="com.watea.radio_upnp.upnp.AndroidUpnpService"
+            android:name="com.watea.radio_upnp.service.AndroidUpnpService"
             android:description="@string/upnp_service_description"
             android:enabled="true"
             android:exported="false"

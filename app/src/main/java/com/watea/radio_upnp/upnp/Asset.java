@@ -41,7 +41,7 @@ public abstract class Asset implements URLService.Consumer {
   public void endParseAccept(@NonNull URLService uRLService) {
   }
 
-  protected boolean isOnError() {
+  public boolean isOnError() {
     return isOnError;
   }
 

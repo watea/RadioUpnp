@@ -69,7 +69,6 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.model.SessionDevice;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
-import com.watea.radio_upnp.upnp.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.io.IOException;

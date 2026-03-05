@@ -39,7 +39,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.upnp.AndroidUpnpService;
+import com.watea.radio_upnp.service.AndroidUpnpService;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.util.ArrayList;

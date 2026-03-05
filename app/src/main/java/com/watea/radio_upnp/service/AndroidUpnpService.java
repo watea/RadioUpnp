@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.upnp;
+package com.watea.radio_upnp.service;
 
 import android.content.Context;
 import android.content.Intent;
@@ -40,7 +40,8 @@ import androidx.annotation.Nullable;
 import com.watea.androidssdpclient.SsdpClient;
 import com.watea.androidssdpclient.SsdpService;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.service.NetworkProxy;
+import com.watea.radio_upnp.upnp.ActionController;
+import com.watea.radio_upnp.upnp.Device;
 
 import org.xmlpull.v1.XmlPullParserException;
 
