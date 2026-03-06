@@ -29,7 +29,6 @@ import android.content.Intent;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -39,21 +38,18 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.view.MenuItemCompat;
-import androidx.mediarouter.app.MediaRouteActionProvider;
-import androidx.mediarouter.media.MediaRouteSelector;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.cast.framework.CastContext;
+import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosMainAdapter;
+import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
 public class MainFragment extends MainActivityFragment {
-  private static final String LOG_TAG = MainFragment.class.getSimpleName();
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;
   private MenuItem preferredMenuItem;
@@ -201,17 +197,13 @@ public class MainFragment extends MainActivityFragment {
           }
         }
       });
-    // Cast
-    final MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(menu.findItem(R.id.action_cast));
-    if (mediaRouteActionProvider == null) {
-      Log.e(LOG_TAG, "onCreateMenu: mediaRouteActionProvider not found");
-    } else {
-      final CastContext castContext = CastContext.getSharedInstance(requireContext());
-      final MediaRouteSelector mediaRouteSelector = castContext.getMergedSelector();
-      if (mediaRouteSelector == null) {
-        Log.e(LOG_TAG, "onCreateMenu: mediaRouteSelector not found");
+    // Cast item - only visible in "full" flavor
+    final MenuItem castItem = menu.findItem(R.id.action_cast);
+    if (castItem != null) {
+      if (BuildConfig.HAS_CAST) {
+        CastManager.mediaRouteActionProviderSetRouteSelector(requireContext(), castItem);
       } else {
-        mediaRouteActionProvider.setRouteSelector(mediaRouteSelector);
+        castItem.setVisible(false);
       }
     }
   }

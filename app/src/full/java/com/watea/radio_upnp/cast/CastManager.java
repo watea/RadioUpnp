@@ -1,19 +1,26 @@
 package com.watea.radio_upnp.cast;
 
 import android.content.Context;
+import android.net.Uri;
+import android.util.Log;
+import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.MenuItemCompat;
+import androidx.mediarouter.app.MediaRouteActionProvider;
+import androidx.mediarouter.media.MediaRouteSelector;
 
 import com.google.android.gms.cast.framework.CastContext;
 import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
+import com.watea.radio_upnp.model.Radio;
 
-// Singleton
-public class CastManager {
-  @Nullable
-  private static CastManager instance = null;
+import java.util.function.Consumer;
+
+public class CastManager extends OpenCastManager<CastSessionDevice> {
+  private static final String LOG_TAG = CastManager.class.getSimpleName();
   @NonNull
   private Callback callback = new Callback() {
   };
@@ -75,15 +82,31 @@ public class CastManager {
   private CastManager() {
   }
 
-  public static synchronized CastManager getInstance() {
+  @NonNull
+  public static CastManager getInstance() {
     if (instance == null) {
       instance = new CastManager();
     }
-    return instance;
+    return (CastManager) instance;
   }
 
-  // Only called in one place / app, when context is available
-  public void setContext(@NonNull Context context, @NonNull Callback callback) {
+  public static void mediaRouteActionProviderSetRouteSelector(@NonNull Context context, @NonNull MenuItem castItem) {
+    final MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(castItem);
+    if (mediaRouteActionProvider == null) {
+      Log.e(LOG_TAG, "setRouteSelector: mediaRouteActionProvider not found");
+    } else {
+      final CastContext castContext = CastContext.getSharedInstance(context);
+      final MediaRouteSelector mediaRouteSelector = castContext.getMergedSelector();
+      if (mediaRouteSelector == null) {
+        Log.e(LOG_TAG, "setRouteSelector: mediaRouteSelector not found");
+      } else {
+        mediaRouteActionProvider.setRouteSelector(mediaRouteSelector);
+      }
+    }
+  }
+
+  @Override
+  public void setContext(@NonNull Context context, @NonNull OpenCastManager.Callback callback) {
     this.callback = callback;
     final SessionManager sessionManager = CastContext.getSharedInstance(context).getSessionManager();
     sessionManager.addSessionManagerListener(sessionManagerListener, CastSession.class);
@@ -95,7 +118,7 @@ public class CastManager {
     }
   }
 
-  // Only called in one place / app
+  @Override
   public void resetContext(@NonNull Context context) {
     CastContext.getSharedInstance(context).getSessionManager().removeSessionManagerListener(
       sessionManagerListener,
@@ -105,19 +128,21 @@ public class CastManager {
     castSession = null;
   }
 
-  @Nullable
-  public CastSession getCastSession() {
-    return castSession;
+  @Override
+  public boolean hasCastSession() {
+    return (castSession != null) && castSession.isConnected();
   }
 
-  public interface Callback {
-    default void onCastStarting() {
-    }
-
-    default void onCastStarted() {
-    }
-
-    default void onCastStop() {
-    }
+  @Override
+  @NonNull
+  public CastSessionDevice getCastSessionDevice(
+    @NonNull Context context,
+    @NonNull Consumer<Integer> listener,
+    @NonNull String lockKey,
+    @NonNull Radio radio,
+    @NonNull Uri radioUri,
+    @Nullable Uri logoUri) {
+    assert castSession != null;
+    return new CastSessionDevice(context, listener, lockKey, radio, radioUri, logoUri, castSession);
   }
 }

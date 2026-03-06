@@ -57,12 +57,10 @@ import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.VolumeProviderCompat;
 import androidx.media.session.MediaButtonReceiver;
 
-import com.google.android.gms.cast.framework.CastSession;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.cast.CastManager;
-import com.watea.radio_upnp.model.CastSessionDevice;
 import com.watea.radio_upnp.model.ContentProvider;
 import com.watea.radio_upnp.model.LocalSessionDevice;
 import com.watea.radio_upnp.model.Radio;
@@ -742,18 +740,18 @@ public class RadioService
     private SessionDevice getSessionDevice(@NonNull Radio radio) {
       assert lockKey != null;
       final Uri serverUri = radioHttpServer.getUri();
-      final CastSession castSession = castManager.getCastSession();
-      final Device selectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      if ((serverUri != null) && (castSession != null)) {
-        return new CastSessionDevice(
+      final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
+      if ((serverUri != null) && castManager.hasCastSession()) {
+        final SessionDevice result = castManager.getCastSessionDevice(
           RadioService.this,
           sessionDeviceListener,
           lockKey,
           radio,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
-          radioHttpServer.createLogoFile(radio),
-          castSession);
-      } else if ((serverUri != null) && (selectedDevice != null)) {
+          radioHttpServer.createLogoFile(radio));
+        assert result != null;
+        return result;
+      } else if ((serverUri != null) && (upnpSelectedDevice != null)) {
         return new UpnpSessionDevice(
           RadioService.this,
           sessionDeviceListener,
@@ -761,7 +759,7 @@ public class RadioService
           radio,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
           radioHttpServer.createLogoFile(radio),
-          selectedDevice,
+          upnpSelectedDevice,
           upnpService.getActionController(),
           contentProvider);
       } else {

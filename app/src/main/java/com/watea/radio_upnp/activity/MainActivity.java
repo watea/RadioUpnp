@@ -83,11 +83,11 @@ import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
+import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.cast.CastManager;
-import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.service.AndroidUpnpService;
+import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.Device;
 
 import org.json.JSONException;
@@ -360,10 +360,10 @@ public class MainActivity
   }
 
   public void onUpnp() {
-    if (CastManager.getInstance().getCastSession() == null) {
-      upnpAlertDialog.show();
-    } else {
+    if (CastManager.getInstance().hasCastSession()) {
       tell(R.string.cast_already_running);
+    } else {
+      upnpAlertDialog.show();
     }
   }
 
