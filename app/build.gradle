@@ -42,22 +42,29 @@ android {
     flavorDimensions = ["version"]
     productFlavors {
         full {
-            dimension = "version" // Changed
+            dimension = "version"
             buildConfigField "boolean", "HAS_CAST", "true"
         }
         open {
-            dimension = "version" // Changed
+            dimension = "version"
             buildConfigField "boolean", "HAS_CAST", "false"
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11 // Changed
-        targetCompatibility = JavaVersion.VERSION_11 // Changed
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     buildFeatures {
-        buildConfig = true // Changed
+        buildConfig = true
+    }
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles
+        includeInBundle = false
     }
 }
 
