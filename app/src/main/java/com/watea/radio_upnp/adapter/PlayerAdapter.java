@@ -156,6 +156,11 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     onRelease();
   }
 
+  // Called when resources only must be released
+  public synchronized final void clean() {
+    onRelease();
+  }
+
   public void setVolume(float volume) {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on setVolume; no session device defined");

@@ -223,6 +223,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
   @Override
   public void release() {
+    stop();
   }
 
   private void scheduleMandatoryAction(

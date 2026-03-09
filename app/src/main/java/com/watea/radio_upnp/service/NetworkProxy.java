@@ -45,8 +45,7 @@ public class NetworkProxy {
 
   // Shall be called after onCreate
   public NetworkProxy(@NonNull Context context) {
-    connectivityManager =
-      (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+    connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
   }
 
   @NonNull
@@ -79,18 +78,12 @@ public class NetworkProxy {
 
   @Nullable
   public String getWifiIpAddress() {
-    if (connectivityManager == null) {
-      return null;
-    }
-    final Network activeNetwork = connectivityManager.getActiveNetwork();
-    if (activeNetwork == null) {
-      return null;
-    }
-    final NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
+    final NetworkCapabilities capabilities = getNetworkCapabilities();
     if ((capabilities == null) || !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
       return null;
     }
-    final LinkProperties linkProperties = connectivityManager.getLinkProperties(activeNetwork);
+    assert connectivityManager != null;
+    final LinkProperties linkProperties = connectivityManager.getLinkProperties(getActiveNetwork());
     if (linkProperties == null) {
       return null;
     }
@@ -117,13 +110,26 @@ public class NetworkProxy {
   }
 
   public boolean isOnNetworkCapability(int networkCapability) {
+    final NetworkCapabilities networkCapabilities = getNetworkCapabilities();
+    return (networkCapabilities != null) && networkCapabilities.hasTransport(networkCapability);
+  }
+
+  @Nullable
+  private Network getActiveNetwork() {
     if (connectivityManager == null) {
-      return false;
-    } else {
-      final NetworkCapabilities capabilities =
-        connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
-      return (capabilities != null) && capabilities.hasTransport(networkCapability);
+      return null;
     }
+    return connectivityManager.getActiveNetwork();
+  }
+
+  @Nullable
+  private NetworkCapabilities getNetworkCapabilities() {
+    final Network activeNetwork = getActiveNetwork();
+    if (activeNetwork == null) {
+      return null;
+    }
+    assert connectivityManager != null;
+    return connectivityManager.getNetworkCapabilities(activeNetwork);
   }
 
   @NonNull

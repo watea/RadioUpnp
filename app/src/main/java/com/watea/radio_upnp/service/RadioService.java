@@ -610,12 +610,6 @@ public class RadioService
     @Override
     public void onPlayFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       Log.d(LOG_TAG, "onPlayFromMediaId with mediaId: " + mediaId);
-      // Retrieve last radio
-      final Radio lastRadio = playerAdapter.getRadio();
-      // Stop player to be clean on resources (if not, audio focus is not well handled)
-      playerAdapter.stop();
-      // Stop scheduler if any
-      releaseScheduler();
       // Try to retrieve radio
       final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
       if (radio == null) {
@@ -627,8 +621,14 @@ public class RadioService
         Log.e(LOG_TAG, "onPlayFromMediaId: radioHttpServer is null");
         return;
       }
-      // Set session tag
+      // Retrieve last radio
+      final Radio lastRadio = playerAdapter.getRadio();
+      // Change session tag
       lockKey = UUID.randomUUID().toString();
+      // Clean current PlayerAdapter; must be done at each new lockKey
+      playerAdapter.clean();
+      // Stop scheduler if any
+      releaseScheduler();
       // PlayerAdapter settings
       final SessionDevice sessionDevice = getSessionDevice(radio);
       Log.d(LOG_TAG, "onPlayFromMediaId: sessionDevice => " + sessionDevice.getClass().getSimpleName());
@@ -641,7 +641,7 @@ public class RadioService
       }
       // Synchronize session data
       session.setExtras(new Bundle());
-      session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_NONE).build());
+      session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_BUFFERING).build());
       final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
       final String lastPlaylist = (mediaMetadataCompat == null) ? "" : mediaMetadataCompat.getString(PLAYLIST);
       buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
@@ -742,15 +742,13 @@ public class RadioService
       final Uri serverUri = radioHttpServer.getUri();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       if ((serverUri != null) && castManager.hasCastSession()) {
-        final SessionDevice result = castManager.getCastSessionDevice(
+        return castManager.getCastSessionDevice(
           RadioService.this,
           sessionDeviceListener,
           lockKey,
           radio,
           RadioHandler.getHandledUri(serverUri, radio, lockKey),
           radioHttpServer.createLogoFile(radio));
-        assert result != null;
-        return result;
       } else if ((serverUri != null) && (upnpSelectedDevice != null)) {
         return new UpnpSessionDevice(
           RadioService.this,
