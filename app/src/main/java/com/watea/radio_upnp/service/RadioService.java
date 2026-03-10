@@ -178,7 +178,7 @@ public class RadioService
     public void onCastStarted() {
       final int state = getPlaybackState();
       Log.d(LOG_TAG, "onCastStarted with state: " + state);
-      if ((state == PlaybackStateCompat.STATE_NONE) || (state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_PLAYING)) {
+      if ((state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_PLAYING)) {
         mediaSessionCompatCallback.onPlay();
       }
     }
@@ -728,8 +728,7 @@ public class RadioService
     // Same extras are reused
     private void onPlayFromMediaId(@Nullable Radio radio) {
       if (radio == null) {
-        // Should not happen
-        Log.e(LOG_TAG, "onPlayFromMediaId: radio is null!");
+        Log.d(LOG_TAG, "onPlayFromMediaId: radio is null!");
       } else {
         onPlayFromMediaId(radio.getId(), mediaController.getExtras());
       }
