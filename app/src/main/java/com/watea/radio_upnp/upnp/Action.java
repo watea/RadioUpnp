@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Action extends Asset {
   public static final String XML_NAME = "action";
   private static final String LOG_TAG = Action.class.getSimpleName();
+  @NonNull
   private final Service service;
   private final Set<Argument> arguments = new HashSet<>();
   private final AtomicReference<Argument> currentArgument = new AtomicReference<>();
