@@ -138,6 +138,14 @@ public class RadioService
   private boolean isAllowedToRewind = false;
   @Nullable
   private String lockKey = null;
+  @Nullable
+  private ScheduledExecutorService scheduler = null;
+  private NotificationCompat.Action actionPause;
+  private NotificationCompat.Action actionPlay;
+  private NotificationCompat.Action actionRewind;
+  private NotificationCompat.Action actionSkipToNext;
+  private NotificationCompat.Action actionSkipToPrevious;
+  private MediaControllerCompat mediaController;
   private final RadioHandler.Controller radioHandlerController = new RadioHandler.Controller() {
     @NonNull
     @Override
@@ -156,14 +164,6 @@ public class RadioService
       return false;
     }
   };
-  @Nullable
-  private ScheduledExecutorService scheduler = null;
-  private NotificationCompat.Action actionPause;
-  private NotificationCompat.Action actionPlay;
-  private NotificationCompat.Action actionRewind;
-  private NotificationCompat.Action actionSkipToNext;
-  private NotificationCompat.Action actionSkipToPrevious;
-  private MediaControllerCompat mediaController;
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
     public void onCastStarting() {
@@ -371,7 +371,7 @@ public class RadioService
       Log.d(LOG_TAG, "isAllowedToRewind => true");
       final Radio radio = playerAdapter.getRadio();
       if (radio != null) {
-        final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
+        final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         if (mediaMetadataCompat != null) {
           buildSessionMetadata(radio, information, addPlaylistItem(mediaMetadataCompat.getString(PLAYLIST), information));
           playerAdapter.onNewInformation(information);
@@ -461,7 +461,8 @@ public class RadioService
 
   @Override
   public int getPlaybackState() {
-    return session.getController().getPlaybackState().getState();
+    final PlaybackStateCompat playbackState = mediaController.getPlaybackState();
+    return (playbackState == null) ? PlaybackStateCompat.STATE_ERROR : playbackState.getState();
   }
 
   @Override
@@ -642,7 +643,7 @@ public class RadioService
       // Synchronize session data
       session.setExtras(new Bundle());
       session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_BUFFERING).build());
-      final MediaMetadataCompat mediaMetadataCompat = session.getController().getMetadata();
+      final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
       final String lastPlaylist = (mediaMetadataCompat == null) ? "" : mediaMetadataCompat.getString(PLAYLIST);
       buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
       // Start service, must be done while activity has foreground
