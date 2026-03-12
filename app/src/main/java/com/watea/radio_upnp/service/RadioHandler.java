@@ -53,6 +53,7 @@ import java.util.regex.Pattern;
 
 public class RadioHandler implements HttpServer.Handler {
   private static final String LOG_TAG = RadioHandler.class.getSimpleName();
+  private static final int BUFFER_SIZE = 4096;
   private static final int METADATA_MAX = 256;
   private static final String KEY = "key";
   private static final Pattern PATTERN_ICY = Pattern.compile(".*StreamTitle='([^;]*)';.*");
@@ -221,52 +222,49 @@ public class RadioHandler implements HttpServer.Handler {
     }
 
     public void handle(@NonNull OutputStream outputStream) throws IOException {
-      final byte[] buffer = new byte[1];
+      final byte[] buffer = new byte[BUFFER_SIZE];
       final CharsetDecoder charsetDecoder = getCharset().newDecoder();
       final int metadataOffset = getMetadataOffset();
       final ByteBuffer metadataBuffer = ByteBuffer.allocate(METADATA_MAX);
       int metadataBlockBytesRead = 0;
       int metadataSize = 0;
-      while (controller.isActive(lockKey) && (inputStream.read(buffer) > 0)) {
-        // Only stream data are transferred
-        if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
-          outputStream.write(buffer[0]);
-        } else {
-          // Metadata: look for title information
-          final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
-          // First byte gives size (16 bytes chunks) to read for metadata
-          if (metadataIndex == 0) {
-            metadataSize = buffer[0] * 16;
-            metadataBuffer.clear();
-          } else if (metadataIndex <= METADATA_MAX) {
-            // Other bytes are metadata
-            metadataBuffer.put(buffer[0]);
-          }
-          // End of metadata, extract pattern
-          if (metadataIndex == metadataSize) {
-            CharBuffer metadata = null;
-            metadataBuffer.flip();
-            // Exception blocked on metadata
-            try {
-              metadata = charsetDecoder.decode(metadataBuffer);
-            } catch (Exception exception) {
-              if (BuildConfig.DEBUG) {
-                Log.w(LOG_TAG, "Error decoding metadata", exception);
-              }
+      int bytesRead;
+      while (controller.isActive(lockKey) && ((bytesRead = inputStream.read(buffer)) > 0)) {
+        for (int i = 0; i < bytesRead; i++) {
+          final byte b = buffer[i];
+          if ((metadataOffset == 0) || (++metadataBlockBytesRead <= metadataOffset)) {
+            outputStream.write(b);
+          } else {
+            final int metadataIndex = metadataBlockBytesRead - metadataOffset - 1;
+            if (metadataIndex == 0) {
+              metadataSize = (b & 0xFF) * 16;
+              metadataBuffer.clear();
+            } else if (metadataIndex <= METADATA_MAX) {
+              metadataBuffer.put(b);
             }
-            if ((metadata != null) && (metadata.length() > 0)) {
-              if (BuildConfig.DEBUG) {
-                Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+            if (metadataIndex == metadataSize) {
+              CharBuffer metadata = null;
+              metadataBuffer.flip();
+              try {
+                metadata = charsetDecoder.decode(metadataBuffer);
+              } catch (Exception exception) {
+                if (BuildConfig.DEBUG) {
+                  Log.w(LOG_TAG, "Error decoding metadata", exception);
+                }
               }
-              final Matcher matcher = PATTERN_ICY.matcher(metadata);
-              // Tell listener
-              final String information =
-                (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
-              if (information != null) {
-                listener.onNewInformation(information, lockKey);
+              if ((metadata != null) && (metadata.length() > 0)) {
+                if (BuildConfig.DEBUG) {
+                  Log.d(LOG_TAG, "Size|Metadata: " + metadataSize + "|" + metadata);
+                }
+                final Matcher matcher = PATTERN_ICY.matcher(metadata);
+                final String information =
+                  (matcher.find() && (matcher.groupCount() > 0)) ? matcher.group(1) : null;
+                if (information != null) {
+                  listener.onNewInformation(information, lockKey);
+                }
               }
+              metadataBlockBytesRead = 0;
             }
-            metadataBlockBytesRead = 0;
           }
         }
       }
@@ -295,23 +293,22 @@ public class RadioHandler implements HttpServer.Handler {
     }
 
     protected int getMetadataOffset() {
-      // Try to find metadataOffset
-      final int metadataOffset;
+      int result;
       final List<String> headerMeta = httpURLConnection.getHeaderFields().get("icy-metaint");
       try {
-        metadataOffset = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
+        result = (headerMeta == null) ? 0 : Integer.parseInt(headerMeta.get(0));
       } catch (NumberFormatException numberFormatException) {
         Log.w(LOG_TAG, "Malformed header icy-metaint, no metadata expected");
-        return 0;
+        result = 0;
       }
-      if (metadataOffset > 0) {
-        Log.d(LOG_TAG, "Metadata expected at index: " + metadataOffset);
-      } else if (metadataOffset == 0) {
+      if (result > 0) {
+        Log.d(LOG_TAG, "Metadata expected at index: " + result);
+      } else if (result == 0) {
         Log.d(LOG_TAG, "No metadata expected");
       } else {
         Log.w(LOG_TAG, "Wrong metadata value");
       }
-      return Math.max(metadataOffset, 0);
+      return Math.max(result, 0);
     }
   }
 }
