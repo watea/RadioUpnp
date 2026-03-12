@@ -46,6 +46,7 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -99,9 +100,10 @@ public class RadioHandler implements HttpServer.Handler {
     }
     // We are handling a valid request
     final boolean isGet = (method.equals("GET"));
+    HttpURLConnection httpURLConnection = null;
     try {
       // Create WAN connection
-      final HttpURLConnection httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
+      httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection(this::setHeader);
       Log.d(LOG_TAG, "Connected to radio " + (isGet ? "GET: " : "HEAD: ") + radio.getName());
       final boolean isHls = HlsHandler.isHls(httpURLConnection);
       // Reset information
@@ -154,16 +156,25 @@ public class RadioHandler implements HttpServer.Handler {
         if (isGet) {
           connectionHandler.handle(responseStream);
         }
-        Log.d(LOG_TAG, "handle: leaving with response");
-        // If we get here, everything went fine
-        return;
       } catch (URISyntaxException uRISyntaxException) {
         Log.e(LOG_TAG, "handle: failed to get input stream", uRISyntaxException);
+        sendError(lockKey);
+        return;
       }
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "handle: failed", iOException);
+      sendError(lockKey);
+      return;
+    } finally {
+      if (httpURLConnection != null) {
+        httpURLConnection.disconnect();
+      }
     }
-    // If we get here, something went wrong
+    // If we get here, everything went fine
+    Log.d(LOG_TAG, "handle: leaving with response");
+  }
+
+  private void sendError(@NonNull String lockKey) {
     if (controller.isActive(lockKey)) {
       listener.onHandleError(lockKey);
     }
@@ -263,10 +274,24 @@ public class RadioHandler implements HttpServer.Handler {
 
     @NonNull
     protected Charset getCharset() {
-      // Try to find charset
-      final String contentEncoding = httpURLConnection.getContentEncoding();
-      return (contentEncoding == null) ?
-        Charset.defaultCharset() : Charset.forName(contentEncoding);
+      // Charset is in Content-Type header, e.g. "text/plain; charset=utf-8"
+      final String contentType = httpURLConnection.getContentType();
+      if (contentType != null) {
+        for (String part : contentType.split(";")) {
+          final String trimmed = part.trim();
+          if (trimmed.toLowerCase().startsWith("charset=")) {
+            final String charsetName = trimmed.substring("charset=".length()).trim();
+            if (!charsetName.isEmpty()) {
+              try {
+                return Charset.forName(charsetName);
+              } catch (UnsupportedCharsetException unsupportedCharsetException) {
+                Log.w(LOG_TAG, "getCharset: unsupported charset => " + charsetName);
+              }
+            }
+          }
+        }
+      }
+      return Charset.defaultCharset();
     }
 
     protected int getMetadataOffset() {
