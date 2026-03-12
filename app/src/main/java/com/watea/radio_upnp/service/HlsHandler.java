@@ -109,11 +109,12 @@ https://stream.radiofrance.fr/fiprock/fiprock_hifi.m3u8?id=radiofrance:
 */
 public class HlsHandler {
   private static final String LOG_TAG = HlsHandler.class.getSimpleName();
-  private static final String BANDWITH = "BANDWIDTH=";
+  private static final String BANDWIDTH = "BANDWIDTH=";
   private static final String STREAM_INF = "#EXT-X-STREAM-INF:";
   private static final String EXTINF = "#EXTINF:";
   private static final String MPEGURL = "MPEGURL";
   private static final String TARGET_DURATION = "#EXT-X-TARGETDURATION:";
+  private static final String ENDLIST = "#EXT-X-ENDLIST";
   private static final int DEFAULT = -1;
   @NonNull
   private final HttpURLConnection httpURLConnection;
@@ -128,50 +129,7 @@ public class HlsHandler {
   private URI segmentsURI = null;
   @Nullable
   private URI actualSegmentsURI = null;
-  @Nullable
-  private Segment currentActualSegment = null;
-  @Nullable
-  private InputStream currentInputStream = null;
-  private long currentInputStreamTime = DEFAULT;
-  private final InputStream inputStream = new InputStream() {
-    @Override
-    public int read() throws IOException {
-      throw new IOException("Stub!");
-    }
-
-    @Override
-    public int read(byte[] b) throws IOException {
-      // currentInputStream shall be defined here
-      if (currentInputStream == null) {
-        return DEFAULT;
-      }
-      int result = currentInputStream.read(b);
-      if (result < 0) {
-        close();
-        final int index;
-        try {
-          index = getNextSegmentIndex();
-        } catch (URISyntaxException uRISyntaxException) {
-          Log.e(LOG_TAG, "read: unable to get next segment index", uRISyntaxException);
-          throw new IOException();
-        }
-        if ((index < 0) || (index >= actualSegments.size())) {
-          throw new IOException("read: index is invalid");
-        } else {
-          openStream(index);
-        }
-        return read(b);
-      }
-      return result;
-    }
-
-    @Override
-    public void close() throws IOException {
-      if (currentInputStream != null) {
-        currentInputStream.close();
-      }
-    }
-  };
+  private boolean isEndList = false;
 
   public HlsHandler(
     @NonNull HttpURLConnection httpURLConnection,
@@ -195,10 +153,11 @@ public class HlsHandler {
   @NonNull
   public InputStream getInputStream() throws IOException, URISyntaxException {
     // Fetch first segments
+    final SegmentInputStream segmentInputStream = new SegmentInputStream();
     if (fetchSegmentsFile()) {
-      openStream(0);
+      segmentInputStream.openSegment(actualSegments.get(0));
     }
-    return inputStream;
+    return segmentInputStream;
   }
 
   // Fetch first found URI
@@ -207,7 +166,11 @@ public class HlsHandler {
     if (!processURLConnection(
       httpURLConnection,
       testIf(STREAM_INF, (line1, line2) -> {
-        rateListener.accept(findStringFor(BANDWITH, line1)); // Rate in b/s
+        if ((line2 == null) || line2.trim().isEmpty()) {
+          Log.w(LOG_TAG, "fetchSegmentsURI: STREAM_INF without following URI, skipping");
+          return false;
+        }
+        rateListener.accept(findStringFor(BANDWIDTH, line1));
         segmentsURI = new URI(line2);
         actualSegmentsURI = httpURLConnection.getURL().toURI().resolve(segmentsURI);
         return true;
@@ -218,47 +181,14 @@ public class HlsHandler {
     }
   }
 
-  // Return DEFAULT if fails
-  private int getNextSegmentIndex() throws IOException, URISyntaxException {
-    Log.d(LOG_TAG, "getNextSegmentIndex");
-    int index = actualSegments.indexOf(currentActualSegment);
-    if (index == actualSegments.size() - 1) {
-      if (fetchSegmentsFile()) {
-        index = actualSegments.indexOf(currentActualSegment);
-        return (index < 0) ? 0 : (index == actualSegments.size() - 1) ? DEFAULT : ++index;
-      } else {
-        return DEFAULT;
-      }
-    } else {
-      return ++index;
-    }
-  }
-
-  // Flush currentInputStream if index < 0, else index must be valid
-  private void openStream(int index) throws IOException {
-    Log.d(LOG_TAG, "openStream: index=" + index);
-    // Wait if needed, to avoid reading to fast
-    if ((currentActualSegment != null) && (currentActualSegment.getDuration() != DEFAULT)) {
-      final long delta = currentInputStreamTime + currentActualSegment.getDuration() - System.currentTimeMillis();
-      if (delta > 0) {
-        try {
-          Log.d(LOG_TAG, "openStream: wait => " + delta + " ms");
-          Thread.sleep(delta);
-        } catch (InterruptedException InterruptedException) {
-          Log.d(LOG_TAG, "openStream: unable to sleep");
-        }
-      }
-    }
-    currentActualSegment = actualSegments.get(index);
-    currentInputStreamTime = System.currentTimeMillis();
-    assert currentActualSegment != null;
-    currentInputStream = currentActualSegment.openStream();
-  }
-
   // Seek URI for segments and all segment data.
   // Return true if OK.
   private boolean fetchSegmentsFile() throws IOException, URISyntaxException {
     Log.d(LOG_TAG, "fetchSegmentsFile");
+    if (isEndList) {
+      Log.d(LOG_TAG, "fetchSegmentsFile: stream ended (#EXT-X-ENDLIST received)");
+      return false;
+    }
     // Reset segments
     actualSegments.clear();
     if (actualSegmentsURI != null) {
@@ -269,6 +199,11 @@ public class HlsHandler {
       headerSetter.accept(uRLConnection);
       processURLConnection(
         uRLConnection,
+        // End of stream (VOD or finished live)
+        testIf(ENDLIST, (line1, line2) -> {
+          isEndList = true;
+          return false;
+        }),
         // Duration of 1 segment
         testIf(TARGET_DURATION, (line1, line2) -> {
           targetDuration = parseIntFor(TARGET_DURATION, line1) * 1000;
@@ -277,9 +212,17 @@ public class HlsHandler {
         // Segment URI & base URL for segments
         testIf(EXTINF, (line1, line2) -> {
           assert actualSegmentsURI != null;
-          actualSegments.add(new Segment(
-            actualSegmentsURI.resolve(new URI(line2)),
-            (long) (parseDoubleFor(EXTINF, line1) * 1000)));
+          if ((line2 == null) || line2.trim().isEmpty()) {
+            Log.w(LOG_TAG, "fetchSegmentsFile: EXTINF without following URI, skipping");
+            return false;
+          }
+          try {
+            actualSegments.add(new Segment(
+              actualSegmentsURI.resolve(new URI(line2.trim())),
+              (long) (parseDoubleFor(EXTINF, line1) * 1000)));
+          } catch (URISyntaxException uRISyntaxException) {
+            Log.w(LOG_TAG, "fetchSegmentsFile: malformed segment URI '" + line2 + "', skipping", uRISyntaxException);
+          }
           return false;
         }));
     }
@@ -340,7 +283,7 @@ public class HlsHandler {
            new BufferedReader(new InputStreamReader(uRLConnection.getInputStream()))) {
       String line1 = bufferedReader.readLine();
       String line2 = bufferedReader.readLine();
-      boolean found = (line1 == null);
+      boolean found = false;
       while (!found && (line1 != null)) {
         for (int i = 0; (i < predicates.length) && !found; i++) {
           found = predicates[i].test(line1, line2);
@@ -353,7 +296,7 @@ public class HlsHandler {
   }
 
   private interface Predicate {
-    boolean test(@NonNull String line1, @NonNull String line2) throws URISyntaxException;
+    boolean test(@NonNull String line1, @Nullable String line2) throws URISyntaxException;
   }
 
   private static class Segment {
@@ -386,6 +329,93 @@ public class HlsHandler {
     @Override
     public int hashCode() {
       return uRI.hashCode();
+    }
+  }
+
+  private class SegmentInputStream extends InputStream {
+    @Nullable
+    private Segment currentSegment = null;
+    @Nullable
+    private InputStream currentInputStream = null;
+    private long currentInputStreamTime = DEFAULT;
+
+    @Override
+    public int read() throws IOException {
+      throw new IOException("Stub!");
+    }
+
+    @Override
+    public int read(byte[] b) throws IOException {
+      // currentInputStream shall be defined here
+      if (currentInputStream == null) {
+        return DEFAULT;
+      }
+      int result = currentInputStream.read(b);
+      if (result < 0) {
+        close();
+        final Segment nextSegment;
+        try {
+          nextSegment = getNextSegment(currentSegment);
+        } catch (URISyntaxException uRISyntaxException) {
+          Log.e(LOG_TAG, "read: unable to get next segment", uRISyntaxException);
+          throw new IOException();
+        }
+        if (nextSegment == null) {
+          throw new IOException("read: no next segment available");
+        }
+        openSegment(nextSegment);
+        return read(b);
+      }
+      return result;
+    }
+
+    @Override
+    public void close() throws IOException {
+      if (currentInputStream != null) {
+        currentInputStream.close();
+        currentInputStream = null;
+      }
+    }
+
+    public void openSegment(@NonNull Segment segment) throws IOException {
+      Log.d(LOG_TAG, "openSegment: " + segment.uRI);
+      // Wait if needed, to avoid reading to fast
+      if ((currentSegment != null) && (currentSegment.getDuration() != DEFAULT)) {
+        final long delta = currentInputStreamTime + currentSegment.getDuration() - System.currentTimeMillis();
+        if (delta > 0) {
+          try {
+            Log.d(LOG_TAG, "openSegment: wait => " + delta + " ms");
+            Thread.sleep(delta);
+          } catch (InterruptedException InterruptedException) {
+            Log.d(LOG_TAG, "openSegment: unable to sleep");
+          }
+        }
+      }
+      currentSegment = segment;
+      currentInputStreamTime = System.currentTimeMillis();
+      currentInputStream = currentSegment.openStream();
+    }
+
+    @Nullable
+    private Segment getNextSegment(@Nullable Segment currentSegment) throws IOException, URISyntaxException {
+      Log.d(LOG_TAG, "getNextSegment");
+      Segment nextSegment = null;
+      int index = actualSegments.indexOf(currentSegment);
+      if (index < actualSegments.size() - 1) {
+        // Next segment is already available
+        nextSegment = actualSegments.get(++index);
+      } else if (fetchSegmentsFile()) {
+        // Last segment: fetch new playlist
+        index = actualSegments.indexOf(currentSegment);
+        if (index < 0) {
+          // Current segment not found in new playlist: start from beginning
+          nextSegment = actualSegments.get(0);
+        } else if (index < actualSegments.size() - 1) {
+          nextSegment = actualSegments.get(++index);
+        }
+        // else: still last segment after refresh → nextSegment stays null (stream stalled)
+      }
+      return nextSegment;
     }
   }
 }
