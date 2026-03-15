@@ -92,17 +92,19 @@ import com.watea.radio_upnp.upnp.Device;
 
 import org.json.JSONException;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 public class MainActivity
@@ -213,6 +215,30 @@ public class MainActivity
       upnpDevicesAdapter.setUpnpService(null);
     }
   };
+
+  @NonNull
+  private static PrintWriter getPrintWriter(@NonNull Process process, @NonNull File logFile) throws IOException {
+    final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    final FileOutputStream fileOutputStream = new FileOutputStream(logFile);
+    final PrintWriter printWriter = new PrintWriter(fileOutputStream);
+    // --- Device info ---
+    printWriter.println("===== DEVICE INFO =====");
+    printWriter.println("App version : " + BuildConfig.VERSION_NAME);
+    printWriter.println("Android     : " + Build.VERSION.RELEASE);
+    printWriter.println("SDK         : " + Build.VERSION.SDK_INT);
+    printWriter.println("Device      : " + Build.MANUFACTURER + " " + Build.MODEL);
+    printWriter.println("Brand       : " + Build.BRAND);
+    printWriter.println("Board       : " + Build.BOARD);
+    printWriter.println("========================");
+    printWriter.println();
+    // --- Logcat ---
+    String line;
+    while ((line = bufferedReader.readLine()) != null) {
+      printWriter.println(line);
+    }
+    printWriter.flush();
+    return printWriter;
+  }
 
   @NonNull
   public SharedPreferences getSharedPreferences() {
@@ -722,51 +748,38 @@ public class MainActivity
   }
 
   private void sendLogcatMail() {
-    // Use a background thread for logcat execution
     final Handler handler = new Handler(Looper.getMainLooper());
-    try (final ExecutorService executorService = Executors.newSingleThreadExecutor()) {
-      executorService.execute(() -> {
-        final File logFile = new File(getFilesDir(), "logcat.txt");
-        final String packageName = getPackageName();
-        final String[] command = new String[]{
-          "logcat",
-          "-d",
-          "-v",
-          "threadtime",
-          "-f",
-          logFile.toString(),
-          "com.watea.*:D"
-        };
-        Process process = null;
-        try {
-          // Execute logcat command
-          process = Runtime.getRuntime().exec(command);
-          // Wait for logcat to finish
-          process.waitFor();
-          // Check if logcat was successful
-          if (logFile.exists() && logFile.length() > 0) {
-            // Prepare mail on the main thread
-            handler.post(() -> {
-              try {
-                startActivity(getNewSendIntent(logFile, packageName));
-              } catch (Exception exception) {
-                Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
-                tellReportError();
-              }
-            });
-          } else {
-            handler.post(this::tellReportError);
-          }
-        } catch (IOException | InterruptedException exception) {
-          Log.e(LOG_TAG, "sendLogcatMail: internal failure", exception);
+    new Thread(() -> {
+      final File logFile = new File(getFilesDir(), "logcat.txt");
+      final String[] command = new String[]{
+        "logcat",
+        "-d",
+        "-b", "all",
+        "-v", "threadtime",
+        "*:V"
+      };
+      try {
+        final Process process = Runtime.getRuntime().exec(command);
+        final PrintWriter writer = getPrintWriter(process, logFile);
+        writer.close();
+        process.waitFor();
+        if (logFile.length() > 0) {
+          handler.post(() -> {
+            try {
+              startActivity(getNewSendIntent(logFile, getPackageName()));
+            } catch (Exception exception) {
+              Log.e(LOG_TAG, "sendLogcatMail failure", exception);
+              tellReportError();
+            }
+          });
+        } else {
           handler.post(this::tellReportError);
-        } finally {
-          if (process != null) {
-            process.destroy();
-          }
         }
-      });
-    }
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "sendLogcatMail failure", exception);
+        handler.post(this::tellReportError);
+      }
+    }).start();
   }
 
   @NonNull
