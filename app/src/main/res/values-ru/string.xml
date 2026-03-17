@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2018. Stephane Treuchot
+  ~
+  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+  ~ of this software and associated documentation files (the "Software"), to deal
+  ~ in the Software without restriction, including without limitation the rights to
+  ~ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+  ~ of the Software, and to permit persons to whom the Software is furnished to
+  ~ do so, subject to the following conditions:
+  ~
+  ~ The above copyright notice and this permission notice shall be included in
+  ~ all copies or substantial portions of the Software.
+  ~
+  ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  ~ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+  ~ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  ~ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  ~ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+  ~ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  ~ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  ~ OTHER DEALINGS IN THE SOFTWARE.
+  -->
+
+<resources>
+    <string name="radio_service_description">Потоковое радио для приложения RadioUpnp</string>
+    <string name="upnp_service_description">Обработка устройств UPnP/DLNA для приложения RadioUpnp</string>
+    <string name="alarm_service_description">Обработка будильников для приложения RadioUpnp</string>
+    <string name="credit">Авторы:</string>
+    <string name="free_software">Это свободное программное обеспечение; условия копирования см. в исходных кодах.</string>
+    <string name="version">Версия: </string>
+    <string name="no_web_page">У этой радиостанции нет веб-страницы!</string>
+    <string name="radio_connection_error">Ошибка подключения к радиостанции!</string>
+    <string name="no_internet">Нет подключения к интернету!</string>
+    <string name="radio_connection_waiting">Сервис радио запускается, подождите&#8230;</string>
+    <string name="radio_no_radio">Нет радиостанций</string>
+    <string name="radio_no_playlist">Нет доступных плейлистов!</string>
+    <string name="radio_search_1">Поиск в онлайн-базе радиостанций (макс. 200 результатов):</string>
+    <string name="radio_search_3">Учтите, что <b>RadioUpnp</b> не несёт ответственности за содержимое; оно может быть устаревшим или недействительным.</string>
+    <string name="dlna_selection">Выбор устройства UPnP/DLNA:\n</string>
+    <string name="no_dlna_selection">Не выбрано ни одного устройства UPnP/DLNA.</string>
+    <string name="radio_name">НАЗВАНИЕ РАДИОСТАНЦИИ</string>
+    <string name="searched_words">СЛОВА ДЛЯ ПОИСКА</string>
+    <string name="radio_service_notification_name">Экран радио и управление</string>
+    <string name="alarm_service_notification_name">Будильник</string>
+    <string name="optional"><b>Необязательно:</b></string>
+    <string name="legend_streaming_url">URL потока</string>
+    <string name="legend_streaming_url_example">http://direct.myradio.fr/live/myradio.mp3</string>
+    <string name="legend_page_url">URL веб-страницы (<b>ЗНАЧОК ПОИСКА</b> для получения иконки)</string>
+    <string name="legend_page_url_example">http://direct.myradio.fr</string>
+    <string name="icon_url">URL иконки (<b>ЗНАЧОК ПОИСКА</b> для получения), или <b>ОБЗОР</b></string>
+    <string name="icon_url_example">https://www.my_cloud.com/icons/my_icon.png</string>
+    <string name="radio_definition_error">Некорректное описание радиостанции!</string>
+    <string name="device_no_device_yet">Устройства пока не найдены.</string>
+    <string name="please_wait">Пожалуйста, подождите&#8230;</string>
+    <string name="live_streaming">Прямой эфир</string>
+    <string name="no_icon_found">Не удалось найти иконку по URL иконки или веб-страницы!</string>
+    <string name="no_local_icon">Не найдена допустимая локальная иконка!</string>
+    <string name="connection_test_failed">Тест подключения не пройден!</string>
+    <string name="mime_not_authorized">Внимание! MIME-тип не разрешён.\nАудиоконтент: </string>
+    <string name="connection_test_aborted">Тест подключения не выполнен: неверный URL потока!</string>
+    <string name="connection_test_successful">Тест подключения успешен.\nАудиоконтент: </string>
+    <string name="lan_required">Не найдено LAN/Wi-Fi подключение для функции UPnP/DLNA!</string>
+    <string name="radio_long_press">Долгое нажатие открывает веб-сайт</string>
+    <string name="play_long_press">Долгое нажатие останавливает радио</string>
+    <string name="toolbar_press">Нажатие на панель инструментов переключает расширенный/сжатый вид</string>
+    <string name="information_press">Нажмите на значок играющей радиостанции, чтобы отобразить текущий плейлист</string>
+    <string name="information_select_press">Нажмите (или долго нажмите) на песню, чтобы скопировать информацию о песне (или весь список) в буфер обмена</string>
+    <string name="dlna_enable">Короткое или долгое нажатие: поиск устройств UPnP/DLNA.\n\nДля подключения может потребоваться авторизация.\nПлохое Wi-Fi может ухудшить качество подключения.</string>
+    <string name="preferred_radios">Показывать только избранные радиостанции.\nИзбранные радиостанции устанавливаются на экране изменения.</string>
+    <string name="wait_search">Выполняется поиск.\nЭто может занять некоторое время, пожалуйста, подождите&#8230;</string>
+    <string name="icon_updated">Иконка обновлена!</string>
+    <string name="donation_button_close">Закрыть</string>
+    <string name="donation_description">Считаете это приложение полезным?\nПоддержите его разработку, отправив пожертвование разработчику.\nБольшое спасибо!</string>
+    <string name="donation_google_android_market_description">(Google взимает комиссию 15%)</string>
+    <string name="donation_alert_dialog_title">Произошла ошибка!</string>
+    <string name="donation_alert_dialog_try_again">Пожалуйста, повторите попытку позже&#8230;</string>
+    <string name="radio_search_failure">Не удалось получить данные с сервера! Пожалуйста, повторите позже&#8230;</string>
+    <string name="upnp_error">Сбой службы UPnP, проверьте доступность сети!</string>
+    <string name="preferred">Избранное</string>
+    <string name="report_error">Ошибка, не удалось сгенерировать отчёт!</string>
+    <string name="radio_database_update_failed">Внутренняя ошибка: не удалось изменить радиостанцию!</string>
+    <string name="radio_garden_share">Отличное приложение <b>Radio Garden</b> можно использовать для поиска новой радиостанции.\n\n<b>Поделитесь</b> обратно, как показано.\nЗатем выберите <b>RadioUpnp</b> в меню общего доступа Android.\nРадиостанция будет добавлена автоматически (займёт несколько секунд)!\n</string>
+    <string name="import_message">Выберите файл импорта; содержимое (попробуйте экспорт, чтобы увидеть формат) будет импортировано</string>
+    <string name="export_message">Экспорт [.CSV] или [.JSON] в выбранную директорию</string>
+    <string name="import_successful">Импорт успешен!</string>
+    <string name="import_failed">Ошибка импорта!</string>
+    <string name="export_done">Файл экспорта создан: </string>
+    <string name="export_failed">Экспорт не удался!</string>
+    <string name="export_failed_not_created">Экспорт не удался; не удалось создать файл!</string>
+    <string name="radio_garden_radio_added">Радиостанция из Radio Garden добавлена!</string>
+    <string name="try_to_add_from_radio_garden">Попытка добавить из Radio Garden.\nЭто может занять некоторое время, пожалуйста, подождите&#8230;</string>
+    <string name="play_store_not_installed">Play Store не доступен.\nRadio Garden не может быть установлен!</string>
+    <string name="icon_search">Поиск иконки</string>
+    <string name="or_use">или используйте</string>
+    <string name="Theme">Тема</string>
+    <string name="radio_not_defined">Радиостанция не найдена в базе данных!</string>
+    <string name="copied_to_clipboard">Информация скопирована в буфер обмена!</string>
+    <string name="server_not_available">Сервер недоступен. Пожалуйста, повторите позже&#8230;</string>
+    <string name="country">[Пожалуйста, выберите страну]</string>
+    <string name="radio_tag">[Пожалуйста, выберите тег]</string>
+    <string name="bitrate">[Пожалуйста, выберите битрейт]</string>
+    <string name="no_radio_found">Радиостанции не найдены!</string>
+    <string name="alarm_title">Будильник</string>
+    <string name="alarm_set_for">%1$02d:%2$02d</string>
+    <string name="alarm_cancelled">Будильник отменён!</string>
+    <string name="alarm_not_available">Будильник недоступен, пожалуйста, повторите позже&#8230;</string>
+    <string name="no_radio_available">Нет выбранной радиостанции, пожалуйста, включите радио!</string>
+    <string name="off">ВЫКЛ</string>
+    <string name="on">ВКЛ</string>
+    <string name="alarm_radio">Будильник установлен на последнюю прослушанную радиостанцию:</string>
+    <string name="alarm_can_not_be_set">Android не позволяет установить будильник!</string>
+    <string name="alarm_not_allowed">Пожалуйста, разрешите будильник для RadioUpnp.</string>
+    <string name="sleep">Таймер сна устанавливается/отменяется <b>двойным нажатием</b> на значок управления воспроизведением/паузой:</string>
+    <string name="sleep_set">Таймер сна на %d мин установлен!</string>
+    <string name="sleep_cancelled">Таймер сна отменён!</string>
+    <string name="minutes">минут</string>
+    <string name="remote">(УДАЛЁННОЕ)</string>
+    <string name="sleep_timer_title">Сон</string>
+    <string name="sleep_timer_set_for">Таймер сна установлен на: %d минут</string>
+    <string name="cancel_sleep_timer">Отменить таймер сна</string>
+    <string name="search_done">Поиск завершён!</string>
+    <string name="Layout">Макет</string>
+    <string name="tile_radio_button">Плитка</string>
+    <string name="row_radio_button">Строка</string>
+    <string name="radio_information">Информация о радиостанции</string>
+    <string name="system_radio_button">Системная</string>
+    <string name="dark_radio_button">Тёмная</string>
+    <string name="light_radio_button">Светлая</string>
+    <string name="no_file_picker_found">Не найдено приложение для выбора файлов!</string>
+    <string name="donation_error">Внутренняя ошибка, пожалуйста, повторите позже!</string>
+    <string name="loading_radios">Загрузка, пожалуйста, подождите&#8230;</string>
+    <string name="battery_optimization">Если будильник не срабатывает, отключите оптимизацию батареи. Это может отличаться в зависимости от вашего устройства.</string>
+    <string name="cast_already_running">UPnP нельзя использовать, когда открыта сессия Google Cast.</string>
+    <!-- Menu titles -->
+    <string name="title_preferred">Избранные радиостанции</string>
+    <string name="title_main">Воспроизведение</string>
+    <string name="title_item_add">Добавить</string>
+    <string name="title_modify">Изменить</string>
+    <string name="title_donate">Пожертвовать</string>
+    <string name="title_parameters">Параметры</string>
+    <string name="title_about">О программе</string>
+    <string name="title_item_modify">Редактировать</string>
+    <string name="title_import">Импорт</string>
+    <string name="title_export">Экспорт</string>
+    <string name="title_radio_garden">Radio Garden</string>
+    <string name="title_search">Поиск</string>
+    <string name="title_alarm">Будильник</string>
+    <string name="title_sleep">Сон</string>
+    <string name="action_play">Играть</string>
+    <string name="action_pause">Пауза</string>
+    <string name="action_stop">Стоп</string>
+    <string name="action_done">ОК</string>
+    <string name="action_move">Переместить</string>
+    <string name="action_relaunch">Перезапустить</string>
+    <string name="action_skip_to_next">Перейти к следующей</string>
+    <string name="action_skip_to_previous">Перейти к предыдущей</string>
+    <string name="action_browse">Обзор</string>
+    <string name="action_go">Вперёд!</string>
+    <string name="action_got_it">Понятно!</string>
+    <string name="action_all">ВЫБРАТЬ ВСЁ</string>
+    <string name="drawer_open">Открыть панель навигации</string>
+    <string name="drawer_close">Закрыть панель навигации</string>
+</resources>
