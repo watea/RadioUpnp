@@ -158,12 +158,19 @@ public class RadioService
     }
 
     @Override
+    public void onConnect(@NonNull String lockKey) {
+      runIfLocked(lockKey, () -> isAllowedToRewind = true);
+    }
+
+    @Override
     public void onDisconnect(@NonNull String lockKey) {
-      // Disconnect is not expected if playing
-      final int state = getPlaybackState();
-      if ((state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PLAYING)) {
-        onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
-      }
+      runIfLocked(lockKey, () -> {
+        // Disconnect is not expected if playing
+        final int state = getPlaybackState();
+        if ((state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PLAYING)) {
+          onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build());
+        }
+      });
     }
   };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
@@ -398,58 +405,7 @@ public class RadioService
   @SuppressLint("SwitchIntDef")
   @Override
   public void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey) {
-    runIfLocked(lockKey, () -> {
-      Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
-      // Report the state to the MediaSession
-      session.setPlaybackState(state);
-      // Manage the started state of this service, and session activity
-      switch (state.getState()) {
-        case PlaybackStateCompat.STATE_PLAYING:
-          isAllowedToRewind = true;
-        case PlaybackStateCompat.STATE_BUFFERING:
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-              FOREGROUND_NOTIFICATION_ID,
-              getNotification(),
-              playerAdapter.isRemote() ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-          } else {
-            startForeground(FOREGROUND_NOTIFICATION_ID, getNotification());
-          }
-          break;
-        case PlaybackStateCompat.STATE_PAUSED:
-          releaseScheduler();
-          buildNotification();
-          break;
-        case PlaybackStateCompat.STATE_ERROR:
-          releaseScheduler();
-          // Try to relaunch just once
-          if (isAllowedToRewind) {
-            isAllowedToRewind = false;
-            handler.postDelayed(() -> {
-                try {
-                  // Still in error?
-                  if (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_ERROR) {
-                    mediaSessionCompatCallback.onRewind();
-                  }
-                } catch (Exception exception) {
-                  Log.d(LOG_TAG, "Relaunch failed, we stop");
-                  mediaSessionCompatCallback.onStop();
-                }
-              },
-              4000);
-          } else {
-            buildNotification();
-          }
-          break;
-        default:
-          // Release everything
-          playerAdapter.release();
-          releaseScheduler();
-          session.setMetadata(null);
-          stopForeground(STOP_FOREGROUND_REMOVE);
-          stopSelf();
-      }
-    });
+    runIfLocked(lockKey, () -> onPlaybackStateChange(state));
   }
 
   @Override
@@ -462,6 +418,58 @@ public class RadioService
   public int getPlaybackState() {
     final PlaybackStateCompat playbackState = mediaController.getPlaybackState();
     return (playbackState == null) ? PlaybackStateCompat.STATE_ERROR : playbackState.getState();
+  }
+
+  private void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
+    Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
+    // Report the state to the MediaSession
+    session.setPlaybackState(state);
+    // Manage the started state of this service, and session activity
+    switch (state.getState()) {
+      case PlaybackStateCompat.STATE_PLAYING:
+      case PlaybackStateCompat.STATE_BUFFERING:
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          startForeground(
+            FOREGROUND_NOTIFICATION_ID,
+            getNotification(),
+            playerAdapter.isRemote() ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+          startForeground(FOREGROUND_NOTIFICATION_ID, getNotification());
+        }
+        break;
+      case PlaybackStateCompat.STATE_PAUSED:
+        releaseScheduler();
+        buildNotification();
+        break;
+      case PlaybackStateCompat.STATE_ERROR:
+        releaseScheduler();
+        // Try to relaunch just once
+        if (isAllowedToRewind) {
+          isAllowedToRewind = false;
+          handler.postDelayed(() -> {
+              try {
+                // Still in error?
+                if (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_ERROR) {
+                  mediaSessionCompatCallback.onRewind();
+                }
+              } catch (Exception exception) {
+                Log.d(LOG_TAG, "Relaunch failed, we stop");
+                mediaSessionCompatCallback.onStop();
+              }
+            },
+            4000);
+        } else {
+          buildNotification();
+        }
+        break;
+      default:
+        // Release everything
+        playerAdapter.release();
+        releaseScheduler();
+        session.setMetadata(null);
+        stopForeground(STOP_FOREGROUND_REMOVE);
+        stopSelf();
+    }
   }
 
   private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information, @NonNull String playlist) {

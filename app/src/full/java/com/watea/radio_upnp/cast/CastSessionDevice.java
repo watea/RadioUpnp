@@ -80,8 +80,10 @@ public class CastSessionDevice extends SessionDevice {
           break;
         case MediaStatus.PLAYER_STATE_BUFFERING:
         case MediaStatus.PLAYER_STATE_LOADING:
-        case MediaStatus.PLAYER_STATE_IDLE:
           onState(PlaybackStateCompat.STATE_BUFFERING);
+          break;
+        case MediaStatus.PLAYER_STATE_IDLE:
+          onState(PlaybackStateCompat.STATE_ERROR);
           break;
         default:
           onState(PlaybackStateCompat.STATE_STOPPED);
@@ -152,24 +154,6 @@ public class CastSessionDevice extends SessionDevice {
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "Failed to adjust volume", iOException);
     }
-  }
-
-  @Override
-  public long getAvailableActions(int state) {
-    long availableActions = super.getAvailableActions(state);
-    switch (state) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-      case MediaStatus.PLAYER_STATE_LOADING:
-        availableActions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      default:
-        // Nothing else
-    }
-    return availableActions;
   }
 
   @Override

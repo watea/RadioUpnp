@@ -146,6 +146,7 @@ public class UpnpStreamServer extends NanoHTTPD {
         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Interrupted");
       }
     }
+    callback.onConnect(lockKey.get());
     return getResponse(session.getMethod());
   }
 
@@ -179,6 +180,8 @@ public class UpnpStreamServer extends NanoHTTPD {
   }
 
   public interface Callback {
+    void onConnect(@NonNull String lockKey);
+
     void onDisconnect(@NonNull String lockKey);
 
     @NonNull

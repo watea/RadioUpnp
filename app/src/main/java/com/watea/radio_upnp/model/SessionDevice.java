@@ -140,10 +140,25 @@ public abstract class SessionDevice {
 
   // Set the current capabilities available on this session
   public long getAvailableActions(int state) {
-    return PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
+    long availableActions = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
       PlaybackStateCompat.ACTION_STOP |
       PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
       PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+    switch (state) {
+      case PlaybackStateCompat.STATE_PLAYING:
+        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
+        break;
+      case PlaybackStateCompat.STATE_PAUSED:
+      case PlaybackStateCompat.STATE_BUFFERING:
+        availableActions |= PlaybackStateCompat.ACTION_PLAY;
+        break;
+      case PlaybackStateCompat.STATE_ERROR:
+        availableActions |= PlaybackStateCompat.ACTION_REWIND;
+        break;
+      default:
+        // Nothing else
+    }
+    return availableActions;
   }
 
   protected void onMetadata(@NonNull Metadata metadata) {

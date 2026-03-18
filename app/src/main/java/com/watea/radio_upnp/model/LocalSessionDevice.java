@@ -73,11 +73,6 @@ public class LocalSessionDevice extends SessionDevice {
             onState(PlaybackStateCompat.STATE_PLAYING);
             break;
           case ExoPlayer.STATE_IDLE:
-            // Stop if not already in error
-            if (!isError()) {
-              onState(PlaybackStateCompat.STATE_STOPPED);
-            }
-            break;
           case ExoPlayer.STATE_ENDED:
             onState(PlaybackStateCompat.STATE_ERROR);
             break;

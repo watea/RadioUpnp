@@ -153,23 +153,6 @@ public class UpnpSessionDevice extends SessionDevice {
   }
 
   @Override
-  public long getAvailableActions(int state) {
-    long availableActions = super.getAvailableActions(state);
-    switch (state) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-        availableActions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      default:
-        // Nothing else
-    }
-    return availableActions;
-  }
-
-  @Override
   public void prepareFromMediaId() {
     super.prepareFromMediaId();
     onState(PlaybackStateCompat.STATE_BUFFERING);
