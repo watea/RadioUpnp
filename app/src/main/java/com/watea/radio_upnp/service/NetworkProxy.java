@@ -29,7 +29,6 @@ import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,26 +38,12 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 
 public class NetworkProxy {
-  private static final String SCHEME = "http";
   @Nullable
   private final ConnectivityManager connectivityManager;
 
   // Shall be called after onCreate
   public NetworkProxy(@NonNull Context context) {
     connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-  }
-
-  @NonNull
-  private static Uri getUri(@NonNull String address, int port) {
-    return new Uri.Builder()
-      .scheme(SCHEME)
-      .appendEncodedPath("/" + address + ":" + port)
-      .build();
-  }
-
-  @NonNull
-  public static Uri getLoopbackUri(int port) {
-    return getUri("127.0.0.1", port);
   }
 
   public boolean isOnWifi() {
@@ -68,12 +53,6 @@ public class NetworkProxy {
   // Only Wifi and Cellular is supported
   public boolean isDeviceOnline() {
     return isOnWifi() || isOnNetworkCapability(NetworkCapabilities.TRANSPORT_CELLULAR);
-  }
-
-  @Nullable
-  public Uri getUri(int port) {
-    final String ipAddress = getWifiIpAddress();
-    return (ipAddress == null) ? null : getUri(ipAddress, port);
   }
 
   @Nullable

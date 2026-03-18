@@ -128,8 +128,10 @@ public class UpnpStreamServer extends NanoHTTPD {
     Log.d(TAG, "serve: " + session.getMethod() + " from " + session.getRemoteIpAddress() + " UA=" + session.getHeaders().get("user-agent"));
     final String uri = session.getUri().substring(1);
     // -- Logo --
-    if (uri.equals(logoUri) && (logoBytes != null)) {
-      return newFixedLengthResponse(Response.Status.OK, "image/jpeg", new ByteArrayInputStream(logoBytes), logoBytes.length);
+    if (uri.equals(logoUri)) {
+      return (logoBytes == null) ?
+        newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "No logo available") :
+        newFixedLengthResponse(Response.Status.OK, "image/jpeg", new ByteArrayInputStream(logoBytes), logoBytes.length);
     }
     // -- Stream --
     queue.clear();
