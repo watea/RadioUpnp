@@ -164,8 +164,9 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
     @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
+    @NonNull Uri radioUri,
     @Nullable Uri logoUri) {
     assert castSession != null;
-    return new CastSessionDevice(context, exoPlayer, listener, lockKey, radio, logoUri, castSession);
+    return new CastSessionDevice(context, exoPlayer, listener, lockKey, radio, radioUri, logoUri, castSession);
   }
 }

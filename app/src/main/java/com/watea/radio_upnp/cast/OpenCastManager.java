@@ -69,6 +69,7 @@ public class OpenCastManager<T extends SessionDevice> {
     @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
+    @NonNull Uri radioUri,
     @Nullable Uri logoUri) {
     Log.e(LOG_TAG, "getCastSessionDevice: invalid call");
     return null;

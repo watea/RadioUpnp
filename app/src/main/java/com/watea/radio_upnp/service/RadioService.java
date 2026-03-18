@@ -606,6 +606,7 @@ public class RadioService
         Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
         return;
       }
+      Log.d(LOG_TAG, "onPlayFromMediaId with radio: " + radio.getName() + " => " + radio.getUri());
       // Retrieve last radio
       final Radio lastRadio = playerAdapter.getRadio();
       // Change session tag
@@ -748,12 +749,15 @@ public class RadioService
       final ExoPlayer exoPlayer = getExoPlayer(capturingSink);
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       if (isRemoteReady && castManager.hasCastSession()) {
+        // Link capturingSink to upnpStreamServer
+        capturingSink.setCallback(upnpStreamServer.getPcmCallback());
         return castManager.getCastSessionDevice(
           RadioService.this,
           exoPlayer,
           playerAdapter.getSessionDeviceListener(),
           lockKey,
           radio,
+          upnpStreamServer.getStreamUri(localIp),
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         // Link capturingSink to upnpStreamServer

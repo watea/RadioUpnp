@@ -122,7 +122,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on prepareFromMediaId; no session device defined");
     } else {
-      Log.d(LOG_TAG, "prepareFromMediaId " + sessionDevice.getRadio().getName());
+      Log.d(LOG_TAG, "prepareFromMediaId on radio: " + sessionDevice.getRadio().getName());
       if (isRemote() || requestAudioFocus()) {
         onPrepareFromMediaId();
         return true;

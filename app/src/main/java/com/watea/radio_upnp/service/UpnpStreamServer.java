@@ -1,3 +1,26 @@
+/*
+ * Copyright (c) 2026. Stephane Treuchot
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to
+ * do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package com.watea.radio_upnp.service;
 
 import android.graphics.Bitmap;
@@ -30,7 +53,8 @@ public class UpnpStreamServer extends NanoHTTPD {
   private static final String SCHEME = "http://";
   private static final int DEFAULT = -1;
   private static final int GET_TIMEOUT = 5000; // ms
-  private static final int QUEUE_SIZE = 100; // ~2-3s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
+  private static final int QUEUE_SIZE = 300; // ~10s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
+  private static final int PACER_POLL_TIMEOUT = 15; // s
   private static final int REMOTE_LOGO_SIZE = 300;
   private static final String LOGO_PREFIX = "logo";
   private static final String LOGO_SUFFIX = ".jpg";
@@ -108,7 +132,6 @@ public class UpnpStreamServer extends NanoHTTPD {
       return newFixedLengthResponse(Response.Status.OK, "image/jpeg", new ByteArrayInputStream(logoBytes), logoBytes.length);
     }
     // -- Stream --
-    final boolean isGet = Method.GET.equals(session.getMethod());
     queue.clear();
     final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
     while (isInactive()) {
@@ -123,7 +146,7 @@ public class UpnpStreamServer extends NanoHTTPD {
         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Interrupted");
       }
     }
-    return getResponse(isGet);
+    return getResponse(session.getMethod());
   }
 
   // Returns the stream URL to pass to the renderer via SetAVTransportURI
@@ -141,11 +164,16 @@ public class UpnpStreamServer extends NanoHTTPD {
   }
 
   @NonNull
-  private Response getResponse(boolean isGet) {
-    final InputStream stream = isGet ? new WavInputStream(sampleRate, channelCount, bitsPerSample, lockKey.get()) : new ByteArrayInputStream(new byte[0]);
-    final Response response = newFixedLengthResponse(Response.Status.OK, MIME, stream, FAKE_STREAM_LENGTH);
+  private Response getResponse(@Nullable Method method) {
+    final boolean isGet = Method.GET.equals(method);
+    final boolean isHead = Method.HEAD.equals(method);
+    if (!isGet && !isHead) {
+      return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_PLAINTEXT, "Invalid request");
+    }
+    final InputStream inputStream = isGet ? new WavInputStream(sampleRate, channelCount, bitsPerSample, lockKey.get()) : new ByteArrayInputStream(new byte[0]);
+    final Response response = newFixedLengthResponse(Response.Status.OK, MIME, inputStream, isGet ? FAKE_STREAM_LENGTH : 0);
     response.addHeader("transferMode.dlna.org", "Streaming");
-    response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+    response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
     response.addHeader("Accept-Ranges", "none");
     return response;
   }
@@ -188,11 +216,11 @@ public class UpnpStreamServer extends NanoHTTPD {
           Log.i(TAG, "Renderer started reading stream");
         }
         if (pending == null) {
-          pending = queue.poll(2, TimeUnit.SECONDS);
+          pending = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.SECONDS);
           pendingOffset = 0;
         }
         if (pending == null) {
-          Log.w(TAG, "PCM timeout (2s) – stream stalled");
+          Log.w(TAG, "PCM timeout (" + PACER_POLL_TIMEOUT + "s) – stream stalled");
           // Something went wrong
           callback.onDisconnect(lockKey);
           throw new IOException("Stream stalled");
