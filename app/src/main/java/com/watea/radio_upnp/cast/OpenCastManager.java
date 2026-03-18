@@ -30,11 +30,10 @@ import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
-
-import java.util.function.Consumer;
 
 // Singleton.
 // CastManager that does nothing.
@@ -66,10 +65,10 @@ public class OpenCastManager<T extends SessionDevice> {
   @Nullable
   public T getCastSessionDevice(
     @NonNull Context context,
-    @NonNull Consumer<Integer> listener,
+    @NonNull ExoPlayer exoPlayer,
+    @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
-    @NonNull Uri radioUri,
     @Nullable Uri logoUri) {
     Log.e(LOG_TAG, "getCastSessionDevice: invalid call");
     return null;

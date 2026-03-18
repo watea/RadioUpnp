@@ -56,7 +56,6 @@
     <string name="no_icon_found">Icon-Suche unter der Icon-URL oder Webseiten-URL fehlgeschlagen!</string>
     <string name="no_local_icon">Kein gültiges lokales Icon gefunden!</string>
     <string name="connection_test_failed">Verbindungstest fehlerhaft!</string>
-    <string name="mime_not_authorized">Warnung! MIME-Typ ist nicht zulässig.\nAudio-Inhalt: </string>
     <string name="connection_test_aborted">Keine Verbindung: Fehlerhafte Streaming-URL!</string>
     <string name="connection_test_successful">Verbindungstest erfolgreich.\nAudio-Inhalt: </string>
     <string name="lan_required">Keine LAN/WLAN-Verbindung für die UPnP/DLNA-Funktion gefunden!</string>

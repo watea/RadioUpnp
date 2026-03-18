@@ -30,6 +30,13 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
+import androidx.media3.common.Metadata;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.common.Tracks;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.ExoPlayer;
 
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaLoadRequestData;
@@ -43,8 +50,8 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
 
 import java.io.IOException;
-import java.util.function.Consumer;
 
+@OptIn(markerClass = UnstableApi.class)
 public class CastSessionDevice extends SessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
   private static final double VOLUME_STEP = 0.05; // 5%
@@ -82,15 +89,37 @@ public class CastSessionDevice extends SessionDevice {
 
   public CastSessionDevice(
     @NonNull Context context,
-    @NonNull Consumer<Integer> listener,
+    @NonNull ExoPlayer exoPlayer,
+    @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
-    @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull CastSession castSession) {
-    super(context, listener, lockKey, radio, radioUri);
+    super(context, exoPlayer, listener, lockKey, radio);
     this.logoUri = logoUri;
     this.castSession = castSession;
+  }
+
+  @NonNull
+  @Override
+  protected Player.Listener getPlayerListener() {
+    return new Player.Listener() {
+      @Override
+      public void onMetadata(@NonNull Metadata metadata) {
+        CastSessionDevice.this.onMetadata(metadata);
+      }
+
+      @Override
+      public void onTracksChanged(@NonNull Tracks tracks) {
+        CastSessionDevice.this.onTracksChanged(tracks);
+      }
+
+      @Override
+      public void onPlayerError(@NonNull PlaybackException error) {
+        Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
+        onState(PlaybackStateCompat.STATE_ERROR);
+      }
+    };
   }
 
   @Override
@@ -194,7 +223,7 @@ public class CastSessionDevice extends SessionDevice {
     if (logoUri != null) {
       movieMetadata.addImage(new WebImage(logoUri));
     }
-    final MediaInfo mediaInfo = new MediaInfo.Builder(radioUri.toString())
+    final MediaInfo mediaInfo = new MediaInfo.Builder(radio.getURL().toString())
       .setStreamType(MediaInfo.STREAM_TYPE_LIVE) // Radio
       .setMetadata(movieMetadata)
       .build();

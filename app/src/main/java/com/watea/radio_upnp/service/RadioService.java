@@ -35,7 +35,6 @@ import android.content.ServiceConnection;
 import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.media.AudioManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -51,17 +50,24 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.VolumeProviderCompat;
 import androidx.media.session.MediaButtonReceiver;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.Renderer;
+import androidx.media3.exoplayer.audio.DefaultAudioSink;
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
+import androidx.media3.exoplayer.metadata.MetadataRenderer;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.adapter.PlayerAdapter;
 import com.watea.radio_upnp.cast.CastManager;
-import com.watea.radio_upnp.model.ContentProvider;
 import com.watea.radio_upnp.model.LocalSessionDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
@@ -82,11 +88,12 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicReference;
 
+@OptIn(markerClass = UnstableApi.class)
 public class RadioService
   extends MediaBrowserServiceCompat
-  implements PlayerAdapter.StateController, RadioHandler.Listener {
+  implements PlayerAdapter.StateController {
   public static final String DATE = "date";
   public static final String INFORMATION = "information";
   public static final String PLAYLIST = "playlist";
@@ -103,13 +110,13 @@ public class RadioService
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback = new MediaSessionCompatCallback();
-  private final ContentProvider contentProvider = new ContentProvider();
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onPreferredChange() {
       notifyChildrenChanged(MEDIA_ROOT_ID);
     }
   };
+  private final AtomicReference<String> lockKey = new AtomicReference<>(getLockKey());
   private PlayerAdapter playerAdapter;
   private final VolumeProviderCompat volumeProviderCompat =
     new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
@@ -118,7 +125,6 @@ public class RadioService
         playerAdapter.adjustVolume(direction);
       }
     };
-  private final Consumer<Integer> sessionDeviceListener = state -> playerAdapter.notifyState(state);
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -134,10 +140,8 @@ public class RadioService
   };
   private NotificationManagerCompat notificationManager;
   private MediaSessionCompat session;
-  private RadioHttpServer radioHttpServer;
+  private UpnpStreamServer upnpStreamServer;
   private boolean isAllowedToRewind = false;
-  @Nullable
-  private String lockKey = null;
   @Nullable
   private ScheduledExecutorService scheduler = null;
   private NotificationCompat.Action actionPause;
@@ -146,22 +150,20 @@ public class RadioService
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
-  private final RadioHandler.Controller radioHandlerController = new RadioHandler.Controller() {
-    @NonNull
+  private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
     @Override
-    public String getContentType() {
-      return playerAdapter.getContentType();
+    @NonNull
+    public String getLockKey() {
+      return lockKey.get();
     }
 
     @Override
-    public boolean isActive(@NonNull String lockKey) {
-      if (lockKey.equals(RadioService.this.lockKey)) {
-        final int state = getPlaybackState();
-        return
-          !((state == PlaybackStateCompat.STATE_ERROR) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_STOPPED)) &&
-            lockKey.equals(RadioService.this.lockKey); // We test again to be multi-thread safe without using any synchronized
+    public void onDisconnect(@NonNull String lockKey) {
+      // Disconnect is not expected if playing
+      final int state = getPlaybackState();
+      if ((state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PLAYING)) {
+        onPlaybackStateChange(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
       }
-      return false;
     }
   };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
@@ -231,6 +233,11 @@ public class RadioService
     }
   }
 
+  @NonNull
+  private static String getLockKey() {
+    return UUID.randomUUID().toString();
+  }
+
   @Override
   public void onCreate() {
     super.onCreate();
@@ -282,11 +289,11 @@ public class RadioService
     playerAdapter = new PlayerAdapter(this, this);
     // Launch HTTP server
     try {
-      radioHttpServer = new RadioHttpServer(this, this, radioHandlerController);
-      radioHttpServer.start();
+      upnpStreamServer = new UpnpStreamServer(upnpStreamCallback);
+      upnpStreamServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation fails", iOException);
-      radioHttpServer = null;
+      upnpStreamServer = null;
     }
     // Prepare notification
     actionPause = new NotificationCompat.Action(
@@ -319,13 +326,9 @@ public class RadioService
     Log.d(LOG_TAG, "onDestroy");
     // Stop player to be clean on resources (if not, audio focus is not well handled)
     playerAdapter.stop();
-    // Release HTTP service
-    if (radioHttpServer != null) {
-      try {
-        radioHttpServer.stop();
-      } catch (IOException iOException) {
-        Log.e(LOG_TAG, "HTTP server stop fails");
-      }
+    // Release HTTP server
+    if (upnpStreamServer != null) {
+      upnpStreamServer.stop();
     }
     // Release UPnP service
     unbindService(upnpConnection);
@@ -364,17 +367,14 @@ public class RadioService
   }
 
   @Override
-  public void onNewInformation(@NonNull final String information, @NonNull final String lockKey) {
+  public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
-      // A bit tricky: information must be refreshed at start of reading, we enable rewind
-      isAllowedToRewind = true;
-      Log.d(LOG_TAG, "isAllowedToRewind => true");
+      Log.d(LOG_TAG, "onNewInformation: " + information);
       final Radio radio = playerAdapter.getRadio();
       if (radio != null) {
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         if (mediaMetadataCompat != null) {
           buildSessionMetadata(radio, information, addPlaylistItem(mediaMetadataCompat.getString(PLAYLIST), information));
-          playerAdapter.onNewInformation(information);
           // Update notification
           buildNotification();
         }
@@ -382,30 +382,22 @@ public class RadioService
     });
   }
 
-  // Should be called at beginning of reading for proper display
-  @Override
-  public void onNewRate(@Nullable final String rate, @NonNull final String lockKey) {
-    // We add current rate to current media data
+  public void onNewBitrate(int bitrate, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
+      Log.d(LOG_TAG, "onNewBitrate: " + bitrate);
       // Rate in extras
       final Bundle extras = mediaController.getExtras();
-      extras.putString(getString(R.string.key_rate), (rate == null) ? "" : rate);
+      extras.putString(getString(R.string.key_rate), Integer.toString(bitrate));
       session.setExtras(extras);
       // Update notification
       buildNotification();
     });
   }
 
-  @Override
-  public void onHandleError(@NonNull String lockKey) {
-    Log.d(LOG_TAG, "onHandleError: " + lockKey);
-    onPlaybackStateChange(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
-  }
-
   // Only if lockKey still valid
   @SuppressLint("SwitchIntDef")
   @Override
-  public void onPlaybackStateChange(@NonNull final PlaybackStateCompat state, @NonNull final String lockKey) {
+  public void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
       // Report the state to the MediaSession
@@ -413,6 +405,7 @@ public class RadioService
       // Manage the started state of this service, and session activity
       switch (state.getState()) {
         case PlaybackStateCompat.STATE_PLAYING:
+          isAllowedToRewind = true;
         case PlaybackStateCompat.STATE_BUFFERING:
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -472,15 +465,11 @@ public class RadioService
   }
 
   private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information, @NonNull String playlist) {
-    session.setMetadata(getMediaMetadataBuilder(radio, information).putString(PLAYLIST, playlist).build());
-  }
-
-  @NonNull
-  private MediaMetadataCompat.Builder getMediaMetadataBuilder(@NonNull Radio radio, @NonNull String information) {
-    return radio.getMediaMetadataBuilder(
-      getString(R.string.app_name),
-      playerAdapter.isRemote() ? " " + getString(R.string.remote) : "",
-      information);
+    session.setMetadata(radio.getMediaMetadataBuilder(
+        getString(R.string.app_name),
+        playerAdapter.isRemote() ? " " + getString(R.string.remote) : "",
+        information)
+      .putString(PLAYLIST, playlist).build());
   }
 
   @SuppressLint("SwitchIntDef")
@@ -584,7 +573,7 @@ public class RadioService
 
   private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
     handler.post(() -> {
-      if (session.isActive() && lockKey.equals(this.lockKey)) {
+      if (session.isActive() && lockKey.equals(this.lockKey.get())) {
         runnable.run();
       }
     });
@@ -617,21 +606,16 @@ public class RadioService
         Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
         return;
       }
-      // Catch catastrophic failure
-      if (radioHttpServer == null) {
-        Log.e(LOG_TAG, "onPlayFromMediaId: radioHttpServer is null");
-        return;
-      }
       // Retrieve last radio
       final Radio lastRadio = playerAdapter.getRadio();
       // Change session tag
-      lockKey = UUID.randomUUID().toString();
+      lockKey.set(getLockKey());
       // Clean current PlayerAdapter; must be done at each new lockKey
       playerAdapter.clean();
       // Stop scheduler if any
       releaseScheduler();
       // PlayerAdapter settings
-      final SessionDevice sessionDevice = getSessionDevice(radio);
+      final SessionDevice sessionDevice = getSessionDevice(radio, lockKey.get());
       Log.d(LOG_TAG, "onPlayFromMediaId: sessionDevice => " + sessionDevice.getClass().getSimpleName());
       playerAdapter.setSessionDevice(sessionDevice);
       // Volume
@@ -711,6 +695,26 @@ public class RadioService
       }
     }
 
+    @NonNull
+    private ExoPlayer getExoPlayer(@NonNull CapturingAudioSink capturingSink) {
+      return new ExoPlayer.Builder(RadioService.this)
+        .setRenderersFactory(
+          (handler,
+           videoListener,
+           audioListener,
+           textOutput,
+           metadataOutput) -> new Renderer[]{
+            new MediaCodecAudioRenderer(
+              RadioService.this,
+              MediaCodecSelector.DEFAULT,
+              handler,
+              audioListener,
+              capturingSink),
+            new MetadataRenderer(metadataOutput, handler.getLooper())
+          })
+        .build();
+    }
+
     private void skipTo(int direction) {
       final Radio radio = playerAdapter.getRadio();
       if (radio == null) {
@@ -737,36 +741,41 @@ public class RadioService
 
     // UPnP or Cast not accepted if environment not OK: force local processing
     @NonNull
-    private SessionDevice getSessionDevice(@NonNull Radio radio) {
-      assert lockKey != null;
-      final Uri serverUri = radioHttpServer.getUri();
+    private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
+      final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      if ((serverUri != null) && castManager.hasCastSession()) {
+      final CapturingAudioSink capturingSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey);
+      final ExoPlayer exoPlayer = getExoPlayer(capturingSink);
+      final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
+      if (isRemoteReady && castManager.hasCastSession()) {
         return castManager.getCastSessionDevice(
           RadioService.this,
-          sessionDeviceListener,
+          exoPlayer,
+          playerAdapter.getSessionDeviceListener(),
           lockKey,
           radio,
-          RadioHandler.getHandledUri(serverUri, radio, lockKey),
-          radioHttpServer.createLogoFile(radio));
-      } else if ((serverUri != null) && (upnpSelectedDevice != null)) {
+          upnpStreamServer.setLogo(radio, localIp));
+      } else if (isRemoteReady && (upnpSelectedDevice != null)) {
+        // Link capturingSink to upnpStreamServer
+        capturingSink.setCallback(upnpStreamServer.getPcmCallback());
         return new UpnpSessionDevice(
           RadioService.this,
-          sessionDeviceListener,
+          exoPlayer,
+          playerAdapter.getSessionDeviceListener(),
           lockKey,
           radio,
-          RadioHandler.getHandledUri(serverUri, radio, lockKey),
-          radioHttpServer.createLogoFile(radio),
+          upnpStreamServer.getStreamUri(localIp),
+          upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
           upnpService.getActionController(),
-          contentProvider);
+          upnpStreamServer::stopStream);
       } else {
         return new LocalSessionDevice(
           RadioService.this,
-          sessionDeviceListener,
+          exoPlayer,
+          playerAdapter.getSessionDeviceListener(),
           lockKey,
-          radio,
-          RadioHandler.getHandledUri(radioHttpServer.getLoopbackUri(), radio, lockKey));
+          radio);
       }
     }
   }

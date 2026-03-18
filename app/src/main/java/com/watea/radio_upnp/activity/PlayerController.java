@@ -438,16 +438,20 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       if ((mediaMetadata != null) && RadioService.isValid(mainActivity, mediaMetadata)) {
         // Use title metadata
         playedRadioInformationTextView.setText(mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
-        // Rate in extras
-        final Bundle extras = (mediaController == null) ? null : mediaController.getExtras();
-        if (extras != null) {
-          final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
-          if (rate != null) {
-            playedRadioRateTextView.setText(rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbps));
-          }
-        }
         // User help for fist valid information after a few time
         informationPressUserHint.show();
+      }
+    }
+
+    @Override
+    public void onExtrasChanged(@Nullable Bundle extras) {
+      if (extras == null) {
+        return;
+      }
+      final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
+      if (rate != null) {
+        playedRadioRateTextView.setText(
+          rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbps));
       }
     }
 

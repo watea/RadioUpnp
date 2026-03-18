@@ -51,7 +51,6 @@ import androidx.core.content.ContextCompat;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.SessionDevice;
 import com.watea.radio_upnp.service.RadioURL;
 
 import java.io.File;
@@ -345,7 +344,7 @@ public abstract class ItemFragment extends MainActivityFragment {
       if (streamContent == null) {
         tell(R.string.connection_test_failed);
       } else {
-        tell(getResources().getString(SessionDevice.isHandling(streamContent) ? R.string.connection_test_successful : R.string.mime_not_authorized) + streamContent + ".");
+        tell(getResources().getString(R.string.connection_test_successful) + streamContent + ".");
       }
     }
   }
