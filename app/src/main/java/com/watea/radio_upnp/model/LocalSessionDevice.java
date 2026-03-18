@@ -30,6 +30,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.media3.common.Metadata;
+import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
@@ -72,21 +73,25 @@ public class LocalSessionDevice extends SessionDevice {
             onState(PlaybackStateCompat.STATE_PLAYING);
             break;
           case ExoPlayer.STATE_IDLE:
-            if (isPaused()) {
-              onState(PlaybackStateCompat.STATE_PAUSED);
-              break;
+            // Stop if not already in error
+            if (!isError()) {
+              onState(PlaybackStateCompat.STATE_STOPPED);
             }
+            break;
           case ExoPlayer.STATE_ENDED:
-            // Do nothing if we are already stopped
-            if (isPaused()) {
-              onState(PlaybackStateCompat.STATE_ERROR);
-            }
+            onState(PlaybackStateCompat.STATE_ERROR);
             break;
           // Should not happen
           default:
             Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
             onState(PlaybackStateCompat.STATE_ERROR);
         }
+      }
+
+      @Override
+      public void onPlayerError(@NonNull PlaybackException error) {
+        Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
+        onState(PlaybackStateCompat.STATE_ERROR);
       }
     };
   }

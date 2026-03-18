@@ -453,15 +453,19 @@ public class RadioService
   }
 
   @Override
-  public int getPlaybackState() {
-    final PlaybackStateCompat playbackState = mediaController.getPlaybackState();
-    return (playbackState == null) ? PlaybackStateCompat.STATE_ERROR : playbackState.getState();
+  public boolean isPlaying() {
+    return (getPlaybackState() == PlaybackStateCompat.STATE_PLAYING);
   }
 
   @Override
   public void onTaskRemoved(@NonNull Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
     stopSelf();
+  }
+
+  private int getPlaybackState() {
+    final PlaybackStateCompat playbackState = mediaController.getPlaybackState();
+    return (playbackState == null) ? PlaybackStateCompat.STATE_ERROR : playbackState.getState();
   }
 
   private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information, @NonNull String playlist) {

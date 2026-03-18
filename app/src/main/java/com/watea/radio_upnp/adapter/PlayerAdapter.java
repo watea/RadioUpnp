@@ -214,7 +214,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     }
     switch (focusChange) {
       case AudioManager.AUDIOFOCUS_GAIN:
-        if (isPlaying()) {
+        if (stateController.isPlaying()) {
           setVolume(MEDIA_VOLUME_DEFAULT);
         } else if (playOnAudioFocus) {
           play();
@@ -225,7 +225,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
         setVolume(MEDIA_VOLUME_DUCK);
         break;
       case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-        if (isPlaying()) {
+        if (stateController.isPlaying()) {
           playOnAudioFocus = true;
           pause();
         }
@@ -244,16 +244,12 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   public void notifyState(int state, @NonNull String lockKey) {
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on changeAndNotifyState; no session device defined");
+      Log.e(LOG_TAG, "notifyState; internal failure, no session device defined");
     } else {
       Log.d(LOG_TAG, "New state/lock key received: " + state + "/" + sessionDevice.getLockKey());
-      if (stateController.getPlaybackState() == state) {
-        Log.d(LOG_TAG, "=> no change");
-      } else {
-        stateController.onPlaybackStateChange(
-          getPlaybackStateCompatBuilder(state).setActions(sessionDevice.getAvailableActions()).build(),
-          lockKey);
-      }
+      stateController.onPlaybackStateChange(
+        getPlaybackStateCompatBuilder(state).setActions(sessionDevice.getAvailableActions()).build(),
+        lockKey);
     }
   }
 
@@ -309,10 +305,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     }
   }
 
-  private boolean isPlaying() {
-    return (stateController.getPlaybackState() == PlaybackStateCompat.STATE_PLAYING);
-  }
-
   private void registerAudioNoisyReceiver() {
     if (!audioNoisyReceiverRegistered) {
       context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER);
@@ -349,6 +341,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
     void onNewBitrate(int bitrate, @NonNull String lockKey);
 
-    int getPlaybackState();
+    boolean isPlaying();
   }
 }
