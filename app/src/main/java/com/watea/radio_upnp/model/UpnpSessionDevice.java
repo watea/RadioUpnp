@@ -153,9 +153,9 @@ public class UpnpSessionDevice extends SessionDevice {
   }
 
   @Override
-  public long getAvailableActions() {
-    long availableActions = DEFAULT_AVAILABLE_ACTIONS;
-    switch (getState()) {
+  public long getAvailableActions(int state) {
+    long availableActions = super.getAvailableActions(state);
+    switch (state) {
       case PlaybackStateCompat.STATE_PLAYING:
         availableActions |= PlaybackStateCompat.ACTION_PAUSE;
         break;

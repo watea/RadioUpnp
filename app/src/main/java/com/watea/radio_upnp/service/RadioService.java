@@ -93,7 +93,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @OptIn(markerClass = UnstableApi.class)
 public class RadioService
   extends MediaBrowserServiceCompat
-  implements PlayerAdapter.StateController {
+  implements SessionDevice.Listener {
   public static final String DATE = "date";
   public static final String INFORMATION = "information";
   public static final String PLAYLIST = "playlist";
@@ -162,7 +162,7 @@ public class RadioService
       // Disconnect is not expected if playing
       final int state = getPlaybackState();
       if ((state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PLAYING)) {
-        onPlaybackStateChange(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
+        onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build(), lockKey);
       }
     }
   };
@@ -286,7 +286,7 @@ public class RadioService
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
     // Player
-    playerAdapter = new PlayerAdapter(this, this);
+    playerAdapter = new PlayerAdapter(this);
     // Launch HTTP server
     try {
       upnpStreamServer = new UpnpStreamServer(upnpStreamCallback);
@@ -453,17 +453,13 @@ public class RadioService
   }
 
   @Override
-  public boolean isPlaying() {
-    return (getPlaybackState() == PlaybackStateCompat.STATE_PLAYING);
-  }
-
-  @Override
   public void onTaskRemoved(@NonNull Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
     stopSelf();
   }
 
-  private int getPlaybackState() {
+  @Override
+  public int getPlaybackState() {
     final PlaybackStateCompat playbackState = mediaController.getPlaybackState();
     return (playbackState == null) ? PlaybackStateCompat.STATE_ERROR : playbackState.getState();
   }
@@ -631,7 +627,7 @@ public class RadioService
       }
       // Synchronize session data
       session.setExtras(new Bundle());
-      session.setPlaybackState(PlayerAdapter.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_BUFFERING).build());
+      session.setPlaybackState(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_BUFFERING).build());
       final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
       final String lastPlaylist = (mediaMetadataCompat == null) ? "" : mediaMetadataCompat.getString(PLAYLIST);
       buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
@@ -758,7 +754,7 @@ public class RadioService
         return castManager.getCastSessionDevice(
           RadioService.this,
           exoPlayer,
-          playerAdapter.getSessionDeviceListener(),
+          RadioService.this,
           lockKey,
           radio,
           upnpStreamServer.getStreamUri(localIp),
@@ -769,7 +765,7 @@ public class RadioService
         return new UpnpSessionDevice(
           RadioService.this,
           exoPlayer,
-          playerAdapter.getSessionDeviceListener(),
+          RadioService.this,
           lockKey,
           radio,
           upnpStreamServer.getStreamUri(localIp),
@@ -781,7 +777,7 @@ public class RadioService
         return new LocalSessionDevice(
           RadioService.this,
           exoPlayer,
-          playerAdapter.getSessionDeviceListener(),
+          RadioService.this,
           lockKey,
           radio);
       }

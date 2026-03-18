@@ -23,8 +23,12 @@
 
 package com.watea.radio_upnp.model;
 
+import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
+
 import android.content.Context;
+import android.os.SystemClock;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
@@ -39,11 +43,7 @@ import androidx.media3.extractor.metadata.icy.IcyInfo;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
-  protected static final long DEFAULT_AVAILABLE_ACTIONS =
-    PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
-      PlaybackStateCompat.ACTION_STOP |
-      PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-      PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+  private static final String LOG_TAG = SessionDevice.class.getSimpleName();
   @NonNull
   protected final Context context;
   @NonNull
@@ -56,7 +56,6 @@ public abstract class SessionDevice {
   protected final Listener listener;
   @NonNull
   private final Player.Listener playerListener;
-  private int state = PlaybackStateCompat.STATE_NONE;
 
   public SessionDevice(
     @NonNull Context context,
@@ -72,8 +71,9 @@ public abstract class SessionDevice {
     this.radio = radio;
   }
 
-  public int getState() {
-    return state;
+  @NonNull
+  public static PlaybackStateCompat.Builder getPlaybackStateCompatBuilder(int state) {
+    return new PlaybackStateCompat.Builder().setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 
   @NonNull
@@ -81,30 +81,27 @@ public abstract class SessionDevice {
     return radio;
   }
 
-  @NonNull
-  public String getLockKey() {
-    return lockKey;
+  public int getState() {
+    return listener.getPlaybackState();
   }
 
-  @SuppressWarnings("unused")
-  public void onNewInformation(@NonNull String information) {
+  public boolean isPlaying() {
+    return (getState() == PlaybackStateCompat.STATE_PLAYING);
   }
 
   public boolean isPaused() {
-    return (state == PlaybackStateCompat.STATE_PAUSED);
+    return (getState() == PlaybackStateCompat.STATE_PAUSED);
   }
 
   public boolean isError() {
-    return (state == PlaybackStateCompat.STATE_ERROR);
+    return (getState() == PlaybackStateCompat.STATE_ERROR);
   }
 
   public void play() {
-    state = PlaybackStateCompat.STATE_PLAYING;
     exoPlayer.play();
   }
 
   public void pause() {
-    state = PlaybackStateCompat.STATE_PAUSED;
     if (isRemote()) {
       exoPlayer.stop();
     } else {
@@ -113,16 +110,21 @@ public abstract class SessionDevice {
   }
 
   public void stop() {
-    state = PlaybackStateCompat.STATE_STOPPED;
     exoPlayer.stop();
   }
 
   public void prepareFromMediaId() {
-    state = PlaybackStateCompat.STATE_BUFFERING;
     exoPlayer.addListener(playerListener);
     exoPlayer.setMediaItem(MediaItem.fromUri(radio.getUri()));
     exoPlayer.prepare();
     exoPlayer.setPlayWhenReady(true);
+  }
+
+  public void onState(int state) {
+    Log.d(LOG_TAG, "onState: " + state + "/" + lockKey);
+    listener.onPlaybackStateChange(
+      getPlaybackStateCompatBuilder(state).setActions(getAvailableActions(state)).build(),
+      lockKey);
   }
 
   public abstract boolean isRemote();
@@ -137,7 +139,12 @@ public abstract class SessionDevice {
   public abstract void adjustVolume(int direction);
 
   // Set the current capabilities available on this session
-  public abstract long getAvailableActions();
+  public long getAvailableActions(int state) {
+    return PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
+      PlaybackStateCompat.ACTION_STOP |
+      PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+      PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+  }
 
   protected void onMetadata(@NonNull Metadata metadata) {
     String title = null;
@@ -163,19 +170,16 @@ public abstract class SessionDevice {
     }
   }
 
-  protected void onState(int state) {
-    this.state = state;
-    listener.onNewState(this.state, lockKey);
-  }
-
   @NonNull
   protected abstract Player.Listener getPlayerListener();
 
   public interface Listener {
-    void onNewState(int state, @NonNull String lockKey);
+    void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey);
 
     void onNewInformation(@NonNull String information, @NonNull String lockKey);
 
     void onNewBitrate(int bitrate, @NonNull String lockKey);
+
+    int getPlaybackState();
   }
 }
