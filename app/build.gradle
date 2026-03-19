@@ -92,7 +92,7 @@ dependencies {
     // nanohttpd
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
     // AndroidSsdpClient
-    implementation 'com.github.watea:androidssdpclient:1.0.6'
+    implementation 'com.github.watea:androidssdpclient:1.0.7'
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.3.2'
     // Billing
