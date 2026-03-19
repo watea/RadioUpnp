@@ -50,11 +50,15 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @OptIn(markerClass = UnstableApi.class)
 public class CastSessionDevice extends SessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
   private static final double VOLUME_STEP = 0.05; // 5%
+  private static final int HEART_BEAT = 60; // s
   @NonNull
   private final CastSession castSession;
   @NonNull
@@ -90,6 +94,8 @@ public class CastSessionDevice extends SessionDevice {
       }
     }
   };
+  @Nullable
+  private ScheduledExecutorService heartbeat;
 
   public CastSessionDevice(
     @NonNull Context context,
@@ -163,6 +169,9 @@ public class CastSessionDevice extends SessionDevice {
     if (remoteMediaClient != null) {
       remoteMediaClient.registerCallback(remoteCallback);
       load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
+      // Heartbeat
+      heartbeat = Executors.newSingleThreadScheduledExecutor();
+      heartbeat.scheduleWithFixedDelay(() -> remoteMediaClient.requestStatus(), HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
     }
   }
 
@@ -194,6 +203,10 @@ public class CastSessionDevice extends SessionDevice {
   @Override
   public void release() {
     super.release();
+    if (heartbeat != null) {
+      heartbeat.shutdownNow();
+      heartbeat = null;
+    }
     if (remoteMediaClient != null) {
       remoteMediaClient.unregisterCallback(remoteCallback);
       remoteMediaClient = null;

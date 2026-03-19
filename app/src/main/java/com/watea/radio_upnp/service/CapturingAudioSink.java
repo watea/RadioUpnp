@@ -88,13 +88,12 @@ public class CapturingAudioSink implements AudioSink {
     } else {
       lastPresentationTimeUs = presentationTimeUs;
       if (buffer.hasRemaining()) {
+        if (pcmBuffer.remainingCapacity() == 0) {
+          return false; // ExoPlayer will retry later
+        }
         final byte[] pcmData = new byte[buffer.remaining()];
         buffer.get(pcmData);
-        try {
-          pcmBuffer.put(pcmData); // Backpressure: blocks ExoPlayer if Pacer is lagging
-        } catch (InterruptedException interruptedException) {
-          Thread.currentThread().interrupt();
-        }
+        pcmBuffer.offer(pcmData);
       }
       return true;
     }
