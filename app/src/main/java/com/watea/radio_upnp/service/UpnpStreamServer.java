@@ -124,9 +124,12 @@ public class UpnpStreamServer extends NanoHTTPD {
 
   public void feed(@NonNull final byte[] pcmData) {
     final int remaining = queue.remainingCapacity();
-    if (remaining < QUEUE_SIZE * 0.2F)
+    if (remaining < QUEUE_SIZE * 0.2F) {
       Log.w(TAG, "Queue fill: " + (QUEUE_SIZE - remaining) + "/" + QUEUE_SIZE);
-    if (!queue.offer(pcmData)) Log.e(TAG, "QUEUE FULL DROP (" + pcmData.length + " bytes)");
+    }
+    if (!queue.offer(pcmData)) {
+      Log.e(TAG, "QUEUE FULL => DROP (" + pcmData.length + " bytes)");
+    }
   }
 
   // NanoHTTPD: HTTP response to UPnP renderer
