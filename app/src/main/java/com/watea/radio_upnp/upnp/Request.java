@@ -183,8 +183,7 @@ public abstract class Request {
 
   public abstract void onSuccess(@NonNull Map<String, String> responses);
 
-  public abstract void onFailure(
-    @NonNull String faultCode, @NonNull String faultString, @NonNull String faultDetail);
+  public abstract void onFailure(@NonNull String faultCode, @NonNull String faultString, @NonNull String faultDetail);
 
   public void onFailure(@NonNull String faultCode, @NonNull String faultString) {
     onFailure(faultCode, faultString, "No");
