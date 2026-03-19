@@ -140,7 +140,8 @@ public class RadioService
   };
   private NotificationManagerCompat notificationManager;
   private MediaSessionCompat session;
-  private UpnpStreamServer upnpStreamServer;
+  @Nullable
+  private UpnpStreamServer upnpStreamServer = null;
   private boolean isAllowedToRewind = false;
   @Nullable
   private ScheduledExecutorService scheduler = null;
