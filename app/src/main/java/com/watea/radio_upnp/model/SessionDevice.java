@@ -23,56 +23,57 @@
 
 package com.watea.radio_upnp.model;
 
+import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
+
 import android.content.Context;
-import android.net.Uri;
+import android.os.SystemClock;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.OptIn;
+import androidx.media3.common.Format;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.Metadata;
+import androidx.media3.common.Player;
+import androidx.media3.common.Tracks;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.extractor.metadata.icy.IcyInfo;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Consumer;
-
+@OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
-  public static final String AUDIO_CONTENT_TYPE = "audio/";
-  public static final String DEFAULT_CONTENT_TYPE = AUDIO_CONTENT_TYPE + "mpeg";
-  protected static final long DEFAULT_AVAILABLE_ACTIONS =
-    PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
-      PlaybackStateCompat.ACTION_STOP |
-      PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-      PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
-  private static final String APPLICATION_CONTENT_TYPE = "application/";
-  private static final List<String> AUDIO_CONTENT_PREFIXS = Arrays.asList(AUDIO_CONTENT_TYPE, APPLICATION_CONTENT_TYPE);
+  private static final String LOG_TAG = SessionDevice.class.getSimpleName();
+  @NonNull
   protected final Context context;
+  @NonNull
+  protected final ExoPlayer exoPlayer;
+  @NonNull
   protected final String lockKey; // Current tag
+  @NonNull
   protected final Radio radio;
-  protected final Uri radioUri;
-  protected final Consumer<Integer> listener;
-  private int state = PlaybackStateCompat.STATE_NONE;
+  @NonNull
+  protected final Listener listener;
+  @NonNull
+  private final Player.Listener playerListener;
 
   public SessionDevice(
     @NonNull Context context,
-    @NonNull Consumer<Integer> listener,
+    @NonNull ExoPlayer exoplayer,
+    @NonNull Listener listener,
     @NonNull String lockKey,
-    @NonNull Radio radio,
-    @NonNull Uri radioUri) {
+    @NonNull Radio radio) {
     this.context = context;
+    this.exoPlayer = exoplayer;
+    this.playerListener = getPlayerListener();
     this.listener = listener;
     this.lockKey = lockKey;
     this.radio = radio;
-    this.radioUri = radioUri;
   }
 
-  public static boolean isHandling(@NonNull String protocolInfo) {
-    for (final String audioContentPrefix : AUDIO_CONTENT_PREFIXS) {
-      if (protocolInfo.contains(audioContentPrefix))
-        return true;
-    }
-    return false;
-  }
-
-  public int getState() {
-    return state;
+  @NonNull
+  public static PlaybackStateCompat.Builder getPlaybackStateCompatBuilder(int state) {
+    return new PlaybackStateCompat.Builder().setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 
   @NonNull
@@ -80,53 +81,120 @@ public abstract class SessionDevice {
     return radio;
   }
 
-  @NonNull
-  public String getLockKey() {
-    return lockKey;
+  public int getState() {
+    return listener.getPlaybackState();
   }
 
-  // Default is unknown
-  public String getContentType() {
-    return "";
-  }
-
-  @SuppressWarnings("unused")
-  public void onNewInformation(@NonNull String information) {
+  public boolean isPlaying() {
+    return (getState() == PlaybackStateCompat.STATE_PLAYING);
   }
 
   public boolean isPaused() {
-    return (state == PlaybackStateCompat.STATE_PAUSED);
+    return (getState() == PlaybackStateCompat.STATE_PAUSED);
+  }
+
+  public boolean isError() {
+    return (getState() == PlaybackStateCompat.STATE_ERROR);
   }
 
   public void play() {
-    state = PlaybackStateCompat.STATE_PLAYING;
+    exoPlayer.play();
   }
 
   public void pause() {
-    state = PlaybackStateCompat.STATE_PAUSED;
+    if (isRemote()) {
+      exoPlayer.stop();
+    } else {
+      exoPlayer.pause();
+    }
   }
 
   public void stop() {
-    state = PlaybackStateCompat.STATE_STOPPED;
+    exoPlayer.stop();
   }
 
   public void prepareFromMediaId() {
-    state = PlaybackStateCompat.STATE_BUFFERING;
+    exoPlayer.addListener(playerListener);
+    exoPlayer.setMediaItem(MediaItem.fromUri(radio.getUri()));
+    exoPlayer.prepare();
+    exoPlayer.setPlayWhenReady(true);
+  }
+
+  public void onState(int state) {
+    Log.d(LOG_TAG, "onState: " + state + "/" + lockKey);
+    listener.onPlaybackStateChange(
+      getPlaybackStateCompatBuilder(state).setActions(getAvailableActions(state)).build(),
+      lockKey);
   }
 
   public abstract boolean isRemote();
 
-  public abstract void release();
+  public void release() {
+    exoPlayer.removeListener(playerListener);
+    exoPlayer.release();
+  }
 
   public abstract void setVolume(float volume);
 
   public abstract void adjustVolume(int direction);
 
   // Set the current capabilities available on this session
-  public abstract long getAvailableActions();
+  public long getAvailableActions(int state) {
+    long availableActions = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
+      PlaybackStateCompat.ACTION_STOP |
+      PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+      PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+    switch (state) {
+      case PlaybackStateCompat.STATE_PLAYING:
+        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
+        break;
+      case PlaybackStateCompat.STATE_PAUSED:
+      case PlaybackStateCompat.STATE_BUFFERING:
+        availableActions |= PlaybackStateCompat.ACTION_PLAY;
+        break;
+      case PlaybackStateCompat.STATE_ERROR:
+        availableActions |= PlaybackStateCompat.ACTION_REWIND;
+        break;
+      default:
+        // Nothing else
+    }
+    return availableActions;
+  }
 
-  protected void onState(int state) {
-    this.state = state;
-    listener.accept(this.state);
+  protected void onMetadata(@NonNull Metadata metadata) {
+    String title = null;
+    for (int i = 0; i < metadata.length(); i++) {
+      final Metadata.Entry entry = metadata.get(i);
+      if (entry instanceof IcyInfo) {
+        final IcyInfo icyInfo = (IcyInfo) entry;
+        title = icyInfo.title;
+        break;
+      }
+    }
+    listener.onNewInformation((title == null) ? "" : title, lockKey);
+  }
+
+  protected void onTracksChanged(@NonNull Tracks tracks) {
+    for (final Tracks.Group group : tracks.getGroups()) {
+      for (int i = 0; i < group.length; i++) {
+        final Format format = group.getTrackFormat(i);
+        if (format.bitrate != Format.NO_VALUE) {
+          listener.onNewBitrate(format.bitrate / 1000, lockKey);
+        }
+      }
+    }
+  }
+
+  @NonNull
+  protected abstract Player.Listener getPlayerListener();
+
+  public interface Listener {
+    void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey);
+
+    void onNewInformation(@NonNull String information, @NonNull String lockKey);
+
+    void onNewBitrate(int bitrate, @NonNull String lockKey);
+
+    int getPlaybackState();
   }
 }

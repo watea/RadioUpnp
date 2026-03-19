@@ -23,8 +23,6 @@
 
 package com.watea.radio_upnp.adapter;
 
-import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -34,7 +32,6 @@ import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
@@ -59,8 +56,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   @NonNull
   private final AudioManager audioManager;
   @NonNull
-  private final StateController stateController;
-  @NonNull
   private final AudioFocusRequest audioFocusRequest;
   @Nullable
   private SessionDevice sessionDevice = null;
@@ -75,20 +70,13 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   };
   private boolean audioNoisyReceiverRegistered = false;
 
-  public PlayerAdapter(@NonNull Context context, @NonNull StateController stateController) {
+  public PlayerAdapter(@NonNull Context context) {
     this.context = context;
-    this.stateController = stateController;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
       .setOnAudioFocusChangeListener(this, new Handler(Looper.getMainLooper()))
       .build();
-  }
-
-  @NonNull
-  public static PlaybackStateCompat.Builder getPlaybackStateCompatBuilder(int state) {
-    return new PlaybackStateCompat.Builder()
-      .setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 
   public void setSessionDevice(@NonNull SessionDevice sessionDevice) {
@@ -100,7 +88,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on prepareFromMediaId; no session device defined");
     } else {
-      Log.d(LOG_TAG, "prepareFromMediaId " + sessionDevice.getRadio().getName());
+      Log.d(LOG_TAG, "prepareFromMediaId on radio: " + sessionDevice.getRadio().getName());
       if (isRemote() || requestAudioFocus()) {
         onPrepareFromMediaId();
         return true;
@@ -123,12 +111,15 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public synchronized final void pause() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on pause; no session device defined");
+    }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
       if (!isRemote() && !playOnAudioFocus) {
         releaseAudioFocus();
       }
       // Pause immediately
-      notifyState(PlaybackStateCompat.STATE_PAUSED);
+      sessionDevice.onState(PlaybackStateCompat.STATE_PAUSED);
       onPause();
       onRelease(); // We release also in Pause
     } else {
@@ -137,8 +128,11 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public synchronized final void stop() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on stop; no session device defined");
+    }
     // Stop immediately
-    notifyState(PlaybackStateCompat.STATE_STOPPED);
+    sessionDevice.onState(PlaybackStateCompat.STATE_STOPPED);
     if (!isRemote()) {
       releaseAudioFocus();
       unregisterAudioNoisyReceiver();
@@ -180,9 +174,17 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   @Override
   public void onAudioFocusChange(int focusChange) {
     Log.d(LOG_TAG, "onAudioFocusChange: " + focusChange);
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on onAudioFocusChange; no session device defined");
+      return;
+    }
+    // No effect on remote playback
+    if (isRemote()) {
+      return;
+    }
     switch (focusChange) {
       case AudioManager.AUDIOFOCUS_GAIN:
-        if (isPlaying()) {
+        if (sessionDevice.isPlaying()) {
           setVolume(MEDIA_VOLUME_DEFAULT);
         } else if (playOnAudioFocus) {
           play();
@@ -193,7 +195,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
         setVolume(MEDIA_VOLUME_DUCK);
         break;
       case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-        if (isPlaying()) {
+        if (sessionDevice.isPlaying()) {
           playOnAudioFocus = true;
           pause();
         }
@@ -205,42 +207,9 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     }
   }
 
-  @NonNull
-  public String getContentType() {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on getContentType; no session device defined");
-      return "";
-    } else {
-      return sessionDevice.getContentType();
-    }
-  }
-
   @Nullable
   public Radio getRadio() {
     return (sessionDevice == null) ? null : sessionDevice.getRadio();
-  }
-
-  public void notifyState(int state) {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on changeAndNotifyState; no session device defined");
-    } else {
-      Log.d(LOG_TAG, "New state/lock key received: " + state + "/" + sessionDevice.getLockKey());
-      if (stateController.getPlaybackState() == state) {
-        Log.d(LOG_TAG, "=> no change");
-      } else {
-        stateController.onPlaybackStateChange(
-          getPlaybackStateCompatBuilder(state).setActions(sessionDevice.getAvailableActions()).build(),
-          sessionDevice.getLockKey());
-      }
-    }
-  }
-
-  public void onNewInformation(@NonNull String information) {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onNewInformation; no session device defined");
-    } else {
-      sessionDevice.onNewInformation(information);
-    }
   }
 
   public boolean isRemote() {
@@ -295,10 +264,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     }
   }
 
-  private boolean isPlaying() {
-    return (stateController.getPlaybackState() == PlaybackStateCompat.STATE_PLAYING);
-  }
-
   private void registerAudioNoisyReceiver() {
     if (!audioNoisyReceiverRegistered) {
       context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER);
@@ -325,12 +290,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   private boolean isAvailableAction(long action) {
-    return (sessionDevice != null) && ((sessionDevice.getAvailableActions() & action) > 0L);
-  }
-
-  public interface StateController {
-    void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey);
-
-    int getPlaybackState();
+    return (sessionDevice != null) && ((sessionDevice.getAvailableActions(sessionDevice.getState()) & action) > 0L);
   }
 }

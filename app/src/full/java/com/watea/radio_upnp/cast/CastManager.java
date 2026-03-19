@@ -31,6 +31,7 @@ import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.MenuItemCompat;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.mediarouter.app.MediaRouteActionProvider;
 import androidx.mediarouter.media.MediaRouteSelector;
 
@@ -39,8 +40,7 @@ import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
 import com.watea.radio_upnp.model.Radio;
-
-import java.util.function.Consumer;
+import com.watea.radio_upnp.model.SessionDevice;
 
 public class CastManager extends OpenCastManager<CastSessionDevice> {
   private static final String LOG_TAG = CastManager.class.getSimpleName();
@@ -160,12 +160,13 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   @NonNull
   public CastSessionDevice getCastSessionDevice(
     @NonNull Context context,
-    @NonNull Consumer<Integer> listener,
+    @NonNull ExoPlayer exoPlayer,
+    @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri,
     @Nullable Uri logoUri) {
     assert castSession != null;
-    return new CastSessionDevice(context, listener, lockKey, radio, radioUri, logoUri, castSession);
+    return new CastSessionDevice(context, exoPlayer, listener, lockKey, radio, radioUri, logoUri, castSession);
   }
 }

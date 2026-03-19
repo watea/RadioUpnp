@@ -30,6 +30,13 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
+import androidx.media3.common.Metadata;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.common.Tracks;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.ExoPlayer;
 
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaLoadRequestData;
@@ -43,13 +50,15 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
 
 import java.io.IOException;
-import java.util.function.Consumer;
 
+@OptIn(markerClass = UnstableApi.class)
 public class CastSessionDevice extends SessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
   private static final double VOLUME_STEP = 0.05; // 5%
   @NonNull
   private final CastSession castSession;
+  @NonNull
+  private final Uri radioUri;
   @Nullable
   private final Uri logoUri;
   @Nullable
@@ -71,8 +80,10 @@ public class CastSessionDevice extends SessionDevice {
           break;
         case MediaStatus.PLAYER_STATE_BUFFERING:
         case MediaStatus.PLAYER_STATE_LOADING:
-        case MediaStatus.PLAYER_STATE_IDLE:
           onState(PlaybackStateCompat.STATE_BUFFERING);
+          break;
+        case MediaStatus.PLAYER_STATE_IDLE:
+          onState(PlaybackStateCompat.STATE_ERROR);
           break;
         default:
           onState(PlaybackStateCompat.STATE_STOPPED);
@@ -82,15 +93,39 @@ public class CastSessionDevice extends SessionDevice {
 
   public CastSessionDevice(
     @NonNull Context context,
-    @NonNull Consumer<Integer> listener,
+    @NonNull ExoPlayer exoPlayer,
+    @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull CastSession castSession) {
-    super(context, listener, lockKey, radio, radioUri);
+    super(context, exoPlayer, listener, lockKey, radio);
+    this.radioUri = radioUri;
     this.logoUri = logoUri;
     this.castSession = castSession;
+  }
+
+  @NonNull
+  @Override
+  protected Player.Listener getPlayerListener() {
+    return new Player.Listener() {
+      @Override
+      public void onMetadata(@NonNull Metadata metadata) {
+        CastSessionDevice.this.onMetadata(metadata);
+      }
+
+      @Override
+      public void onTracksChanged(@NonNull Tracks tracks) {
+        CastSessionDevice.this.onTracksChanged(tracks);
+      }
+
+      @Override
+      public void onPlayerError(@NonNull PlaybackException error) {
+        Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
+        onState(PlaybackStateCompat.STATE_ERROR);
+      }
+    };
   }
 
   @Override
@@ -122,30 +157,12 @@ public class CastSessionDevice extends SessionDevice {
   }
 
   @Override
-  public long getAvailableActions() {
-    long availableActions = DEFAULT_AVAILABLE_ACTIONS;
-    switch (getState()) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-      case MediaStatus.PLAYER_STATE_LOADING:
-        availableActions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      default:
-        // Nothing else
-    }
-    return availableActions;
-  }
-
-  @Override
   public void prepareFromMediaId() {
     super.prepareFromMediaId();
     remoteMediaClient = castSession.getRemoteMediaClient();
     if (remoteMediaClient != null) {
       remoteMediaClient.registerCallback(remoteCallback);
-      load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), logoUri, true);
+      load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
     }
   }
 
@@ -170,12 +187,13 @@ public class CastSessionDevice extends SessionDevice {
     super.stop();
     if (remoteMediaClient != null) {
       remoteMediaClient.stop();
-      load(remoteMediaClient, "", "", null, false);
+      clearCastUi(remoteMediaClient);
     }
   }
 
   @Override
   public void release() {
+    super.release();
     if (remoteMediaClient != null) {
       remoteMediaClient.unregisterCallback(remoteCallback);
       remoteMediaClient = null;
@@ -186,21 +204,35 @@ public class CastSessionDevice extends SessionDevice {
     @NonNull RemoteMediaClient remoteMediaClient,
     @NonNull String keyTitle,
     @NonNull String keySubtitle,
-    @Nullable Uri logoUri,
-    boolean isAutoPlay) {
+    @NonNull String radioUri,
+    @Nullable Uri logoUri) {
     final MediaMetadata movieMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
     movieMetadata.putString(MediaMetadata.KEY_TITLE, keyTitle);
     movieMetadata.putString(MediaMetadata.KEY_SUBTITLE, keySubtitle);
     if (logoUri != null) {
       movieMetadata.addImage(new WebImage(logoUri));
     }
-    final MediaInfo mediaInfo = new MediaInfo.Builder(radioUri.toString())
+    final MediaInfo mediaInfo = new MediaInfo.Builder(radioUri)
       .setStreamType(MediaInfo.STREAM_TYPE_LIVE) // Radio
       .setMetadata(movieMetadata)
       .build();
     final MediaLoadRequestData requestData = new MediaLoadRequestData.Builder()
       .setMediaInfo(mediaInfo)
-      .setAutoplay(isAutoPlay)
+      .setAutoplay(true)
+      .build();
+    remoteMediaClient.load(requestData);
+  }
+
+  private void clearCastUi(@NonNull RemoteMediaClient remoteMediaClient) {
+    final MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_GENERIC);
+    metadata.putString(MediaMetadata.KEY_TITLE, "");
+    final MediaInfo mediaInfo = new MediaInfo.Builder("")
+      .setStreamType(MediaInfo.STREAM_TYPE_NONE)
+      .setMetadata(metadata)
+      .build();
+    final MediaLoadRequestData requestData = new MediaLoadRequestData.Builder()
+      .setMediaInfo(mediaInfo)
+      .setAutoplay(false)
       .build();
     remoteMediaClient.load(requestData);
   }

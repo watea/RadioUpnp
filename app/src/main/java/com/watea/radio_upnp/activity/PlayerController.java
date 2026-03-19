@@ -328,7 +328,8 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     }
   }
 
-  private void onNewCurrentRadio() {
+  // true if valid radio, false otherwise
+  private boolean onNewCurrentRadio() {
     final Radio radio = getCurrentRadio();
     // Manage radio description
     final boolean isVisible = (radio != null);
@@ -346,6 +347,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     if (listener != null) {
       listener.accept(radio);
     }
+    return isVisible;
   }
 
   private void copyToClipBoard(@NonNull String string) {
@@ -361,6 +363,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     playImageButton.setTag(PlaybackStateCompat.STATE_PLAYING);
   }
 
+  // Must respect (isWaiting = false) if (isOn = false)
   private void setPlayImageButtonVisibility(boolean isOn, boolean isWaiting) {
     playImageButton.setEnabled(isOn);
     playImageButton.setVisibility(MainActivityFragment.getVisibleFrom(!isWaiting));
@@ -411,8 +414,8 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
           break;
         case PlaybackStateCompat.STATE_BUFFERING:
         case PlaybackStateCompat.STATE_CONNECTING:
-          onNewCurrentRadio();
-          setPlayImageButtonVisibility(true, true);
+          final boolean isVisible = onNewCurrentRadio();
+          setPlayImageButtonVisibility(isVisible, isVisible);
           break;
         case PlaybackStateCompat.STATE_NONE:
         case PlaybackStateCompat.STATE_STOPPED:
@@ -438,16 +441,20 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       if ((mediaMetadata != null) && RadioService.isValid(mainActivity, mediaMetadata)) {
         // Use title metadata
         playedRadioInformationTextView.setText(mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
-        // Rate in extras
-        final Bundle extras = (mediaController == null) ? null : mediaController.getExtras();
-        if (extras != null) {
-          final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
-          if (rate != null) {
-            playedRadioRateTextView.setText(rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbps));
-          }
-        }
         // User help for fist valid information after a few time
         informationPressUserHint.show();
+      }
+    }
+
+    @Override
+    public void onExtrasChanged(@Nullable Bundle extras) {
+      if (extras == null) {
+        return;
+      }
+      final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
+      if (rate != null) {
+        playedRadioRateTextView.setText(
+          rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbps));
       }
     }
 

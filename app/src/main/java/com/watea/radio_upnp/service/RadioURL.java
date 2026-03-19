@@ -68,8 +68,7 @@ public class RadioURL {
     SSLContext sSLContext = null;
     try {
       sSLContext = SSLContext.getInstance("TLS");
-      sSLContext.init(
-        null, new TrustManager[]{new EasyX509TrustManager()}, new java.security.SecureRandom());
+      sSLContext.init(null, new TrustManager[]{new EasyX509TrustManager()}, new java.security.SecureRandom());
     } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
       Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
     }

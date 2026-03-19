@@ -31,19 +31,24 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
+import androidx.media3.common.Metadata;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.service.UpnpStreamServer;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
+@OptIn(markerClass = UnstableApi.class)
 public class UpnpSessionDevice extends SessionDevice {
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
@@ -54,7 +59,6 @@ public class UpnpSessionDevice extends SessionDevice {
   private static final String DEFAULT_PROTOCOL_INFO = PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
-  private static final String ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
   private static final String ACTION_PLAY = "Play";
   private static final String ACTION_STOP = "Stop";
   private static final String ACTION_SET_VOLUME = "SetVolume";
@@ -63,12 +67,10 @@ public class UpnpSessionDevice extends SessionDevice {
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
   @NonNull
-  private final Device device;
-  @NonNull
   private final ActionController actionController;
   @NonNull
-  private final ContentProvider contentProvider;
-  @Nullable
+  private final Uri radioUri;
+  @NonNull
   private final Uri logoUri;
   @Nullable
   private final Service connectionManager;
@@ -76,6 +78,8 @@ public class UpnpSessionDevice extends SessionDevice {
   private final Service avTransportService;
   @Nullable
   private final Service renderingControl;
+  @NonNull
+  private final Runnable cleanCallback;
   @NonNull
   private final String information; // Not final in further use
   private int currentVolume;
@@ -85,25 +89,43 @@ public class UpnpSessionDevice extends SessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
-    @NonNull Consumer<Integer> listener,
+    @NonNull ExoPlayer exoPlayer,
+    @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri,
-    @Nullable Uri logoUri,
+    @NonNull Uri logoUri,
     @NonNull Device device,
     @NonNull ActionController actionController,
-    @NonNull ContentProvider contentProvider) {
-    super(context, listener, lockKey, radio, radioUri);
-    this.device = device;
+    @NonNull Runnable cleanCallback) {
+    super(context, exoPlayer, listener, lockKey, radio);
+    this.radioUri = radioUri;
     this.actionController = actionController;
-    this.contentProvider = contentProvider;
     this.logoUri = logoUri;
+    this.cleanCallback = cleanCallback;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
     avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
     // Those services are mandatory in UPnP standard
     connectionManager = device.getShortService(CONNECTION_MANAGER_ID);
     renderingControl = device.getShortService(RENDERING_CONTROL_ID);
+  }
+
+  @NonNull
+  @Override
+  protected Player.Listener getPlayerListener() {
+    return new Player.Listener() {
+      @Override
+      public void onMetadata(@NonNull Metadata metadata) {
+        UpnpSessionDevice.this.onMetadata(metadata);
+      }
+
+      @Override
+      public void onPlayerError(@NonNull PlaybackException error) {
+        Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
+        onState(PlaybackStateCompat.STATE_ERROR);
+      }
+    };
   }
 
   @Override
@@ -131,82 +153,17 @@ public class UpnpSessionDevice extends SessionDevice {
   }
 
   @Override
-  public long getAvailableActions() {
-    long availableActions = DEFAULT_AVAILABLE_ACTIONS;
-    switch (getState()) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-        availableActions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      default:
-        // Nothing else
-    }
-    return availableActions;
-  }
-
-  // Special handling for MIME type
-  @Override
-  @NonNull
-  public String getContentType() {
-    String contentType = contentProvider.getContentType(radio);
-    // Default value
-    if (contentType == null) {
-      contentType = DEFAULT_CONTENT_TYPE;
-    }
-    // First choice: contentType
-    String result = contentProvider.getContentType(device, contentType);
-    if (result != null) {
-      return result;
-    }
-    // Second choice: MIME subtype
-    final String HEAD_EXP = "[a-z]*/";
-    result =
-      contentProvider.getContentType(device, HEAD_EXP + contentType.replaceFirst(HEAD_EXP, ""));
-    if (result != null) {
-      return result;
-    }
-    // AAC special case
-    if (contentType.contains("aac")) {
-      result = contentProvider.getContentType(device, AUDIO_CONTENT_TYPE + "mp4");
-      if (result != null) {
-        return result;
-      }
-    }
-    // Default case
-    return contentType;
-  }
-
-  @Override
   public void prepareFromMediaId() {
     super.prepareFromMediaId();
     onState(PlaybackStateCompat.STATE_BUFFERING);
-    // First we need to know radio content type
-    contentProvider.fetchContentType(radio, () -> {
-      if (getState() == PlaybackStateCompat.STATE_BUFFERING) {
-        // Do prepare if action available
-        scheduleActionPrepareForConnection();
-        // Fetch ProtocolInfo if not available
-        if (!contentProvider.hasProtocolInfo(device)) {
-          scheduleActionGetProtocolInfo();
-        }
-        scheduleActionSetAvTransportUri();
-        scheduleActionPlay();
-      } else {
-        // Something went wrong
-        onState(PlaybackStateCompat.STATE_ERROR);
-      }
-    });
+    scheduleActionPrepareForConnection();
+    scheduleActionSetAvTransportUri();
+    scheduleActionPlay();
   }
 
   @Override
   public void play() {
-    super.play();
-    onState(PlaybackStateCompat.STATE_BUFFERING);
-    scheduleActionSetAvTransportUri();
-    scheduleActionPlay();
+    Log.e(LOG_TAG, "play: shall not be used!");
   }
 
   @Override
@@ -224,6 +181,7 @@ public class UpnpSessionDevice extends SessionDevice {
   @Override
   public void release() {
     stop();
+    cleanCallback.run();
   }
 
   private void scheduleMandatoryAction(
@@ -384,34 +342,6 @@ public class UpnpSessionDevice extends SessionDevice {
         .addArgument("CurrentURIMetaData", getMetaData()));
   }
 
-  private void scheduleActionGetProtocolInfo() {
-    scheduleMandatoryAction(
-      (connectionManager == null) ? null : connectionManager.getAction(ACTION_GET_PROTOCOL_INFO),
-      action -> new UpnpAction(action, actionController) {
-        @Override
-        protected void onSuccess() {
-          final String sink = getResponse("Sink");
-          if (sink != null) {
-            final List<String> protocolInfos = new ArrayList<>();
-            for (final String protocolInfo : sink.split(",")) {
-              if (UpnpSessionDevice.isHandling(protocolInfo)) {
-                Log.d(LOG_TAG, "Audio ProtocolInfo: " + protocolInfo);
-                protocolInfos.add(protocolInfo);
-              }
-            }
-            contentProvider.putProtocolInfo(action.getDevice(), protocolInfos);
-          }
-          super.onSuccess();
-        }
-
-        @Override
-        protected void onFailure() {
-          onState(PlaybackStateCompat.STATE_ERROR);
-          super.onFailure();
-        }
-      });
-  }
-
   @NonNull
   private String moveToSoap(@NonNull String string) {
     return string
@@ -435,8 +365,7 @@ public class UpnpSessionDevice extends SessionDevice {
       "<upnp:artist>" + moveToSoap(information) + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" +
-      PROTOCOL_INFO_HEADER + getContentType() + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + UpnpStreamServer.MIME + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
       "</item>" +
       "</DIDL-Lite>");
   }
