@@ -146,7 +146,7 @@ public class UpnpStreamServer extends NanoHTTPD {
     // -- Stream --
     // Wait for audio format to be ready
     final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
-    while (isInactive()) {
+    while (!callback.getLockKey().equals(lockKey.get())) {
       if (System.currentTimeMillis() > deadline) {
         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Format timeout");
       }
@@ -167,7 +167,7 @@ public class UpnpStreamServer extends NanoHTTPD {
     }
     callback.onConnect(incomingLockKey);
     queue.clear();
-    return getResponse(session.getMethod());
+    return getResponse(session.getMethod(), incomingLockKey);
   }
 
   // Returns the stream URL to pass to the renderer via SetAVTransportURI
@@ -175,18 +175,14 @@ public class UpnpStreamServer extends NanoHTTPD {
     return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/" + STREAM_PREFIX + lockKey + STREAM_SUFFIX);
   }
 
-  private boolean isInactive() {
-    return !callback.getLockKey().equals(lockKey.get());
-  }
-
   @NonNull
-  private Response getResponse(@Nullable Method method) {
+  private Response getResponse(@Nullable Method method, @NonNull String lockKey) {
     final boolean isGet = Method.GET.equals(method);
     final boolean isHead = Method.HEAD.equals(method);
     if (!isGet && !isHead) {
       return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_PLAINTEXT, "Invalid request");
     }
-    final InputStream inputStream = isGet ? new WavInputStream(sampleRate, channelCount, bitsPerSample, lockKey.get()) : new ByteArrayInputStream(new byte[0]);
+    final InputStream inputStream = isGet ? new WavInputStream(sampleRate, channelCount, bitsPerSample, lockKey) : new ByteArrayInputStream(new byte[0]);
     final Response response = newFixedLengthResponse(Response.Status.OK, MIME, inputStream, FAKE_STREAM_LENGTH);
     response.addHeader("transferMode.dlna.org", "Streaming");
     response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
@@ -224,7 +220,7 @@ public class UpnpStreamServer extends NanoHTTPD {
 
     @Override
     public int read(final byte[] buf, final int off, final int len) throws IOException {
-      if (isInactive()) {
+      if (!lockKey.equals(callback.getLockKey())) {
         throw new IOException("Stream stopped");
       }
       try {
