@@ -76,9 +76,7 @@ public class UpnpStreamServer extends NanoHTTPD {
     }
 
     @Override
-    public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
-      // Current stream signature
-      UpnpStreamServer.this.lockKey.set(lockKey);
+    public void onPcmData(@NonNull byte[] pcmData) {
       // PCM 16-bit little-endian byte array
       feed(pcmData);
     }

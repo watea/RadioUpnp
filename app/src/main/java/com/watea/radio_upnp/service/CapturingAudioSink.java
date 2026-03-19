@@ -39,7 +39,6 @@ import androidx.media3.exoplayer.audio.AudioSink;
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 @OptIn(markerClass = UnstableApi.class)
 public class CapturingAudioSink implements AudioSink {
@@ -49,7 +48,6 @@ public class CapturingAudioSink implements AudioSink {
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
   @NonNull
   private final AudioSink delegate;
-  private final AtomicReference<String> lockKey = new AtomicReference<>("");
   private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);
   @Nullable
   private Callback callback = null;
@@ -58,9 +56,8 @@ public class CapturingAudioSink implements AudioSink {
   private volatile long byteRate = DEFAULT;
   private volatile long lastPresentationTimeUs = 0; // Presentation time microseconds
 
-  public CapturingAudioSink(@NonNull AudioSink delegate, @NonNull String lockKey) {
+  public CapturingAudioSink(@NonNull AudioSink delegate) {
     this.delegate = delegate;
-    this.lockKey.set(lockKey);
   }
 
   public void setCallback(@NonNull Callback callback) {
@@ -245,7 +242,7 @@ public class CapturingAudioSink implements AudioSink {
   public interface Callback {
     void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample);
 
-    void onPcmData(@NonNull byte[] data, @NonNull String lockKey);
+    void onPcmData(@NonNull byte[] data);
   }
 
   // callback != null.
@@ -283,7 +280,7 @@ public class CapturingAudioSink implements AudioSink {
           }
           bytesConsumed += pcmData.length;
           assert callback != null;
-          callback.onPcmData(pcmData, lockKey.get());
+          callback.onPcmData(pcmData);
         } catch (InterruptedException interruptedException) {
           Thread.currentThread().interrupt();
         }

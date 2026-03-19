@@ -754,7 +754,7 @@ public class RadioService
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      final CapturingAudioSink capturingSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey);
+      final CapturingAudioSink capturingSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build());
       final ExoPlayer exoPlayer = getExoPlayer(capturingSink);
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       if (isRemoteReady && castManager.hasCastSession()) {
