@@ -82,7 +82,7 @@ public class CapturingAudioSink implements AudioSink {
     delegate.configure(inputFormat, specifiedBufferSize, outputChannels);
   }
 
-  // presentationTimeUs: microseconds, It is the timestamp in microseconds at which this audio frame must be presented (played) to the user, within the media timeline
+  // presentationTimeUs: microseconds, it is the timestamp in microseconds at which this audio frame must be presented (played) to the user, within the media timeline
   @Override
   public boolean handleBuffer(@NonNull ByteBuffer buffer, long presentationTimeUs, int encodedAccessUnitCount)
     throws InitializationException, WriteException {

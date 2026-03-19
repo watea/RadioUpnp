@@ -58,6 +58,8 @@ public class UpnpStreamServer extends NanoHTTPD {
   private static final int REMOTE_LOGO_SIZE = 300;
   private static final String LOGO_PREFIX = "logo";
   private static final String LOGO_SUFFIX = ".jpg";
+  private static final String STREAM_PREFIX = "stream-";
+  private static final String STREAM_SUFFIX = ".wav";
   private static final long FAKE_STREAM_LENGTH = 0x7FFFFFFFL; // ~2GB
   @NonNull
   private final Callback callback;
@@ -90,6 +92,14 @@ public class UpnpStreamServer extends NanoHTTPD {
   public UpnpStreamServer(@NonNull Callback callback) throws IOException {
     super(0);
     this.callback = callback;
+  }
+
+  @Nullable
+  private static String extractLockKey(@NonNull String uri) {
+    if (uri.startsWith(STREAM_PREFIX) && uri.endsWith(STREAM_SUFFIX)) {
+      return uri.substring(STREAM_PREFIX.length(), uri.length() - STREAM_SUFFIX.length());
+    }
+    return null;
   }
 
   @NonNull
@@ -134,7 +144,7 @@ public class UpnpStreamServer extends NanoHTTPD {
         newFixedLengthResponse(Response.Status.OK, "image/jpeg", new ByteArrayInputStream(logoBytes), logoBytes.length);
     }
     // -- Stream --
-    queue.clear();
+    // Wait for audio format to be ready
     final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
     while (isInactive()) {
       if (System.currentTimeMillis() > deadline) {
@@ -148,14 +158,21 @@ public class UpnpStreamServer extends NanoHTTPD {
         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Interrupted");
       }
     }
-    callback.onConnect(lockKey.get());
+    final String incomingLockKey = extractLockKey(uri);
+    if (incomingLockKey == null) {
+      return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_PLAINTEXT, "Invalid request");
+    }
+    if (!incomingLockKey.equals(callback.getLockKey())) {
+      return newFixedLengthResponse(Response.Status.GONE, MIME_PLAINTEXT, "Stale session");
+    }
+    callback.onConnect(incomingLockKey);
+    queue.clear();
     return getResponse(session.getMethod());
   }
 
   // Returns the stream URL to pass to the renderer via SetAVTransportURI
-  @NonNull
-  public Uri getStreamUri(@NonNull final String localIp) {
-    return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/stream.wav");
+  public Uri getStreamUri(@NonNull String localIp, @NonNull String lockKey) {
+    return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/" + STREAM_PREFIX + lockKey + STREAM_SUFFIX);
   }
 
   private boolean isInactive() {

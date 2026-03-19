@@ -765,7 +765,7 @@ public class RadioService
           RadioService.this,
           lockKey,
           radio,
-          upnpStreamServer.getStreamUri(localIp),
+          upnpStreamServer.getStreamUri(localIp, lockKey),
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         // Link capturingSink to upnpStreamServer
@@ -776,7 +776,7 @@ public class RadioService
           RadioService.this,
           lockKey,
           radio,
-          upnpStreamServer.getStreamUri(localIp),
+          upnpStreamServer.getStreamUri(localIp, lockKey),
           upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
           upnpService.getActionController());
