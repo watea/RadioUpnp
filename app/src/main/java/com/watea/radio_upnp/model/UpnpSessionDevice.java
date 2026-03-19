@@ -32,9 +32,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.media3.common.Metadata;
-import androidx.media3.common.PlaybackException;
-import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 
@@ -105,23 +102,6 @@ public class UpnpSessionDevice extends SessionDevice {
     // Those services are mandatory in UPnP standard
     connectionManager = device.getShortService(CONNECTION_MANAGER_ID);
     renderingControl = device.getShortService(RENDERING_CONTROL_ID);
-  }
-
-  @NonNull
-  @Override
-  protected Player.Listener getPlayerListener() {
-    return new Player.Listener() {
-      @Override
-      public void onMetadata(@NonNull Metadata metadata) {
-        UpnpSessionDevice.this.onMetadata(metadata);
-      }
-
-      @Override
-      public void onPlayerError(@NonNull PlaybackException error) {
-        Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
-        onState(PlaybackStateCompat.STATE_ERROR);
-      }
-    };
   }
 
   @Override

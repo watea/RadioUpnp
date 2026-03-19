@@ -35,6 +35,7 @@ import androidx.annotation.OptIn;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Metadata;
+import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
@@ -175,32 +176,10 @@ public abstract class SessionDevice {
     return availableActions;
   }
 
-  protected void onMetadata(@NonNull Metadata metadata) {
-    String title = null;
-    for (int i = 0; i < metadata.length(); i++) {
-      final Metadata.Entry entry = metadata.get(i);
-      if (entry instanceof IcyInfo) {
-        final IcyInfo icyInfo = (IcyInfo) entry;
-        title = icyInfo.title;
-        break;
-      }
-    }
-    listener.onNewInformation((title == null) ? "" : title, lockKey);
-  }
-
-  protected void onTracksChanged(@NonNull Tracks tracks) {
-    for (final Tracks.Group group : tracks.getGroups()) {
-      for (int i = 0; i < group.length; i++) {
-        final Format format = group.getTrackFormat(i);
-        if (format.bitrate != Format.NO_VALUE) {
-          listener.onNewBitrate(format.bitrate / 1000, lockKey);
-        }
-      }
-    }
-  }
-
   @NonNull
-  protected abstract Player.Listener getPlayerListener();
+  protected Player.Listener getPlayerListener() {
+    return new PlayerListener();
+  }
 
   public interface Listener {
     void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey);
@@ -210,5 +189,39 @@ public abstract class SessionDevice {
     void onNewBitrate(int bitrate, @NonNull String lockKey);
 
     int getPlaybackState();
+  }
+
+  protected class PlayerListener implements Player.Listener {
+    @Override
+    public void onMetadata(@NonNull Metadata metadata) {
+      String title = null;
+      for (int i = 0; i < metadata.length(); i++) {
+        final Metadata.Entry entry = metadata.get(i);
+        if (entry instanceof IcyInfo) {
+          final IcyInfo icyInfo = (IcyInfo) entry;
+          title = icyInfo.title;
+          break;
+        }
+      }
+      listener.onNewInformation((title == null) ? "" : title, lockKey);
+    }
+
+    @Override
+    public void onTracksChanged(@NonNull Tracks tracks) {
+      for (final Tracks.Group group : tracks.getGroups()) {
+        for (int i = 0; i < group.length; i++) {
+          final Format format = group.getTrackFormat(i);
+          if (format.bitrate != Format.NO_VALUE) {
+            listener.onNewBitrate(format.bitrate / 1000, lockKey);
+          }
+        }
+      }
+    }
+
+    @Override
+    public void onPlayerError(@NonNull PlaybackException error) {
+      Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
+      onState(PlaybackStateCompat.STATE_ERROR);
+    }
   }
 }

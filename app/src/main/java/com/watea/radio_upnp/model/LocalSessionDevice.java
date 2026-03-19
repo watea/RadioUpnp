@@ -29,10 +29,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
-import androidx.media3.common.Metadata;
-import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
-import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 
@@ -51,17 +48,7 @@ public class LocalSessionDevice extends SessionDevice {
 
   @NonNull
   protected Player.Listener getPlayerListener() {
-    return new Player.Listener() {
-      @Override
-      public void onMetadata(@NonNull Metadata metadata) {
-        LocalSessionDevice.this.onMetadata(metadata);
-      }
-
-      @Override
-      public void onTracksChanged(@NonNull Tracks tracks) {
-        LocalSessionDevice.this.onTracksChanged(tracks);
-      }
-
+    return new PlayerListener() {
       @Override
       public void onPlaybackStateChanged(int playbackState) {
         Log.d(LOG_TAG, "onPlaybackStateChanged: State=" + playbackState);
@@ -81,12 +68,6 @@ public class LocalSessionDevice extends SessionDevice {
             Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
             onState(PlaybackStateCompat.STATE_ERROR);
         }
-      }
-
-      @Override
-      public void onPlayerError(@NonNull PlaybackException error) {
-        Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
-        onState(PlaybackStateCompat.STATE_ERROR);
       }
     };
   }

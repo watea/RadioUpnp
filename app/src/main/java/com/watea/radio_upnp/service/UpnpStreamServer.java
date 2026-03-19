@@ -164,7 +164,6 @@ public class UpnpStreamServer extends NanoHTTPD {
     if (!incomingLockKey.equals(callback.getLockKey())) {
       return newFixedLengthResponse(Response.Status.GONE, MIME_PLAINTEXT, "Stale session");
     }
-    callback.onConnect(incomingLockKey);
     queue.clear();
     return getResponse(session.getMethod(), incomingLockKey);
   }
@@ -189,8 +188,6 @@ public class UpnpStreamServer extends NanoHTTPD {
   }
 
   public interface Callback {
-    void onConnect(@NonNull String lockKey);
-
     void onDisconnect(@NonNull String lockKey);
 
     @NonNull
@@ -233,8 +230,6 @@ public class UpnpStreamServer extends NanoHTTPD {
         }
         if (pending == null) {
           Log.w(TAG, "PCM timeout (" + PACER_POLL_TIMEOUT + "s) – stream stalled");
-          // Something went wrong
-          callback.onDisconnect(lockKey);
           throw new IOException("Stream stalled");
         }
         final int toCopy = Math.min(pending.length - pendingOffset, len);
@@ -246,10 +241,14 @@ public class UpnpStreamServer extends NanoHTTPD {
         return toCopy;
       } catch (InterruptedException interruptedException) {
         Thread.currentThread().interrupt();
-        // Something went wrong
-        callback.onDisconnect(lockKey);
         throw new IOException("Interrupted", interruptedException);
       }
+    }
+
+    @Override
+    public void close() throws IOException {
+      super.close();
+      callback.onDisconnect(lockKey);
     }
 
     // Builds a standard 44-byte WAV header.

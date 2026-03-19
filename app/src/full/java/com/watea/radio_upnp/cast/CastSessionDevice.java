@@ -31,10 +31,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.media3.common.Metadata;
-import androidx.media3.common.PlaybackException;
-import androidx.media3.common.Player;
-import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 
@@ -110,28 +106,6 @@ public class CastSessionDevice extends SessionDevice {
     this.radioUri = radioUri;
     this.logoUri = logoUri;
     this.castSession = castSession;
-  }
-
-  @NonNull
-  @Override
-  protected Player.Listener getPlayerListener() {
-    return new Player.Listener() {
-      @Override
-      public void onMetadata(@NonNull Metadata metadata) {
-        CastSessionDevice.this.onMetadata(metadata);
-      }
-
-      @Override
-      public void onTracksChanged(@NonNull Tracks tracks) {
-        CastSessionDevice.this.onTracksChanged(tracks);
-      }
-
-      @Override
-      public void onPlayerError(@NonNull PlaybackException error) {
-        Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
-        onState(PlaybackStateCompat.STATE_ERROR);
-      }
-    };
   }
 
   @Override

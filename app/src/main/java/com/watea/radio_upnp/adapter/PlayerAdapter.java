@@ -137,7 +137,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
       unregisterAudioNoisyReceiver();
     }
     onStop();
-    onRelease();
   }
 
   // Called when resources must be released, no impact on playback state

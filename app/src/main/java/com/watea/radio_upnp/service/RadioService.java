@@ -141,7 +141,6 @@ public class RadioService
   private MediaSessionCompat session;
   @Nullable
   private UpnpStreamServer upnpStreamServer = null;
-  private boolean isAllowedToRewind = false;
   @Nullable
   private ScheduledExecutorService scheduler = null;
   private NotificationCompat.Action actionPause;
@@ -158,19 +157,9 @@ public class RadioService
     }
 
     @Override
-    public void onConnect(@NonNull String lockKey) {
-      runIfLocked(lockKey, () -> isAllowedToRewind = true);
-    }
-
-    @Override
     public void onDisconnect(@NonNull String lockKey) {
-      runIfLocked(lockKey, () -> {
-        // Disconnect is not expected if playing
-        final int state = getPlaybackState();
-        if ((state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PLAYING)) {
-          onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build());
-        }
-      });
+      Log.d(LOG_TAG, "onDisconnect: " + lockKey);
+      runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
     }
   };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
@@ -441,31 +430,11 @@ public class RadioService
           startForeground(FOREGROUND_NOTIFICATION_ID, getNotification());
         }
         break;
+      case PlaybackStateCompat.STATE_ERROR:
+        playerAdapter.release();
       case PlaybackStateCompat.STATE_PAUSED:
         releaseScheduler();
         buildNotification();
-        break;
-      case PlaybackStateCompat.STATE_ERROR:
-        playerAdapter.release();
-        releaseScheduler();
-        // Try to relaunch just once
-        if (isAllowedToRewind) {
-          isAllowedToRewind = false;
-          handler.postDelayed(() -> {
-              try {
-                // Still in error?
-                if (getPlaybackState() == PlaybackStateCompat.STATE_ERROR) {
-                  mediaSessionCompatCallback.onRewind();
-                }
-              } catch (Exception exception) {
-                Log.d(LOG_TAG, "Relaunch failed, we stop");
-                mediaSessionCompatCallback.onStop();
-              }
-            },
-            4000);
-        } else {
-          buildNotification();
-        }
         break;
       default:
         // Release everything
@@ -640,7 +609,6 @@ public class RadioService
       final String lastPlaylist = (mediaMetadataCompat == null) ? "" : mediaMetadataCompat.getString(PLAYLIST);
       buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
       // Start service, must be done while activity has foreground
-      isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
         startForegroundService(new Intent(RadioService.this, RadioService.class));
       } else {
