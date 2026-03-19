@@ -64,7 +64,6 @@ public class UpnpStreamServer extends NanoHTTPD {
   @NonNull
   private final Callback callback;
   private final ArrayBlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
-  @NonNull
   private final AtomicReference<String> lockKey = new AtomicReference<>(""); // Current stream signature
   private int sampleRate = DEFAULT;
   private int channelCount = DEFAULT;
