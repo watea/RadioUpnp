@@ -43,11 +43,17 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
 
-import org.xmlpull.v1.XmlPullParserException;
-
-import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class AndroidUpnpService extends android.app.Service {
@@ -55,6 +61,7 @@ public class AndroidUpnpService extends android.app.Service {
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
   private static final String DEVICE_VERSION = "1";
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
+  private static final long DEVICE_FETCH_TIMEOUT_S = 5L; // s, max time to wait for a device HTTP description fetch before giving up
   private final NetworkRequest networkRequest = new NetworkRequest.Builder()
     .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) // Not a VPN
     .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) // Validated
@@ -63,7 +70,11 @@ public class AndroidUpnpService extends android.app.Service {
   private final Binder binder = new UpnpService();
   private final ActionController actionController = new ActionController();
   private final Devices devices = new Devices();
-  private final Set<Listener> listeners = new HashSet<>();
+  // CopyOnWriteArraySet ensures thread-safe iteration and modification:
+  // listener notifications are dispatched from background threads while
+  // add/remove can happen from binder threads concurrently
+  private final Set<Listener> listeners = new CopyOnWriteArraySet<>();
+  private final ExecutorService deviceExecutor = Executors.newCachedThreadPool(); // Bounded executor for device HTTP fetches — prevents unbounded raw thread creation
   private final SsdpClient.Listener ssdpClientListener = new SsdpClient.Listener() {
     public void onServiceDiscovered(@NonNull SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
@@ -122,8 +133,12 @@ public class AndroidUpnpService extends android.app.Service {
   public void onDestroy() {
     super.onDestroy();
     connectivityManager.unregisterNetworkCallback(networkCallback);
-    ssdpClient.stop();
+    // Clear listeners BEFORE stopping the SSDP client to prevent
+    // spurious onDeviceRemove() notifications during shutdown
     listeners.clear();
+    ssdpClient.stop();
+    // Shut down the device fetch executor
+    deviceExecutor.shutdownNow();
   }
 
   @Nullable
@@ -133,16 +148,20 @@ public class AndroidUpnpService extends android.app.Service {
   }
 
   private void tellRemoveListeners(@NonNull Device device) {
+    // Pre-capture embedded devices while the set is still populated
+    final List<Device> embedded = devices.getEmbeddedDevicesStream(device).collect(Collectors.toList());
     listeners.forEach(listener -> {
       listener.onDeviceRemove(device);
-      devices.getEmbeddedDevicesStream(device).forEach(listener::onDeviceRemove);
+      embedded.forEach(listener::onDeviceRemove);
     });
   }
 
   private void tellAddListeners(@NonNull Device device) {
+    // Pre-capture embedded devices while the set is still populated
+    final List<Device> embedded = devices.getEmbeddedDevicesStream(device).collect(Collectors.toList());
     listeners.forEach(listener -> {
       listener.onDeviceAdd(device);
-      devices.getEmbeddedDevicesStream(device).forEach(listener::onDeviceAdd);
+      embedded.forEach(listener::onDeviceAdd);
     });
   }
 
@@ -185,14 +204,14 @@ public class AndroidUpnpService extends android.app.Service {
       listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
     }
 
-    // Null if no valid device selected
+    // Returns null if no device is persisted or if the persisted identity is no longer known
     @Nullable
     public Device getSelectedDevice() {
       final String selectedDeviceIdentity = getSharedPreferences(getString(R.string.app_name), Context.MODE_PRIVATE).getString(getString(R.string.key_selected_device), null);
       return (selectedDeviceIdentity == null) ? null : devices.get(selectedDeviceIdentity);
     }
 
-    // Null if no active device selected
+    // Returns null if no device is selected OR if the selected device is no longer alive
     @Nullable
     public Device getActiveSelectedDevice() {
       final Device result = getSelectedDevice();
@@ -201,7 +220,11 @@ public class AndroidUpnpService extends android.app.Service {
   }
 
   private class Devices extends HashSet<Device> {
-    // Add device if has good DEVICE and not already known
+    // Tracks UUIDs currently being fetched to prevent duplicate Device
+    // construction when two SSDP announcements for the same UUID arrive in quick succession
+    private final Set<String> pendingUUIDs = new HashSet<>();
+
+    // Add device if it has the expected device type and is not already known
     @Override
     public synchronized boolean add(Device device) {
       final boolean added = !device.isOnError() &&
@@ -226,18 +249,42 @@ public class AndroidUpnpService extends android.app.Service {
       final String uUID = Device.getUUID(service);
       final Device knownDevice = (uUID == null) ? null : get(uUID);
       if (knownDevice == null) {
-        // Device not found, we build in own thread
-        new Thread(() -> {
+        // Skip if this UUID is already being fetched asynchronously —
+        // prevents duplicate Device objects from concurrent SSDP announcements
+        if ((uUID != null) && pendingUUIDs.contains(uUID)) {
+          Log.d(LOG_TAG, "Device fetch already in progress for UUID: " + uUID);
+          return;
+        }
+        if (uUID != null) {
+          pendingUUIDs.add(uUID);
+        }
+        // Submit the blocking HTTP fetch to the bounded executor and
+        // enforce a timeout via a second executor task to avoid hanging threads
+        final Future<Device> future = deviceExecutor.submit(() -> new Device(service));
+        deviceExecutor.execute(() -> {
           try {
-            final Device device = new Device(service);
+            final Device device = future.get(DEVICE_FETCH_TIMEOUT_S, TimeUnit.SECONDS);
             final Set<Device> embeddedDevices = device.getEmbeddedDevices();
             Log.d(LOG_TAG, "Device found (embedded: " + embeddedDevices.size() + ", onError: " + device.isOnError() + "): " + device.getDisplayString());
             add(device);
             addAll(embeddedDevices);
-          } catch (IOException | XmlPullParserException exception) {
-            Log.e(LOG_TAG, "process: add device failed!", exception);
+          } catch (TimeoutException timeoutException) {
+            Log.w(LOG_TAG, "Device fetch timed out: " + service);
+            future.cancel(true);
+          } catch (ExecutionException executionException) {
+            Log.e(LOG_TAG, "process: add device failed!", executionException.getCause());
+          } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+          } finally {
+            // Always release the pending guard, even on failure, so
+            // subsequent announcements for this UUID are not permanently blocked
+            if (uUID != null) {
+              synchronized (Devices.this) {
+                pendingUUIDs.remove(uUID);
+              }
+            }
           }
-        }).start();
+        });
       } else {
         final boolean isAlive = Device.isAlive(service.getStatus());
         if (knownDevice.isAlive() != isAlive) {

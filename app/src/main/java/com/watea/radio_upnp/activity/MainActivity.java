@@ -160,7 +160,7 @@ public class MainActivity
 
       @Override
       public void onFatalError() {
-        tell(R.string.upnp_error);
+        runOnUiThread(() -> tell(R.string.upnp_error));
       }
 
       @Override
