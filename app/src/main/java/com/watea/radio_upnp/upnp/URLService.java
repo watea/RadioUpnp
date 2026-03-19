@@ -49,10 +49,11 @@ public class URLService {
   private static final int TIMEOUT = 3000; // ms, for connection and read
   private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
   @NonNull
-  final URLConnection uRLConnection;
+  private final URLConnection uRLConnection;
   private final Map<String, String> tags = new HashMap<>();
   @Nullable
   private String content = null;
+  private boolean streamConsumed = false; // Guards against double getInputStream() calls on the same URLConnection
 
   public URLService(@NonNull URL uRL) throws IOException {
     uRLConnection = uRL.openConnection();
@@ -104,8 +105,12 @@ public class URLService {
   }
 
   // Calls consumer on START_TAG, END_TAG.
-  // XML contents may be handeld with getTag, clearTags.
+  // XML contents may be handled with getTag, clearTags.
+  // fetchContent() must be called before parseXml().
   public void parseXml(@NonNull Consumer consumer) throws XmlPullParserException, IOException {
+    if (content == null) {
+      throw new IllegalStateException("fetchContent() must be called before parseXml()");
+    }
     final XmlPullParserFactory xmlPullParserFactory = XmlPullParserFactory.newInstance();
     xmlPullParserFactory.setNamespaceAware(true);
     final XmlPullParser xmlPullParser = xmlPullParserFactory.newPullParser();
@@ -141,6 +146,10 @@ public class URLService {
 
   @NonNull
   private InputStream getInputStream() throws IOException {
+    if (streamConsumed) {
+      throw new IllegalStateException("URLConnection stream already consumed; create a new URLService instance");
+    }
+    streamConsumed = true;
     return uRLConnection.getInputStream();
   }
 

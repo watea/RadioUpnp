@@ -46,10 +46,11 @@ public class CapturingAudioSink implements AudioSink {
   private static final String LOG_TAG = CapturingAudioSink.class.getSimpleName();
   private static final int PACER_TIMEOUT = 2; // s
   private static final int DEFAULT = -1;
+  private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
   @NonNull
   private final AudioSink delegate;
   private final AtomicReference<String> lockKey = new AtomicReference<>("");
-  private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>();
+  private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);
   @Nullable
   private Callback callback = null;
   @Nullable
@@ -92,7 +93,11 @@ public class CapturingAudioSink implements AudioSink {
       if (buffer.hasRemaining()) {
         final byte[] pcmData = new byte[buffer.remaining()];
         buffer.get(pcmData);
-        pcmBuffer.add(pcmData);
+        try {
+          pcmBuffer.put(pcmData); // Backpressure: blocks ExoPlayer if Pacer is lagging
+        } catch (InterruptedException interruptedException) {
+          Thread.currentThread().interrupt();
+        }
       }
       return true;
     }
