@@ -118,13 +118,12 @@ public class RadioService
   };
   private final AtomicReference<String> lockKey = new AtomicReference<>(getLockKey());
   private PlayerAdapter playerAdapter;
-  private final VolumeProviderCompat volumeProviderCompat =
-    new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
-      @Override
-      public void onAdjustVolume(int direction) {
-        playerAdapter.adjustVolume(direction);
-      }
-    };
+  private final VolumeProviderCompat volumeProviderCompat = new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
+    @Override
+    public void onAdjustVolume(int direction) {
+      playerAdapter.adjustVolume(direction);
+    }
+  };
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {

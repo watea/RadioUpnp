@@ -68,19 +68,6 @@ public class UpnpStreamServer extends NanoHTTPD {
   private int sampleRate = DEFAULT;
   private int channelCount = DEFAULT;
   private int bitsPerSample = DEFAULT;
-  private final CapturingAudioSink.Callback pcmCallback = new CapturingAudioSink.Callback() {
-    @Override
-    public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
-      // Update WAV header format
-      setAudioFormat(sampleRate, channelCount, bitsPerSample);
-    }
-
-    @Override
-    public void onPcmData(@NonNull byte[] pcmData) {
-      // PCM 16-bit little-endian byte array
-      feed(pcmData);
-    }
-  };
   @Nullable
   private String logoUri = null;
   @Nullable
@@ -101,7 +88,19 @@ public class UpnpStreamServer extends NanoHTTPD {
 
   @NonNull
   public CapturingAudioSink.Callback getPcmCallback() {
-    return pcmCallback;
+    return new CapturingAudioSink.Callback() {
+      @Override
+      public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
+        // Update WAV header format
+        setAudioFormat(sampleRate, channelCount, bitsPerSample);
+      }
+
+      @Override
+      public void onPcmData(@NonNull byte[] pcmData) {
+        // PCM 16-bit little-endian byte array
+        feed(pcmData);
+      }
+    };
   }
 
   @NonNull
