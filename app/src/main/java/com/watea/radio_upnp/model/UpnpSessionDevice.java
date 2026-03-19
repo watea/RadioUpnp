@@ -204,6 +204,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
         @Override
         protected void onFailure() {
+          Log.d(LOG_TAG, "scheduleActionPlay: error");
           onState(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
@@ -225,6 +226,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
         @Override
         protected void onFailure() {
+          Log.d(LOG_TAG, "scheduleActionStop: error");
           onState(PlaybackStateCompat.STATE_ERROR);
           super.onFailure();
         }
@@ -310,6 +312,13 @@ public class UpnpSessionDevice extends SessionDevice {
         .addArgument(INPUT_CHANNEL, INPUT_MASTER);
   }
 
+  @Override
+  public void release() {
+    super.release();
+    // Put device in idle state
+    stop();
+  }
+
   private void scheduleActionSetAvTransportUri() {
     scheduleMandatoryAction(
       (avTransportService == null) ? null : avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
@@ -322,6 +331,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
         @Override
         protected void onFailure() {
+          Log.d(LOG_TAG, "scheduleActionSetAvTransportUri: error");
           onState(PlaybackStateCompat.STATE_ERROR);
           // Release other UPnP actions on this device
           actionController.release(action.getDevice());

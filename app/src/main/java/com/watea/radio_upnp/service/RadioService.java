@@ -421,7 +421,11 @@ public class RadioService
   }
 
   private void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
-    Log.d(LOG_TAG, "Valid state/lock key received: " + state.getState() + "/" + lockKey);
+    Log.d(LOG_TAG, "Valid state/lock key received: " + SessionDevice.getStateName(state.getState()) + "/" + lockKey);
+    // Nothing can change if Stopped
+    if (getPlaybackState() == PlaybackStateCompat.STATE_STOPPED) {
+      return;
+    }
     // Report the state to the MediaSession
     session.setPlaybackState(state);
     // Manage the started state of this service, and session activity
@@ -514,36 +518,31 @@ public class RadioService
     }
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
-    final PlaybackStateCompat playbackStateCompat = mediaController.getPlaybackState();
-    if (playbackStateCompat == null) {
-      builder.setOngoing(false);
-    } else {
-      builder.addAction(actionSkipToPrevious);
-      switch (playbackStateCompat.getState()) {
-        case PlaybackStateCompat.STATE_PLAYING:
-          builder
-            .addAction(actionPause)
-            .setOngoing(true);
-          mediaStyle.setShowActionsInCompactView(0, 1, 2);
-          break;
-        case PlaybackStateCompat.STATE_PAUSED:
-          builder
-            .addAction(actionPlay)
-            .setOngoing(false);
-          mediaStyle.setShowActionsInCompactView(0, 1, 2);
-          break;
-        case PlaybackStateCompat.STATE_ERROR:
-          builder
-            .addAction(actionRewind)
-            .setOngoing(false);
-          mediaStyle.setShowActionsInCompactView(0, 1, 2);
-          break;
-        default:
-          builder.setOngoing(false);
-          mediaStyle.setShowActionsInCompactView(0, 1);
-      }
-      builder.addAction(actionSkipToNext);
+    builder.addAction(actionSkipToPrevious);
+    switch (getPlaybackState()) {
+      case PlaybackStateCompat.STATE_PLAYING:
+        builder
+          .addAction(actionPause)
+          .setOngoing(true);
+        mediaStyle.setShowActionsInCompactView(0, 1, 2);
+        break;
+      case PlaybackStateCompat.STATE_PAUSED:
+        builder
+          .addAction(actionPlay)
+          .setOngoing(false);
+        mediaStyle.setShowActionsInCompactView(0, 1, 2);
+        break;
+      case PlaybackStateCompat.STATE_ERROR:
+        builder
+          .addAction(actionRewind)
+          .setOngoing(false);
+        mediaStyle.setShowActionsInCompactView(0, 1, 2);
+        break;
+      default:
+        builder.setOngoing(false);
+        mediaStyle.setShowActionsInCompactView(0, 1);
     }
+    builder.addAction(actionSkipToNext);
     return builder
       .setStyle(mediaStyle)
       .build();

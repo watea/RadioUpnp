@@ -72,6 +72,24 @@ public abstract class SessionDevice {
   }
 
   @NonNull
+  public static String getStateName(int state) {
+    switch (state) {
+      case PlaybackStateCompat.STATE_PLAYING:
+        return "PLAYING";
+      case PlaybackStateCompat.STATE_PAUSED:
+        return "PAUSED";
+      case PlaybackStateCompat.STATE_BUFFERING:
+        return "BUFFERING";
+      case PlaybackStateCompat.STATE_STOPPED:
+        return "STOPPED";
+      case PlaybackStateCompat.STATE_ERROR:
+        return "ERROR";
+      default:
+        return "UNKNOWN";
+    }
+  }
+
+  @NonNull
   public static PlaybackStateCompat.Builder getPlaybackStateCompatBuilder(int state) {
     return new PlaybackStateCompat.Builder().setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
@@ -117,7 +135,7 @@ public abstract class SessionDevice {
   }
 
   public void onState(int state) {
-    Log.d(LOG_TAG, "onState: " + state + "/" + lockKey);
+    Log.d(LOG_TAG, "onState: " + getStateName(state) + "/" + lockKey);
     listener.onPlaybackStateChange(
       getPlaybackStateCompatBuilder(state).setActions(getAvailableActions(state)).build(),
       lockKey);

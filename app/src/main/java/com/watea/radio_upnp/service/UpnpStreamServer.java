@@ -170,10 +170,9 @@ public class UpnpStreamServer extends NanoHTTPD {
       return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_PLAINTEXT, "Invalid request");
     }
     final InputStream inputStream = isGet ? new WavInputStream(sampleRate, channelCount, bitsPerSample, lockKey.get()) : new ByteArrayInputStream(new byte[0]);
-    final Response response = newFixedLengthResponse(Response.Status.OK, MIME, inputStream, isGet ? FAKE_STREAM_LENGTH : 0);
+    final Response response = newFixedLengthResponse(Response.Status.OK, MIME, inputStream, FAKE_STREAM_LENGTH);
     response.addHeader("transferMode.dlna.org", "Streaming");
     response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
-    response.addHeader("Accept-Ranges", "none");
     return response;
   }
 

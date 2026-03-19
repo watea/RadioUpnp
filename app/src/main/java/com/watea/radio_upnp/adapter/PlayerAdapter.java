@@ -258,7 +258,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   private void onRelease() {
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onRelease; no session device defined");
+      Log.d(LOG_TAG, "onRelease; no session device defined");
     } else {
       sessionDevice.release();
     }
