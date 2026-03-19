@@ -342,31 +342,21 @@ public class UpnpSessionDevice extends SessionDevice {
         .addArgument("CurrentURIMetaData", getMetaData()));
   }
 
-  @NonNull
-  private String moveToSoap(@NonNull String string) {
-    return string
-      .replace("&", "&amp;")
-      .replace("<", "&lt;")
-      .replace(">", "&gt;")
-      .replace("\"", "&quot;")
-      .replace("'", "&apos;");
-  }
-
   // Create DIDL-Lite metadata
   @NonNull
   private String getMetaData() {
-    return moveToSoap("<DIDL-Lite " +
+    return "<DIDL-Lite " +
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
       "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
       "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
-      "<dc:title>" + moveToSoap(radio.getName()) + "</dc:title>" +
-      "<upnp:artist>" + moveToSoap(information) + "</upnp:artist>" +
+      "<dc:title>" + radio.getName() + "</dc:title>" +
+      "<upnp:artist>" + information + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
       "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + UpnpStreamServer.MIME + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
       "</item>" +
-      "</DIDL-Lite>");
+      "</DIDL-Lite>";
   }
 }

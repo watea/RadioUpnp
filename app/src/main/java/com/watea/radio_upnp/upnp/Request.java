@@ -39,6 +39,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +50,15 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 public abstract class Request {
   private static final String LOG_TAG = Request.class.getSimpleName();
-  private static final int TIMEOUT = 3000; // ms, for request connection and read
+  private static final int TIMEOUT = 6000; // ms, for request connection and read
+  private static final String SOAP_ENVELOPE_NS = "http://schemas.xmlsoap.org/soap/envelope/";
+  private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY;
+
+  static {
+    DOCUMENT_BUILDER_FACTORY = DocumentBuilderFactory.newInstance();
+    DOCUMENT_BUILDER_FACTORY.setNamespaceAware(true); // Necessary!!
+  }
+
   @NonNull
   private final Service service;
   @NonNull
@@ -70,6 +79,16 @@ public abstract class Request {
   private static String getElementValue(Element parent, String tagName) {
     final NodeList nodeList = parent.getElementsByTagName(tagName);
     return (nodeList.getLength() > 0) ? nodeList.item(0).getTextContent() : "";
+  }
+
+  @NonNull
+  private static String escapeXml(@NonNull String value) {
+    return value
+      .replace("&", "&amp;")
+      .replace("<", "&lt;")
+      .replace(">", "&gt;")
+      .replace("\"", "&quot;")
+      .replace("'", "&apos;");
   }
 
   public void call() {
@@ -96,7 +115,7 @@ public abstract class Request {
       return;
     }
     try (final OutputStreamWriter writer =
-           new OutputStreamWriter(httpURLConnection.getOutputStream())) {
+           new OutputStreamWriter(httpURLConnection.getOutputStream(), StandardCharsets.UTF_8)) {
       writer.write(getSoapBody(serviceType).toString());
       writer.flush();
       // Read the response
@@ -111,19 +130,15 @@ public abstract class Request {
           onFailure("SOAP connection internal error/responseCode: " + responseCode, "No response available");
           return;
         }
-        final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setNamespaceAware(true); // Necessary!!
-        final DocumentBuilder builder = factory.newDocumentBuilder();
+        final DocumentBuilder builder = DOCUMENT_BUILDER_FACTORY.newDocumentBuilder();
         document = builder.parse(responseStream);
       } catch (Exception exception) {
         onFailure("SOAP response parsing exception/responseCode: " + responseCode, exception.toString());
         return;
-      } finally {
-        httpURLConnection.disconnect();
       }
       // Get the action response element
       if (isFailure) {
-        final NodeList responseNodes = document.getElementsByTagName("s:Fault");
+        final NodeList responseNodes = document.getElementsByTagNameNS(SOAP_ENVELOPE_NS, "Fault");
         // Get the first element
         final Element element =
           (responseNodes.getLength() > 0) ? (Element) responseNodes.item(0) : null;
@@ -161,6 +176,8 @@ public abstract class Request {
       onSuccess(responses);
     } catch (IOException ioException) {
       onFailure("Request exception", ioException.toString());
+    } finally {
+      httpURLConnection.disconnect();
     }
   }
 
@@ -188,7 +205,7 @@ public abstract class Request {
       soapBody.append("<")
         .append(upnpActionArgument.getKey())
         .append(">")
-        .append(upnpActionArgument.getValue())
+        .append(escapeXml(upnpActionArgument.getValue()))
         .append("</")
         .append(upnpActionArgument.getKey())
         .append(">");
