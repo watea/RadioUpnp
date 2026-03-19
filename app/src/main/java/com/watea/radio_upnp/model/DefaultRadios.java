@@ -99,13 +99,18 @@ public class DefaultRadios {
     new DefaultRadio(
       "MAUI'S Q103",
       R.drawable.logo_q103,
-      "http://radio.garden/api/ara/content/listen/ZUwwAb1A/channel.mp3",
+      "https://ice26.securenetsystems.net/KNUQFM",
       "http://q103maui.com/"),
     new DefaultRadio(
       "DFM DAVID GUETTA",
       R.drawable.logo_dfm,
-      "http://radio.garden/api/ara/content/listen/qotcIfno/channel.mp3",
-      "https://dfm.ru/"));
+      "https://dfm-guetta.hostingradio.ru/guetta96.aacp",
+      "https://dfm.ru/"),
+    new DefaultRadio(
+      "FIP ROCK",
+      R.drawable.logo_fip,
+      "https://stream.radiofrance.fr/fiprock/fiprock_hifi.m3u8?id=radiofrance",
+      "https://www.radiofrance.fr/fip/radio-rock"));
 
   @NonNull
   public static List<Radio> get(@NonNull Context context, int iconSize) {

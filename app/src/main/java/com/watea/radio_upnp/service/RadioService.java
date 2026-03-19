@@ -442,6 +442,7 @@ public class RadioService
         buildNotification();
         break;
       case PlaybackStateCompat.STATE_ERROR:
+        playerAdapter.release();
         releaseScheduler();
         // Try to relaunch just once
         if (isAllowedToRewind) {
@@ -449,7 +450,7 @@ public class RadioService
           handler.postDelayed(() -> {
               try {
                 // Still in error?
-                if (mediaController.getPlaybackState().getState() == PlaybackStateCompat.STATE_ERROR) {
+                if (getPlaybackState() == PlaybackStateCompat.STATE_ERROR) {
                   mediaSessionCompatCallback.onRewind();
                 }
               } catch (Exception exception) {
@@ -779,8 +780,7 @@ public class RadioService
           upnpStreamServer.getStreamUri(localIp),
           upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
-          upnpService.getActionController(),
-          upnpStreamServer::stopStream);
+          upnpService.getActionController());
       } else {
         return new LocalSessionDevice(
           RadioService.this,

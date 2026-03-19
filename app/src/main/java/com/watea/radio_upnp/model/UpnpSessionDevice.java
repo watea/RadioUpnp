@@ -79,8 +79,6 @@ public class UpnpSessionDevice extends SessionDevice {
   @Nullable
   private final Service renderingControl;
   @NonNull
-  private final Runnable cleanCallback;
-  @NonNull
   private final String information; // Not final in further use
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
@@ -96,13 +94,11 @@ public class UpnpSessionDevice extends SessionDevice {
     @NonNull Uri radioUri,
     @NonNull Uri logoUri,
     @NonNull Device device,
-    @NonNull ActionController actionController,
-    @NonNull Runnable cleanCallback) {
+    @NonNull ActionController actionController) {
     super(context, exoPlayer, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.actionController = actionController;
     this.logoUri = logoUri;
-    this.cleanCallback = cleanCallback;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
     avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
@@ -176,12 +172,6 @@ public class UpnpSessionDevice extends SessionDevice {
   public void stop() {
     super.stop();
     scheduleActionStop();
-  }
-
-  @Override
-  public void release() {
-    stop();
-    cleanCallback.run();
   }
 
   private void scheduleMandatoryAction(

@@ -46,7 +46,6 @@
     <string name="key_preferred_radios_got_it" translatable="false">key_preferred_radios_got_it</string>
     <string name="key_information_press_got_it" translatable="false">key_information_press_got_it</string>
     <string name="key_information_select_press_got_it" translatable="false">key_information_select_press_got_it</string>
-    <string name="key_radio_garden_got_it" translatable="false">key_radio_garden_got_it</string>
     <string name="key_toolbar_got_it" translatable="false">key_toolbar_got_it</string>
     <string name="key_battery_optimization_press_got_it" translatable="false">key_battery_optimization_press_got_it</string>
     <!-- Bundles -->

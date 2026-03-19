@@ -93,10 +93,6 @@ public abstract class SessionDevice {
     return (getState() == PlaybackStateCompat.STATE_PAUSED);
   }
 
-  public boolean isError() {
-    return (getState() == PlaybackStateCompat.STATE_ERROR);
-  }
-
   public void play() {
     exoPlayer.play();
   }

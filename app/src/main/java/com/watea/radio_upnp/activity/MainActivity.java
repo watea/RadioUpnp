@@ -138,7 +138,6 @@ public class MainActivity
   private AppBarLayout appBarLayout;
   private PlayerController playerController;
   private SharedPreferences sharedPreferences;
-  private RadioGardenController radioGardenController;
   private AlarmController alarmController;
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
@@ -147,7 +146,6 @@ public class MainActivity
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
-  private Intent newIntent;
   private NetworkProxy networkProxy;
   private ActivityResultLauncher<Intent> importExportLauncher;
   @Nullable
@@ -266,9 +264,6 @@ public class MainActivity
     final Integer id = menuItem.getItemId();
     // Note: switch not to use as id not final
     switch (id) {
-      case R.id.action_radio_garden:
-        radioGardenController.launch(false);
-        break;
       case R.id.action_alarm:
         alarmController.launch();
         break;
@@ -484,8 +479,6 @@ public class MainActivity
       });
     // Toggle expansion state, animate the transition
     findViewById(R.id.actionbar).setOnClickListener(v -> setToolbarExpanded(!isToolbarExpanded));
-    // Radio Garden
-    radioGardenController = new RadioGardenController(this);
     // Alarm
     alarmController = new AlarmController(this);
     // Import/export function
@@ -628,8 +621,6 @@ public class MainActivity
         }
       }
     });
-    // Store intent
-    newIntent = getIntent();
     // PlayerController init
     playerController.onActivityCreate();
   }
@@ -659,13 +650,6 @@ public class MainActivity
   }
 
   @Override
-  protected void onNewIntent(@NonNull Intent intent) {
-    super.onNewIntent(intent);
-    Log.d(LOG_TAG, "onNewIntent");
-    newIntent = intent;
-  }
-
-  @Override
   protected void onStart() {
     super.onStart();
     // Bind to UPnP service
@@ -675,17 +659,6 @@ public class MainActivity
     }
     // AlarmController init
     alarmController.onActivityStart();
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-    Log.d(LOG_TAG, "onResume");
-    // Radio Garden share?
-    if ((newIntent != null) && Intent.ACTION_SEND.equals(newIntent.getAction())) {
-      radioGardenController.onNewIntent(newIntent);
-      newIntent = null;
-    }
   }
 
   @Override

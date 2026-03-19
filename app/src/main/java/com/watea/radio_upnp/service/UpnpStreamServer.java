@@ -158,10 +158,6 @@ public class UpnpStreamServer extends NanoHTTPD {
     return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/stream.wav");
   }
 
-  public void stopStream() {
-    queue.clear();
-  }
-
   private boolean isInactive() {
     return !callback.getLockKey().equals(lockKey.get());
   }

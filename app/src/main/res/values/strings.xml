@@ -79,18 +79,14 @@
     <string name="preferred_radios">Display only preferred radios.\nPreferred radios are set in Modify screen.</string>
     <string name="wait_search">Search in progress.\nMay take some time, please wait&#8230;</string>
     <string name="icon_updated">Icon updated!</string>
-    <string name="donation_button_close">Close</string>
     <string name="donation_description">Do you find this application useful?\nSupport its development by sending a donation to the developer.\nThanks a lot!</string>
     <string name="donation_google_android_market_description">(Google charges a fee of 15%)</string>
-    <string name="donation_alert_dialog_title">Error occurred!</string>
-    <string name="donation_alert_dialog_try_again">Please try again later&#8230;</string>
     <string name="radio_search_failure">Fetching data from server failed! Please try later&#8230;</string>
     <string name="upnp_error">UPnP service failed, please check if network is available!</string>
     <string name="kbps" translatable="false">\u00A0kbps</string>
     <string name="preferred">Preferred</string>
     <string name="report_error">Error, report could not be generated!</string>
     <string name="radio_database_update_failed">Internal error: radio modification failed!</string>
-    <string name="radio_garden_share">Great app <b>Radio Garden</b> can be used to search a new radio.\n\n<b>Share</b> back as shown.\nThen choose <b>RadioUpnp</b> in Android share screen.\nRadio is added automatically (take a few seconds)!\n</string>
     <string name="import_message">Choose import file; content (try export to see format) will be imported</string>
     <string name="export_message">[.CSV] or [.JSON] exports file in chosen directory</string>
     <string name="import_successful">Import successful!</string>
@@ -98,9 +94,6 @@
     <string name="export_done">Export file created: </string>
     <string name="export_failed">Export failed!</string>
     <string name="export_failed_not_created">Export failed; unable to create file!</string>
-    <string name="radio_garden_radio_added">Radio Garden radio added!</string>
-    <string name="try_to_add_from_radio_garden">Try to add from Radio Garden.\nMay take some time, please wait&#8230;</string>
-    <string name="play_store_not_installed">Play Store not available.\nRadio Garden cannot be installed!</string>
     <string name="icon_search">Search icon</string>
     <string name="google_play" translatable="false">Google Play</string>
     <string name="liberapay" translatable="false">liberapay.com</string>
@@ -158,14 +151,12 @@
     <string name="title_log">Report</string>
     <string name="title_import">Import</string>
     <string name="title_export">Export</string>
-    <string name="title_radio_garden">Radio Garden</string>
     <string name="title_search">Search</string>
     <string name="title_alarm">Alarm</string>
     <string name="title_sleep">Sleep</string>
     <string name="title_cast" translatable="false">Google cast</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
-    <string name="action_stop">Stop</string>
     <string name="action_done">OK</string>
     <string name="action_move">Move</string>
     <string name="action_relaunch">Relaunch</string>
