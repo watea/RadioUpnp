@@ -28,14 +28,17 @@
         android:id="@+id/action_upnp"
         android:title="@string/title_dlna"
         app:showAsAction="ifRoom" />
+
     <item
         android:id="@+id/action_cast"
         android:title="@string/title_cast"
         app:actionProviderClass="androidx.mediarouter.app.MediaRouteActionProvider"
         app:showAsAction="always" />
+
     <item
         android:id="@+id/action_preferred"
         android:icon="@drawable/ic_star_white_30dp"
         android:title="@string/title_preferred"
         app:showAsAction="always" />
+
 </menu>

@@ -31,62 +31,80 @@
             android:id="@+id/action_home"
             android:icon="@drawable/ic_radio_white_24dp"
             android:title="@string/title_main" />
+
         <item
             android:id="@+id/action_search"
             android:icon="@drawable/ic_search_white_24dp"
             android:title="@string/title_search" />
+
         <item
             android:id="@+id/action_add_item"
             android:icon="@drawable/ic_playlist_add_white_24dp"
             android:title="@string/title_item_add" />
+
         <item
             android:id="@+id/action_modify"
             android:icon="@drawable/ic_edit_white_24dp"
             android:title="@string/title_modify" />
+
     </group>
+
     <group
         android:id="@+id/alarm"
         android:checkableBehavior="single">
+
         <item
             android:id="@+id/action_alarm"
             android:icon="@drawable/ic_alarm_white_24dp"
             android:title="@string/title_alarm" />
+
         <item
             android:id="@+id/action_sleep"
             android:icon="@drawable/ic_hourglass_bottom_white_24dp"
             android:title="@string/title_sleep" />
+
     </group>
+
     <group
         android:id="@+id/exchange"
         android:checkableBehavior="single">
+
         <item
             android:id="@+id/action_export"
             android:icon="@drawable/ic_output_white_24dp"
             android:title="@string/title_export" />
+
         <item
             android:id="@+id/action_import"
             android:icon="@drawable/ic_exit_to_app_white_24dp"
             android:title="@string/title_import" />
+
     </group>
 
     <group
         android:id="@+id/sub"
         android:checkableBehavior="single">
+
         <item
             android:id="@+id/action_log"
             android:icon="@drawable/ic_attach_email_white_24dp"
             android:title="@string/title_log" />
+
         <item
             android:id="@+id/action_parameters"
             android:icon="@drawable/ic_settings_white_24dp"
             android:title="@string/title_parameters" />
+
         <item
             android:id="@+id/action_donate"
             android:icon="@drawable/ic_payment_white_24dp"
             android:title="@string/title_donate" />
+
         <item
             android:id="@+id/action_about"
             android:icon="@drawable/ic_question_mark_white_24dp"
             android:title="@string/title_about" />
+
     </group>
+
 </menu>

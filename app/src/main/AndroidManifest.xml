@@ -33,13 +33,16 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustPan|stateAlwaysHidden">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.APP_MUSIC" />
+
             </intent-filter>
+
         </activity>
 
         <service
@@ -49,9 +52,12 @@
             android:exported="true"
             android:foregroundServiceType="mediaPlayback|connectedDevice"
             tools:ignore="ExportedService">
+
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
+
             </intent-filter>
+
         </service>
 
         <service
@@ -67,9 +73,12 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">
+
             <intent-filter>
                 <action android:name="com.watea.radio_upnp.ALARM_TRIGGERED" />
+
             </intent-filter>
+
         </service>
 
         <!--
@@ -84,9 +93,12 @@
             android:name="androidx.media.session.MediaButtonReceiver"
             android:enabled="true"
             android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
+
             </intent-filter>
+
         </receiver>
 
         <receiver
@@ -99,9 +111,11 @@
             android:authorities="com.watea.radio_upnp.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
+
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
+
         </provider>
 
         <meta-data
@@ -124,6 +138,7 @@
 
     <queries>
         <package android:name="com.jonathanpuckey.radiogarden" />
+
     </queries>
 
 </manifest>
