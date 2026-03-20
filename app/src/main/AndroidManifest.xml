@@ -34,14 +34,10 @@
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustPan|stateAlwaysHidden">
             <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
-            </intent-filter>
-            <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
+                <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.APP_MUSIC" />
             </intent-filter>
         </activity>
@@ -119,6 +115,10 @@
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.watea.radio_upnp.cast.CastOptionsProvider" />
+
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
 
     </application>
 

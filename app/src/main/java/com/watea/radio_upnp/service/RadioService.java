@@ -618,8 +618,35 @@ public class RadioService
     }
 
     @Override
+    public void onPlayFromSearch(String query, Bundle extras) {
+      Log.d(LOG_TAG, "onPlayFromSearch: query=" + query);
+      final Radios radios = Radios.getInstance();
+      Radio match = null;
+      if ((query == null) || query.trim().isEmpty()) {
+        // No query — play the first available radio
+        if (!radios.isEmpty()) {
+          match = radios.get(0);
+        }
+      } else {
+        final String normalizedQuery = query.trim().toLowerCase(Locale.getDefault());
+        // 1. Exact name match
+        match = radios.stream().filter(radio -> radio.getName().toLowerCase(Locale.getDefault()).equals(normalizedQuery)).findAny().orElse(null);
+        // 2. Partial name match
+        if (match == null) {
+          match = radios.stream().filter(radio -> radio.getName().toLowerCase(Locale.getDefault()).contains(normalizedQuery)).findAny().orElse(null);
+        }
+      }
+      if (match == null) {
+        Log.w(LOG_TAG, "onPlayFromSearch: no match found for query=" + query);
+      } else {
+        Log.d(LOG_TAG, "onPlayFromSearch: matched radio=" + match.getName());
+        onPlay(match);
+      }
+    }
+
+    @Override
     public void onPlay() {
-      onPlayFromMediaId(playerAdapter.getRadio());
+      onPlay(playerAdapter.getRadio());
     }
 
     @Override
@@ -702,17 +729,16 @@ public class RadioService
         if (nextRadio == null) {
           Log.d(LOG_TAG, "skipTo: next radio is null!");
         } else {
-          onPlayFromMediaId(Radios.getInstance().getRadioFrom(radio, direction));
+          onPlay(Radios.getInstance().getRadioFrom(radio, direction));
         }
       }
     }
 
-    // Same extras are reused
-    private void onPlayFromMediaId(@Nullable Radio radio) {
+    private void onPlay(@Nullable Radio radio) {
       if (radio == null) {
-        Log.d(LOG_TAG, "onPlayFromMediaId: radio is null!");
+        Log.d(LOG_TAG, "onPlay: radio is null!");
       } else {
-        onPlayFromMediaId(radio.getId(), mediaController.getExtras());
+        onPlayFromMediaId(radio.getId(), new Bundle());
       }
     }
 

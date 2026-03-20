@@ -272,6 +272,23 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     return (radioId == null) ? null : Radios.getInstance().getRadioFromId(radioId);
   }
 
+  @Override
+  public void accept(Consumer<Radio> radioConsumer) {
+    listener = radioConsumer;
+    // Init listener
+    if (listener != null) {
+      listener.accept(getCurrentRadio());
+    }
+  }
+
+  public void playRadioByName(@NonNull String radioName) {
+    if (mediaController == null) {
+      Log.d(LOG_TAG, "playRadioByName: mediaController is null");
+    } else {
+      mediaController.getTransportControls().playFromSearch(radioName, null);
+    }
+  }
+
   private void onPlayClick() {
     if (mediaController == null) { // Should not happen
       mainActivity.tell(R.string.radio_connection_waiting);
@@ -373,15 +390,6 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   private void setPreferredButton(boolean isPreferred) {
     preferredImageButton.setImageResource(
       isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
-  }
-
-  @Override
-  public void accept(Consumer<Radio> radioConsumer) {
-    listener = radioConsumer;
-    // Init listener
-    if (listener != null) {
-      listener.accept(getCurrentRadio());
-    }
   }
 
   private class MediaControllerCompatCallback extends MediaControllerCompat.Callback {
