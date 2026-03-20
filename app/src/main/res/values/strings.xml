@@ -68,7 +68,7 @@
     <string name="no_local_icon">No valid local icon found!</string>
     <string name="connection_test_failed">Connection test failed!</string>
     <string name="connection_test_aborted">No connection test: invalid Streaming URL!</string>
-    <string name="connection_test_successful">Connection test successful.\nAudio content: </string>
+    <string name="connection_test_successful">Connection test successful. URL may updated.\nAudio content: </string>
     <string name="lan_required">No LAN/Wifi connection found for UPnP/DLNA function!</string>
     <string name="radio_long_press">Long press opens web site</string>
     <string name="play_long_press">Long press stops radio</string>

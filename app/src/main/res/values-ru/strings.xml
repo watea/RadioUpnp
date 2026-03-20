@@ -57,7 +57,7 @@
     <string name="no_local_icon">Не найдена допустимая локальная иконка!</string>
     <string name="connection_test_failed">Тест подключения не пройден!</string>
     <string name="connection_test_aborted">Тест подключения не выполнен: неверный URL потока!</string>
-    <string name="connection_test_successful">Тест подключения успешен.\nАудиоконтент: </string>
+    <string name="connection_test_successful">Тест подключения успешен. URL обновлён!\nАудиоконтент: </string>
     <string name="lan_required">Не найдено LAN/Wi-Fi подключение для функции UPnP/DLNA!</string>
     <string name="radio_long_press">Долгое нажатие открывает веб-сайт</string>
     <string name="play_long_press">Долгое нажатие останавливает радио</string>

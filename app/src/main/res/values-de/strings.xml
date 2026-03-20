@@ -57,7 +57,7 @@
     <string name="no_local_icon">Kein gültiges lokales Icon gefunden!</string>
     <string name="connection_test_failed">Verbindungstest fehlerhaft!</string>
     <string name="connection_test_aborted">Keine Verbindung: Fehlerhafte Streaming-URL!</string>
-    <string name="connection_test_successful">Verbindungstest erfolgreich.\nAudio-Inhalt: </string>
+    <string name="connection_test_successful">Verbindungstest erfolgreich. URL aktualisiert!\nAudio-Inhalt: </string>
     <string name="lan_required">Keine LAN/WLAN-Verbindung für die UPnP/DLNA-Funktion gefunden!</string>
     <string name="radio_long_press">Ein langer Klick öffnet die Webseite des Senders</string>
     <string name="play_long_press">Ein langer Klick beendet die Wiedergabe</string>

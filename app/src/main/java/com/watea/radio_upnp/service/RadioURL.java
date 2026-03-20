@@ -151,24 +151,6 @@ public class RadioURL {
     return contentType;
   }
 
-  // MIME type
-  @Nullable
-  public String getStreamContentType() {
-    HttpURLConnection actualHttpURLConnection = null;
-    try {
-      actualHttpURLConnection = getActualHttpURLConnection();
-      return getStreamContentType(actualHttpURLConnection);
-    } catch (IOException iOException) {
-      // Fires also in case of timeout
-      Log.d(LOG_TAG, "getStreamContentType: IOException", iOException);
-    } finally {
-      if (actualHttpURLConnection != null) {
-        actualHttpURLConnection.disconnect();
-      }
-    }
-    return null;
-  }
-
   @NonNull
   public HttpURLConnection getActualHttpURLConnection() throws IOException {
     return getActualHttpURLConnection(null);
