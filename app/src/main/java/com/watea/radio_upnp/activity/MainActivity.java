@@ -623,18 +623,12 @@ public class MainActivity
     });
     // PlayerController init
     playerController.onActivityCreate();
-    // Intent
-    final Intent intent = getIntent();
-    if (intent != null) {
-      handleIntent(intent);
-    }
   }
 
   @Override
   protected void onNewIntent(@NonNull Intent intent) {
     super.onNewIntent(intent);
     setIntent(intent);
-    handleIntent(intent);
   }
 
   @Override
@@ -898,15 +892,6 @@ public class MainActivity
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
-  }
-
-  private void handleIntent(@NonNull Intent intent) {
-    if (intent.hasExtra("radio_name")) {
-      final String radioName = intent.getStringExtra("radio_name");
-      if ((radioName != null) && !radioName.isEmpty()) {
-        playerController.playRadioByName(radioName);
-      }
-    }
   }
 
   public enum Layout {

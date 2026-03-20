@@ -28,6 +28,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -281,14 +282,6 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     }
   }
 
-  public void playRadioByName(@NonNull String radioName) {
-    if (mediaController == null) {
-      Log.d(LOG_TAG, "playRadioByName: mediaController is null");
-    } else {
-      mediaController.getTransportControls().playFromSearch(radioName, null);
-    }
-  }
-
   private void onPlayClick() {
     if (mediaController == null) { // Should not happen
       mainActivity.tell(R.string.radio_connection_waiting);
@@ -488,6 +481,8 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
         mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
       }
+      // External intent
+      handleIntent(mainActivity.getIntent());
       // Nota: no mediaBrowser.subscribe here needed
     }
 
@@ -505,6 +500,16 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     @Override
     public void onConnectionFailed() {
       Log.d(LOG_TAG, "Connection to RadioService failed");
+    }
+
+    private void handleIntent(@NonNull Intent intent) {
+      if (intent.hasExtra("radio_name")) {
+        final String radioName = intent.getStringExtra("radio_name");
+        if ((radioName != null) && !radioName.isEmpty()) {
+          assert mediaController != null;
+          mediaController.getTransportControls().playFromSearch(radioName, null);
+        }
+      }
     }
   }
 }
