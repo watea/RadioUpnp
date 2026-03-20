@@ -46,7 +46,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class URLService {
-  private static final int TIMEOUT = 3000; // ms, for connection and read
+  private static final int CONNECT_TIMEOUT = 8000; // ms
+  private static final int READ_TIMEOUT = 3000; // ms
   private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
   @NonNull
   private final URLConnection uRLConnection;
@@ -57,8 +58,8 @@ public class URLService {
 
   public URLService(@NonNull URL uRL) throws IOException {
     uRLConnection = uRL.openConnection();
-    uRLConnection.setConnectTimeout(TIMEOUT);
-    uRLConnection.setReadTimeout(TIMEOUT);
+    uRLConnection.setConnectTimeout(CONNECT_TIMEOUT);
+    uRLConnection.setReadTimeout(READ_TIMEOUT);
   }
 
   public URLService(@NonNull URL uRL, @NonNull URI uRI) throws IOException, URISyntaxException {

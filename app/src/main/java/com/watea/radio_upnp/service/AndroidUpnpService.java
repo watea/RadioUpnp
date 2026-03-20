@@ -61,7 +61,9 @@ public class AndroidUpnpService extends android.app.Service {
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
   private static final String DEVICE_VERSION = "1";
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
-  private static final long DEVICE_FETCH_TIMEOUT_S = 5L; // s, max time to wait for a device HTTP description fetch before giving up
+  // s, max time to wait for a device HTTP description fetch before giving up
+  // => device HTTP description fetch may be slow on some renderers at startup
+  private static final long DEVICE_FETCH_TIMEOUT_S = 20L;
   private final NetworkRequest networkRequest = new NetworkRequest.Builder()
     .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) // Not a VPN
     .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) // Validated
@@ -249,6 +251,11 @@ public class AndroidUpnpService extends android.app.Service {
       final String uUID = Device.getUUID(service);
       final Device knownDevice = (uUID == null) ? null : get(uUID);
       if (knownDevice == null) {
+        // Skip BYEBYE announcements for unknown devices — location is null
+        // and there is nothing useful to fetch
+        if (!Device.isAlive(service.getStatus())) {
+          return;
+        }
         // Skip if this UUID is already being fetched asynchronously —
         // prevents duplicate Device objects from concurrent SSDP announcements
         if ((uUID != null) && pendingUUIDs.contains(uUID)) {
