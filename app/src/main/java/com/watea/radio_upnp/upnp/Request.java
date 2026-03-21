@@ -91,6 +91,10 @@ public abstract class Request {
       .replace("'", "&apos;");
   }
 
+  public abstract void onSuccess(@NonNull Map<String, String> responses);
+
+  public abstract void onFailure(@NonNull String faultCode, @NonNull String faultString, @NonNull String faultDetail);
+
   public void call() {
     final URL url;
     try {
@@ -180,10 +184,6 @@ public abstract class Request {
       httpURLConnection.disconnect();
     }
   }
-
-  public abstract void onSuccess(@NonNull Map<String, String> responses);
-
-  public abstract void onFailure(@NonNull String faultCode, @NonNull String faultString, @NonNull String faultDetail);
 
   public void onFailure(@NonNull String faultCode, @NonNull String faultString) {
     onFailure(faultCode, faultString, "No");

@@ -154,10 +154,6 @@ public class MainActivity
   private Consumer<Bitmap> upnpIconConsumer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
-      private void consumeIcon(@Nullable Device device) {
-        runOnUiThread(() -> MainActivity.this.consumeIcon(device));
-      }
-
       @Override
       public void onFatalError() {
         runOnUiThread(() -> tell(R.string.upnp_error));
@@ -189,6 +185,10 @@ public class MainActivity
           }
           upnpAlertDialog.dismiss();
         }
+      }
+
+      private void consumeIcon(@Nullable Device device) {
+        runOnUiThread(() -> MainActivity.this.consumeIcon(device));
       }
     };
 

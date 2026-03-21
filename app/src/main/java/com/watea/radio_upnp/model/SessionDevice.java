@@ -95,6 +95,12 @@ public abstract class SessionDevice {
     return new PlaybackStateCompat.Builder().setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
   }
 
+  public abstract boolean isRemote();
+
+  public abstract void setVolume(float volume);
+
+  public abstract void adjustVolume(int direction);
+
   @NonNull
   public Radio getRadio() {
     return radio;
@@ -142,16 +148,10 @@ public abstract class SessionDevice {
       lockKey);
   }
 
-  public abstract boolean isRemote();
-
   public void release() {
     exoPlayer.removeListener(playerListener);
     exoPlayer.release();
   }
-
-  public abstract void setVolume(float volume);
-
-  public abstract void adjustVolume(int direction);
 
   // Set the current capabilities available on this session
   public long getAvailableActions(int state) {

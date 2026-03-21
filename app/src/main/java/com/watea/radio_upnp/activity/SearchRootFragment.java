@@ -97,11 +97,6 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   }
 
   @Override
-  protected int getLayout() {
-    return R.layout.content_main;
-  }
-
-  @Override
   public void onResume() {
     super.onResume();
     // Build search dialog if not yet done
@@ -136,6 +131,22 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     searchExecutor.shutdown();
   }
 
+  protected abstract void clearDialog();
+
+  protected abstract JSONArray getStations() throws IOException, JSONException;
+
+  protected abstract void fetchDialogItems() throws IOException, JSONException;
+
+  protected abstract void setDialogItems();
+
+  // Shall prepare Radio items if needed
+  protected abstract boolean validCurrentRadio(@NonNull JSONObject station) throws JSONException;
+
+  @Override
+  protected int getLayout() {
+    return R.layout.content_main;
+  }
+
   protected boolean isServerAvailable() {
     return isServerAvailable;
   }
@@ -166,17 +177,6 @@ public abstract class SearchRootFragment extends MainActivityFragment {
       new URL(stream),
       homepage.isEmpty() ? null : new URL(homepage));
   }
-
-  protected abstract void clearDialog();
-
-  protected abstract JSONArray getStations() throws IOException, JSONException;
-
-  protected abstract void fetchDialogItems() throws IOException, JSONException;
-
-  protected abstract void setDialogItems();
-
-  // Shall prepare Radio items if needed
-  protected abstract boolean validCurrentRadio(@NonNull JSONObject station) throws JSONException;
 
   private void search() {
     final int currentSession = ++searchSessionId;

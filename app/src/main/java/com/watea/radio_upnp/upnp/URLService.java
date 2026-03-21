@@ -155,12 +155,12 @@ public class URLService {
   }
 
   public interface Consumer {
+    void endParseAccept(@NonNull URLService uRLService);
+
     default void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     }
 
     default void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     }
-
-    void endParseAccept(@NonNull URLService uRLService);
   }
 }

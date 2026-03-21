@@ -231,6 +231,11 @@ public class Radio {
   }
 
   @NonNull
+  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
+    return Bitmap.createScaledBitmap(bitmap, size, size, true);
+  }
+
+  @NonNull
   private static String export(@NonNull String string) {
     return string + SPACER;
   }
@@ -244,11 +249,6 @@ public class Radio {
   private static Bitmap getBitmapFrom(@NonNull String base64String) {
     final byte[] byteArray = Base64.decode(base64String, Base64.NO_WRAP);
     return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
-  }
-
-  @NonNull
-  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
-    return Bitmap.createScaledBitmap(bitmap, size, size, true);
   }
 
   @NonNull

@@ -365,25 +365,6 @@ public class AlarmService extends Service {
       }
     };
 
-    private void launch() {
-      if (!isAndroidAutoConnected) {
-        final Radio radio = ((AlarmServiceBinder) binder).getRadio();
-        if (radio == null) {
-          Log.e(LOG_TAG, "launch: alarm radio is null!");
-        } else {
-          Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
-          if (mediaController == null) {
-            Log.e(LOG_TAG, "launch: mediaController is null!");
-          } else {
-            mediaController.getTransportControls().playFromMediaId(radio.getId(), new Bundle());
-            return;
-          }
-        }
-      }
-      // Something went wrong, cancel alarm
-      ((AlarmServiceBinder) binder).cancelAlarm();
-    }
-
     @Override
     public void onConnected() {
       Log.d(LOG_TAG, "onConnected");
@@ -413,6 +394,25 @@ public class AlarmService extends Service {
     @Override
     public void onConnectionFailed() {
       Log.d(LOG_TAG, "onConnectionFailed");
+    }
+
+    private void launch() {
+      if (!isAndroidAutoConnected) {
+        final Radio radio = ((AlarmServiceBinder) binder).getRadio();
+        if (radio == null) {
+          Log.e(LOG_TAG, "launch: alarm radio is null!");
+        } else {
+          Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
+          if (mediaController == null) {
+            Log.e(LOG_TAG, "launch: mediaController is null!");
+          } else {
+            mediaController.getTransportControls().playFromMediaId(radio.getId(), new Bundle());
+            return;
+          }
+        }
+      }
+      // Something went wrong, cancel alarm
+      ((AlarmServiceBinder) binder).cancelAlarm();
     }
   }
 }

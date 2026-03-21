@@ -154,6 +154,13 @@ public class UpnpSessionDevice extends SessionDevice {
     scheduleActionStop();
   }
 
+  @Override
+  public void release() {
+    super.release();
+    // Put device in idle state
+    stop();
+  }
+
   private void scheduleMandatoryAction(
     @Nullable Action action, @NonNull Function<Action, UpnpAction> function) {
     if (action == null) {
@@ -290,13 +297,6 @@ public class UpnpSessionDevice extends SessionDevice {
         }
       }
         .addArgument(INPUT_CHANNEL, INPUT_MASTER);
-  }
-
-  @Override
-  public void release() {
-    super.release();
-    // Put device in idle state
-    stop();
   }
 
   private void scheduleActionSetAvTransportUri() {

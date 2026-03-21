@@ -50,11 +50,6 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   @Nullable
   private CastSession castSession = null;
   private final SessionManagerListener<CastSession> sessionManagerListener = new SessionManagerListener<>() {
-    private void release() {
-      castSession = null;
-      callback.onCastStop();
-    }
-
     @Override
     public void onSessionStarting(@NonNull CastSession castSession) {
       CastManager.this.castSession = castSession;
@@ -99,6 +94,11 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
     @Override
     public void onSessionSuspended(@NonNull CastSession castSession, int i) {
       release();
+    }
+
+    private void release() {
+      castSession = null;
+      callback.onCastStop();
     }
   };
 

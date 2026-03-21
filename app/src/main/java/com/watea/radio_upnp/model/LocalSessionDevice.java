@@ -46,32 +46,6 @@ public class LocalSessionDevice extends SessionDevice {
     super(context, exoPlayer, listener, lockKey, radio);
   }
 
-  @NonNull
-  protected Player.Listener getPlayerListener() {
-    return new PlayerListener() {
-      @Override
-      public void onPlaybackStateChanged(int playbackState) {
-        Log.d(LOG_TAG, "onPlaybackStateChanged: State=" + playbackState);
-        switch (playbackState) {
-          case ExoPlayer.STATE_BUFFERING:
-            onState(PlaybackStateCompat.STATE_BUFFERING);
-            break;
-          case ExoPlayer.STATE_READY:
-            onState(PlaybackStateCompat.STATE_PLAYING);
-            break;
-          case ExoPlayer.STATE_IDLE:
-          case ExoPlayer.STATE_ENDED:
-            onState(PlaybackStateCompat.STATE_ERROR);
-            break;
-          // Should not happen
-          default:
-            Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
-            onState(PlaybackStateCompat.STATE_ERROR);
-        }
-      }
-    };
-  }
-
   @Override
   public boolean isRemote() {
     return false;
@@ -110,5 +84,31 @@ public class LocalSessionDevice extends SessionDevice {
   @Override
   public void play() {
     Log.e(LOG_TAG, "play: shall not be used!");
+  }
+
+  @NonNull
+  protected Player.Listener getPlayerListener() {
+    return new PlayerListener() {
+      @Override
+      public void onPlaybackStateChanged(int playbackState) {
+        Log.d(LOG_TAG, "onPlaybackStateChanged: State=" + playbackState);
+        switch (playbackState) {
+          case ExoPlayer.STATE_BUFFERING:
+            onState(PlaybackStateCompat.STATE_BUFFERING);
+            break;
+          case ExoPlayer.STATE_READY:
+            onState(PlaybackStateCompat.STATE_PLAYING);
+            break;
+          case ExoPlayer.STATE_IDLE:
+          case ExoPlayer.STATE_ENDED:
+            onState(PlaybackStateCompat.STATE_ERROR);
+            break;
+          // Should not happen
+          default:
+            Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
+            onState(PlaybackStateCompat.STATE_ERROR);
+        }
+      }
+    };
   }
 }

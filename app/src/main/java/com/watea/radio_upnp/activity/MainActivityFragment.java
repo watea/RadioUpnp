@@ -55,6 +55,13 @@ public abstract class MainActivityFragment extends Fragment {
     return isVisible ? View.VISIBLE : View.INVISIBLE;
   }
 
+  @NonNull
+  public abstract View.OnClickListener getFloatingActionButtonOnClickListener();
+
+  public abstract int getFloatingActionButtonResource();
+
+  public abstract int getTitle();
+
   @Nullable
   @Override
   public View onCreateView(
@@ -115,12 +122,9 @@ public abstract class MainActivityFragment extends Fragment {
     return v -> false;
   }
 
-  @NonNull
-  public abstract View.OnClickListener getFloatingActionButtonOnClickListener();
+  protected abstract int getLayout();
 
-  public abstract int getFloatingActionButtonResource();
-
-  public abstract int getTitle();
+  protected abstract void onCreateView(@NonNull View view, @Nullable ViewGroup container);
 
   protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
   }
@@ -128,10 +132,6 @@ public abstract class MainActivityFragment extends Fragment {
   protected boolean onMenuItemSelected(@NonNull MenuItem item) {
     return false;
   }
-
-  protected abstract int getLayout();
-
-  protected abstract void onCreateView(@NonNull View view, @Nullable ViewGroup container);
 
   @NonNull
   protected SharedPreferences getSharedPreferences() {
