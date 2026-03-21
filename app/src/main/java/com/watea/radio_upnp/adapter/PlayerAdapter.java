@@ -113,6 +113,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   public synchronized final void pause() {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on pause; no session device defined");
+      return;
     }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
       if (!isRemote() && !playOnAudioFocus) {
@@ -128,7 +129,8 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   public synchronized final void stop() {
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on stop; no session device defined");
+      Log.d(LOG_TAG, "stop: no session device defined");
+      return;
     }
     // Stop immediately
     sessionDevice.onState(PlaybackStateCompat.STATE_STOPPED);
