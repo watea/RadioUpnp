@@ -72,6 +72,7 @@ public class CapturingAudioSink implements AudioSink {
     final int sampleRate = inputFormat.sampleRate;
     final int channelCount = inputFormat.channelCount;
     final int bytesPerSample = Util.getPcmFrameSize(inputFormat.pcmEncoding, 1);
+    Log.d(LOG_TAG, "configure: sampleRate=" + sampleRate + " channelCount=" + channelCount);
     byteRate = (long) sampleRate * channelCount * bytesPerSample;
     if (callback != null) {
       callback.onFormatChanged(sampleRate, channelCount, bytesPerSample * 8);

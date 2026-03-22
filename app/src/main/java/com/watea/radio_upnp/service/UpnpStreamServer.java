@@ -115,6 +115,7 @@ public class UpnpStreamServer extends NanoHTTPD {
 
   // Called before starting the stream
   public void setAudioFormat(int sampleRate, int channelCount, int bitsPerSample) {
+    Log.d(TAG, "setAudioFormat: ready, lockKey=" + lockKey.get());
     this.sampleRate = sampleRate;
     this.channelCount = channelCount;
     this.bitsPerSample = bitsPerSample;
