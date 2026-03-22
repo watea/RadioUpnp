@@ -40,6 +40,7 @@ import com.watea.radio_upnp.service.UpnpStreamServer;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
+import com.watea.radio_upnp.upnp.Request;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 
@@ -329,9 +330,9 @@ public class UpnpSessionDevice extends SessionDevice {
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">" +
-      "<item id=\"" + radio.getId() + "\" parentID=\"0\" restricted=\"1\">" +
+      "<item id=\"" + Request.escapeXml(radio.getId()) + "\" parentID=\"0\" restricted=\"1\">" +
       "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
-      "<dc:title>" + radio.getName() + "</dc:title>" +
+      "<dc:title>" + Request.escapeXml(radio.getName()) + "</dc:title>" +
       "<upnp:artist>" + information + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +

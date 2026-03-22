@@ -76,19 +76,19 @@ public abstract class Request {
   }
 
   @NonNull
-  private static String getElementValue(Element parent, String tagName) {
-    final NodeList nodeList = parent.getElementsByTagName(tagName);
-    return (nodeList.getLength() > 0) ? nodeList.item(0).getTextContent() : "";
-  }
-
-  @NonNull
-  private static String escapeXml(@NonNull String value) {
+  public static String escapeXml(@NonNull String value) {
     return value
       .replace("&", "&amp;")
       .replace("<", "&lt;")
       .replace(">", "&gt;")
       .replace("\"", "&quot;")
       .replace("'", "&apos;");
+  }
+
+  @NonNull
+  private static String getElementValue(Element parent, String tagName) {
+    final NodeList nodeList = parent.getElementsByTagName(tagName);
+    return (nodeList.getLength() > 0) ? nodeList.item(0).getTextContent() : "";
   }
 
   public abstract void onSuccess(@NonNull Map<String, String> responses);
