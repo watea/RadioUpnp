@@ -193,11 +193,9 @@ public class RadioService
     @Override
     public void onConnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onConnected: " + lockKey);
-      runIfLocked(lockKey, () -> {
-        if (capturingAudioSink != null) {
-          capturingAudioSink.flushAndReset();
-        }
-      });
+      if ((capturingAudioSink != null) && lockKey.equals(RadioService.this.lockKey.get())) {
+        capturingAudioSink.flushAndReset();
+      }
     }
   };
 
