@@ -231,6 +231,12 @@ public class CapturingAudioSink implements AudioSink {
     return (callback == null) ? delegate.getCurrentPositionUs(sourceEnded) : lastPresentationTimeUs;
   }
 
+  public void flushAndReset() {
+    if (pacer != null) {
+      pacer.flushAndReset();
+    }
+  }
+
   private void stopPacer() {
     if (pacer != null) {
       pacer.interrupt();
@@ -248,6 +254,7 @@ public class CapturingAudioSink implements AudioSink {
   // PCM: Pulse Code Modulation.
   private class Pacer extends Thread {
     private long bytesConsumed = 0L;
+    private volatile boolean resetRequested = false;
 
     private Pacer() {
       setDaemon(true);
@@ -260,6 +267,14 @@ public class CapturingAudioSink implements AudioSink {
       long startTimeUs = -1;
       while (!Thread.currentThread().isInterrupted()) {
         try {
+          if (resetRequested) {
+            resetRequested = false;
+            startTimeUs = -1;
+            bytesConsumed = 0L;
+            pcmBuffer.clear();
+            Log.d(LOG_TAG, "Pacer timing reset for new renderer connection");
+            continue;
+          }
           final byte[] pcmData = pcmBuffer.poll(PACER_TIMEOUT, TimeUnit.SECONDS);
           if (pcmData == null) {
             Log.e(LOG_TAG, "pcmBuffer EMPTY — ExoPlayer stopped feeding");
@@ -284,6 +299,10 @@ public class CapturingAudioSink implements AudioSink {
           Thread.currentThread().interrupt();
         }
       }
+    }
+
+    public void flushAndReset() {
+      resetRequested = true;
     }
 
     private long getTimestamp() {

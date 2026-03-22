@@ -149,19 +149,6 @@ public class RadioService
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
-  private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
-    @Override
-    @NonNull
-    public String getLockKey() {
-      return lockKey.get();
-    }
-
-    @Override
-    public void onDisconnect(@NonNull String lockKey) {
-      Log.d(LOG_TAG, "onDisconnect: " + lockKey);
-      runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
-    }
-  };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
     public void onCastStarting() {
@@ -188,6 +175,31 @@ public class RadioService
     }
   };
   private CastManager castManager;
+  @Nullable
+  private CapturingAudioSink capturingAudioSink = null;
+  private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
+    @Override
+    @NonNull
+    public String getLockKey() {
+      return lockKey.get();
+    }
+
+    @Override
+    public void onDisconnect(@NonNull String lockKey) {
+      Log.d(LOG_TAG, "onDisconnect: " + lockKey);
+      runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
+    }
+
+    @Override
+    public void onConnected(@NonNull String lockKey) {
+      Log.d(LOG_TAG, "onConnected: " + lockKey);
+      runIfLocked(lockKey, () -> {
+        if (capturingAudioSink != null) {
+          capturingAudioSink.flushAndReset();
+        }
+      });
+    }
+  };
 
   public static boolean isValid(@NonNull Context context, @NonNull MediaMetadataCompat mediaMetadataCompat) {
     final String metadataKeyMediaId = mediaMetadataCompat.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
@@ -700,7 +712,7 @@ public class RadioService
     }
 
     @NonNull
-    private ExoPlayer getExoPlayer(@NonNull CapturingAudioSink capturingSink) {
+    private ExoPlayer getExoPlayer(@NonNull CapturingAudioSink capturingAudioSink) {
       return new ExoPlayer.Builder(RadioService.this)
         .setRenderersFactory(
           (handler,
@@ -713,7 +725,7 @@ public class RadioService
               MediaCodecSelector.DEFAULT,
               handler,
               audioListener,
-              capturingSink),
+              capturingAudioSink),
             new MetadataRenderer(metadataOutput, handler.getLooper())
           })
         .build();
@@ -747,12 +759,12 @@ public class RadioService
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      final CapturingAudioSink capturingSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build());
-      final ExoPlayer exoPlayer = getExoPlayer(capturingSink);
+      capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build());
+      final ExoPlayer exoPlayer = getExoPlayer(capturingAudioSink);
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       if (isRemoteReady && castManager.hasCastSession()) {
         // Link capturingSink to upnpStreamServer
-        capturingSink.setCallback(upnpStreamServer.getPcmCallback());
+        capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
         return castManager.getCastSessionDevice(
           RadioService.this,
           exoPlayer,
@@ -763,7 +775,7 @@ public class RadioService
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         // Link capturingSink to upnpStreamServer
-        capturingSink.setCallback(upnpStreamServer.getPcmCallback());
+        capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
         return new UpnpSessionDevice(
           RadioService.this,
           exoPlayer,

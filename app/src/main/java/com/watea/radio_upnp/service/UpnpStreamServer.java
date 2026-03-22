@@ -52,7 +52,7 @@ public class UpnpStreamServer extends NanoHTTPD {
   private static final String TAG = "UpnpStreamServer";
   private static final String SCHEME = "http://";
   private static final int DEFAULT = -1;
-  private static final int GET_TIMEOUT = 5000; // ms
+  private static final int GET_TIMEOUT = 10000; // ms
   private static final int QUEUE_SIZE = 300; // ~10s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private static final int PACER_POLL_TIMEOUT = 15; // s
   private static final int REMOTE_LOGO_SIZE = 300;
@@ -147,24 +147,31 @@ public class UpnpStreamServer extends NanoHTTPD {
     final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
     while (!callback.getLockKey().equals(lockKey.get())) {
       if (System.currentTimeMillis() > deadline) {
-        return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Format timeout");
+        final Response response = newFixedLengthResponse(Response.Status.lookup(503), MIME_PLAINTEXT, "Not ready yet");
+        response.addHeader("Retry-After", "1");
+        Log.d(TAG, "serve => Not ready yet");
+        return response;
       }
       try {
         //noinspection BusyWait
         Thread.sleep(50);
       } catch (InterruptedException interruptedException) {
         Thread.currentThread().interrupt();
+        Log.d(TAG, "serve => Interrupted");
         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Interrupted");
       }
     }
     final String incomingLockKey = extractLockKey(uri);
     if (incomingLockKey == null) {
+      Log.d(TAG, "serve => Invalid request");
       return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_PLAINTEXT, "Invalid request");
     }
     if (!incomingLockKey.equals(callback.getLockKey())) {
+      Log.d(TAG, "serve => Stale session");
       return newFixedLengthResponse(Response.Status.GONE, MIME_PLAINTEXT, "Stale session");
     }
     queue.clear();
+    callback.onConnected(incomingLockKey);
     return getResponse(session.getMethod(), incomingLockKey);
   }
 
@@ -189,6 +196,8 @@ public class UpnpStreamServer extends NanoHTTPD {
 
   public interface Callback {
     void onDisconnect(@NonNull String lockKey);
+
+    void onConnected(@NonNull String lockKey);
 
     @NonNull
     String getLockKey();
