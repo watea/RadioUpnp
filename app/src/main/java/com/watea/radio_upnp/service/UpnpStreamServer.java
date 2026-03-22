@@ -138,6 +138,7 @@ public class UpnpStreamServer extends NanoHTTPD {
     final String uri = session.getUri().substring(1);
     // -- Logo --
     if (uri.equals(logoUri)) {
+      Log.d(TAG, "serve => logo");
       return (logoBytes == null) ?
         newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "No logo available") :
         newFixedLengthResponse(Response.Status.OK, "image/jpeg", new ByteArrayInputStream(logoBytes), logoBytes.length);
@@ -191,6 +192,7 @@ public class UpnpStreamServer extends NanoHTTPD {
     final Response response = newFixedLengthResponse(Response.Status.OK, MIME, inputStream, FAKE_STREAM_LENGTH);
     response.addHeader("transferMode.dlna.org", "Streaming");
     response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+    Log.d(TAG, "serve => OK " + lockKey);
     return response;
   }
 
