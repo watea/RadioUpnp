@@ -129,6 +129,9 @@
     <string name="Layout">Layout</string>
     <string name="tile_radio_button">Tile</string>
     <string name="row_radio_button">Row</string>
+    <string name="upnp_stream_mode">UPnP stream mode</string>
+    <string name="pcm_radio_button" translatable="false">PCM</string>
+    <string name="relay_radio_button">Passthrough</string>
     <string name="radio_information">Radio information</string>
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dark</string>

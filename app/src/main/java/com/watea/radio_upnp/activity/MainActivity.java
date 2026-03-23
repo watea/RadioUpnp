@@ -215,6 +215,11 @@ public class MainActivity
   };
 
   @NonNull
+  public static SharedPreferences getAppPreferences(@NonNull Context context) {
+    return context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
+  }
+
+  @NonNull
   private static PrintWriter getPrintWriter(@NonNull Process process, @NonNull File logFile) throws IOException {
     final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
     final FileOutputStream fileOutputStream = new FileOutputStream(logFile);
@@ -459,6 +464,8 @@ public class MainActivity
     setTheme(getCurrentTheme());
     // Layout
     layout = Layout.valueOf(sharedPreferences.getString(getString(R.string.key_layout), layout.toString()));
+    // PCM
+    final boolean isPcm = sharedPreferences.getBoolean(getString(string.key_pcm_mode), true);
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // Inflate view
@@ -551,6 +558,7 @@ public class MainActivity
       .create();
     // Parameters dialog
     final View parametersView = getLayoutInflater().inflate(R.layout.view_parameters, null);
+    // Parameters dialog: theme
     final RadioGroup themeRadioGroup = parametersView.findViewById(R.id.theme_radio_group);
     themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
       final Theme previousTheme = theme;
@@ -580,6 +588,7 @@ public class MainActivity
         themeRadioButtonId = R.id.system_radio_button;
     }
     ((RadioButton) parametersView.findViewById(themeRadioButtonId)).setChecked(true);
+    // Parameters dialog: layout
     final RadioGroup layoutRadioGroup = parametersView.findViewById(R.id.layout_radio_group);
     layoutRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
       final Layout previousLayout = layout;
@@ -591,6 +600,12 @@ public class MainActivity
     });
     final int layoutRadioButtonId = (layout == Layout.TILE) ? R.id.tile_radio_button : R.id.row_radio_button;
     ((RadioButton) parametersView.findViewById(layoutRadioButtonId)).setChecked(true);
+    // Parameters dialog: PCM
+    final RadioGroup pcmRadioGroup = parametersView.findViewById(R.id.pcm_radio_group);
+    pcmRadioGroup.setOnCheckedChangeListener((group, checkedId) ->
+      sharedPreferences.edit().putBoolean(getString(R.string.key_pcm_mode), (group.getCheckedRadioButtonId() == id.pcm_radio_button)).commit());
+    final int pcmRadioButtonId = isPcm ? R.id.pcm_radio_button : id.relay_radio_button;
+    ((RadioButton) parametersView.findViewById(pcmRadioButtonId)).setChecked(true);
     parametersAlertDialog = new AlertDialog.Builder(this)
       .setTitle(string.title_parameters)
       .setIcon(R.drawable.ic_settings_white_24dp)

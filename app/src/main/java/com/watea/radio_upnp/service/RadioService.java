@@ -755,9 +755,10 @@ public class RadioService
     // UPnP or Cast not accepted if environment not OK: force local processing
     @NonNull
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
+      final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build());
+      capturingAudioSink = new CapturingAudioSink(isPcm ? new DefaultAudioSink.Builder(RadioService.this).build() : new SilentAudioSink());
       final ExoPlayer exoPlayer = getExoPlayer(capturingAudioSink);
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       if (isRemoteReady && castManager.hasCastSession()) {
@@ -772,8 +773,13 @@ public class RadioService
           upnpStreamServer.getStreamUri(localIp, lockKey),
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
-        // Link capturingSink to upnpStreamServer
-        capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
+        if (isPcm) {
+          // Link capturingSink to upnpStreamServer
+          capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
+        } else {
+          // Relay mode: stream original URL directly, ExoPlayer only for ICY metadata
+          upnpStreamServer.setRelayUrl(radio.getUri().toString());
+        }
         return new UpnpSessionDevice(
           RadioService.this,
           exoPlayer,

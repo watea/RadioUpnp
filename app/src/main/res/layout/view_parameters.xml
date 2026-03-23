@@ -96,4 +96,37 @@
 
     </RadioGroup>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/textColorPrimary" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:text="@string/upnp_stream_mode"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/pcm_radio_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <RadioButton
+            android:id="@+id/pcm_radio_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/app_margin"
+            android:text="@string/pcm_radio_button" />
+
+        <RadioButton
+            android:id="@+id/relay_radio_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/app_margin"
+            android:text="@string/relay_radio_button" />
+
+    </RadioGroup>
+
 </LinearLayout>

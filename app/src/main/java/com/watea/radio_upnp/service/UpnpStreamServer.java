@@ -38,6 +38,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -53,6 +55,8 @@ public class UpnpStreamServer extends NanoHTTPD {
   private static final String SCHEME = "http://";
   private static final int DEFAULT = -1;
   private static final int GET_TIMEOUT = 10000; // ms
+  private static final int CONNECTION_TIMEOUT = 5000; // ms
+  private static final int READ_TIMEOUT = 10000; // ms
   private static final int QUEUE_SIZE = 300; // ~10s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private static final int PACER_POLL_TIMEOUT = 15; // s
   private static final int REMOTE_LOGO_SIZE = 300;
@@ -72,6 +76,8 @@ public class UpnpStreamServer extends NanoHTTPD {
   private String logoUri = null;
   @Nullable
   private byte[] logoBytes = null;
+  @Nullable
+  private String relayUrl = null;
 
   public UpnpStreamServer(@NonNull Callback callback) throws IOException {
     super(0);
@@ -116,9 +122,17 @@ public class UpnpStreamServer extends NanoHTTPD {
   // Called before starting the stream
   public void setAudioFormat(int sampleRate, int channelCount, int bitsPerSample) {
     Log.d(TAG, "setAudioFormat");
+    relayUrl = null; // PCM mode
     this.sampleRate = sampleRate;
     this.channelCount = channelCount;
     this.bitsPerSample = bitsPerSample;
+    lockKey.set(callback.getLockKey());
+  }
+
+  public void setRelayUrl(@NonNull String url) {
+    Log.d(TAG, "setRelayUrl");
+    relayUrl = url;
+    sampleRate = DEFAULT; // Reset PCM format
     lockKey.set(callback.getLockKey());
   }
 
@@ -174,7 +188,14 @@ public class UpnpStreamServer extends NanoHTTPD {
     }
     queue.clear();
     callback.onConnected(incomingLockKey);
-    return getResponse(session.getMethod(), incomingLockKey);
+    final Method method = session.getMethod();
+    final boolean isGet = Method.GET.equals(method);
+    final boolean isHead = Method.HEAD.equals(method);
+    if (!isGet && !isHead) {
+      return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_PLAINTEXT, "Invalid request");
+    }
+    // Relay mode or PCM mode
+    return (relayUrl != null) ? getRelayResponse(isGet, incomingLockKey) : getResponse(isGet, incomingLockKey);
   }
 
   // Returns the stream URL to pass to the renderer via SetAVTransportURI
@@ -183,18 +204,31 @@ public class UpnpStreamServer extends NanoHTTPD {
   }
 
   @NonNull
-  private Response getResponse(@Nullable Method method, @NonNull String lockKey) {
-    final boolean isGet = Method.GET.equals(method);
-    final boolean isHead = Method.HEAD.equals(method);
-    if (!isGet && !isHead) {
-      return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_PLAINTEXT, "Invalid request");
-    }
+  private Response getResponse(boolean isGet, @NonNull String lockKey) {
     final InputStream inputStream = isGet ? new WavInputStream(sampleRate, channelCount, bitsPerSample, lockKey) : new ByteArrayInputStream(new byte[0]);
     final Response response = newFixedLengthResponse(Response.Status.OK, MIME, inputStream, FAKE_STREAM_LENGTH);
     response.addHeader("transferMode.dlna.org", "Streaming");
     response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
     Log.d(TAG, "serve => OK " + lockKey);
     return response;
+  }
+
+  @NonNull
+  private Response getRelayResponse(boolean isGet, @NonNull String lockKey) {
+    try {
+      final HttpURLConnection connection = (HttpURLConnection) new URL(relayUrl).openConnection();
+      connection.setRequestProperty("Icy-MetaData", "0"); // ExoPlayer handles ICY locally
+      connection.setConnectTimeout(CONNECTION_TIMEOUT);
+      connection.setReadTimeout(READ_TIMEOUT);
+      connection.connect();
+      final String contentType = connection.getContentType();
+      final String mime = (contentType != null) ? contentType : "audio/mpeg";
+      final InputStream inputStream = isGet ? new RelayInputStream(connection, lockKey) : new ByteArrayInputStream(new byte[0]);
+      return newChunkedResponse(Response.Status.OK, mime, inputStream);  // Use chunked response: relay length is unknown
+    } catch (IOException iOException) {
+      Log.e(TAG, "getRelayResponse: relay connection failed", iOException);
+      return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Relay failed");
+    }
   }
 
   public interface Callback {
@@ -286,6 +320,44 @@ public class UpnpStreamServer extends NanoHTTPD {
       buf.put(new byte[]{'d', 'a', 't', 'a'});
       buf.putInt(0xFFFFFFFF); // Unknown data size — streaming
       return buf.array();
+    }
+  }
+
+  private class RelayInputStream extends InputStream {
+    @NonNull
+    private final HttpURLConnection connection;
+    @NonNull
+    private final InputStream source;
+    @NonNull
+    private final String lockKey;
+
+    private RelayInputStream(
+      @NonNull HttpURLConnection connection,
+      @NonNull String lockKey) throws IOException {
+      this.connection = connection;
+      this.source = connection.getInputStream();
+      this.lockKey = lockKey;
+    }
+
+    @Override
+    public int read() throws IOException {
+      return source.read();
+    }
+
+    @Override
+    public int read(@NonNull byte[] buf, int off, int len) throws IOException {
+      if (!lockKey.equals(callback.getLockKey())) {
+        throw new IOException("Stream stopped");
+      }
+      return source.read(buf, off, len);
+    }
+
+    @Override
+    public void close() throws IOException {
+      source.close();
+      connection.disconnect();
+      // Same disconnect detection as WAV mode
+      callback.onDisconnect(lockKey);
     }
   }
 }

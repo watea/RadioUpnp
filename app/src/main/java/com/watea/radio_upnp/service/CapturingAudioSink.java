@@ -69,12 +69,12 @@ public class CapturingAudioSink implements AudioSink {
   @Override
   public void configure(@NonNull Format inputFormat, int specifiedBufferSize, @Nullable int[] outputChannels)
     throws ConfigurationException {
-    final int sampleRate = inputFormat.sampleRate;
-    final int channelCount = inputFormat.channelCount;
-    final int bytesPerSample = Util.getPcmFrameSize(inputFormat.pcmEncoding, 1);
-    Log.d(LOG_TAG, "configure: sampleRate=" + sampleRate + " channelCount=" + channelCount);
-    byteRate = (long) sampleRate * channelCount * bytesPerSample;
     if (callback != null) {
+      final int sampleRate = inputFormat.sampleRate;
+      final int channelCount = inputFormat.channelCount;
+      final int bytesPerSample = Util.getPcmFrameSize(inputFormat.pcmEncoding, 1);
+      Log.d(LOG_TAG, "configure: sampleRate=" + sampleRate + " channelCount=" + channelCount);
+      byteRate = (long) sampleRate * channelCount * bytesPerSample;
       callback.onFormatChanged(sampleRate, channelCount, bytesPerSample * 8);
     }
     delegate.configure(inputFormat, specifiedBufferSize, outputChannels);

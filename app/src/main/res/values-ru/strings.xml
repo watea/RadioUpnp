@@ -114,6 +114,8 @@
     <string name="Layout">Макет</string>
     <string name="tile_radio_button">Плитка</string>
     <string name="row_radio_button">Строка</string>
+    <string name="upnp_stream_mode">Режим потоковой передачи UPnP</string>
+    <string name="relay_radio_button">Сквозной</string>
     <string name="radio_information">Информация о радиостанции</string>
     <string name="system_radio_button">Системная</string>
     <string name="dark_radio_button">Тёмная</string>
@@ -132,6 +134,7 @@
     <string name="title_parameters">Параметры</string>
     <string name="title_about">О программе</string>
     <string name="title_item_modify">Редактировать</string>
+    <string name="title_log">Отчёт</string>
     <string name="title_import">Импорт</string>
     <string name="title_export">Экспорт</string>
     <string name="title_search">Поиск</string>
