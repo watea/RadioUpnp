@@ -36,6 +36,8 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.activity.MainActivity;
+import com.watea.radio_upnp.service.RadioURL;
 import com.watea.radio_upnp.service.UpnpStreamServer;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
@@ -44,6 +46,8 @@ import com.watea.radio_upnp.upnp.Request;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.function.Function;
 
 @OptIn(markerClass = UnstableApi.class)
@@ -78,6 +82,8 @@ public class UpnpSessionDevice extends SessionDevice {
   private final Service renderingControl;
   @NonNull
   private final String information; // Not final in further use
+  @NonNull
+  private volatile String content = UpnpStreamServer.PCM_MIME; // Default
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -133,9 +139,15 @@ public class UpnpSessionDevice extends SessionDevice {
   public void prepareFromMediaId() {
     super.prepareFromMediaId();
     onState(PlaybackStateCompat.STATE_BUFFERING);
-    scheduleActionPrepareForConnection();
-    scheduleActionSetAvTransportUri();
-    scheduleActionPlay();
+    // PCM or relay?
+    if (MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
+      prepare();
+    } else {
+      new Thread(() -> {
+        getRadioContent();
+        prepare();
+      }).start();
+    }
   }
 
   @Override
@@ -160,6 +172,29 @@ public class UpnpSessionDevice extends SessionDevice {
     super.release();
     // Put device in idle state
     stop();
+  }
+
+  private void prepare() {
+    scheduleActionPrepareForConnection();
+    scheduleActionSetAvTransportUri();
+    scheduleActionPlay();
+  }
+
+  private void getRadioContent() {
+    HttpURLConnection httpURLConnection = null;
+    try {
+      httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection();
+      final String result = RadioURL.getStreamContentType(httpURLConnection);
+      content = (result == null) ? UpnpStreamServer.DEFAULT_MIME : result;
+      RadioURL.getStreamContentType(httpURLConnection);
+      Log.d(LOG_TAG, "getRadioContent: content => " + content);
+    } catch (IOException ioException) {
+      Log.d(LOG_TAG, "getRadioContent: unable to connect", ioException);
+    } finally {
+      if (httpURLConnection != null) {
+        httpURLConnection.disconnect();
+      }
+    }
   }
 
   private void scheduleMandatoryAction(
@@ -336,7 +371,7 @@ public class UpnpSessionDevice extends SessionDevice {
       "<upnp:artist>" + information + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + UpnpStreamServer.MIME + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + content + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
       "</item>" +
       "</DIDL-Lite>";
   }

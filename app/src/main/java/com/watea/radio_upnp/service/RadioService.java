@@ -88,7 +88,6 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 @OptIn(markerClass = UnstableApi.class)
 public class RadioService
@@ -116,7 +115,8 @@ public class RadioService
       notifyChildrenChanged(MEDIA_ROOT_ID);
     }
   };
-  private final AtomicReference<String> lockKey = new AtomicReference<>(getLockKey());
+  @NonNull
+  private volatile String lockKey = getLockKey();
   private PlayerAdapter playerAdapter;
   private final VolumeProviderCompat volumeProviderCompat = new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
     @Override
@@ -181,7 +181,7 @@ public class RadioService
     @Override
     @NonNull
     public String getLockKey() {
-      return lockKey.get();
+      return lockKey;
     }
 
     @Override
@@ -193,7 +193,7 @@ public class RadioService
     @Override
     public void onConnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onConnected: " + lockKey);
-      if ((capturingAudioSink != null) && lockKey.equals(RadioService.this.lockKey.get())) {
+      if ((capturingAudioSink != null) && lockKey.equals(RadioService.this.lockKey)) {
         capturingAudioSink.flushAndReset();
       }
     }
@@ -227,6 +227,11 @@ public class RadioService
   }
 
   @NonNull
+  public static String getLockKey() {
+    return UUID.randomUUID().toString();
+  }
+
+  @NonNull
   private static String addPlaylistItem(@Nullable String playlist, @NonNull String item) {
     if (item.isEmpty() || (playlist != null) && playlist.endsWith(item)) {
       return (playlist == null) ? "" : playlist;
@@ -237,11 +242,6 @@ public class RadioService
       return ((playlist == null) || playlist.isEmpty()) ?
         information : playlist + PLAYLIST_SEPARATOR + information;
     }
-  }
-
-  @NonNull
-  private static String getLockKey() {
-    return UUID.randomUUID().toString();
   }
 
   @Override
@@ -425,10 +425,15 @@ public class RadioService
     if (getPlaybackState() == PlaybackStateCompat.STATE_STOPPED) {
       return;
     }
+    final int intState = state.getState();
+    // Error is not accepted if remote and paused
+    if ((playerAdapter.isRemote() && (intState == PlaybackStateCompat.STATE_ERROR) && (getPlaybackState() == PlaybackStateCompat.STATE_PAUSED))) {
+      return;
+    }
     // Report the state to the MediaSession
     session.setPlaybackState(state);
     // Manage the started state of this service, and session activity
-    switch (state.getState()) {
+    switch (intState) {
       case PlaybackStateCompat.STATE_PLAYING:
       case PlaybackStateCompat.STATE_BUFFERING:
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -560,7 +565,7 @@ public class RadioService
 
   private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
     handler.post(() -> {
-      if (session.isActive() && lockKey.equals(this.lockKey.get())) {
+      if (session.isActive() && lockKey.equals(this.lockKey)) {
         runnable.run();
       }
     });
@@ -597,13 +602,13 @@ public class RadioService
       // Retrieve last radio
       final Radio lastRadio = playerAdapter.getRadio();
       // Change session tag
-      lockKey.set(getLockKey());
+      lockKey = getLockKey();
       // Clean current PlayerAdapter; must be done at each new lockKey
       playerAdapter.clean();
       // Stop scheduler if any
       releaseScheduler();
       // PlayerAdapter settings
-      final SessionDevice sessionDevice = getSessionDevice(radio, lockKey.get());
+      final SessionDevice sessionDevice = getSessionDevice(radio, lockKey);
       Log.d(LOG_TAG, "onPlayFromMediaId: sessionDevice => " + sessionDevice.getClass().getSimpleName());
       playerAdapter.setSessionDevice(sessionDevice);
       // Volume
@@ -778,7 +783,7 @@ public class RadioService
           capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
         } else {
           // Relay mode: stream original URL directly, ExoPlayer only for ICY metadata
-          upnpStreamServer.setRelayUrl(radio.getUri().toString());
+          upnpStreamServer.setRelayUrl(radio.getURL());
         }
         return new UpnpSessionDevice(
           RadioService.this,

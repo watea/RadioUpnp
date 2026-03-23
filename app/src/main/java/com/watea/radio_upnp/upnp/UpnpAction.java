@@ -68,8 +68,7 @@ public abstract class UpnpAction {
   }
 
   public void execute(boolean isOnOwnThread) {
-    Log.d(
-      LOG_TAG, "execute: " + action.getName() + " on: " + action.getDevice().getDisplayString());
+    Log.d(LOG_TAG, "execute: " + action.getName() + " on: " + action.getDevice().getDisplayString());
     final Request request = new Request(action.getService(), action.getName(), arguments) {
       @Override
       public void onSuccess(@NonNull Map<String, String> responses) {

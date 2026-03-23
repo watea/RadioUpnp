@@ -60,7 +60,8 @@ public class RadioURL {
     "https?://[-A-Za-z\\d+&@#%?=~_|!:,.;/]+\\.(png|jpg|jpeg|ico|gif|svg)",
     Pattern.CASE_INSENSITIVE);
   private static final int CONNECTION_TRY = 3;
-  private static final int TIMEOUT = 8000; // ms, for connection and read
+  private static final int READ_TIMEOUT = 10000; // ms
+  private static final int CONNECTION_TIMEOUT = 5000; // ms
   // Create the SSL connection for HTTPS
   private static final SSLSocketFactory sSLSocketFactory;
 
@@ -80,11 +81,6 @@ public class RadioURL {
 
   public RadioURL(@Nullable URL uRL) {
     this.uRL = uRL;
-  }
-
-  @Nullable
-  public static String getMimeType(@NonNull HttpURLConnection httpURLConnection) {
-    return httpURLConnection.getHeaderField("Content-Type");
   }
 
   @Nullable
@@ -139,7 +135,7 @@ public class RadioURL {
   // MIME type
   @Nullable
   public static String getStreamContentType(@NonNull HttpURLConnection httpURLConnection) throws IOException {
-    String contentType = getMimeType(httpURLConnection);
+    String contentType = httpURLConnection.getContentType();
     // If we get there, connection has occurred.
     // Content-Type first asset is MIME type.
     if (contentType != null) {
@@ -182,8 +178,8 @@ public class RadioURL {
       boolean success = false;
       try {
         // Set timeouts
-        httpURLConnection.setConnectTimeout(TIMEOUT);
-        httpURLConnection.setReadTimeout(TIMEOUT);
+        httpURLConnection.setConnectTimeout(CONNECTION_TIMEOUT);
+        httpURLConnection.setReadTimeout(READ_TIMEOUT);
         httpURLConnection.setInstanceFollowRedirects(false);
         // Kill zombie connections
         httpURLConnection.setRequestProperty("Connection", "close");
