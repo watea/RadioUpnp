@@ -211,14 +211,19 @@ public class UpnpStreamServer extends NanoHTTPD {
     } else {
       // Map MIME to DLNA profile — null means omit (device tolerance assumed)
       switch (mime) {
-        case "audio/mpeg":  dlnaOrgPn = "DLNA.ORG_PN=MP3;"; break;
+        case "audio/mpeg":
+          dlnaOrgPn = "DLNA.ORG_PN=MP3;";
+          break;
         case "audio/aac":
         case "audio/x-aac":
-        case "audio/mp4":  dlnaOrgPn = "DLNA.ORG_PN=AAC_ISO_MBLA;"; break;
-        default:           dlnaOrgPn = ""; // OGG, FLAC, etc. — no standard DLNA profile
+        case "audio/mp4":
+          dlnaOrgPn = "DLNA.ORG_PN=AAC_ISO_MBLA;";
+          break;
+        default:
+          dlnaOrgPn = ""; // OGG, FLAC, etc. — no standard DLNA profile
       }
     }
-    response.addHeader("contentFeatures.dlna.org",dlnaOrgPn + "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+    response.addHeader("contentFeatures.dlna.org", dlnaOrgPn + "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
     return response;
   }
 

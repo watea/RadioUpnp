@@ -44,8 +44,11 @@ import java.util.concurrent.TimeUnit;
 public class CapturingAudioSink implements AudioSink {
   private static final String LOG_TAG = CapturingAudioSink.class.getSimpleName();
   private static final int PACER_TIMEOUT = 2; // s
-  private static final int DEFAULT = -1;
+  private static final long LONG_DEFAULT = -1L;
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
+  private static final long ONE_SECOND_US = 1_000_000L;
+  private static final long PACER_SLEEP_MIN_US = 1_000L;
+  private static final long BURST_DURATION_US = 5_000_000L;
   @NonNull
   private final AudioSink delegate;
   private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);
@@ -53,7 +56,7 @@ public class CapturingAudioSink implements AudioSink {
   private Callback callback = null;
   @Nullable
   private Pacer pacer = null;
-  private volatile long byteRate = DEFAULT;
+  private volatile long byteRate = LONG_DEFAULT;
   private volatile long lastPresentationTimeUs = 0; // Presentation time microseconds
 
   public CapturingAudioSink(@NonNull AudioSink delegate) {
@@ -253,6 +256,8 @@ public class CapturingAudioSink implements AudioSink {
 
   // callback != null.
   // PCM: Pulse Code Modulation.
+  // Burst duration: send initial PCM data unthrottled to fill renderer's
+  // internal buffer before switching to real-time pacing.
   private class Pacer extends Thread {
     private long bytesConsumed = 0L;
     private volatile boolean resetRequested = false;
@@ -265,12 +270,15 @@ public class CapturingAudioSink implements AudioSink {
 
     @Override
     public void run() {
-      long startTimeUs = -1;
+      long startTimeUs = LONG_DEFAULT;
+      long burstEndBytes = LONG_DEFAULT; // Threshold below which no pacing is applied
+
       while (!Thread.currentThread().isInterrupted()) {
         try {
           if (resetRequested) {
             resetRequested = false;
-            startTimeUs = -1;
+            startTimeUs = LONG_DEFAULT;
+            burstEndBytes = LONG_DEFAULT;
             bytesConsumed = 0L;
             pcmBuffer.clear();
             Log.d(LOG_TAG, "Pacer timing reset for new renderer connection");
@@ -281,14 +289,22 @@ public class CapturingAudioSink implements AudioSink {
             Log.e(LOG_TAG, "pcmBuffer EMPTY — ExoPlayer stopped feeding");
             continue;
           }
-          if (startTimeUs < 0) {
-            startTimeUs = getTimestamp();
+          // Compute burst threshold once byteRate is known
+          if ((burstEndBytes < 0) && (byteRate > 0)) {
+            burstEndBytes = (byteRate * BURST_DURATION_US) / ONE_SECOND_US;
+            Log.d(LOG_TAG, "Pacer burst phase: " + burstEndBytes + " bytes (" + (BURST_DURATION_US / ONE_SECOND_US) + "s)");
           }
-          if (byteRate != DEFAULT) {
-            final long expectedUs = (bytesConsumed * 1_000_000L) / byteRate;
+          // Real-time pacing only after burst phase
+          if ((burstEndBytes >= 0) && (bytesConsumed > burstEndBytes) && (byteRate > 0)) {
+            if (startTimeUs < 0) {
+              // Anchor the clock retroactively to account for bytes already sent
+              // during burst, so pacing continues seamlessly from here.
+              startTimeUs = getTimestamp() - getExpectedUs();
+              Log.d(LOG_TAG, "Pacer burst complete, switching to real-time pacing");
+            }
             final long elapsedUs = getTimestamp() - startTimeUs;
-            final long sleepUs = expectedUs - elapsedUs;
-            if (sleepUs >= 1000) {
+            final long sleepUs = getExpectedUs() - elapsedUs;
+            if (sleepUs >= PACER_SLEEP_MIN_US) {
               //noinspection BusyWait
               Thread.sleep(sleepUs / 1000);
             }
@@ -308,6 +324,10 @@ public class CapturingAudioSink implements AudioSink {
 
     private long getTimestamp() {
       return System.nanoTime() / 1000;
+    }
+
+    private long getExpectedUs() {
+      return (bytesConsumed * ONE_SECOND_US) / byteRate;
     }
   }
 }
