@@ -91,6 +91,14 @@ public class UpnpStreamServer extends NanoHTTPD {
   }
 
   @NonNull
+  private static Response getUpnpResponse(@NonNull final InputStream inputStream, @NonNull String mime) {
+    final Response response = newFixedLengthResponse(Response.Status.OK, mime, inputStream, FAKE_STREAM_LENGTH);
+    response.addHeader("transferMode.dlna.org", "Streaming");
+    response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+    return response;
+  }
+
+  @NonNull
   public CapturingAudioSink.Callback getPcmCallback() {
     return new CapturingAudioSink.Callback() {
       @Override
@@ -202,17 +210,9 @@ public class UpnpStreamServer extends NanoHTTPD {
   }
 
   @NonNull
-  private Response getUPnPResponse(@NonNull final InputStream inputStream, @NonNull String mime) {
-    final Response response = newFixedLengthResponse(Response.Status.OK, mime, inputStream, FAKE_STREAM_LENGTH);
-    response.addHeader("transferMode.dlna.org", "Streaming");
-    response.addHeader("contentFeatures.dlna.org", "*");//DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
-    return response;
-  }
-
-  @NonNull
   private Response getResponse(boolean isGet, @NonNull String lockKey) {
     final InputStream inputStream = isGet ? new WavInputStream(sampleRate, channelCount, bitsPerSample, lockKey) : new ByteArrayInputStream(new byte[0]);
-    final Response response = getUPnPResponse(inputStream, PCM_MIME);
+    final Response response = getUpnpResponse(inputStream, PCM_MIME);
     Log.d(TAG, "getResponse => OK " + lockKey);
     return response;
   }
@@ -223,7 +223,7 @@ public class UpnpStreamServer extends NanoHTTPD {
       final HttpURLConnection httpURLConnection = new RadioURL(relayUrl).getActualHttpURLConnection(connection -> connection.setRequestProperty("Icy-MetaData", "0")); // ExoPlayer handles ICY locally
       final String streamContent = RadioURL.getStreamContentType(httpURLConnection);
       final InputStream inputStream = isGet ? new RelayInputStream(httpURLConnection, lockKey) : new ByteArrayInputStream(new byte[0]);
-      final Response response = getUPnPResponse(inputStream, (streamContent == null) ? DEFAULT_MIME : streamContent);
+      final Response response = getUpnpResponse(inputStream, (streamContent == null) ? DEFAULT_MIME : streamContent);
       Log.d(TAG, "getRelayResponse => OK " + lockKey);
       return response;
     } catch (IOException iOException) {
