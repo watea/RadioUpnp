@@ -760,34 +760,36 @@ public class RadioService
     // UPnP or Cast not accepted if environment not OK: force local processing
     @NonNull
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
-      final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      capturingAudioSink = new CapturingAudioSink(isPcm ? new DefaultAudioSink.Builder(RadioService.this).build() : new SilentAudioSink());
-      final ExoPlayer exoPlayer = getExoPlayer(capturingAudioSink);
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
+      capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build()); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
         // Link capturingSink to upnpStreamServer
         capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
         return castManager.getCastSessionDevice(
           RadioService.this,
-          exoPlayer,
+          getExoPlayer(capturingAudioSink),
           RadioService.this,
           lockKey,
           radio,
           upnpStreamServer.getStreamUri(localIp, lockKey),
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
+        // PCM?
+        final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
+        Log.d(LOG_TAG, "getSessionDevice: UPnp with isPcm = " + isPcm);
         if (isPcm) {
           // Link capturingSink to upnpStreamServer
           capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
         } else {
           // Relay mode: stream original URL directly, ExoPlayer only for ICY metadata
+          capturingAudioSink = new CapturingAudioSink(new SilentAudioSink());
           upnpStreamServer.setRelayUrl(radio.getURL());
         }
         return new UpnpSessionDevice(
           RadioService.this,
-          exoPlayer,
+          getExoPlayer(capturingAudioSink),
           RadioService.this,
           lockKey,
           radio,
@@ -798,7 +800,7 @@ public class RadioService
       } else {
         return new LocalSessionDevice(
           RadioService.this,
-          exoPlayer,
+          getExoPlayer(capturingAudioSink),
           RadioService.this,
           lockKey,
           radio);
