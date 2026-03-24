@@ -178,8 +178,12 @@ public abstract class MainActivityFragment extends Fragment {
 
   protected void protectedRunOnUiThread(@NonNull Runnable runnable) {
     final Activity activity = getActivity();
-    if ((activity != null) && isAdded()) {
-      activity.runOnUiThread(runnable);
+    if (activity != null) {
+      activity.runOnUiThread(() -> {
+        if (isAdded() && (getView() != null)) {
+          runnable.run();
+        }
+      });
     }
   }
 
