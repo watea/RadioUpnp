@@ -67,6 +67,8 @@ public class UpnpStreamServer extends NanoHTTPD {
   private final Callback callback;
   private final ArrayBlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
   private volatile String lockKey = RadioService.getLockKey(); // Current stream signature
+  @Nullable
+  private volatile URL relayUrl = null;
   private int sampleRate = DEFAULT;
   private int channelCount = DEFAULT;
   private int bitsPerSample = DEFAULT;
@@ -74,8 +76,6 @@ public class UpnpStreamServer extends NanoHTTPD {
   private String logoUri = null;
   @Nullable
   private byte[] logoBytes = null;
-  @Nullable
-  private URL relayUrl = null;
 
   public UpnpStreamServer(@NonNull Callback callback) throws IOException {
     super(0);
@@ -88,14 +88,6 @@ public class UpnpStreamServer extends NanoHTTPD {
       return uri.substring(STREAM_PREFIX.length(), uri.length() - STREAM_SUFFIX.length());
     }
     return null;
-  }
-
-  @NonNull
-  private static Response getUpnpResponse(@NonNull final InputStream inputStream, @NonNull String mime) {
-    final Response response = newFixedLengthResponse(Response.Status.OK, mime, inputStream, FAKE_STREAM_LENGTH);
-    response.addHeader("transferMode.dlna.org", "Streaming");
-    response.addHeader("contentFeatures.dlna.org", "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
-    return response;
   }
 
   @NonNull
@@ -207,6 +199,27 @@ public class UpnpStreamServer extends NanoHTTPD {
   // Returns the stream URL to pass to the renderer via SetAVTransportURI
   public Uri getStreamUri(@NonNull String localIp, @NonNull String lockKey) {
     return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/" + STREAM_PREFIX + lockKey + STREAM_SUFFIX);
+  }
+
+  @NonNull
+  private Response getUpnpResponse(@NonNull final InputStream inputStream, @NonNull String mime) {
+    final Response response = newFixedLengthResponse(Response.Status.OK, mime, inputStream, FAKE_STREAM_LENGTH);
+    response.addHeader("transferMode.dlna.org", "Streaming");
+    final String dlnaOrgPn;
+    if (relayUrl == null) {
+      dlnaOrgPn = "DLNA.ORG_PN=LPCM;";
+    } else {
+      // Map MIME to DLNA profile — null means omit (device tolerance assumed)
+      switch (mime) {
+        case "audio/mpeg":  dlnaOrgPn = "DLNA.ORG_PN=MP3;"; break;
+        case "audio/aac":
+        case "audio/x-aac":
+        case "audio/mp4":  dlnaOrgPn = "DLNA.ORG_PN=AAC_ISO_MBLA;"; break;
+        default:           dlnaOrgPn = ""; // OGG, FLAC, etc. — no standard DLNA profile
+      }
+    }
+    response.addHeader("contentFeatures.dlna.org",dlnaOrgPn + "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+    return response;
   }
 
   @NonNull

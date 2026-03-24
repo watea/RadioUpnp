@@ -83,7 +83,7 @@ public class UpnpSessionDevice extends SessionDevice {
   @NonNull
   private final String information; // Not final in further use
   @NonNull
-  private volatile String content = UpnpStreamServer.PCM_MIME; // Default
+  private volatile String content = UpnpStreamServer.DEFAULT_MIME; // Default
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -141,6 +141,7 @@ public class UpnpSessionDevice extends SessionDevice {
     onState(PlaybackStateCompat.STATE_BUFFERING);
     // PCM or relay?
     if (MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
+      content = UpnpStreamServer.PCM_MIME;
       prepare();
     } else {
       new Thread(() -> {
@@ -185,8 +186,9 @@ public class UpnpSessionDevice extends SessionDevice {
     try {
       httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection();
       final String result = RadioURL.getStreamContentType(httpURLConnection);
-      content = (result == null) ? UpnpStreamServer.DEFAULT_MIME : result;
-      RadioURL.getStreamContentType(httpURLConnection);
+      if (result != null) {
+        content = result;
+      }
       Log.d(LOG_TAG, "getRadioContent: content => " + content);
     } catch (IOException ioException) {
       Log.d(LOG_TAG, "getRadioContent: unable to connect", ioException);

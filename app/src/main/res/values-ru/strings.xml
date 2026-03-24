@@ -47,7 +47,7 @@
     <string name="legend_streaming_url_example">http://direct.myradio.com/live/myradio.mp3</string>
     <string name="legend_page_url">Интернет-адрес радиостанции:</string>
     <string name="legend_page_url_example">http://direct.myradio.com</string>
-    <string name="icon_url">Интернет-адрес иконки (нажмите <b>ПОИСК ИКОНКИ</b>, чтобы взять иконку с интернет-адреса радиостанции, или <b>ОБЗОР<b>, чтобы выбрать иконку из файловой системы устройства):</string>
+    <string name="icon_url">Интернет-адрес иконки (нажмите <b>ПОИСК ИКОНКИ</b>, чтобы взять иконку с интернет-адреса радиостанции, или <b>ОБЗОР</b>, чтобы выбрать иконку из файловой системы устройства):</string>
     <string name="icon_url_example">https://www.my_cloud.com/icons/my_icon.png</string>
     <string name="radio_definition_error">Некорректное описание радиостанции!</string>
     <string name="device_no_device_yet">Устройства пока не найдены.</string>
@@ -75,7 +75,7 @@
     <string name="preferred">Избранное</string>
     <string name="report_error">Ошибка, не удалось сгенерировать отчёт!</string>
     <string name="radio_database_update_failed">Внутренняя ошибка: не удалось изменить радиостанцию!</string>
-    <string name="import_message">Выберите файл импорта. Чтобы увидеть формат экспортируемого содержимого вы можете выполнить <b>ЭКСПОРТ<b> и изучить полученные данные в файле</string>
+    <string name="import_message">Выберите файл импорта. Чтобы увидеть формат экспортируемого содержимого вы можете выполнить <b>ЭКСПОРТ</b> и изучить полученные данные в файле</string>
     <string name="export_message">Экспорт [.CSV] или [.JSON] в выбранную директорию</string>
     <string name="import_successful">Импорт успешен!</string>
     <string name="import_failed">Ошибка импорта!</string>
