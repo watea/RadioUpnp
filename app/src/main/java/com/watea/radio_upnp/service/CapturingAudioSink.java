@@ -48,7 +48,7 @@ public class CapturingAudioSink implements AudioSink {
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private static final long ONE_SECOND_US = 1_000_000L;
   private static final long PACER_SLEEP_MIN_US = 1_000L;
-  private static final long BURST_DURATION_US = 5_000_000L;
+  private static final long BURST_DURATION_US = 2_000_000L;
   @NonNull
   private final AudioSink delegate;
   private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);

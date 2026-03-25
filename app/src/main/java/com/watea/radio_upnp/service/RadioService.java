@@ -334,7 +334,11 @@ public class RadioService
     playerAdapter.stop();
     // Release HTTP server
     if (upnpStreamServer != null) {
-      upnpStreamServer.stop();
+      try {
+        upnpStreamServer.stop();
+      } catch (IOException ioException) {
+        Log.d(LOG_TAG, "onDestroy: unable to stop HTTP server", ioException);
+      }
     }
     // Release UPnP service
     unbindService(upnpConnection);
@@ -765,6 +769,8 @@ public class RadioService
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build()); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
+        // Sync lockKey immediately, format follows later
+        upnpStreamServer.setPcmMode();
         // Link capturingSink to upnpStreamServer
         capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
         return castManager.getCastSessionDevice(
@@ -780,6 +786,8 @@ public class RadioService
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
         Log.d(LOG_TAG, "getSessionDevice: UPnp with isPcm = " + isPcm);
         if (isPcm) {
+          // Sync lockKey immediately, format follows later
+          upnpStreamServer.setPcmMode();
           // Link capturingSink to upnpStreamServer
           capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
         } else {
