@@ -81,6 +81,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -110,10 +111,9 @@ public class RadioService
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback = new MediaSessionCompatCallback();
-  private final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
   @Nullable
   private Result<List<MediaBrowserCompat.MediaItem>> loadResult = null;
-  private volatile boolean isLastRadioToLaunch = false;
+  private boolean isLastRadioToLaunch = false;
   @NonNull
   private volatile String lockKey = getLockKey();
   private PlayerAdapter playerAdapter;
@@ -205,10 +205,9 @@ public class RadioService
     @Override
     public void onInitEnd() {
       Log.d(LOG_TAG, "onInitEnd");
-      onLoadChildren();
       handler.post(() -> {
         if (loadResult != null) {
-          loadResult.sendResult(mediaItems);
+          onLoadChildren(loadResult);
           loadResult = null;
         }
         if (isLastRadioToLaunch) {
@@ -409,13 +408,16 @@ public class RadioService
   public void onLoadChildren(@NonNull final String parentMediaId, @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
     Log.d(LOG_TAG, "onLoadChildren: with parentMediaId = " + parentMediaId);
     if (MEDIA_ROOT_ID.equals(parentMediaId)) {
-      if (!Radios.isInit()) {
+      if (Radios.isInit()) {
+        onLoadChildren(result);
+      } else {
         Log.d(LOG_TAG, "onLoadChildren: detach");
         result.detach();
         this.loadResult = result;
       }
+    } else {
+      result.sendResult(Collections.emptyList());
     }
-    result.sendResult(mediaItems);
   }
 
   @Override
@@ -465,8 +467,9 @@ public class RadioService
     return (playbackState == null) ? PlaybackStateCompat.STATE_ERROR : playbackState.getState();
   }
 
-  private void onLoadChildren() {
+  private void onLoadChildren(@NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
     Log.d(LOG_TAG, "onLoadChildren");
+    final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
     for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
       final String radioId = radio.getId();
       Log.d(LOG_TAG, "Children: Id = " + radioId);
@@ -478,6 +481,7 @@ public class RadioService
       final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
       mediaItems.add(item);
     }
+    result.sendResult(mediaItems);
   }
 
   private void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
