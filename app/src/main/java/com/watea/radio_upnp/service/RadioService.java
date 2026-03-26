@@ -204,6 +204,7 @@ public class RadioService
 
     @Override
     public void onInitEnd() {
+      Log.d(LOG_TAG, "onInitEnd");
       onLoadChildren();
       handler.post(() -> {
         if (loadResult != null) {
@@ -465,6 +466,7 @@ public class RadioService
   }
 
   private void onLoadChildren() {
+    Log.d(LOG_TAG, "onLoadChildren");
     for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
       final String radioId = radio.getId();
       Log.d(LOG_TAG, "Children: Id = " + radioId);
@@ -793,6 +795,7 @@ public class RadioService
     }
 
     private boolean launchLastRadio() {
+      Log.d(LOG_TAG, "launchLastRadio");
       if (Radios.isInit()) {
         final Radios radios = Radios.getInstance();
         if (!radios.isEmpty()) {
@@ -848,6 +851,7 @@ public class RadioService
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build()); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
+        Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
         // Sync lockKey immediately, format follows later
         upnpStreamServer.setPcmMode();
         // Link capturingSink to upnpStreamServer
@@ -863,7 +867,7 @@ public class RadioService
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         // PCM?
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
-        Log.d(LOG_TAG, "getSessionDevice: UPnp with isPcm = " + isPcm);
+        Log.d(LOG_TAG, "getSessionDevice: UpnpSessionDevice with isPcm = " + isPcm);
         if (isPcm) {
           // Sync lockKey immediately, format follows later
           upnpStreamServer.setPcmMode();
@@ -885,6 +889,7 @@ public class RadioService
           upnpSelectedDevice,
           upnpService.getActionController());
       } else {
+        Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
         return new LocalSessionDevice(
           RadioService.this,
           getExoPlayer(capturingAudioSink),
