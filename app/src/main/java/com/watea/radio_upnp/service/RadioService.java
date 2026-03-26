@@ -114,6 +114,7 @@ public class RadioService
   @Nullable
   private Result<List<MediaBrowserCompat.MediaItem>> loadResult = null;
   private boolean isLastRadioToLaunch = false;
+  private volatile boolean isAllowedToRewind = false;
   @NonNull
   private volatile String lockKey = getLockKey();
   private PlayerAdapter playerAdapter;
@@ -148,6 +149,9 @@ public class RadioService
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
+  private CastManager castManager;
+  @Nullable
+  private CapturingAudioSink capturingAudioSink = null;
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
     public void onCastStarting() {
@@ -163,7 +167,8 @@ public class RadioService
       final int state = getPlaybackState();
       Log.d(LOG_TAG, "onCastStarted with state: " + state);
       if ((state == PlaybackStateCompat.STATE_BUFFERING) || (state == PlaybackStateCompat.STATE_PAUSED) || (state == PlaybackStateCompat.STATE_PLAYING)) {
-        mediaSessionCompatCallback.onPlay();
+        // We relaunch a session
+        mediaSessionCompatCallback.onRewind();
       }
     }
 
@@ -173,9 +178,6 @@ public class RadioService
       mediaSessionCompatCallback.onStop();
     }
   };
-  private CastManager castManager;
-  @Nullable
-  private CapturingAudioSink capturingAudioSink = null;
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onPreferredChange() {
@@ -240,6 +242,7 @@ public class RadioService
     public void onConnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onConnected: " + lockKey);
       if ((capturingAudioSink != null) && lockKey.equals(RadioService.this.lockKey)) {
+        isAllowedToRewind = true;
         capturingAudioSink.flushAndReset();
       }
     }
@@ -500,6 +503,9 @@ public class RadioService
     // Manage the started state of this service, and session activity
     switch (intState) {
       case PlaybackStateCompat.STATE_PLAYING:
+        if (!playerAdapter.isRemote()) {
+          isAllowedToRewind = true;
+        }
       case PlaybackStateCompat.STATE_BUFFERING:
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
           startForeground(
@@ -512,6 +518,10 @@ public class RadioService
         break;
       case PlaybackStateCompat.STATE_ERROR:
         playerAdapter.release();
+        if (isAllowedToRewind) {
+          isAllowedToRewind = false;
+          mediaSessionCompatCallback.onRewind();
+        }
       case PlaybackStateCompat.STATE_PAUSED:
         releaseScheduler();
         buildNotification();
@@ -691,6 +701,7 @@ public class RadioService
       final String lastPlaylist = (mediaMetadataCompat == null) ? "" : mediaMetadataCompat.getString(PLAYLIST);
       buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
       // Start service, must be done while activity has foreground
+      isAllowedToRewind = false;
       if (playerAdapter.prepareFromMediaId()) {
         startForegroundService(new Intent(RadioService.this, RadioService.class));
       } else {
@@ -756,7 +767,11 @@ public class RadioService
     @Override
     public void onRewind() {
       Log.d(LOG_TAG, "onRewind");
-      onPlay();
+      // We relaunch a session
+      final Radio radio = playerAdapter.getRadio();
+      if (radio != null) {
+        onPlayFromMediaId(radio.getId(), new Bundle());
+      }
     }
 
     @Override

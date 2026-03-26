@@ -26,6 +26,8 @@ package com.watea.radio_upnp.model;
 import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
@@ -41,6 +43,11 @@ import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
+
+import com.watea.radio_upnp.service.RadioURL;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
@@ -125,7 +132,8 @@ public abstract class SessionDevice {
   }
 
   public void pause() {
-    if (isRemote()) {
+    // UPnP session shall be relaunched after pause, so we stop it
+    if (isUpnp()) {
       exoPlayer.stop();
     } else {
       exoPlayer.pause();
@@ -137,10 +145,32 @@ public abstract class SessionDevice {
   }
 
   public void prepareFromMediaId() {
-    exoPlayer.addListener(playerListener);
-    exoPlayer.setMediaItem(MediaItem.fromUri(radio.getUri()));
-    exoPlayer.prepare();
-    exoPlayer.setPlayWhenReady(true);
+    new Thread(() -> {
+      HttpURLConnection httpURLConnection = null;
+      try {
+        httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection();
+        final String url = httpURLConnection.getURL().toString();
+        Log.d(LOG_TAG, "prepareFromMediaId: " + url);
+        // Post ExoPlayer calls to the main thread
+        new Handler(Looper.getMainLooper()).post(() -> {
+          exoPlayer.addListener(playerListener);
+          exoPlayer.setMediaItem(MediaItem.fromUri(url));
+          exoPlayer.prepare();
+          exoPlayer.setPlayWhenReady(true);
+        });
+      } catch (IOException ioException) {
+        Log.d(LOG_TAG, "prepareFromMediaId failed", ioException);
+        // For remote session, we let the remote functional chain work to detect failure,
+        // as it is launched independently
+        if (!isRemote()) {
+          onState(PlaybackStateCompat.STATE_ERROR);
+        }
+      } finally {
+        if (httpURLConnection != null) {
+          httpURLConnection.disconnect();
+        }
+      }
+    }).start();
   }
 
   public void onState(int state) {
