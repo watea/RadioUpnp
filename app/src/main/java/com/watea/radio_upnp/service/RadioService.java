@@ -150,8 +150,6 @@ public class RadioService
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
   private CastManager castManager;
-  @Nullable
-  private CapturingAudioSink capturingAudioSink = null;
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
     public void onCastStarting() {
@@ -241,9 +239,8 @@ public class RadioService
     @Override
     public void onConnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onConnected: " + lockKey);
-      if ((capturingAudioSink != null) && lockKey.equals(RadioService.this.lockKey)) {
+      if (lockKey.equals(RadioService.this.lockKey)) {
         isAllowedToRewind = true;
-        capturingAudioSink.flushAndReset();
       }
     }
   };
@@ -868,7 +865,7 @@ public class RadioService
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
-      capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build()); // Default: PCM
+      CapturingAudioSink capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build()); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
         // Sync lockKey immediately, format follows later
