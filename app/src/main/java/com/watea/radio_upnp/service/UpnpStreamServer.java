@@ -273,7 +273,7 @@ public class UpnpStreamServer extends HttpServer {
         return; // Not a stream request — not handled
       }
       final String method = request.getMethod();
-      Log.d(TAG, "StreamHandler: " + method + " lockKey=" + incomingLockKey);
+      Log.d(TAG, "StreamHandler: " + method + " lockKey = " + incomingLockKey);
       final boolean isGet = method.equals("GET");
       final boolean isHead = method.equals("HEAD");
       if (!(isHead || isGet)) {
@@ -376,7 +376,7 @@ public class UpnpStreamServer extends HttpServer {
         .getActualHttpURLConnection(conn -> conn.setRequestProperty("Icy-MetaData", "0")); // ExoPlayer handles ICY locally
       final String contentType = RadioURL.getStreamContentType(httpURLConnection);
       final String mime = (contentType != null) ? contentType : DEFAULT_MIME;
-      Log.d(TAG, "handleRelay: relay mime =" + mime);
+      Log.d(TAG, "handleRelay: relay mime = " + mime);
       addDlnaHeaders(response, mime);
       response.send(); // Headers on the wire — body follows immediately
       if (isHead) {

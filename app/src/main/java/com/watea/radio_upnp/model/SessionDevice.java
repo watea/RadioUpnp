@@ -97,6 +97,8 @@ public abstract class SessionDevice {
 
   public abstract boolean isRemote();
 
+  public abstract boolean isUpnp();
+
   public abstract void setVolume(float volume);
 
   public abstract void adjustVolume(int direction);

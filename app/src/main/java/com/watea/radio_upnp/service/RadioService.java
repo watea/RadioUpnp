@@ -80,6 +80,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -109,12 +110,10 @@ public class RadioService
   private static final Handler handler = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final MediaSessionCompatCallback mediaSessionCompatCallback = new MediaSessionCompatCallback();
-  private final Radios.Listener radiosListener = new Radios.Listener() {
-    @Override
-    public void onPreferredChange() {
-      notifyChildrenChanged(MEDIA_ROOT_ID);
-    }
-  };
+  private final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
+  @Nullable
+  private Result<List<MediaBrowserCompat.MediaItem>> loadResult = null;
+  private volatile boolean isLastRadioToLaunch = false;
   @NonNull
   private volatile String lockKey = getLockKey();
   private PlayerAdapter playerAdapter;
@@ -177,6 +176,53 @@ public class RadioService
   private CastManager castManager;
   @Nullable
   private CapturingAudioSink capturingAudioSink = null;
+  private final Radios.Listener radiosListener = new Radios.Listener() {
+    @Override
+    public void onPreferredChange() {
+      notifyChildrenChanged();
+    }
+
+    @Override
+    public void onAdd(@NonNull Radio radio) {
+      notifyChildrenChanged();
+    }
+
+    @Override
+    public void onAddAll(@NonNull Collection<? extends Radio> c) {
+      notifyChildrenChanged();
+    }
+
+    @Override
+    public void onChange(@NonNull Radio radio) {
+      notifyChildrenChanged();
+    }
+
+    @Override
+    public void onRemove(int index) {
+      notifyChildrenChanged();
+    }
+
+    @Override
+    public void onInitEnd() {
+      onLoadChildren();
+      handler.post(() -> {
+        if (loadResult != null) {
+          loadResult.sendResult(mediaItems);
+          loadResult = null;
+        }
+        if (isLastRadioToLaunch) {
+          mediaSessionCompatCallback.launchLastRadio();
+          isLastRadioToLaunch = false;
+        }
+      });
+    }
+
+    private void notifyChildrenChanged() {
+      if (Radios.isInit()) {
+        RadioService.this.notifyChildrenChanged(MEDIA_ROOT_ID);
+      }
+    }
+  };
   private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
     @Override
     @NonNull
@@ -292,7 +338,7 @@ public class RadioService
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
     // Player
-    playerAdapter = new PlayerAdapter(this);
+    playerAdapter = new PlayerAdapter(this, mediaSessionCompatCallback::onPlay);
     // Launch HTTP server
     try {
       upnpStreamServer = new UpnpStreamServer(upnpStreamCallback);
@@ -330,6 +376,8 @@ public class RadioService
   public void onDestroy() {
     super.onDestroy();
     Log.d(LOG_TAG, "onDestroy");
+    // Radios
+    Radios.getInstance().removeListener(radiosListener);
     // Stop player to be clean on resources (if not, audio focus is not well handled)
     playerAdapter.stop();
     // Release HTTP server
@@ -359,18 +407,11 @@ public class RadioService
   @Override
   public void onLoadChildren(@NonNull final String parentMediaId, @NonNull final Result<List<MediaBrowserCompat.MediaItem>> result) {
     Log.d(LOG_TAG, "onLoadChildren: with parentMediaId = " + parentMediaId);
-    final List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
     if (MEDIA_ROOT_ID.equals(parentMediaId)) {
-      for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
-        final String radioId = radio.getId();
-        Log.d(LOG_TAG, "Children: Id = " + radioId);
-        final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
-          .setMediaId(radioId)
-          .setTitle(radio.getName())
-          .setIconBitmap(radio.getIcon())
-          .build();
-        final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
-        mediaItems.add(item);
+      if (!Radios.isInit()) {
+        Log.d(LOG_TAG, "onLoadChildren: detach");
+        result.detach();
+        this.loadResult = result;
       }
     }
     result.sendResult(mediaItems);
@@ -421,6 +462,20 @@ public class RadioService
   public int getPlaybackState() {
     final PlaybackStateCompat playbackState = mediaController.getPlaybackState();
     return (playbackState == null) ? PlaybackStateCompat.STATE_ERROR : playbackState.getState();
+  }
+
+  private void onLoadChildren() {
+    for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
+      final String radioId = radio.getId();
+      Log.d(LOG_TAG, "Children: Id = " + radioId);
+      final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
+        .setMediaId(radioId)
+        .setTitle(radio.getName())
+        .setIconBitmap(radio.getIcon())
+        .build();
+      final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
+      mediaItems.add(item);
+    }
   }
 
   private void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
@@ -603,6 +658,8 @@ public class RadioService
         return;
       }
       Log.d(LOG_TAG, "onPlayFromMediaId with radio: " + radio.getName() + " => " + radio.getUri());
+      // Store
+      MainActivity.getAppPreferences(RadioService.this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
       // Retrieve last radio
       final Radio lastRadio = playerAdapter.getRadio();
       // Change session tag
@@ -638,7 +695,7 @@ public class RadioService
 
     @Override
     public void onPlayFromSearch(String query, Bundle extras) {
-      Log.d(LOG_TAG, "onPlayFromSearch: query=" + query);
+      Log.d(LOG_TAG, "onPlayFromSearch: query = " + query);
       final Radios radios = Radios.getInstance();
       Radio match = null;
       if ((query == null) || query.trim().isEmpty()) {
@@ -656,20 +713,27 @@ public class RadioService
         }
       }
       if (match == null) {
-        Log.w(LOG_TAG, "onPlayFromSearch: no match found for query=" + query);
+        Log.w(LOG_TAG, "onPlayFromSearch: no match found for query = " + query);
       } else {
-        Log.d(LOG_TAG, "onPlayFromSearch: matched radio=" + match.getName());
+        Log.d(LOG_TAG, "onPlayFromSearch: matched radio = " + match.getName());
         onPlay(match);
       }
     }
 
     @Override
     public void onPlay() {
-      onPlay(playerAdapter.getRadio());
+      Log.d(LOG_TAG, "onPlay");
+      // Is it an init call?
+      if (playerAdapter.hasSessionDevice()) {
+        playerAdapter.play();
+      } else {
+        isLastRadioToLaunch = !launchLastRadio();
+      }
     }
 
     @Override
     public void onPause() {
+      Log.d(LOG_TAG, "onPause");
       playerAdapter.pause();
     }
 
@@ -685,11 +749,13 @@ public class RadioService
 
     @Override
     public void onRewind() {
+      Log.d(LOG_TAG, "onRewind");
       onPlay();
     }
 
     @Override
     public void onStop() {
+      Log.d(LOG_TAG, "onStop");
       playerAdapter.stop();
     }
 
@@ -716,6 +782,27 @@ public class RadioService
         default:
           Log.e(LOG_TAG, "onCustomAction: unknown command!");
       }
+    }
+
+    public void onPlay(@Nullable Radio radio) {
+      if (radio == null) {
+        Log.d(LOG_TAG, "onPlay: radio is null!");
+      } else {
+        onPlayFromMediaId(radio.getId(), new Bundle());
+      }
+    }
+
+    private boolean launchLastRadio() {
+      if (Radios.isInit()) {
+        final Radios radios = Radios.getInstance();
+        if (!radios.isEmpty()) {
+          onPlayFromMediaId(
+            MainActivity.getAppPreferences(RadioService.this).getString(getString(R.string.key_last_played_radio), radios.get(0).getId()),
+            new Bundle());
+        }
+        return true;
+      }
+      return false;
     }
 
     @NonNull
@@ -750,14 +837,6 @@ public class RadioService
         } else {
           onPlay(Radios.getInstance().getRadioFrom(radio, direction));
         }
-      }
-    }
-
-    private void onPlay(@Nullable Radio radio) {
-      if (radio == null) {
-        Log.d(LOG_TAG, "onPlay: radio is null!");
-      } else {
-        onPlayFromMediaId(radio.getId(), new Bundle());
       }
     }
 

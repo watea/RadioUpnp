@@ -116,6 +116,11 @@ public class UpnpSessionDevice extends SessionDevice {
     return true;
   }
 
+  @Override
+  public boolean isUpnp() {
+    return true;
+  }
+
   // Not implemented
   @Override
   public void setVolume(float volume) {

@@ -52,6 +52,11 @@ public class LocalSessionDevice extends SessionDevice {
   }
 
   @Override
+  public boolean isUpnp() {
+    return false;
+  }
+
+  @Override
   public void setVolume(float volume) {
     exoPlayer.setVolume(volume);
   }
@@ -81,23 +86,18 @@ public class LocalSessionDevice extends SessionDevice {
     return availableActions;
   }
 
-  @Override
-  public void play() {
-    Log.e(LOG_TAG, "play: shall not be used!");
-  }
-
   @NonNull
   protected Player.Listener getPlayerListener() {
     return new PlayerListener() {
       @Override
       public void onPlaybackStateChanged(int playbackState) {
-        Log.d(LOG_TAG, "onPlaybackStateChanged: State=" + playbackState);
+        Log.d(LOG_TAG, "onPlaybackStateChanged: state = " + playbackState);
         switch (playbackState) {
           case ExoPlayer.STATE_BUFFERING:
             onState(PlaybackStateCompat.STATE_BUFFERING);
             break;
           case ExoPlayer.STATE_READY:
-            onState(PlaybackStateCompat.STATE_PLAYING);
+            // Delegate to onIsPlayingChanged — it fires on both initial play and resume
             break;
           case ExoPlayer.STATE_IDLE:
           case ExoPlayer.STATE_ENDED:
@@ -105,8 +105,16 @@ public class LocalSessionDevice extends SessionDevice {
             break;
           // Should not happen
           default:
-            Log.e(LOG_TAG, "onPlaybackStateChanged: bad State=" + playbackState);
+            Log.e(LOG_TAG, "onPlaybackStateChanged: bad state = " + playbackState);
             onState(PlaybackStateCompat.STATE_ERROR);
+        }
+      }
+
+      @Override
+      public void onIsPlayingChanged(boolean isPlaying) {
+        // Fired on play/pause toggle while STATE_READY stays constant
+        if (exoPlayer.getPlaybackState() == ExoPlayer.STATE_READY) {
+          onState(isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED);
         }
       }
     };

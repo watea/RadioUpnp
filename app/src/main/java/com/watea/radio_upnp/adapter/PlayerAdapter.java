@@ -41,6 +41,8 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
 
+import java.util.function.Consumer;
+
 // Player implementation that handles playing music with proper handling of headphones and audio focus
 public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   private static final String LOG_TAG = PlayerAdapter.class.getSimpleName();
@@ -57,6 +59,8 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   private final AudioManager audioManager;
   @NonNull
   private final AudioFocusRequest audioFocusRequest;
+  @NonNull
+  private final Consumer<Radio> onPlayCallback;
   @Nullable
   private SessionDevice sessionDevice = null;
   private boolean playOnAudioFocus = false;
@@ -70,13 +74,18 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   };
   private boolean audioNoisyReceiverRegistered = false;
 
-  public PlayerAdapter(@NonNull Context context) {
+  public PlayerAdapter(@NonNull Context context, @NonNull Consumer<Radio> onPlayCallback) {
     this.context = context;
+    this.onPlayCallback = onPlayCallback;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
       .setOnAudioFocusChangeListener(this, new Handler(Looper.getMainLooper()))
       .build();
+  }
+
+  public boolean hasSessionDevice() {
+    return (sessionDevice != null);
   }
 
   public void setSessionDevice(@NonNull SessionDevice sessionDevice) {
@@ -98,12 +107,20 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public synchronized final void play() {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "Internal failure on play; no session device defined");
+      return;
+    }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
       if (isRemote() || requestAudioFocus()) {
         if (!isRemote()) {
           registerAudioNoisyReceiver();
         }
-        onPlay();
+        if (sessionDevice.isUpnp()) {
+          onPlayCallback.accept(getRadio());
+        } else {
+          onPlay();
+        }
       }
     } else {
       Log.e(LOG_TAG, "Internal failure on play; not allowed");

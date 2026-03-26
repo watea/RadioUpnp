@@ -71,7 +71,7 @@ public class Radios extends ArrayList<Radio> {
   @Nullable
   private static Radios radios = null; // Singleton
   private static boolean isPreferred = false;
-  private static boolean isInit = false;
+  private static volatile boolean isInit = false;
   private final Handler handler = new Handler(Looper.getMainLooper());
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
@@ -144,8 +144,8 @@ public class Radios extends ArrayList<Radio> {
   }
 
   private static void onInit() {
-    isInit = true;
     getInstance().tellListeners(true, false, Listener::onInitEnd);
+    isInit = true;
   }
 
   public void addListener(@NonNull Listener listener) {

@@ -70,7 +70,7 @@ public class CastSessionDevice extends SessionDevice {
         return;
       }
       final int playerState = remoteMediaClient.getPlayerState();
-      Log.d(LOG_TAG, "onStatusUpdated: State=" + playerState);
+      Log.d(LOG_TAG, "onStatusUpdated: state = " + playerState);
       switch (playerState) {
         case MediaStatus.PLAYER_STATE_PLAYING:
           onState(PlaybackStateCompat.STATE_PLAYING);
@@ -111,6 +111,11 @@ public class CastSessionDevice extends SessionDevice {
   @Override
   public boolean isRemote() {
     return true;
+  }
+
+  @Override
+  public boolean isUpnp() {
+    return false;
   }
 
   @Override
