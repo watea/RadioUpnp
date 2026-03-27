@@ -743,8 +743,12 @@ public class RadioService
     @Override
     public void onPlay() {
       Log.d(LOG_TAG, "onPlay");
+      final int state = getPlaybackState();
       // Is it an init call?
-      if (playerAdapter.hasSessionDevice()) {
+      if (playerAdapter.hasSessionDevice() &&
+        (state == PlaybackStateCompat.STATE_PAUSED) ||
+        (state == PlaybackStateCompat.STATE_BUFFERING) ||
+        (state == PlaybackStateCompat.STATE_PLAYING)) {
         playerAdapter.play();
       } else {
         isLastRadioToLaunch = !launchLastRadio();

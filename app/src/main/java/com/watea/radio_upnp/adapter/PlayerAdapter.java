@@ -94,6 +94,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   // Must be called
   public synchronized final boolean prepareFromMediaId() {
+    Log.d(LOG_TAG, "prepareFromMediaId");
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on prepareFromMediaId; no session device defined");
     } else {
@@ -107,6 +108,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public synchronized final void play() {
+    Log.d(LOG_TAG, "play");
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on play; no session device defined");
       return;
@@ -128,6 +130,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public synchronized final void pause() {
+    Log.d(LOG_TAG, "pause");
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on pause; no session device defined");
       return;
@@ -145,6 +148,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public synchronized final void stop() {
+    Log.d(LOG_TAG, "stop");
     if (sessionDevice == null) {
       Log.d(LOG_TAG, "stop: no session device defined");
       return;
@@ -160,6 +164,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   // Called when resources must be released, no impact on playback state
   public synchronized final void release() {
+    Log.d(LOG_TAG, "release");
     if (!isRemote()) {
       releaseAudioFocus();
       unregisterAudioNoisyReceiver();
@@ -169,6 +174,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   // Called when resources only must be released
   public synchronized final void clean() {
+    Log.d(LOG_TAG, "clean");
     onRelease();
   }
 
