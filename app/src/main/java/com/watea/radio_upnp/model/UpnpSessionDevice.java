@@ -365,6 +365,32 @@ public class UpnpSessionDevice extends SessionDevice {
         .addArgument("CurrentURIMetaData", getMetaData()));
   }
 
+  @NonNull
+  private String getDidlMime() {
+    switch (content) {
+      case "audio/aac":
+      case "audio/x-aac":
+      case "audio/aacp":
+        // Renderers list audio/mp4, not raw AAC MIME types
+        return "audio/mp4";
+      case "audio/x-mpeg":
+      case "audio/mp2":
+      case "audio/mpeg3":
+      case "audio/x-mp3":
+        // Normalize all MP3 variants
+        return "audio/mpeg";
+      case "audio/x-m4a":
+        return "audio/mp4";
+      case "audio/ogg":
+      case "audio/vorbis":
+      case "application/ogg":
+        // OGG: no standard DLNA MIME, best effort
+        return "audio/ogg";
+      default:
+        return content;
+    }
+  }
+
   // Create DIDL-Lite metadata
   @NonNull
   private String getMetaData() {
@@ -378,7 +404,7 @@ public class UpnpSessionDevice extends SessionDevice {
       "<upnp:artist>" + information + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + content + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlMime() + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
       "</item>" +
       "</DIDL-Lite>";
   }

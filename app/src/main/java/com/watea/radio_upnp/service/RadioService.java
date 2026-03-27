@@ -149,6 +149,27 @@ public class RadioService
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
   private MediaControllerCompat mediaController;
+  private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
+    @Override
+    @NonNull
+    public String getLockKey() {
+      return lockKey;
+    }
+
+    @Override
+    public void onDisconnect(@NonNull String lockKey) {
+      Log.d(LOG_TAG, "onDisconnect: " + lockKey);
+      runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
+    }
+
+    @Override
+    public void onConnected(@NonNull String lockKey) {
+      Log.d(LOG_TAG, "onConnected: " + lockKey);
+      if (lockKey.equals(RadioService.this.lockKey)) {
+        isAllowedToRewind = true;
+      }
+    }
+  };
   private CastManager castManager;
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
@@ -220,27 +241,6 @@ public class RadioService
     private void notifyChildrenChanged() {
       if (Radios.isInit()) {
         RadioService.this.notifyChildrenChanged(MEDIA_ROOT_ID);
-      }
-    }
-  };
-  private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
-    @Override
-    @NonNull
-    public String getLockKey() {
-      return lockKey;
-    }
-
-    @Override
-    public void onDisconnect(@NonNull String lockKey) {
-      Log.d(LOG_TAG, "onDisconnect: " + lockKey);
-      runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
-    }
-
-    @Override
-    public void onConnected(@NonNull String lockKey) {
-      Log.d(LOG_TAG, "onConnected: " + lockKey);
-      if (lockKey.equals(RadioService.this.lockKey)) {
-        isAllowedToRewind = true;
       }
     }
   };
@@ -486,13 +486,18 @@ public class RadioService
 
   private void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
     Log.d(LOG_TAG, "Valid state/lock key received: " + SessionDevice.getStateName(state.getState()) + "/" + lockKey);
+    final int currentState = getPlaybackState();
     // Nothing can change if Stopped
-    if (getPlaybackState() == PlaybackStateCompat.STATE_STOPPED) {
+    if (currentState == PlaybackStateCompat.STATE_STOPPED) {
       return;
     }
     final int intState = state.getState();
+    // We do nothing if nothing change
+    if (intState == currentState) {
+      return;
+    }
     // Error is not accepted if remote and paused
-    if ((playerAdapter.isRemote() && (intState == PlaybackStateCompat.STATE_ERROR) && (getPlaybackState() == PlaybackStateCompat.STATE_PAUSED))) {
+    if ((playerAdapter.isRemote() && (intState == PlaybackStateCompat.STATE_ERROR) && (currentState == PlaybackStateCompat.STATE_PAUSED))) {
       return;
     }
     // Report the state to the MediaSession
@@ -518,6 +523,7 @@ public class RadioService
         if (isAllowedToRewind) {
           isAllowedToRewind = false;
           mediaSessionCompatCallback.onRewind();
+          break;
         }
       case PlaybackStateCompat.STATE_PAUSED:
         releaseScheduler();
@@ -878,7 +884,7 @@ public class RadioService
           RadioService.this,
           lockKey,
           radio,
-          upnpStreamServer.getStreamUri(localIp, lockKey),
+          upnpStreamServer.getStreamUri(localIp, lockKey, true),
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         // PCM?
@@ -900,7 +906,7 @@ public class RadioService
           RadioService.this,
           lockKey,
           radio,
-          upnpStreamServer.getStreamUri(localIp, lockKey),
+          upnpStreamServer.getStreamUri(localIp, lockKey, isPcm),
           upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
           upnpService.getActionController());
