@@ -59,6 +59,7 @@ import androidx.media.session.MediaButtonReceiver;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.Renderer;
+import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
@@ -137,6 +138,8 @@ public class RadioService
       upnpService = null;
     }
   };
+  @Nullable
+  private AudioSink audioSink = null;
   private NotificationManagerCompat notificationManager;
   private MediaSessionCompat session;
   @Nullable
@@ -151,22 +154,23 @@ public class RadioService
   private MediaControllerCompat mediaController;
   private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
     @Override
-    @NonNull
-    public String getLockKey() {
-      return lockKey;
+    public void onConnected(@NonNull String lockKey) {
+      Log.d(LOG_TAG, "onConnected: " + lockKey);
+      if (lockKey.equals(RadioService.this.lockKey)) {
+        isAllowedToRewind = true;
+      }
     }
 
     @Override
-    public void onDisconnect(@NonNull String lockKey) {
+    public void onDisconnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onDisconnect: " + lockKey);
       runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
     }
 
     @Override
-    public void onConnected(@NonNull String lockKey) {
-      Log.d(LOG_TAG, "onConnected: " + lockKey);
-      if (lockKey.equals(RadioService.this.lockKey)) {
-        isAllowedToRewind = true;
+    public void onFeedingStart(@NonNull String lockKey) {
+      if (audioSink instanceof CapturingAudioSink) {
+        ((CapturingAudioSink) audioSink).flushAndReset(lockKey);
       }
     }
   };
@@ -746,9 +750,9 @@ public class RadioService
       final int state = getPlaybackState();
       // Is it an init call?
       if (playerAdapter.hasSessionDevice() &&
-        (state == PlaybackStateCompat.STATE_PAUSED) ||
-        (state == PlaybackStateCompat.STATE_BUFFERING) ||
-        (state == PlaybackStateCompat.STATE_PLAYING)) {
+        ((state == PlaybackStateCompat.STATE_PAUSED) ||
+          (state == PlaybackStateCompat.STATE_BUFFERING) ||
+          (state == PlaybackStateCompat.STATE_PLAYING))) {
         playerAdapter.play();
       } else {
         isLastRadioToLaunch = !launchLastRadio();
@@ -835,7 +839,7 @@ public class RadioService
     }
 
     @NonNull
-    private ExoPlayer getExoPlayer(@NonNull CapturingAudioSink capturingAudioSink) {
+    private ExoPlayer getExoPlayer(@NonNull AudioSink audioSink) {
       return new ExoPlayer.Builder(RadioService.this)
         .setRenderersFactory(
           (handler,
@@ -848,7 +852,7 @@ public class RadioService
               MediaCodecSelector.DEFAULT,
               handler,
               audioListener,
-              capturingAudioSink),
+              audioSink),
             new MetadataRenderer(metadataOutput, handler.getLooper())
           })
         .build();
@@ -875,16 +879,16 @@ public class RadioService
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
-      CapturingAudioSink capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build()); // Default: PCM
+      audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
         // Sync lockKey immediately, format follows later
-        upnpStreamServer.setPcmMode();
+        upnpStreamServer.setMode(null, lockKey);
         // Link capturingSink to upnpStreamServer
-        capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
+        ((CapturingAudioSink) audioSink).setCallback(upnpStreamServer.getPcmCallback());
         return castManager.getCastSessionDevice(
           RadioService.this,
-          getExoPlayer(capturingAudioSink),
+          getExoPlayer(audioSink),
           RadioService.this,
           lockKey,
           radio,
@@ -894,19 +898,17 @@ public class RadioService
         // PCM?
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
         Log.d(LOG_TAG, "getSessionDevice: UpnpSessionDevice with isPcm = " + isPcm);
+        upnpStreamServer.setMode(isPcm ? null : radio.getURL(), lockKey);
         if (isPcm) {
-          // Sync lockKey immediately, format follows later
-          upnpStreamServer.setPcmMode();
           // Link capturingSink to upnpStreamServer
-          capturingAudioSink.setCallback(upnpStreamServer.getPcmCallback());
+          ((CapturingAudioSink) audioSink).setCallback(upnpStreamServer.getPcmCallback());
         } else {
           // Relay mode: stream original URL directly, ExoPlayer only for ICY metadata
-          capturingAudioSink = new CapturingAudioSink(new SilentAudioSink());
-          upnpStreamServer.setRelayUrl(radio.getURL());
+          audioSink = new SilentAudioSink();
         }
         return new UpnpSessionDevice(
           RadioService.this,
-          getExoPlayer(capturingAudioSink),
+          getExoPlayer(audioSink),
           RadioService.this,
           lockKey,
           radio,
@@ -918,7 +920,7 @@ public class RadioService
         Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
         return new LocalSessionDevice(
           RadioService.this,
-          getExoPlayer(capturingAudioSink),
+          getExoPlayer(audioSink),
           RadioService.this,
           lockKey,
           radio);

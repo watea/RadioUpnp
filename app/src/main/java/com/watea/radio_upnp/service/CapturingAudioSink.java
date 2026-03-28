@@ -50,6 +50,8 @@ public class CapturingAudioSink implements AudioSink {
   private static final long PACER_SLEEP_MIN_US = 1_000L;
   private static final long BURST_DURATION_US = 2_000_000L;
   @NonNull
+  private final String lockKey;
+  @NonNull
   private final AudioSink delegate;
   private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);
   @Nullable
@@ -59,8 +61,9 @@ public class CapturingAudioSink implements AudioSink {
   private volatile long byteRate = LONG_DEFAULT;
   private volatile long lastPresentationTimeUs = 0; // Presentation time microseconds
 
-  public CapturingAudioSink(@NonNull AudioSink delegate) {
+  public CapturingAudioSink(@NonNull AudioSink delegate, @NonNull String lockKey) {
     this.delegate = delegate;
+    this.lockKey = lockKey;
   }
 
   public void setCallback(@NonNull Callback callback) {
@@ -235,6 +238,12 @@ public class CapturingAudioSink implements AudioSink {
     return (callback == null) ? delegate.getCurrentPositionUs(sourceEnded) : lastPresentationTimeUs;
   }
 
+  public void flushAndReset(@NonNull String lockKey) {
+    if ((pacer != null) && lockKey.equals(this.lockKey)) {
+      pacer.flushAndReset();
+    }
+  }
+
   private void stopPacer() {
     if (pacer != null) {
       pacer.interrupt();
@@ -245,7 +254,8 @@ public class CapturingAudioSink implements AudioSink {
   public interface Callback {
     void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample);
 
-    void onPcmData(@NonNull byte[] data);
+    // data == null for a reset
+    void onPcmData(@Nullable byte[] data, @NonNull String lockKey);
   }
 
   // callback != null.
@@ -254,6 +264,7 @@ public class CapturingAudioSink implements AudioSink {
   // internal buffer before switching to real-time pacing.
   private class Pacer extends Thread {
     private long bytesConsumed = 0L;
+    private volatile boolean resetRequested = false;
 
     private Pacer() {
       setDaemon(true);
@@ -268,6 +279,17 @@ public class CapturingAudioSink implements AudioSink {
 
       while (!Thread.currentThread().isInterrupted()) {
         try {
+          assert callback != null;
+          if (resetRequested) {
+            resetRequested = false;
+            startTimeUs = LONG_DEFAULT;
+            burstEndBytes = LONG_DEFAULT;
+            bytesConsumed = 0L;
+            pcmBuffer.clear();
+            callback.onPcmData(null, lockKey);
+            Log.d(LOG_TAG, "Pacer timing reset for new renderer connection");
+            continue;
+          }
           final byte[] pcmData = pcmBuffer.poll(PACER_TIMEOUT, TimeUnit.SECONDS);
           if (pcmData == null) {
             Log.e(LOG_TAG, "pcmBuffer EMPTY — ExoPlayer stopped feeding");
@@ -294,12 +316,15 @@ public class CapturingAudioSink implements AudioSink {
             }
           }
           bytesConsumed += pcmData.length;
-          assert callback != null;
-          callback.onPcmData(pcmData);
+          callback.onPcmData(pcmData, lockKey);
         } catch (InterruptedException interruptedException) {
           Thread.currentThread().interrupt();
         }
       }
+    }
+
+    public void flushAndReset() {
+      resetRequested = true;
     }
 
     private long getTimestamp() {
