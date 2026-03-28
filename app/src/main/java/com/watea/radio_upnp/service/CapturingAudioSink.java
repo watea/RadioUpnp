@@ -295,24 +295,30 @@ public class CapturingAudioSink implements AudioSink {
             Log.e(LOG_TAG, "pcmBuffer EMPTY — ExoPlayer stopped feeding");
             continue;
           }
-          // Compute burst threshold once byteRate is known
-          if ((burstEndBytes < 0) && (byteRate > 0)) {
-            burstEndBytes = (byteRate * BURST_DURATION_US) / ONE_SECOND_US;
-            Log.d(LOG_TAG, "Pacer burst phase: " + burstEndBytes + " bytes (" + (BURST_DURATION_US / ONE_SECOND_US) + "s)");
-          }
-          // Real-time pacing only after burst phase
-          if ((burstEndBytes >= 0) && (bytesConsumed > burstEndBytes) && (byteRate > 0)) {
-            if (startTimeUs < 0) {
-              // Anchor the clock retroactively to account for bytes already sent
-              // during burst, so pacing continues seamlessly from here.
-              startTimeUs = getTimestamp() - getExpectedUs();
-              Log.d(LOG_TAG, "Pacer burst complete, switching to real-time pacing");
+          // Guard byteRate
+          if (byteRate <= 0) {
+            // Shall not happen
+            Log.e(LOG_TAG, "Pacer: byteRate not yet known");
+          } else {
+            // Compute burst threshold
+            if (burstEndBytes < 0) {
+              burstEndBytes = (byteRate * BURST_DURATION_US) / ONE_SECOND_US;
+              Log.d(LOG_TAG, "Pacer burst phase: " + burstEndBytes + " bytes (" + (BURST_DURATION_US / ONE_SECOND_US) + "s)");
             }
-            final long elapsedUs = getTimestamp() - startTimeUs;
-            final long sleepUs = getExpectedUs() - elapsedUs;
-            if (sleepUs >= PACER_SLEEP_MIN_US) {
-              //noinspection BusyWait
-              Thread.sleep(sleepUs / 1000);
+            // Real-time pacing only after burst phase
+            if (bytesConsumed > burstEndBytes) {
+              if (startTimeUs < 0) {
+                // Anchor the clock retroactively to account for bytes already sent
+                // during burst, so pacing continues seamlessly from here.
+                startTimeUs = getTimestamp() - getExpectedUs();
+                Log.d(LOG_TAG, "Pacer burst complete, switching to real-time pacing");
+              }
+              final long elapsedUs = getTimestamp() - startTimeUs;
+              final long sleepUs = getExpectedUs() - elapsedUs;
+              if (sleepUs >= PACER_SLEEP_MIN_US) {
+                //noinspection BusyWait
+                Thread.sleep(sleepUs / 1000);
+              }
             }
           }
           bytesConsumed += pcmData.length;
