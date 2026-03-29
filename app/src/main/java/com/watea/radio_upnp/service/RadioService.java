@@ -873,7 +873,8 @@ public class RadioService
       }
     }
 
-    // UPnP or Cast not accepted if environment not OK: force local processing
+    // UPnP or Cast not accepted if environment not OK: force local processing.
+    // Cat always in PCM.
     @NonNull
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
@@ -882,7 +883,7 @@ public class RadioService
       audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
-        // Sync lockKey immediately, format follows later
+        // Sync mode and lockKey
         upnpStreamServer.setMode(null, lockKey);
         // Link capturingSink to upnpStreamServer
         ((CapturingAudioSink) audioSink).setCallback(upnpStreamServer.getPcmCallback());
@@ -897,6 +898,7 @@ public class RadioService
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         // PCM?
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
+        // Sync mode and lockKey
         Log.d(LOG_TAG, "getSessionDevice: UpnpSessionDevice with isPcm = " + isPcm);
         upnpStreamServer.setMode(isPcm ? null : radio.getURL(), lockKey);
         if (isPcm) {
