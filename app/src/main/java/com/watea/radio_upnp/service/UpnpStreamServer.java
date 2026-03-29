@@ -48,6 +48,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -67,14 +68,14 @@ public class UpnpStreamServer extends HttpServer {
   private static final String STREAM_PREFIX = "stream-";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final int PIPE_BUFFER_SIZE = 8192;
+  private static final int CONNECT_WATCHDOG_TIMEOUT_S = 10;
+  private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 5;
   private static final Pattern STREAM_PATH_PATTERN = Pattern.compile(
     "^/" + STREAM_PREFIX + "([^/]+?)" + "(?:" + Pattern.quote(STREAM_SUFFIX_PCM) + ")?$");
-  private static final int RELAY_WATCHDOG_TIMEOUT_S = 10;
   @NonNull
   private final Callback callback;
   private final ArrayBlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
-  private final ConcurrentHashMap<String, Runnable> relayWatchdogs = new ConcurrentHashMap<>();
-  private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
+  private final Watchdogs watchdogs = new Watchdogs();
   @NonNull
   private volatile String lockKey = RadioService.getLockKey(); // Current stream signature
   @Nullable
@@ -178,27 +179,13 @@ public class UpnpStreamServer extends HttpServer {
     sampleRate = DEFAULT;
     if (this.relayUrl != null) {
       // Arm watchdog for this lockKey — relay must connect within timeout
-      final String watchedLockKey = this.lockKey;
-      final Runnable watchdog = () -> {
-        relayWatchdogs.remove(watchedLockKey);
-        Log.e(TAG, "setMode: watchdog fired for " + watchedLockKey);
-        callback.onDisconnected(watchedLockKey);
-      };
-      relayWatchdogs.put(watchedLockKey, watchdog);
-      handler.postDelayed(watchdog, RELAY_WATCHDOG_TIMEOUT_S * 1000L);
+      watchdogs.launch(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
     }
   }
 
   // Returns stream URI adapted to current mode (PCM vs relay)
   public Uri getStreamUri(@NonNull String localIp, @NonNull String lockKey, boolean isPcm) {
     return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/" + STREAM_PREFIX + lockKey + (isPcm ? STREAM_SUFFIX_PCM : ""));
-  }
-
-  private void cancelRelayWatchdog(@NonNull String lockKey) {
-    final Runnable watchdog = relayWatchdogs.remove(lockKey);
-    if (watchdog != null) {
-      handler.removeCallbacks(watchdog);
-    }
   }
 
   // Adds DLNA streaming headers common to both PCM and relay responses
@@ -241,6 +228,40 @@ public class UpnpStreamServer extends HttpServer {
     void onFeedingStart(@NonNull String lockKey);
   }
 
+  private static class Watchdogs {
+    private final ConcurrentHashMap<String, Runnable> watchdogs = new ConcurrentHashMap<>();
+    private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
+
+    public void launch(@NonNull Runnable callback, @NonNull String lockKey, int timeoutMs) {
+      final Runnable watchdog = () -> {
+        Log.e(TAG, "Watchdog fired for " + lockKey);
+        watchdogs.remove(lockKey);
+        callback.run();
+      };
+      watchdogs.put(lockKey, watchdog);
+      handler.postDelayed(watchdog, timeoutMs * 1000L);
+    }
+
+    public void launch(@NonNull Consumer<String> callback, @NonNull String lockKey, int timeoutMs) {
+      launch(() -> callback.accept(lockKey), lockKey, timeoutMs);
+    }
+
+    public void cancel(@NonNull String lockKey) {
+      final Runnable watchdog = watchdogs.remove(lockKey);
+      if (watchdog != null) {
+        handler.removeCallbacks(watchdog);
+      }
+    }
+
+    public void relaunch(@NonNull String lockKey, int timeoutMs) {
+      final Runnable watchdog = watchdogs.get(lockKey);
+      if (watchdog != null) {
+        handler.removeCallbacks(watchdog);
+        handler.postDelayed(watchdog, timeoutMs * 1000L);
+      }
+    }
+  }
+
   // Serves the radio logo as JPEG
   private class LogoHandler implements HttpServer.Handler {
     @Override
@@ -281,6 +302,8 @@ public class UpnpStreamServer extends HttpServer {
         Log.d(TAG, "StreamHandler: not a valid request - " + method + " - " + incomingLockKey);
         return;
       }
+      // Cancel connection watchdog
+      watchdogs.cancel(lockKey);
       // Log request
       register(lockKey);
       // Handle response
@@ -293,14 +316,16 @@ public class UpnpStreamServer extends HttpServer {
 
     private void register(@NonNull String lockKey) {
       Log.d(TAG, "register: " + lockKey);
-      cancelRelayWatchdog(lockKey);
       activeConnections.computeIfAbsent(lockKey, k -> new AtomicInteger(0)).incrementAndGet();
     }
 
     private boolean unRegister(@NonNull String lockKey) {
       Log.d(TAG, "unRegister: " + lockKey);
       final AtomicInteger counter = activeConnections.get(lockKey);
-      if ((counter != null) && (counter.decrementAndGet() == 0)) {
+      if (counter == null) {
+        return true;
+      }
+      if (counter.decrementAndGet() <= 0) {
         activeConnections.remove(lockKey);
         return true;
       }
@@ -314,7 +339,7 @@ public class UpnpStreamServer extends HttpServer {
 
     private void onDisconnected(@NonNull String lockKey) {
       if (unRegister(lockKey)) {
-        Log.d(TAG, "onDisconnected: " + lockKey);
+        Log.d(TAG, "onDisconnected: successful for " + lockKey);
         callback.onDisconnected(lockKey);
       } else {
         Log.d(TAG, "onDisconnected: others still active for " + lockKey);
@@ -359,6 +384,7 @@ public class UpnpStreamServer extends HttpServer {
       callback.onFeedingStart(lockKey);
       queue.clear();
       // WAV header first, then raw PCM drained from queue
+      watchdogs.launch(this::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
       Log.d(TAG, "handlePcm: renderer started reading PCM stream - " + lockKey);
       try {
@@ -369,6 +395,7 @@ public class UpnpStreamServer extends HttpServer {
             break;
           }
           responseStream.write(pcmData);
+          watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
         }
       } catch (InterruptedException interruptedException) {
         Thread.currentThread().interrupt();
@@ -408,11 +435,13 @@ public class UpnpStreamServer extends HttpServer {
       // We can signal actual connection
       onConnected(lockKey);
       // Relay
+      watchdogs.launch(httpURLConnection::disconnect, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
       try (final InputStream src = httpURLConnection.getInputStream()) {
         while (lockKey.equals(UpnpStreamServer.this.lockKey) && (n = src.read(buf)) != -1) {
           responseStream.write(buf, 0, n);
+          watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
         }
       } finally {
         httpURLConnection.disconnect();

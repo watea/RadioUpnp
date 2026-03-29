@@ -163,7 +163,7 @@ public class RadioService
 
     @Override
     public void onDisconnected(@NonNull String lockKey) {
-      Log.d(LOG_TAG, "onDisconnect: " + lockKey);
+      Log.d(LOG_TAG, "onDisconnected: " + lockKey);
       runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
     }
 
@@ -489,7 +489,7 @@ public class RadioService
   }
 
   private void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
-    Log.d(LOG_TAG, "Valid state/lock key received: " + SessionDevice.getStateName(state.getState()) + "/" + lockKey);
+    Log.d(LOG_TAG, "onPlaybackStateChange: " + SessionDevice.getStateName(state.getState()) + "/" + lockKey);
     final int currentState = getPlaybackState();
     // Nothing can change if Stopped
     if (currentState == PlaybackStateCompat.STATE_STOPPED) {
