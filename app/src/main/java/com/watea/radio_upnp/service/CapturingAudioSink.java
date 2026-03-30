@@ -48,7 +48,6 @@ public class CapturingAudioSink implements AudioSink {
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private static final long ONE_SECOND_US = 1_000_000L;
   private static final long PACER_SLEEP_MIN_US = 1_000L;
-  private static final long BURST_DURATION_US = 2_000_000L;
   @NonNull
   private final String lockKey;
   @NonNull
@@ -238,12 +237,6 @@ public class CapturingAudioSink implements AudioSink {
     return (callback == null) ? delegate.getCurrentPositionUs(sourceEnded) : lastPresentationTimeUs;
   }
 
-  public void flushAndReset(@NonNull String lockKey) {
-    if ((pacer != null) && lockKey.equals(this.lockKey)) {
-      pacer.flushAndReset();
-    }
-  }
-
   private void stopPacer() {
     if (pacer != null) {
       pacer.interrupt();
@@ -254,17 +247,13 @@ public class CapturingAudioSink implements AudioSink {
   public interface Callback {
     void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample);
 
-    // data == null for a reset
-    void onPcmData(@Nullable byte[] data, @NonNull String lockKey);
+    void onPcmData(@NonNull byte[] data, @NonNull String lockKey);
   }
 
   // callback != null.
   // PCM: Pulse Code Modulation.
-  // Burst duration: send initial PCM data unthrottled to fill renderer's
-  // internal buffer before switching to real-time pacing.
   private class Pacer extends Thread {
     private long bytesConsumed = 0L;
-    private volatile boolean resetRequested = false;
 
     private Pacer() {
       setDaemon(true);
@@ -275,21 +264,10 @@ public class CapturingAudioSink implements AudioSink {
     @Override
     public void run() {
       long startTimeUs = LONG_DEFAULT;
-      long burstEndBytes = LONG_DEFAULT; // Threshold below which no pacing is applied
 
       while (!Thread.currentThread().isInterrupted()) {
         try {
           assert callback != null;
-          if (resetRequested) {
-            resetRequested = false;
-            startTimeUs = LONG_DEFAULT;
-            burstEndBytes = LONG_DEFAULT;
-            bytesConsumed = 0L;
-            pcmBuffer.clear();
-            callback.onPcmData(null, lockKey);
-            Log.d(LOG_TAG, "Pacer timing reset for new renderer connection");
-            continue;
-          }
           final byte[] pcmData = pcmBuffer.poll(PACER_TIMEOUT, TimeUnit.SECONDS);
           if (pcmData == null) {
             Log.e(LOG_TAG, "pcmBuffer EMPTY — ExoPlayer stopped feeding");
@@ -300,25 +278,17 @@ public class CapturingAudioSink implements AudioSink {
             // Shall not happen
             Log.e(LOG_TAG, "Pacer: byteRate not yet known");
           } else {
-            // Compute burst threshold
-            if (burstEndBytes < 0) {
-              burstEndBytes = (byteRate * BURST_DURATION_US) / ONE_SECOND_US;
-              Log.d(LOG_TAG, "Pacer burst phase: " + burstEndBytes + " bytes (" + (BURST_DURATION_US / ONE_SECOND_US) + "s)");
+            final long elapsedUs;
+            if (startTimeUs < 0) {
+              startTimeUs = getTimestamp(); // Anchor clock on first chunk
+              elapsedUs = 0;
+            } else {
+              elapsedUs = getTimestamp() - startTimeUs;
             }
-            // Real-time pacing only after burst phase
-            if (bytesConsumed > burstEndBytes) {
-              if (startTimeUs < 0) {
-                // Anchor the clock retroactively to account for bytes already sent
-                // during burst, so pacing continues seamlessly from here.
-                startTimeUs = getTimestamp() - getExpectedUs();
-                Log.d(LOG_TAG, "Pacer burst complete, switching to real-time pacing");
-              }
-              final long elapsedUs = getTimestamp() - startTimeUs;
-              final long sleepUs = getExpectedUs() - elapsedUs;
-              if (sleepUs >= PACER_SLEEP_MIN_US) {
-                //noinspection BusyWait
-                Thread.sleep(sleepUs / 1000);
-              }
+            final long sleepUs = getExpectedUs() - elapsedUs;
+            if (sleepUs >= PACER_SLEEP_MIN_US) {
+              //noinspection BusyWait
+              Thread.sleep(sleepUs / 1000);
             }
           }
           bytesConsumed += pcmData.length;
@@ -327,10 +297,6 @@ public class CapturingAudioSink implements AudioSink {
           Thread.currentThread().interrupt();
         }
       }
-    }
-
-    public void flushAndReset() {
-      resetRequested = true;
     }
 
     private long getTimestamp() {

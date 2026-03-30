@@ -47,7 +47,6 @@ import java.nio.ByteOrder;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,7 +68,8 @@ public class UpnpStreamServer extends HttpServer {
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final int PIPE_BUFFER_SIZE = 8192;
   private static final int CONNECT_WATCHDOG_TIMEOUT_S = 10;
-  private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 5;
+  private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 20;
+  private static final int RECONNECT_GRACE_TIMEOUT_S = 5;
   private static final Pattern STREAM_PATH_PATTERN = Pattern.compile(
     "^/" + STREAM_PREFIX + "([^/]+?)" + "(?:" + Pattern.quote(STREAM_SUFFIX_PCM) + ")?$");
   @NonNull
@@ -97,12 +97,8 @@ public class UpnpStreamServer extends HttpServer {
     }
 
     @Override
-    public void onPcmData(@Nullable byte[] pcmData, @NonNull String lockKey) {
+    public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
       if (!UpnpStreamServer.this.lockKey.equals(lockKey)) {
-        return;
-      }
-      if (pcmData == null) {
-        queue.clear();
         return;
       }
       final int remaining = queue.remainingCapacity();
@@ -224,8 +220,6 @@ public class UpnpStreamServer extends HttpServer {
     void onDisconnected(@NonNull String lockKey);
 
     void onConnected(@NonNull String lockKey);
-
-    void onFeedingStart(@NonNull String lockKey);
   }
 
   private static class Watchdogs {
@@ -233,6 +227,7 @@ public class UpnpStreamServer extends HttpServer {
     private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
 
     public void launch(@NonNull Runnable callback, @NonNull String lockKey, int timeoutMs) {
+      cancel(lockKey);
       final Runnable watchdog = () -> {
         Log.e(TAG, "Watchdog fired for " + lockKey);
         watchdogs.remove(lockKey);
@@ -286,8 +281,6 @@ public class UpnpStreamServer extends HttpServer {
 
   // Serves the audio stream in PCM/WAV mode or relay (passthrough) mode
   private class StreamHandler implements HttpServer.Handler {
-    private final ConcurrentHashMap<String, AtomicInteger> activeConnections = new ConcurrentHashMap<>();
-
     @Override
     public void handle(
       @NonNull HttpServer.Request request,
@@ -304,8 +297,6 @@ public class UpnpStreamServer extends HttpServer {
       }
       // Cancel connection watchdog
       watchdogs.cancel(lockKey);
-      // Log request
-      register(lockKey);
       // Handle response
       if (relayUrl == null) {
         handlePcm(response, responseStream, incomingLockKey, isHead);
@@ -314,36 +305,14 @@ public class UpnpStreamServer extends HttpServer {
       }
     }
 
-    private void register(@NonNull String lockKey) {
-      Log.d(TAG, "register: " + lockKey);
-      activeConnections.computeIfAbsent(lockKey, k -> new AtomicInteger(0)).incrementAndGet();
-    }
-
-    private boolean unRegister(@NonNull String lockKey) {
-      Log.d(TAG, "unRegister: " + lockKey);
-      final AtomicInteger counter = activeConnections.get(lockKey);
-      if (counter == null) {
-        return true;
-      }
-      if (counter.decrementAndGet() <= 0) {
-        activeConnections.remove(lockKey);
-        return true;
-      }
-      return false;
-    }
-
     private void onConnected(@NonNull String lockKey) {
       Log.d(TAG, "onConnected: " + lockKey);
       callback.onConnected(lockKey);
     }
 
     private void onDisconnected(@NonNull String lockKey) {
-      if (unRegister(lockKey)) {
-        Log.d(TAG, "onDisconnected: successful for " + lockKey);
-        callback.onDisconnected(lockKey);
-      } else {
-        Log.d(TAG, "onDisconnected: others still active for " + lockKey);
-      }
+      Log.d(TAG, "onDisconnected: " + lockKey);
+      watchdogs.launch(callback::onDisconnected, lockKey, RECONNECT_GRACE_TIMEOUT_S);
     }
 
     private void handlePcm(
@@ -358,7 +327,6 @@ public class UpnpStreamServer extends HttpServer {
       response.send();
       responseStream.flush();
       if (isHead) {
-        unRegister(lockKey);
         return;
       }
       // Wait for onFormatChanged()
@@ -380,9 +348,6 @@ public class UpnpStreamServer extends HttpServer {
       }
       // We can signal actual connection
       onConnected(lockKey);
-      // Reset Pacer before data flows
-      callback.onFeedingStart(lockKey);
-      queue.clear();
       // WAV header first, then raw PCM drained from queue
       watchdogs.launch(this::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
@@ -394,8 +359,8 @@ public class UpnpStreamServer extends HttpServer {
             Log.w(TAG, "handlePcm: PCM timeout (" + PACER_POLL_TIMEOUT + "s) - stream stalled - " + lockKey);
             break;
           }
-          responseStream.write(pcmData);
           watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+          responseStream.write(pcmData);
         }
       } catch (InterruptedException interruptedException) {
         Thread.currentThread().interrupt();
@@ -429,7 +394,6 @@ public class UpnpStreamServer extends HttpServer {
       responseStream.flush();
       if (isHead) {
         httpURLConnection.disconnect();
-        unRegister(lockKey);
         return;
       }
       // We can signal actual connection
@@ -440,8 +404,8 @@ public class UpnpStreamServer extends HttpServer {
       int n;
       try (final InputStream src = httpURLConnection.getInputStream()) {
         while (lockKey.equals(UpnpStreamServer.this.lockKey) && (n = src.read(buf)) != -1) {
-          responseStream.write(buf, 0, n);
           watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+          responseStream.write(buf, 0, n);
         }
       } finally {
         httpURLConnection.disconnect();

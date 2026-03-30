@@ -138,8 +138,6 @@ public class RadioService
       upnpService = null;
     }
   };
-  @Nullable
-  private AudioSink audioSink = null;
   private NotificationManagerCompat notificationManager;
   private MediaSessionCompat session;
   @Nullable
@@ -165,13 +163,6 @@ public class RadioService
     public void onDisconnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onDisconnected: " + lockKey);
       runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
-    }
-
-    @Override
-    public void onFeedingStart(@NonNull String lockKey) {
-      if (audioSink instanceof CapturingAudioSink) {
-        ((CapturingAudioSink) audioSink).flushAndReset(lockKey);
-      }
     }
   };
   private CastManager castManager;
@@ -880,7 +871,7 @@ public class RadioService
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
-      audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
+      AudioSink audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
         // Sync mode and lockKey
