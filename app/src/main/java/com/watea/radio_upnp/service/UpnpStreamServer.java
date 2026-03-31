@@ -403,10 +403,10 @@ public class UpnpStreamServer extends HttpServer {
         return;
       }
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
-      final String contentType = RadioURL.getStreamContentType(httpURLConnection);
-      final String mime = (contentType != null) ? contentType : DEFAULT_MIME;
-      Log.d(TAG, "handleRelay: relay mime = " + mime + " - " + lockKey);
-      addDlnaHeaders(response, mime);
+      String contentType = RadioURL.getStreamContentType(httpURLConnection);
+      contentType = (contentType == null) ? DEFAULT_MIME : contentType;
+      Log.d(TAG, "handleRelay: relay mime = " + contentType + " - " + lockKey);
+      addDlnaHeaders(response, contentType);
       response.send();
       responseStream.flush();
       if (isHead || !isValid(lockKey, session)) {

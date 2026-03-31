@@ -452,11 +452,12 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       if (extras == null) {
         return;
       }
-      final String rate = extras.getString(mainActivity.getString(R.string.key_rate));
-      if (rate != null) {
-        playedRadioRateTextView.setText(
-          rate.isEmpty() ? "" : rate + mainActivity.getString(R.string.kbps));
-      }
+      String rate = extras.getString(mainActivity.getString(R.string.key_bitrate));
+      rate = ((rate == null) || rate.isEmpty()) ? "" : rate + mainActivity.getString(R.string.kbps);
+      String mimeType = extras.getString(mainActivity.getString(R.string.key_mime_type));
+      mimeType = ((mimeType == null) || mimeType.isEmpty()) ? "" : mimeType;
+      final String text = rate + (rate.isEmpty() ? "" : " - ") + mimeType;
+      playedRadioRateTextView.setText(text);
     }
 
     private int getState(@Nullable final PlaybackStateCompat state) {

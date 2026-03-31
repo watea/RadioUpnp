@@ -34,6 +34,7 @@
     <string name="key_country" translatable="false">key_country</string>
     <string name="key_radio_tag" translatable="false">key_radio_tag</string>
     <string name="key_bitrate" translatable="false">key_bitrate</string>
+    <string name="key_mime_type" translatable="false">key_mime_type</string>
     <string name="key_last_played_radio" translatable="false">key_last_played_radio</string>
     <string name="key_alarm_radio" translatable="false">key_alarm_radio</string>
     <string name="key_alarm_hour" translatable="false">key_alarm_hour</string>
@@ -49,6 +50,4 @@
     <string name="key_toolbar_got_it" translatable="false">key_toolbar_got_it</string>
     <string name="key_battery_optimization_press_got_it" translatable="false">key_battery_optimization_press_got_it</string>
     <string name="key_pcm_mode" translatable="false">key_pcm_mode</string>
-    <!-- Bundles -->
-    <string name="key_rate" translatable="false">key_rate</string>
 </resources>

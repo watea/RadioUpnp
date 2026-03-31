@@ -218,7 +218,7 @@ public abstract class SessionDevice {
 
     void onNewInformation(@NonNull String information, @NonNull String lockKey);
 
-    void onNewBitrate(int bitrate, @NonNull String lockKey);
+    void onNewBitrate(int bitrate, @NonNull String mimeType, @NonNull String lockKey);
 
     int getPlaybackState();
   }
@@ -243,8 +243,10 @@ public abstract class SessionDevice {
       for (final Tracks.Group group : tracks.getGroups()) {
         for (int i = 0; i < group.length; i++) {
           final Format format = group.getTrackFormat(i);
-          if (format.bitrate != Format.NO_VALUE) {
-            listener.onNewBitrate(format.bitrate / 1000, lockKey);
+          final int bitrate = format.bitrate;
+          final String mimeType = format.sampleMimeType;
+          if (bitrate != Format.NO_VALUE) {
+            listener.onNewBitrate(bitrate / 1000, (mimeType == null) ? "" : mimeType, lockKey);
           }
         }
       }
