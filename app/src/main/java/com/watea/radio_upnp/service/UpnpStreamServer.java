@@ -68,7 +68,7 @@ public class UpnpStreamServer extends HttpServer {
   private static final String STREAM_PREFIX = "stream-";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final int PIPE_BUFFER_SIZE = 8192;
-  private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
+  private static final int CONNECT_WATCHDOG_TIMEOUT_S = 30;
   private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 20;
   private static final Pattern STREAM_PATH_PATTERN = Pattern.compile(
     "^/" + STREAM_PREFIX + "([^/]+?)" + "(?:" + Pattern.quote(STREAM_SUFFIX_PCM) + ")?$");
@@ -176,8 +176,6 @@ public class UpnpStreamServer extends HttpServer {
       result = RadioURL.getStreamContentType(httpURLConnection);
       result = (result == null) ? DEFAULT_MIME : result;
       Log.d(LOG_TAG, "setHttpURLConnectionAndGetContentType: content => " + result);
-      // Timeout
-      watchdogs.launch(this::onConnectionFailure, lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
     } catch (IOException ioException) {
       Log.d(LOG_TAG, "setHttpURLConnectionAndGetContentType: unable to connect", ioException);
     }
@@ -190,6 +188,10 @@ public class UpnpStreamServer extends HttpServer {
     this.lockKey = lockKey;
     session.set(0);
     sampleRate = DEFAULT;
+  }
+
+  public void launchWatchdog(@NonNull String lockKey) {
+    watchdogs.launch(this::onConnectionFailure, lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
   }
 
   // Returns stream URI adapted to current mode (PCM vs relay)

@@ -701,6 +701,9 @@ public class RadioService
       buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
+      if ((upnpStreamServer != null) && playerAdapter.isRemote()) {
+        upnpStreamServer.launchWatchdog(lockKey);
+      }
       if (playerAdapter.prepareFromMediaId()) {
         startForegroundService(new Intent(RadioService.this, RadioService.class));
       } else {
