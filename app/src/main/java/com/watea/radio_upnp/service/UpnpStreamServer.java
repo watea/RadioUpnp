@@ -55,8 +55,8 @@ import java.util.regex.Pattern;
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpStreamServer extends HttpServer {
   public static final String PCM_MIME = "audio/wav";
-  public static final String DEFAULT_MIME = "audio/mpeg";
-  private static final String TAG = "UpnpStreamServer";
+  private static final String DEFAULT_MIME = "audio/mpeg";
+  private static final String LOG_TAG = "UpnpStreamServer";
   private static final String SCHEME = "http://";
   private static final int DEFAULT = -1;
   private static final int GET_TIMEOUT = 10000; // ms
@@ -70,7 +70,6 @@ public class UpnpStreamServer extends HttpServer {
   private static final int PIPE_BUFFER_SIZE = 8192;
   private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
   private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 20;
-  private static final int RECONNECT_GRACE_TIMEOUT_S = 5;
   private static final Pattern STREAM_PATH_PATTERN = Pattern.compile(
     "^/" + STREAM_PREFIX + "([^/]+?)" + "(?:" + Pattern.quote(STREAM_SUFFIX_PCM) + ")?$");
   @NonNull
@@ -78,10 +77,9 @@ public class UpnpStreamServer extends HttpServer {
   private final ArrayBlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
   private final Watchdogs watchdogs = new Watchdogs();
   private final AtomicInteger session = new AtomicInteger(0);
+  private final ConcurrentHashMap<String, HttpURLConnection> httpURLConnections = new ConcurrentHashMap<>();
   @NonNull
   private volatile String lockKey = RadioService.getLockKey(); // Current stream signature
-  @Nullable
-  private volatile URL relayUrl = null;
   // Audio format — set by setAudioFormat(), DEFAULT until ExoPlayer codec is configured.
   // Volatile because setAudioFormat() runs on an ExoPlayer thread while StreamHandler
   // may be polling these values from the CandidHttpServer thread.
@@ -92,7 +90,7 @@ public class UpnpStreamServer extends HttpServer {
     // Must be called before any PCM streaming is started
     @Override
     public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
-      Log.d(TAG, "onFormatChanged");
+      Log.d(LOG_TAG, "onFormatChanged");
       UpnpStreamServer.this.sampleRate = sampleRate;
       UpnpStreamServer.this.channelCount = channelCount;
       UpnpStreamServer.this.bitsPerSample = bitsPerSample;
@@ -105,10 +103,10 @@ public class UpnpStreamServer extends HttpServer {
       }
       final int remaining = queue.remainingCapacity();
       if (remaining < QUEUE_SIZE * 0.2F) {
-        Log.w(TAG, "Queue fill: " + (QUEUE_SIZE - remaining) + "/" + QUEUE_SIZE);
+        Log.w(LOG_TAG, "Queue fill: " + (QUEUE_SIZE - remaining) + "/" + QUEUE_SIZE);
       }
       if (!queue.offer(pcmData)) {
-        Log.e(TAG, "QUEUE FULL => DROP (" + pcmData.length + " bytes)");
+        Log.e(LOG_TAG, "QUEUE FULL => DROP (" + pcmData.length + " bytes)");
       }
     }
   };
@@ -168,19 +166,30 @@ public class UpnpStreamServer extends HttpServer {
     return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + logoPath);
   }
 
-  // Must be called early before any session is started.
-  // url == null => PCM mode, url != null => relay mode.
-  public void setMode(@Nullable URL relayUrl, @NonNull String lockKey) {
-    Log.d(TAG, "setMode: " + ((relayUrl == null) ? "PCM" : "relay") + " - " + lockKey);
-    this.relayUrl = relayUrl;
+  @Nullable
+  public String setHttpURLConnectionAndGetContentType(@NonNull URL url, @NonNull String lockKey) {
+    String result = null;
+    try {
+      final HttpURLConnection httpURLConnection = new RadioURL(url)
+        .getActualHttpURLConnection(conn -> conn.setRequestProperty("Icy-MetaData", "0")); // No ICY
+      httpURLConnections.put(lockKey, httpURLConnection);
+      result = RadioURL.getStreamContentType(httpURLConnection);
+      result = (result == null) ? DEFAULT_MIME : result;
+      Log.d(LOG_TAG, "setHttpURLConnectionAndGetContentType: content => " + result);
+      // Timeout
+      watchdogs.launch(this::onConnectionFailure, lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
+    } catch (IOException ioException) {
+      Log.d(LOG_TAG, "setHttpURLConnectionAndGetContentType: unable to connect", ioException);
+    }
+    return result;
+  }
+
+  // Must be called early before any session is started
+  public void setLockKey(@NonNull String lockKey) {
+    Log.d(LOG_TAG, "setLockKey: " + lockKey);
     this.lockKey = lockKey;
     session.set(0);
     sampleRate = DEFAULT;
-    // Relay must connect within timeout.
-    // PCM has not connection timeout as covered by external surveillance (ExoPlayer).
-    if (this.relayUrl != null) {
-      watchdogs.launch(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
-    }
   }
 
   // Returns stream URI adapted to current mode (PCM vs relay)
@@ -189,10 +198,10 @@ public class UpnpStreamServer extends HttpServer {
   }
 
   // Adds DLNA streaming headers common to both PCM and relay responses
-  private void addDlnaHeaders(@NonNull HttpServer.Response response, @NonNull String mime) {
+  private void addDlnaHeaders(@NonNull HttpServer.Response response, @NonNull String mime, boolean isPcm) {
     response.addHeader("transferMode.dlna.org", "Streaming");
     final String dlnaOrgPn;
-    if (relayUrl == null) {
+    if (isPcm) {
       dlnaOrgPn = "DLNA.ORG_PN=LPCM;";
     } else {
       switch (mime) {
@@ -220,6 +229,15 @@ public class UpnpStreamServer extends HttpServer {
     response.addHeader(Response.CONTENT_TYPE, mime);
   }
 
+  private void onConnectionFailure(@NonNull String lockKey) {
+    Log.d(LOG_TAG, "onConnectionFailure: " + lockKey);
+    final HttpURLConnection httpURLConnection = httpURLConnections.remove(lockKey);
+    if (httpURLConnection != null) {
+      httpURLConnection.disconnect();
+    }
+    callback.onDisconnected(lockKey);
+  }
+
   public interface Callback {
     void onDisconnected(@NonNull String lockKey);
 
@@ -233,7 +251,7 @@ public class UpnpStreamServer extends HttpServer {
     public void launch(@NonNull Runnable callback, @NonNull String lockKey, int timeoutMs) {
       cancel(lockKey);
       final Runnable watchdog = () -> {
-        Log.d(TAG, "Watchdog fired for " + lockKey);
+        Log.d(LOG_TAG, "Watchdog fired for " + lockKey);
         watchdogs.remove(lockKey);
         callback.run();
       };
@@ -272,10 +290,10 @@ public class UpnpStreamServer extends HttpServer {
         return; // Not our path — let StreamHandler try
       }
       if (logoBytes == null) {
-        Log.e(TAG, "LogoHandler: no logo available");
+        Log.e(LOG_TAG, "LogoHandler: no logo available");
         return;
       }
-      Log.d(TAG, "LogoHandler: serving logo");
+      Log.d(LOG_TAG, "LogoHandler: serving logo");
       response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
       response.send();
@@ -294,14 +312,15 @@ public class UpnpStreamServer extends HttpServer {
       final String method = request.getMethod();
       final boolean isGet = method.equals("GET");
       final boolean isHead = method.equals("HEAD");
-      Log.d(TAG, "StreamHandler: " + method + " lockKey = " + incomingLockKey);
+      Log.d(LOG_TAG, "StreamHandler: " + method + " lockKey = " + incomingLockKey);
       if (!isHead && !isGet || !lockKey.equals(incomingLockKey)) {
-        Log.d(TAG, "StreamHandler: not a valid request - " + method + " - " + incomingLockKey);
+        Log.d(LOG_TAG, "StreamHandler: not a valid request - " + method + " - " + incomingLockKey);
         return;
       }
       final int currentSession = session.incrementAndGet();
+      final boolean isPcm = request.getPath().endsWith(STREAM_SUFFIX_PCM);
       // Handle response
-      if (relayUrl == null) {
+      if (isPcm) {
         handlePcm(response, responseStream, incomingLockKey, currentSession, isHead);
       } else {
         handleRelay(response, responseStream, incomingLockKey, currentSession, isHead);
@@ -309,17 +328,17 @@ public class UpnpStreamServer extends HttpServer {
     }
 
     private void onConnected(@NonNull String lockKey, int session) {
-      Log.d(TAG, "onConnected: " + lockKey + "/" + session);
+      Log.d(LOG_TAG, "onConnected: " + lockKey + "/" + session);
       callback.onConnected(lockKey);
     }
 
     // Only signal disconnect if we're still the active session of lockKey
     private void onDisconnected(@NonNull String lockKey, int session) {
-      if (isValid(lockKey, session)) {
-        Log.d(TAG, "onDisconnected: " + lockKey + "/" + session + " => valid");
-        watchdogs.launch(callback::onDisconnected, lockKey, RECONNECT_GRACE_TIMEOUT_S);
-      } else {
-        Log.d(TAG, "onDisconnected: " + lockKey + "/" + session + " => invalid");
+      final boolean isValid = isValid(lockKey, session) || !lockKey.equals(UpnpStreamServer.this.lockKey);
+      Log.d(LOG_TAG, "onDisconnected: " + lockKey + "/" + session + " => " + (isValid ? "valid" : "invalid"));
+      if (isValid) {
+        watchdogs.cancel(lockKey);
+        onConnectionFailure(lockKey);
       }
     }
 
@@ -333,10 +352,10 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull String lockKey,
       int session,
       boolean isHead) throws IOException {
-      Log.d(TAG, "handlePcm: " + lockKey);
+      Log.d(LOG_TAG, "handlePcm: " + lockKey);
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
-      addDlnaHeaders(response, PCM_MIME);
+      addDlnaHeaders(response, PCM_MIME, true);
       response.send();
       responseStream.flush();
       if (isHead) {
@@ -346,7 +365,7 @@ public class UpnpStreamServer extends HttpServer {
       final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
       while (sampleRate == DEFAULT) {
         if (System.currentTimeMillis() > deadline) {
-          Log.e(TAG, "handlePcm: timeout waiting for audio format - " + lockKey);
+          Log.e(LOG_TAG, "handlePcm: timeout waiting for audio format - " + lockKey);
           onDisconnected(lockKey, session);
           return;
         }
@@ -367,12 +386,12 @@ public class UpnpStreamServer extends HttpServer {
       // WAV header first, then raw PCM drained from queue
       watchdogs.launch(() -> onDisconnected(lockKey, session), lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
-      Log.d(TAG, "handlePcm: renderer started reading PCM stream - " + lockKey);
+      Log.d(LOG_TAG, "handlePcm: renderer started reading PCM stream - " + lockKey);
       try {
         while (isValid(lockKey, session)) {
           final byte[] pcmData = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.SECONDS);
           if (pcmData == null) {
-            Log.w(TAG, "handlePcm: PCM timeout (" + PACER_POLL_TIMEOUT + "s) - stream stalled - " + lockKey);
+            Log.w(LOG_TAG, "handlePcm: PCM timeout (" + PACER_POLL_TIMEOUT + "s) - stream stalled - " + lockKey);
             break;
           }
           watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
@@ -380,8 +399,6 @@ public class UpnpStreamServer extends HttpServer {
         }
       } catch (InterruptedException interruptedException) {
         Thread.currentThread().interrupt();
-      } finally {
-        onDisconnected(lockKey, session);
       }
     }
 
@@ -391,32 +408,26 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull String lockKey,
       int session,
       boolean isHead) throws IOException {
-      Log.d(TAG, "handleRelay: " + lockKey);
-      // Connect to upstream
-      final HttpURLConnection httpURLConnection;
-      try {
-        httpURLConnection = new RadioURL(relayUrl)
-          .getActualHttpURLConnection(conn -> conn.setRequestProperty("Icy-MetaData", "0")); // ExoPlayer handles ICY locally
-      } catch (IOException ioException) {
-        Log.d(TAG, "handleRelay: unable to connect - " + lockKey, ioException);
-        onDisconnected(lockKey, session);
+      Log.d(LOG_TAG, "handleRelay: " + lockKey);
+      // Upstream, shall be already connected in setHttpURLConnectionAndGetContentType
+      final HttpURLConnection httpURLConnection = httpURLConnections.get(lockKey);
+      if (httpURLConnection == null) {
         return;
       }
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       String contentType = RadioURL.getStreamContentType(httpURLConnection);
       contentType = (contentType == null) ? DEFAULT_MIME : contentType;
-      Log.d(TAG, "handleRelay: relay mime = " + contentType + " - " + lockKey);
-      addDlnaHeaders(response, contentType);
+      Log.d(LOG_TAG, "handleRelay: relay mime = " + contentType + " - " + lockKey);
+      addDlnaHeaders(response, contentType, false);
       response.send();
       responseStream.flush();
       if (isHead || !isValid(lockKey, session)) {
-        httpURLConnection.disconnect();
         return;
       }
       // We can signal actual connection
       onConnected(lockKey, session);
       // Relay
-      watchdogs.launch(httpURLConnection::disconnect, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+      watchdogs.launch(() -> onDisconnected(lockKey, session), lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
       try (final InputStream src = httpURLConnection.getInputStream()) {
@@ -424,9 +435,6 @@ public class UpnpStreamServer extends HttpServer {
           watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
           responseStream.write(buf, 0, n);
         }
-      } finally {
-        httpURLConnection.disconnect();
-        onDisconnected(lockKey, session);
       }
     }
   }

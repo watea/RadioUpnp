@@ -37,7 +37,6 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
-import com.watea.radio_upnp.service.RadioURL;
 import com.watea.radio_upnp.service.UpnpStreamServer;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
@@ -46,9 +45,8 @@ import com.watea.radio_upnp.upnp.Request;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpSessionDevice extends SessionDevice {
@@ -71,6 +69,8 @@ public class UpnpSessionDevice extends SessionDevice {
   @NonNull
   private final ActionController actionController;
   @NonNull
+  private final Supplier<String> contentSupplier;
+  @NonNull
   private final Uri radioUri;
   @NonNull
   private final Uri logoUri;
@@ -83,7 +83,7 @@ public class UpnpSessionDevice extends SessionDevice {
   @NonNull
   private final String information; // Not final in further use
   @NonNull
-  private volatile String content = UpnpStreamServer.DEFAULT_MIME; // Default
+  private volatile String content = UpnpStreamServer.PCM_MIME; // Default
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -98,11 +98,13 @@ public class UpnpSessionDevice extends SessionDevice {
     @NonNull Uri radioUri,
     @NonNull Uri logoUri,
     @NonNull Device device,
-    @NonNull ActionController actionController) {
+    @NonNull ActionController actionController,
+    @NonNull Supplier<String> contentSupplier) {
     super(context, exoPlayer, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.actionController = actionController;
     this.logoUri = logoUri;
+    this.contentSupplier = contentSupplier;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
     avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
@@ -146,12 +148,16 @@ public class UpnpSessionDevice extends SessionDevice {
     onState(PlaybackStateCompat.STATE_BUFFERING);
     // PCM or relay?
     if (MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
-      content = UpnpStreamServer.PCM_MIME;
       prepare();
     } else {
       new Thread(() -> {
-        getRadioContent();
-        prepare();
+        final String content = contentSupplier.get();
+        if (content == null) {
+          onState(PlaybackStateCompat.STATE_ERROR);
+        } else {
+          this.content = content;
+          prepare();
+        }
       }).start();
     }
   }
@@ -176,32 +182,13 @@ public class UpnpSessionDevice extends SessionDevice {
   @Override
   public void release() {
     super.release();
-    // Put device in idle state
-    stop();
+    scheduleActionStop();
   }
 
   private void prepare() {
     scheduleActionPrepareForConnection();
     scheduleActionSetAvTransportUri();
     scheduleActionPlay();
-  }
-
-  private void getRadioContent() {
-    HttpURLConnection httpURLConnection = null;
-    try {
-      httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection();
-      final String result = RadioURL.getStreamContentType(httpURLConnection);
-      if (result != null) {
-        content = result;
-      }
-      Log.d(LOG_TAG, "getRadioContent: content => " + content);
-    } catch (IOException ioException) {
-      Log.d(LOG_TAG, "getRadioContent: unable to connect", ioException);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
   }
 
   private void scheduleMandatoryAction(

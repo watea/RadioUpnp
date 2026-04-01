@@ -873,10 +873,9 @@ public class RadioService
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       AudioSink audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
+      upnpStreamServer.setLockKey(lockKey);
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
-        // Sync mode and lockKey
-        upnpStreamServer.setMode(null, lockKey);
         // Link capturingSink to upnpStreamServer
         ((CapturingAudioSink) audioSink).setCallback(upnpStreamServer.getPcmCallback());
         return castManager.getCastSessionDevice(
@@ -892,7 +891,6 @@ public class RadioService
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
         // Sync mode and lockKey
         Log.d(LOG_TAG, "getSessionDevice: UpnpSessionDevice with isPcm = " + isPcm);
-        upnpStreamServer.setMode(isPcm ? null : radio.getURL(), lockKey);
         if (isPcm) {
           // Link capturingSink to upnpStreamServer
           ((CapturingAudioSink) audioSink).setCallback(upnpStreamServer.getPcmCallback());
@@ -909,7 +907,8 @@ public class RadioService
           upnpStreamServer.getStreamUri(localIp, lockKey, isPcm),
           upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
-          upnpService.getActionController());
+          upnpService.getActionController(),
+          () -> upnpStreamServer.setHttpURLConnectionAndGetContentType(radio.getURL(), lockKey));
       } else {
         Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
         return new LocalSessionDevice(
