@@ -66,7 +66,7 @@ public class EasyX509TrustManager implements X509TrustManager {
     try {
       standardTrustManager.checkServerTrusted(certificates, authType);
     } catch (CertificateException certificateException) {
-      if ((certificates == null) || (certificates.length != 1)) {
+      if ((certificates == null) || (certificates.length == 0)) {
         throw certificateException;
       }
       // Accept single self-signed certificate regardless of expiry
