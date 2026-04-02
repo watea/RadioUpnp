@@ -330,8 +330,10 @@ public class UpnpStreamServer extends HttpServer {
     }
 
     private void onConnected(@NonNull String lockKey, int session) {
-      Log.d(LOG_TAG, "onConnected: " + lockKey + "/" + session);
-      callback.onConnected(lockKey);
+      if (isValid(lockKey, session)) {
+        Log.d(LOG_TAG, "onConnected: " + lockKey + "/" + session);
+        callback.onConnected(lockKey);
+      }
     }
 
     // Only signal disconnect if we're still the active session of lockKey
@@ -381,26 +383,30 @@ public class UpnpStreamServer extends HttpServer {
         }
       }
       // We can signal actual connection if we're still the active session
-      if (!isValid(lockKey, session)) {
-        return;
-      }
       onConnected(lockKey, session);
       // WAV header first, then raw PCM drained from queue
       watchdogs.launch(() -> onDisconnected(lockKey, session), lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
       Log.d(LOG_TAG, "handlePcm: renderer started reading PCM stream - " + lockKey);
-      try {
-        while (isValid(lockKey, session)) {
-          final byte[] pcmData = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.SECONDS);
-          if (pcmData == null) {
-            Log.w(LOG_TAG, "handlePcm: PCM timeout (" + PACER_POLL_TIMEOUT + "s) - stream stalled - " + lockKey);
-            break;
+      while (lockKey.equals(UpnpStreamServer.this.lockKey)) {
+        try {
+          if (session == UpnpStreamServer.this.session.get()) {
+            // Latest: read upstream and forward
+            final byte[] pcmData = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.SECONDS);
+            if (pcmData == null) {
+              Log.w(LOG_TAG, "handlePcm: PCM timeout (" + PACER_POLL_TIMEOUT + "s) - stream stalled - " + lockKey);
+              break;
+            }
+            watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+            responseStream.write(pcmData);
+          } else {
+            // Older: stay alive, idle
+            //noinspection BusyWait
+            Thread.sleep(50);
           }
-          watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
-          responseStream.write(pcmData);
+        } catch (InterruptedException interruptedException) {
+          Thread.currentThread().interrupt();
         }
-      } catch (InterruptedException interruptedException) {
-        Thread.currentThread().interrupt();
       }
     }
 
@@ -423,19 +429,33 @@ public class UpnpStreamServer extends HttpServer {
       addDlnaHeaders(response, contentType, false);
       response.send();
       responseStream.flush();
-      if (isHead || !isValid(lockKey, session)) {
+      if (isHead) {
         return;
       }
-      // We can signal actual connection
+      // We can signal actual connection if we're still the active session
       onConnected(lockKey, session);
       // Relay
       watchdogs.launch(() -> onDisconnected(lockKey, session), lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
-      int n;
-      try (final InputStream src = httpURLConnection.getInputStream()) {
-        while (isValid(lockKey, session) && (n = src.read(buf)) != -1) {
-          watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
-          responseStream.write(buf, 0, n);
+      final InputStream src = httpURLConnection.getInputStream();
+      Log.d(LOG_TAG, "handleRelay: renderer started reading stream - " + lockKey);
+      while (lockKey.equals(UpnpStreamServer.this.lockKey)) {
+        try {
+          if (session == UpnpStreamServer.this.session.get()) {
+            // Latest: read upstream and forward
+            final int n = src.read(buf);
+            if (n < 0) {
+              break;
+            }
+            watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+            responseStream.write(buf, 0, n);
+          } else {
+            // Older: stay alive, idle
+            //noinspection BusyWait
+            Thread.sleep(50);
+          }
+        } catch (InterruptedException interruptedException) {
+          Thread.currentThread().interrupt();
         }
       }
     }
