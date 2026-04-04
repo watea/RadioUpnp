@@ -915,7 +915,7 @@ public class RadioService
           upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
           upnpService.getActionController(),
-          () -> upnpStreamServer.setHttpURLConnectionAndGetContentType(radio.getURL(), lockKey));
+          () -> upnpStreamServer.setUrlAndGetContentType(radio.getURL(), lockKey));
       } else {
         Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
         return new LocalSessionDevice(

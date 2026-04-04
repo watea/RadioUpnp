@@ -174,7 +174,7 @@ public class UpnpStreamServer extends HttpServer {
   }
 
   @Nullable
-  public String setHttpURLConnectionAndGetContentType(@NonNull URL url, @NonNull String lockKey) {
+  public String setUrlAndGetContentType(@NonNull URL url, @NonNull String lockKey) {
     String result = null;
     HttpURLConnection httpURLConnection = null;
     try {
@@ -182,10 +182,11 @@ public class UpnpStreamServer extends HttpServer {
         .getActualHttpURLConnection(conn -> conn.setRequestProperty("Icy-MetaData", "0")); // No ICY
       result = RadioURL.getStreamContentType(httpURLConnection);
       result = (result == null) ? DEFAULT_MIME : result;
-      connectionSets.put(lockKey, new ConnectionSet(httpURLConnection.getURL(), result));
-      Log.d(LOG_TAG, "setHttpURLConnectionAndGetContentType: content => " + result);
+      final URL actualUrl = httpURLConnection.getURL();
+      connectionSets.put(lockKey, new ConnectionSet(actualUrl, result));
+      Log.d(LOG_TAG, "setUrlAndGetContentType: content => " + result + " URL => " + actualUrl);
     } catch (IOException ioException) {
-      Log.d(LOG_TAG, "setHttpURLConnectionAndGetContentType: unable to connect", ioException);
+      Log.d(LOG_TAG, "setUrlAndGetContentType: unable to connect", ioException);
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
