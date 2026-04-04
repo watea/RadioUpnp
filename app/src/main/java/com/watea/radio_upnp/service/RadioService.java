@@ -522,11 +522,15 @@ public class RadioService
           break;
         }
       case PlaybackStateCompat.STATE_PAUSED:
+        assert upnpStreamServer != null;
+        upnpStreamServer.setLockKey(getLockKey());
         releaseScheduler();
         buildNotification();
         break;
       default:
         // Release everything
+        assert upnpStreamServer != null;
+        upnpStreamServer.setLockKey(getLockKey());
         playerAdapter.release();
         releaseScheduler();
         session.setMetadata(null);

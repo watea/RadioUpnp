@@ -50,13 +50,12 @@ import java.util.function.Supplier;
 
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpSessionDevice extends SessionDevice {
+  public static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
   private static final String RENDERING_CONTROL_ID = "RenderingControl";
   private static final String CONNECTION_MANAGER_ID = "ConnectionManager";
   private static final String PROTOCOL_INFO_HEADER = "http-get:*:";
-  private static final String PROTOCOL_INFO_ALL = ":*";
-  private static final String DEFAULT_PROTOCOL_INFO = PROTOCOL_INFO_HEADER + "*" + PROTOCOL_INFO_ALL;
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
   private static final String ACTION_PLAY = "Play";
@@ -266,7 +265,7 @@ public class UpnpSessionDevice extends SessionDevice {
         }
         // Note: failure is not taken into account
       }
-        .addArgument("RemoteProtocolInfo", DEFAULT_PROTOCOL_INFO)
+        .addArgument("RemoteProtocolInfo", PROTOCOL_INFO_HEADER + "*:" + PROTOCOL_INFO_TAIL)
         .addArgument("PeerConnectionManager", "")
         .addArgument("PeerConnectionID", "-1")
         .addArgument("Direction", "Input"));
@@ -391,7 +390,7 @@ public class UpnpSessionDevice extends SessionDevice {
       "<upnp:artist>" + information + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlMime() + PROTOCOL_INFO_ALL + "\">" + radioUri + "</res>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlMime() + ":" + PROTOCOL_INFO_TAIL + "\">" + radioUri + "</res>" +
       "</item>" +
       "</DIDL-Lite>";
   }
