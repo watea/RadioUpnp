@@ -431,6 +431,7 @@ public class RadioService
     });
   }
 
+  @Override
   public void onNewBitrate(int bitrate, @NonNull String mimeType, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onNewBitrate: " + bitrate);
@@ -823,6 +824,7 @@ public class RadioService
       }
     }
 
+    // true if work done
     private boolean launchLastRadio() {
       Log.d(LOG_TAG, "launchLastRadio");
       if (Radios.isInit()) {
