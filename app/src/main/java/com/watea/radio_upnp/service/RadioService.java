@@ -339,7 +339,7 @@ public class RadioService
       upnpStreamServer = new UpnpStreamServer(upnpStreamCallback);
       upnpStreamServer.start();
     } catch (IOException iOException) {
-      Log.e(LOG_TAG, "HTTP server creation fails", iOException);
+      Log.e(LOG_TAG, "HTTP server creation failed", iOException);
       upnpStreamServer = null;
     }
     // Prepare notification
@@ -671,6 +671,11 @@ public class RadioService
     @Override
     public void onPlayFromMediaId(@NonNull String mediaId, @NonNull Bundle extras) {
       Log.d(LOG_TAG, "onPlayFromMediaId with mediaId: " + mediaId);
+      // Avoid internal failure
+      if (upnpStreamServer == null) {
+        Log.e(LOG_TAG, "onPlayFromMediaId: upnpStreamServer is null");
+        return;
+      }
       // Try to retrieve radio
       final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
       if (radio == null) {
@@ -706,7 +711,7 @@ public class RadioService
       buildSessionMetadata(radio, "", (radio == lastRadio) ? lastPlaylist : "");
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
-      if ((upnpStreamServer != null) && playerAdapter.isRemote()) {
+      if (playerAdapter.isRemote()) {
         upnpStreamServer.launchWatchdog(lockKey);
       }
       if (playerAdapter.prepareFromMediaId()) {
@@ -876,11 +881,13 @@ public class RadioService
 
     // UPnP or Cast not accepted if environment not OK: force local processing.
     // Cat always in PCM.
+    // upnpStreamServer shall be not null.
     @NonNull
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
+      assert upnpStreamServer != null;
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
+      final boolean isRemoteReady = (localIp != null);
       AudioSink audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
