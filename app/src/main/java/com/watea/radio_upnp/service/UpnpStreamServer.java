@@ -34,6 +34,7 @@ import androidx.annotation.OptIn;
 import androidx.media3.common.util.UnstableApi;
 
 import com.watea.candidhttpserver.HttpServer;
+import com.watea.radio_upnp.model.ConnectionSet;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
 
@@ -76,8 +77,7 @@ public class UpnpStreamServer extends HttpServer {
     "^/" + STREAM_PREFIX + "([^/]+?)" + "(?:" + Pattern.quote(STREAM_SUFFIX_PCM) + ")?$");
   @NonNull
   private final Callback callback;
-  //private final ArrayBlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
-  private final Watchdogs watchdogs = new Watchdogs();
+  private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
   private final ConcurrentHashMap<String, ConnectionSet> connectionSets = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Set<ArrayBlockingQueue<byte[]>>> queuess = new ConcurrentHashMap<>();
   @NonNull
@@ -118,6 +118,8 @@ public class UpnpStreamServer extends HttpServer {
     }
   };
   @Nullable
+  private volatile Watchdog connectionWatchdog = null;
+  @Nullable
   private String logoPath = null;
   @Nullable
   private byte[] logoBytes = null;
@@ -132,30 +134,6 @@ public class UpnpStreamServer extends HttpServer {
   private static String extractLockKey(@NonNull String path) {
     final Matcher matcher = STREAM_PATH_PATTERN.matcher(path);
     return matcher.matches() ? matcher.group(1) : null;
-  }
-
-  // Builds a standard 44-byte WAV header.
-  // Size fields are set to 0xFFFFFFFF to indicate an unbounded stream,
-  // which is the common practice for HTTP audio streaming.
-  @NonNull
-  private static byte[] buildWavHeader(int sampleRate, int channelCount, int bitsPerSample) {
-    final int byteRate = sampleRate * channelCount * (bitsPerSample / 8);
-    final int blockAlign = channelCount * (bitsPerSample / 8);
-    final ByteBuffer buf = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
-    buf.put(new byte[]{'R', 'I', 'F', 'F'});
-    buf.putInt(0xFFFFFFFF); // Unknown file size — streaming
-    buf.put(new byte[]{'W', 'A', 'V', 'E'});
-    buf.put(new byte[]{'f', 'm', 't', ' '});
-    buf.putInt(16); // fmt chunk size
-    buf.putShort((short) 1); // PCM format
-    buf.putShort((short) channelCount);
-    buf.putInt(sampleRate);
-    buf.putInt(byteRate);
-    buf.putShort((short) blockAlign);
-    buf.putShort((short) bitsPerSample);
-    buf.put(new byte[]{'d', 'a', 't', 'a'});
-    buf.putInt(0xFFFFFFFF); // Unknown data size — streaming
-    return buf.array();
   }
 
   @NonNull
@@ -175,7 +153,7 @@ public class UpnpStreamServer extends HttpServer {
 
   // Change lockKey and update connection data
   @Nullable
-  public ConnectionSet setActualUrlAndContentType(@NonNull URL url, @NonNull String lockKey) {
+  public ConnectionSet getConnectionSet(@NonNull URL url, @NonNull String lockKey) {
     setLockKey(lockKey);
     HttpURLConnection httpURLConnection = null;
     try {
@@ -201,7 +179,7 @@ public class UpnpStreamServer extends HttpServer {
   }
 
   public void launchWatchdog(@NonNull String lockKey) {
-    watchdogs.launch(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
+    connectionWatchdog = new Watchdog(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
   }
 
   // Returns stream URI adapted to current mode (PCM vs relay)
@@ -213,44 +191,11 @@ public class UpnpStreamServer extends HttpServer {
   private void setLockKey(@NonNull String lockKey) {
     Log.d(LOG_TAG, "setLockKey: " + lockKey);
     // Disconnect old upstream to unblock any ongoing relay read
-    watchdogs.cancel(this.lockKey);
     queuess.clear();
     connectionSets.clear();
     // Update lockKey
     this.lockKey = lockKey;
     sampleRate = DEFAULT;
-  }
-
-  // Adds DLNA streaming headers common to both PCM and relay responses
-  private void addDlnaHeaders(@NonNull HttpServer.Response response, @NonNull String mime, boolean isPcm) {
-    response.addHeader("transferMode.dlna.org", "Streaming");
-    final String dlnaOrgPn;
-    if (isPcm) {
-      dlnaOrgPn = "DLNA.ORG_PN=LPCM;";
-    } else {
-      switch (mime) {
-        case "audio/mpeg":
-          dlnaOrgPn = "DLNA.ORG_PN=MP3;";
-          break;
-        case "audio/aac":
-        case "audio/x-aac":
-        case "audio/aacp":
-          dlnaOrgPn = "DLNA.ORG_PN=AAC_ADTS;";
-          break;
-        case "audio/mp4":
-        case "audio/x-m4a":
-          dlnaOrgPn = "DLNA.ORG_PN=AAC_ISO;";
-          break;
-        case "audio/flac":
-        case "audio/x-flac":
-          // No standard DLNA profile for FLAC
-        default:
-          // OGG, unknown — no DLNA profile
-          dlnaOrgPn = "";
-      }
-    }
-    response.addHeader("contentFeatures.dlna.org", dlnaOrgPn + UpnpSessionDevice.PROTOCOL_INFO_TAIL);
-    response.addHeader(Response.CONTENT_TYPE, mime);
   }
 
   public interface Callback {
@@ -259,63 +204,41 @@ public class UpnpStreamServer extends HttpServer {
     void onConnected(@NonNull String lockKey);
   }
 
-  public interface ConnectionSetSupplier {
-    @Nullable
-    ConnectionSet getConnectionSet(@NonNull URL url, @NonNull String lockKey);
-  }
-
-  public static class ConnectionSet {
-    private final URL url;
-    private final String content;
-
-    public ConnectionSet(@NonNull URL url, @NonNull String content) {
-      this.url = url;
-      this.content = content;
-    }
-
+  private class Watchdog {
     @NonNull
-    public String getContent() {
-      return content;
-    }
-
+    private final Runnable runnable;
     @NonNull
-    public URL getUrl() {
-      return url;
-    }
-  }
+    private final String lockKey;
+    private final int timeoutS;
 
-  private static class Watchdogs {
-    private final ConcurrentHashMap<String, Runnable> watchdogs = new ConcurrentHashMap<>();
-    private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
-
-    public void launch(@NonNull Runnable callback, @NonNull String lockKey, int timeoutMs) {
-      cancel(lockKey);
-      final Runnable watchdog = () -> {
+    public Watchdog(@NonNull Runnable runnable, @NonNull String lockKey, int timeoutS) {
+      this.runnable = () -> {
         Log.d(LOG_TAG, "Watchdog fired for " + lockKey);
-        watchdogs.remove(lockKey);
-        callback.run();
+        runnable.run();
       };
-      watchdogs.put(lockKey, watchdog);
-      handler.postDelayed(watchdog, timeoutMs * 1000L);
+      this.lockKey = lockKey;
+      this.timeoutS = timeoutS;
+      launch();
     }
 
-    public void launch(@NonNull Consumer<String> callback, @NonNull String lockKey, int timeoutMs) {
-      launch(() -> callback.accept(lockKey), lockKey, timeoutMs);
+    public Watchdog(@NonNull Consumer<String> consumer, @NonNull String lockKey, int timeoutS) {
+      this(() -> consumer.accept(lockKey), lockKey, timeoutS);
     }
 
-    public void relaunch(@NonNull String lockKey, int timeoutMs) {
-      final Runnable watchdog = watchdogs.get(lockKey);
-      if (watchdog != null) {
-        handler.removeCallbacks(watchdog);
-        handler.postDelayed(watchdog, timeoutMs * 1000L);
+    public void relaunch() {
+      cancel(lockKey);
+      launch();
+    }
+
+    // Ensures the right watchdog is cancelled
+    public void cancel(@NonNull String currentLockKey) {
+      if (lockKey.equals(currentLockKey)) {
+        handler.removeCallbacks(runnable);
       }
     }
 
-    private void cancel(@NonNull String lockKey) {
-      final Runnable watchdog = watchdogs.remove(lockKey);
-      if (watchdog != null) {
-        handler.removeCallbacks(watchdog);
-      }
+    private void launch() {
+      handler.postDelayed(runnable, timeoutS * 1000L);
     }
   }
 
@@ -326,8 +249,8 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Request request,
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream) throws IOException {
-      if (logoPath == null || !logoPath.equals(request.getPath())) {
-        return; // Not our path — let StreamHandler try
+      if ((logoPath == null) || !logoPath.equals(request.getPath())) {
+        return; // Not our path
       }
       if (logoBytes == null) {
         Log.e(LOG_TAG, "LogoHandler: no logo available");
@@ -353,30 +276,28 @@ public class UpnpStreamServer extends HttpServer {
       final boolean isGet = method.equals("GET");
       final boolean isHead = method.equals("HEAD");
       Log.d(LOG_TAG, "StreamHandler: " + method + " lockKey = " + incomingLockKey);
-      if (!isHead && !isGet || !lockKey.equals(incomingLockKey)) {
+      if (!((isHead || isGet) && lockKey.equals(incomingLockKey))) {
         Log.d(LOG_TAG, "StreamHandler: not a valid request - " + method + " - " + incomingLockKey);
         return;
       }
       final boolean isPcm = request.getPath().endsWith(STREAM_SUFFIX_PCM);
       // Handle response
       if (isPcm) {
-        handlePcm(response, responseStream, incomingLockKey, isHead);
+        handlePcm(response, responseStream, isHead, incomingLockKey);
       } else {
-        handleRelay(response, responseStream, incomingLockKey, isHead);
+        handleRelay(response, responseStream, isHead, incomingLockKey);
       }
     }
 
     private void handlePcm(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
-      @NonNull String lockKey,
-      boolean isHead) throws IOException {
+      boolean isHead,
+      @NonNull String lockKey) throws IOException {
       Log.d(LOG_TAG, "handlePcm: " + lockKey);
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
-      addDlnaHeaders(response, PCM_MIME, true);
-      response.send();
-      responseStream.flush();
+      sendDlnaResponse(response, responseStream, PCM_MIME, true, lockKey);
       if (isHead) {
         return;
       }
@@ -386,26 +307,24 @@ public class UpnpStreamServer extends HttpServer {
       queues.add(queue);
       // Wait for onFormatChanged()
       final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
-      while (sampleRate == DEFAULT) {
-        if (System.currentTimeMillis() > deadline) {
-          Log.e(LOG_TAG, "handlePcm: timeout waiting for audio format - " + lockKey);
-          callback.onDisconnected(lockKey);
-          return;
-        }
-        try {
-          //noinspection BusyWait
-          Thread.sleep(50);
-        } catch (InterruptedException interruptedException) {
-          Thread.currentThread().interrupt();
-          callback.onDisconnected(lockKey);
-          return;
-        }
-      }
-      // We can signal actual connection
-      callback.onConnected(lockKey);
-      // WAV header first, then raw PCM drained from queue
-      watchdogs.launch(callback::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
       try {
+        while (sampleRate == DEFAULT) {
+          if (System.currentTimeMillis() > deadline) {
+            Log.e(LOG_TAG, "handlePcm: timeout waiting for audio format - " + lockKey);
+            callback.onDisconnected(lockKey);
+            return;
+          }
+          try {
+            //noinspection BusyWait
+            Thread.sleep(50);
+          } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            callback.onDisconnected(lockKey);
+            return;
+          }
+        }
+        // We signal actual connection and start stream
+        final Watchdog watchdog = signalConnectionAndLaunchWatchdog(connectionWatchdog, lockKey);
         responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
         Log.d(LOG_TAG, "handlePcm: renderer started reading PCM stream - " + lockKey);
         try {
@@ -413,9 +332,8 @@ public class UpnpStreamServer extends HttpServer {
             final byte[] pcmData = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.MILLISECONDS);
             if (pcmData == null) {
               Log.d(LOG_TAG, "handlePcm: pcmData is null");
-              break;
             } else {
-              watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+              watchdog.relaunch();
               responseStream.write(pcmData);
             }
           }
@@ -434,8 +352,8 @@ public class UpnpStreamServer extends HttpServer {
     private void handleRelay(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
-      @NonNull String lockKey,
-      boolean isHead) throws IOException {
+      boolean isHead,
+      @NonNull String lockKey) throws IOException {
       Log.d(LOG_TAG, "handleRelay: " + lockKey);
       // Upstream
       final ConnectionSet connectionSet = connectionSets.get(lockKey);
@@ -445,10 +363,7 @@ public class UpnpStreamServer extends HttpServer {
         return;
       }
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
-      Log.d(LOG_TAG, "handleRelay: relay mime = " + connectionSet.getContent() + " - " + lockKey);
-      addDlnaHeaders(response, connectionSet.getContent(), false);
-      response.send();
-      responseStream.flush();
+      sendDlnaResponse(response, responseStream, connectionSet.getContent(), false, lockKey);
       if (isHead) {
         return;
       }
@@ -462,16 +377,14 @@ public class UpnpStreamServer extends HttpServer {
         callback.onDisconnected(lockKey);
         throw ioException;
       }
-      // We can signal actual connection
-      callback.onConnected(lockKey);
-      // Relay
-      watchdogs.launch(callback::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+      // We signal actual connection and start stream
+      final Watchdog watchdog = signalConnectionAndLaunchWatchdog(connectionWatchdog, lockKey);
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       Log.d(LOG_TAG, "handleRelay: renderer started reading stream - " + lockKey);
       int n;
       try (final InputStream inputStream = httpURLConnection.getInputStream()) {
         while (lockKey.equals(UpnpStreamServer.this.lockKey) && ((n = inputStream.read(buf)) >= 0)) {
-          watchdogs.relaunch(lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+          watchdog.relaunch();
           responseStream.write(buf, 0, n);
         }
       } catch (IOException ioException) {
@@ -481,6 +394,84 @@ public class UpnpStreamServer extends HttpServer {
         Log.d(LOG_TAG, "handleRelay: exit - " + lockKey);
         httpURLConnection.disconnect();
       }
+    }
+
+    // Adds DLNA streaming headers common to both PCM and relay responses
+    private void sendDlnaResponse(
+      @NonNull HttpServer.Response response,
+      @NonNull OutputStream responseStream,
+      @NonNull String mime,
+      boolean isPcm,
+      @NonNull String lockKey) throws IOException {
+      response.addHeader("transferMode.dlna.org", "Streaming");
+      final String dlnaOrgPn;
+      if (isPcm) {
+        dlnaOrgPn = "DLNA.ORG_PN=LPCM;";
+      } else {
+        switch (mime) {
+          case "audio/mpeg":
+            dlnaOrgPn = "DLNA.ORG_PN=MP3;";
+            break;
+          case "audio/aac":
+          case "audio/x-aac":
+          case "audio/aacp":
+            dlnaOrgPn = "DLNA.ORG_PN=AAC_ADTS;";
+            break;
+          case "audio/mp4":
+          case "audio/x-m4a":
+            dlnaOrgPn = "DLNA.ORG_PN=AAC_ISO;";
+            break;
+          case "audio/flac":
+          case "audio/x-flac":
+            // No standard DLNA profile for FLAC
+          default:
+            // OGG, unknown — no DLNA profile
+            dlnaOrgPn = "";
+        }
+      }
+      response.addHeader("contentFeatures.dlna.org", dlnaOrgPn + UpnpSessionDevice.PROTOCOL_INFO_TAIL);
+      response.addHeader(Response.CONTENT_TYPE, mime);
+      try {
+        response.send();
+        responseStream.flush();
+      } catch (IOException ioException) {
+        Log.d(LOG_TAG, "sendDlnaResponse: IOException - " + lockKey + "; " + ioException.getMessage());
+        callback.onDisconnected(lockKey);
+        throw ioException;
+      }
+    }
+
+    // Builds a standard 44-byte WAV header.
+    // Size fields are set to 0xFFFFFFFF to indicate an unbounded stream,
+    // which is the common practice for HTTP audio streaming.
+    @NonNull
+    private byte[] buildWavHeader(int sampleRate, int channelCount, int bitsPerSample) {
+      final int byteRate = sampleRate * channelCount * (bitsPerSample / 8);
+      final int blockAlign = channelCount * (bitsPerSample / 8);
+      final ByteBuffer buf = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
+      buf.put(new byte[]{'R', 'I', 'F', 'F'});
+      buf.putInt(0xFFFFFFFF); // Unknown file size — streaming
+      buf.put(new byte[]{'W', 'A', 'V', 'E'});
+      buf.put(new byte[]{'f', 'm', 't', ' '});
+      buf.putInt(16); // fmt chunk size
+      buf.putShort((short) 1); // PCM format
+      buf.putShort((short) channelCount);
+      buf.putInt(sampleRate);
+      buf.putInt(byteRate);
+      buf.putShort((short) blockAlign);
+      buf.putShort((short) bitsPerSample);
+      buf.put(new byte[]{'d', 'a', 't', 'a'});
+      buf.putInt(0xFFFFFFFF); // Unknown data size — streaming
+      return buf.array();
+    }
+
+    @NonNull
+    private Watchdog signalConnectionAndLaunchWatchdog(@Nullable Watchdog connectionWatchdog, @NonNull String lockKey) {
+      callback.onConnected(lockKey);
+      if (connectionWatchdog != null) {
+        connectionWatchdog.cancel(lockKey);
+      }
+      return new Watchdog(callback::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
     }
   }
 }

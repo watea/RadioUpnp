@@ -33,8 +33,6 @@ import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 
-import com.watea.radio_upnp.service.UpnpStreamServer;
-
 @OptIn(markerClass = UnstableApi.class)
 public class LocalSessionDevice extends SessionDevice {
   private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
@@ -42,11 +40,11 @@ public class LocalSessionDevice extends SessionDevice {
   public LocalSessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoPlayer,
-    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
+    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio) {
-    super(context, exoPlayer, upnpStreamServerConnectionSetSupplier, listener, lockKey, radio);
+    super(context, exoPlayer, connectionSetSupplier, listener, lockKey, radio);
   }
 
   @Override

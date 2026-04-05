@@ -86,7 +86,7 @@ public class UpnpSessionDevice extends SessionDevice {
   public UpnpSessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoPlayer,
-    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
+    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
@@ -94,7 +94,7 @@ public class UpnpSessionDevice extends SessionDevice {
     @NonNull Uri logoUri,
     @NonNull Device device,
     @NonNull ActionController actionController) {
-    super(context, exoPlayer, upnpStreamServerConnectionSetSupplier, listener, lockKey, radio);
+    super(context, exoPlayer, connectionSetSupplier, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.actionController = actionController;
     this.logoUri = logoUri;
@@ -337,7 +337,7 @@ public class UpnpSessionDevice extends SessionDevice {
       return UpnpStreamServer.PCM_MIME;
     }
     // Relay
-    final String content = (upnpStreamServerConnectionSet == null) ? UpnpStreamServer.DEFAULT_MIME : upnpStreamServerConnectionSet.getContent();
+    final String content = (connectionSet == null) ? UpnpStreamServer.DEFAULT_MIME : connectionSet.getContent();
     switch (content) {
       case "audio/aac":
       case "audio/x-aac":

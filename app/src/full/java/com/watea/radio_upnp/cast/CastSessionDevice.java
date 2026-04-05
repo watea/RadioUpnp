@@ -42,9 +42,9 @@ import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.media.RemoteMediaClient;
 import com.google.android.gms.common.images.WebImage;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.ConnectionSet;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
-import com.watea.radio_upnp.service.UpnpStreamServer;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -97,14 +97,14 @@ public class CastSessionDevice extends SessionDevice {
   public CastSessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoPlayer,
-    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
+    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull CastSession castSession) {
-    super(context, exoPlayer, upnpStreamServerConnectionSetSupplier, listener, lockKey, radio);
+    super(context, exoPlayer, connectionSetSupplier, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.logoUri = logoUri;
     this.castSession = castSession;

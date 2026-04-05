@@ -896,7 +896,7 @@ public class RadioService
         return castManager.getCastSessionDevice(
           RadioService.this,
           getExoPlayer(audioSink),
-          upnpStreamServer::setActualUrlAndContentType,
+          upnpStreamServer::getConnectionSet,
           RadioService.this,
           lockKey,
           radio,
@@ -917,7 +917,7 @@ public class RadioService
         return new UpnpSessionDevice(
           RadioService.this,
           getExoPlayer(audioSink),
-          upnpStreamServer::setActualUrlAndContentType,
+          upnpStreamServer::getConnectionSet,
           RadioService.this,
           lockKey,
           radio,
@@ -930,7 +930,7 @@ public class RadioService
         return new LocalSessionDevice(
           RadioService.this,
           getExoPlayer(audioSink),
-          upnpStreamServer::setActualUrlAndContentType,
+          upnpStreamServer::getConnectionSet,
           RadioService.this,
           lockKey,
           radio);

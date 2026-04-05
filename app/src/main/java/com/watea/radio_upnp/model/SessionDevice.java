@@ -45,8 +45,6 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
 
-import com.watea.radio_upnp.service.UpnpStreamServer;
-
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
@@ -61,22 +59,22 @@ public abstract class SessionDevice {
   @NonNull
   protected final Listener listener;
   @NonNull
-  private final UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier;
+  private final ConnectionSet.Supplier connectionSetSupplier;
   @NonNull
   private final Player.Listener playerListener;
   @Nullable
-  protected UpnpStreamServer.ConnectionSet upnpStreamServerConnectionSet = null;
+  protected ConnectionSet connectionSet = null;
 
   public SessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoplayer,
-    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
+    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio) {
     this.context = context;
     this.exoPlayer = exoplayer;
-    this.upnpStreamServerConnectionSetSupplier = upnpStreamServerConnectionSetSupplier;
+    this.connectionSetSupplier = connectionSetSupplier;
     this.playerListener = getPlayerListener();
     this.listener = listener;
     this.lockKey = lockKey;
@@ -151,8 +149,8 @@ public abstract class SessionDevice {
   // Must be called in its own thread.
   // Fires ERROR if upstream connection failed.
   public boolean prepareFromMediaId() {
-    upnpStreamServerConnectionSet = upnpStreamServerConnectionSetSupplier.getConnectionSet(radio.getURL(), lockKey);
-    if (upnpStreamServerConnectionSet == null) {
+    connectionSet = connectionSetSupplier.get(radio.getURL(), lockKey);
+    if (connectionSet == null) {
       Log.d(LOG_TAG, "prepareFromMediaId: unable to connect");
       onState(PlaybackStateCompat.STATE_ERROR);
       return false;
@@ -160,7 +158,7 @@ public abstract class SessionDevice {
     // Post ExoPlayer calls to the main thread
     new Handler(Looper.getMainLooper()).post(() -> {
       exoPlayer.addListener(playerListener);
-      exoPlayer.setMediaItem(MediaItem.fromUri(upnpStreamServerConnectionSet.getUrl().toString()));
+      exoPlayer.setMediaItem(MediaItem.fromUri(connectionSet.getUrl().toString()));
       exoPlayer.prepare();
       exoPlayer.setPlayWhenReady(true);
     });
