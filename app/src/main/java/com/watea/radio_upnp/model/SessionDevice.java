@@ -148,12 +148,14 @@ public abstract class SessionDevice {
     exoPlayer.stop();
   }
 
-  // Must be called in its own thread
-  public void prepareFromMediaId() {
+  // Must be called in its own thread.
+  // Fires ERROR if upstream connection failed.
+  public boolean prepareFromMediaId() {
     upnpStreamServerConnectionSet = upnpStreamServerConnectionSetSupplier.getConnectionSet(radio.getURL(), lockKey);
     if (upnpStreamServerConnectionSet == null) {
-      Log.e(LOG_TAG, "prepareFromMediaId: unable to connect");
-      return;
+      Log.d(LOG_TAG, "prepareFromMediaId: unable to connect");
+      onState(PlaybackStateCompat.STATE_ERROR);
+      return false;
     }
     // Post ExoPlayer calls to the main thread
     new Handler(Looper.getMainLooper()).post(() -> {
@@ -162,6 +164,7 @@ public abstract class SessionDevice {
       exoPlayer.prepare();
       exoPlayer.setPlayWhenReady(true);
     });
+    return true;
   }
 
   public void onState(int state) {

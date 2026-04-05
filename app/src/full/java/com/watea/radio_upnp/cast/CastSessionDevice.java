@@ -144,21 +144,19 @@ public class CastSessionDevice extends SessionDevice {
   }
 
   @Override
-  public void prepareFromMediaId() {
-    super.prepareFromMediaId();
-    if (upnpStreamServerConnectionSet == null) {
-      Log.e(LOG_TAG, "prepareFromMediaId: unable to connect");
-      onState(PlaybackStateCompat.STATE_ERROR);
-      return;
+  public boolean prepareFromMediaId() {
+    if (super.prepareFromMediaId()) {
+      remoteMediaClient = castSession.getRemoteMediaClient();
+      if (remoteMediaClient != null) {
+        remoteMediaClient.registerCallback(remoteCallback);
+        load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
+        // Heartbeat
+        heartbeat = Executors.newSingleThreadScheduledExecutor();
+        heartbeat.scheduleWithFixedDelay(() -> remoteMediaClient.requestStatus(), HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
+        return true;
+      }
     }
-    remoteMediaClient = castSession.getRemoteMediaClient();
-    if (remoteMediaClient != null) {
-      remoteMediaClient.registerCallback(remoteCallback);
-      load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
-      // Heartbeat
-      heartbeat = Executors.newSingleThreadScheduledExecutor();
-      heartbeat.scheduleWithFixedDelay(() -> remoteMediaClient.requestStatus(), HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
-    }
+    return false;
   }
 
   @Override

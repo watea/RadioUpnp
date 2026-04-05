@@ -136,17 +136,14 @@ public class UpnpSessionDevice extends SessionDevice {
   }
 
   @Override
-  public void prepareFromMediaId() {
-    super.prepareFromMediaId();
-    if (upnpStreamServerConnectionSet == null) {
-      Log.e(LOG_TAG, "prepareFromMediaId: unable to connect");
-      onState(PlaybackStateCompat.STATE_ERROR);
-      return;
+  public boolean prepareFromMediaId() {
+    if (super.prepareFromMediaId()) {
+      scheduleActionPrepareForConnection();
+      scheduleActionSetAvTransportUri();
+      scheduleActionPlay();
+      return true;
     }
-    onState(PlaybackStateCompat.STATE_BUFFERING);
-    scheduleActionPrepareForConnection();
-    scheduleActionSetAvTransportUri();
-    scheduleActionPlay();
+    return false;
   }
 
   @Override
