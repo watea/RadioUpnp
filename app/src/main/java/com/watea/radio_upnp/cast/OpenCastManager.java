@@ -34,6 +34,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.UpnpStreamServer;
 
 // Singleton.
 // CastManager that does nothing.
@@ -66,6 +67,7 @@ public class OpenCastManager<T extends SessionDevice> {
   public T getCastSessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoPlayer,
+    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
     @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,

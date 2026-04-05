@@ -248,7 +248,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "Internal failure on onPrepareFromMediaId; no session device defined");
     } else {
-      sessionDevice.prepareFromMediaId();
+      new Thread(sessionDevice::prepareFromMediaId).start();
     }
   }
 

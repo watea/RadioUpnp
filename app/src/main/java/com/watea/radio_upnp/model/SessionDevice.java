@@ -33,6 +33,7 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
@@ -44,10 +45,7 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
 
-import com.watea.radio_upnp.service.RadioURL;
-
-import java.io.IOException;
-import java.net.HttpURLConnection;
+import com.watea.radio_upnp.service.UpnpStreamServer;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
@@ -63,16 +61,22 @@ public abstract class SessionDevice {
   @NonNull
   protected final Listener listener;
   @NonNull
+  private final UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier;
+  @NonNull
   private final Player.Listener playerListener;
+  @Nullable
+  protected UpnpStreamServer.ConnectionSet upnpStreamServerConnectionSet = null;
 
   public SessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoplayer,
+    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio) {
     this.context = context;
     this.exoPlayer = exoplayer;
+    this.upnpStreamServerConnectionSetSupplier = upnpStreamServerConnectionSetSupplier;
     this.playerListener = getPlayerListener();
     this.listener = listener;
     this.lockKey = lockKey;
@@ -144,33 +148,20 @@ public abstract class SessionDevice {
     exoPlayer.stop();
   }
 
+  // Must be called in its own thread
   public void prepareFromMediaId() {
-    new Thread(() -> {
-      HttpURLConnection httpURLConnection = null;
-      try {
-        httpURLConnection = new RadioURL(radio.getURL()).getActualHttpURLConnection();
-        final String url = httpURLConnection.getURL().toString();
-        Log.d(LOG_TAG, "prepareFromMediaId: " + url);
-        // Post ExoPlayer calls to the main thread
-        new Handler(Looper.getMainLooper()).post(() -> {
-          exoPlayer.addListener(playerListener);
-          exoPlayer.setMediaItem(MediaItem.fromUri(url));
-          exoPlayer.prepare();
-          exoPlayer.setPlayWhenReady(true);
-        });
-      } catch (IOException ioException) {
-        Log.d(LOG_TAG, "prepareFromMediaId failed", ioException);
-        // For remote session, we let the remote functional chain work to detect failure,
-        // as it is launched independently
-        if (!isRemote()) {
-          onState(PlaybackStateCompat.STATE_ERROR);
-        }
-      } finally {
-        if (httpURLConnection != null) {
-          httpURLConnection.disconnect();
-        }
-      }
-    }).start();
+    upnpStreamServerConnectionSet = upnpStreamServerConnectionSetSupplier.getConnectionSet(radio.getURL(), lockKey);
+    if (upnpStreamServerConnectionSet == null) {
+      Log.e(LOG_TAG, "prepareFromMediaId: unable to connect");
+      return;
+    }
+    // Post ExoPlayer calls to the main thread
+    new Handler(Looper.getMainLooper()).post(() -> {
+      exoPlayer.addListener(playerListener);
+      exoPlayer.setMediaItem(MediaItem.fromUri(upnpStreamServerConnectionSet.getUrl().toString()));
+      exoPlayer.prepare();
+      exoPlayer.setPlayWhenReady(true);
+    });
   }
 
   public void onState(int state) {

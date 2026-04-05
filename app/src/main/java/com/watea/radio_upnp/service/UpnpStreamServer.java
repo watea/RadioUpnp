@@ -57,7 +57,7 @@ import java.util.regex.Pattern;
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpStreamServer extends HttpServer {
   public static final String PCM_MIME = "audio/wav";
-  private static final String DEFAULT_MIME = "audio/mpeg";
+  public static final String DEFAULT_MIME = "audio/mpeg";
   private static final String LOG_TAG = "UpnpStreamServer";
   private static final String SCHEME = "http://";
   private static final int DEFAULT = -1;
@@ -173,38 +173,31 @@ public class UpnpStreamServer extends HttpServer {
     return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + logoPath);
   }
 
+  // Change lockKey and update connection data
   @Nullable
-  public String setUrlAndGetContentType(@NonNull URL url, @NonNull String lockKey) {
-    String result = null;
+  public ConnectionSet setActualUrlAndContentType(@NonNull URL url, @NonNull String lockKey) {
+    setLockKey(lockKey);
     HttpURLConnection httpURLConnection = null;
     try {
       httpURLConnection = new RadioURL(url)
         .getActualHttpURLConnection(conn -> conn.setRequestProperty("Icy-MetaData", "0")); // No ICY
-      result = RadioURL.getStreamContentType(httpURLConnection);
-      result = (result == null) ? DEFAULT_MIME : result;
+      String contentType = RadioURL.getStreamContentType(httpURLConnection);
+      contentType = (contentType == null) ? DEFAULT_MIME : contentType;
       final URL actualUrl = httpURLConnection.getURL();
-      connectionSets.put(lockKey, new ConnectionSet(actualUrl, result));
-      Log.d(LOG_TAG, "setUrlAndGetContentType: content => " + result + " URL => " + actualUrl);
+      connectionSets.put(lockKey, new ConnectionSet(actualUrl, contentType));
+      Log.d(LOG_TAG, "setActualUrlAndContentType: content => " + contentType + " URL => " + actualUrl);
     } catch (IOException ioException) {
-      Log.d(LOG_TAG, "setUrlAndGetContentType: unable to connect", ioException);
+      Log.d(LOG_TAG, "setActualUrlAndContentType: unable to connect", ioException);
     } finally {
       if (httpURLConnection != null) {
         httpURLConnection.disconnect();
       }
     }
-    return result;
+    return connectionSets.get(lockKey);
   }
 
-  // Must be called early before any session is started
-  public void setLockKey(@NonNull String lockKey) {
-    Log.d(LOG_TAG, "setLockKey: " + lockKey);
-    // Disconnect old upstream to unblock any ongoing relay read
-    watchdogs.cancel(this.lockKey);
-    queuess.clear();
-    connectionSets.clear();
-    // Update lockKey
-    this.lockKey = lockKey;
-    sampleRate = DEFAULT;
+  public void release() {
+    setLockKey(RadioService.getLockKey());
   }
 
   public void launchWatchdog(@NonNull String lockKey) {
@@ -214,6 +207,18 @@ public class UpnpStreamServer extends HttpServer {
   // Returns stream URI adapted to current mode (PCM vs relay)
   public Uri getStreamUri(@NonNull String localIp, @NonNull String lockKey, boolean isPcm) {
     return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/" + STREAM_PREFIX + lockKey + (isPcm ? STREAM_SUFFIX_PCM : ""));
+  }
+
+  // Must be called early before any session is started
+  private void setLockKey(@NonNull String lockKey) {
+    Log.d(LOG_TAG, "setLockKey: " + lockKey);
+    // Disconnect old upstream to unblock any ongoing relay read
+    watchdogs.cancel(this.lockKey);
+    queuess.clear();
+    connectionSets.clear();
+    // Update lockKey
+    this.lockKey = lockKey;
+    sampleRate = DEFAULT;
   }
 
   // Adds DLNA streaming headers common to both PCM and relay responses
@@ -254,6 +259,31 @@ public class UpnpStreamServer extends HttpServer {
     void onConnected(@NonNull String lockKey);
   }
 
+  public interface ConnectionSetSupplier {
+    @Nullable
+    ConnectionSet getConnectionSet(@NonNull URL url, @NonNull String lockKey);
+  }
+
+  public static class ConnectionSet {
+    private final URL url;
+    private final String content;
+
+    public ConnectionSet(@NonNull URL url, @NonNull String content) {
+      this.url = url;
+      this.content = content;
+    }
+
+    @NonNull
+    public String getContent() {
+      return content;
+    }
+
+    @NonNull
+    public URL getUrl() {
+      return url;
+    }
+  }
+
   private static class Watchdogs {
     private final ConcurrentHashMap<String, Runnable> watchdogs = new ConcurrentHashMap<>();
     private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
@@ -286,26 +316,6 @@ public class UpnpStreamServer extends HttpServer {
       if (watchdog != null) {
         handler.removeCallbacks(watchdog);
       }
-    }
-  }
-
-  private static class ConnectionSet {
-    private final URL url;
-    private final String content;
-
-    public ConnectionSet(@NonNull URL url, @NonNull String content) {
-      this.url = url;
-      this.content = content;
-    }
-
-    @NonNull
-    public String getContent() {
-      return content;
-    }
-
-    @NonNull
-    public URL getUrl() {
-      return url;
     }
   }
 
@@ -430,7 +440,8 @@ public class UpnpStreamServer extends HttpServer {
       // Upstream
       final ConnectionSet connectionSet = connectionSets.get(lockKey);
       if (connectionSet == null) {
-        Log.d(LOG_TAG, "handleRelay: upstream is null");
+        Log.d(LOG_TAG, "handleRelay: upstream is not defined");
+        callback.onDisconnected(lockKey);
         return;
       }
       // Send HTTP headers immediately — the renderer must not wait on a cold socket

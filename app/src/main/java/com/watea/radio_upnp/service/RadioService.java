@@ -524,14 +524,14 @@ public class RadioService
         }
       case PlaybackStateCompat.STATE_PAUSED:
         assert upnpStreamServer != null;
-        upnpStreamServer.setLockKey(getLockKey());
+        upnpStreamServer.release();
         releaseScheduler();
         buildNotification();
         break;
       default:
         // Release everything
         assert upnpStreamServer != null;
-        upnpStreamServer.setLockKey(getLockKey());
+        upnpStreamServer.release();
         playerAdapter.release();
         releaseScheduler();
         session.setMetadata(null);
@@ -882,7 +882,6 @@ public class RadioService
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = (upnpStreamServer != null) && (localIp != null);
       AudioSink audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
-      upnpStreamServer.setLockKey(lockKey);
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
         // Link capturingSink to upnpStreamServer
@@ -890,6 +889,7 @@ public class RadioService
         return castManager.getCastSessionDevice(
           RadioService.this,
           getExoPlayer(audioSink),
+          upnpStreamServer::setActualUrlAndContentType,
           RadioService.this,
           lockKey,
           radio,
@@ -910,19 +910,20 @@ public class RadioService
         return new UpnpSessionDevice(
           RadioService.this,
           getExoPlayer(audioSink),
+          upnpStreamServer::setActualUrlAndContentType,
           RadioService.this,
           lockKey,
           radio,
           upnpStreamServer.getStreamUri(localIp, lockKey, isPcm),
           upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
-          upnpService.getActionController(),
-          () -> upnpStreamServer.setUrlAndGetContentType(radio.getURL(), lockKey));
+          upnpService.getActionController());
       } else {
         Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
         return new LocalSessionDevice(
           RadioService.this,
           getExoPlayer(audioSink),
+          upnpStreamServer::setActualUrlAndContentType,
           RadioService.this,
           lockKey,
           radio);

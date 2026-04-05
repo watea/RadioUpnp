@@ -46,7 +46,6 @@ import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpSessionDevice extends SessionDevice {
@@ -68,8 +67,6 @@ public class UpnpSessionDevice extends SessionDevice {
   @NonNull
   private final ActionController actionController;
   @NonNull
-  private final Supplier<String> contentSupplier;
-  @NonNull
   private final Uri radioUri;
   @NonNull
   private final Uri logoUri;
@@ -81,8 +78,6 @@ public class UpnpSessionDevice extends SessionDevice {
   private final Service renderingControl;
   @NonNull
   private final String information; // Not final in further use
-  @NonNull
-  private volatile String content = UpnpStreamServer.PCM_MIME; // Default
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -91,19 +86,18 @@ public class UpnpSessionDevice extends SessionDevice {
   public UpnpSessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoPlayer,
+    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri,
     @NonNull Uri logoUri,
     @NonNull Device device,
-    @NonNull ActionController actionController,
-    @NonNull Supplier<String> contentSupplier) {
-    super(context, exoPlayer, listener, lockKey, radio);
+    @NonNull ActionController actionController) {
+    super(context, exoPlayer, upnpStreamServerConnectionSetSupplier, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.actionController = actionController;
     this.logoUri = logoUri;
-    this.contentSupplier = contentSupplier;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
     avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
@@ -144,21 +138,15 @@ public class UpnpSessionDevice extends SessionDevice {
   @Override
   public void prepareFromMediaId() {
     super.prepareFromMediaId();
-    onState(PlaybackStateCompat.STATE_BUFFERING);
-    // PCM or relay?
-    if (MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
-      prepare();
-    } else {
-      new Thread(() -> {
-        final String content = contentSupplier.get();
-        if (content == null) {
-          onState(PlaybackStateCompat.STATE_ERROR);
-        } else {
-          this.content = content;
-          prepare();
-        }
-      }).start();
+    if (upnpStreamServerConnectionSet == null) {
+      Log.e(LOG_TAG, "prepareFromMediaId: unable to connect");
+      onState(PlaybackStateCompat.STATE_ERROR);
+      return;
     }
+    onState(PlaybackStateCompat.STATE_BUFFERING);
+    scheduleActionPrepareForConnection();
+    scheduleActionSetAvTransportUri();
+    scheduleActionPlay();
   }
 
   @Override
@@ -182,12 +170,6 @@ public class UpnpSessionDevice extends SessionDevice {
   public void release() {
     super.release();
     scheduleActionStop();
-  }
-
-  private void prepare() {
-    scheduleActionPrepareForConnection();
-    scheduleActionSetAvTransportUri();
-    scheduleActionPlay();
   }
 
   private void scheduleMandatoryAction(
@@ -353,6 +335,12 @@ public class UpnpSessionDevice extends SessionDevice {
 
   @NonNull
   private String getDidlMime() {
+    // PCM?
+    if (MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
+      return UpnpStreamServer.PCM_MIME;
+    }
+    // Relay
+    final String content = (upnpStreamServerConnectionSet == null) ? UpnpStreamServer.DEFAULT_MIME : upnpStreamServerConnectionSet.getContent();
     switch (content) {
       case "audio/aac":
       case "audio/x-aac":

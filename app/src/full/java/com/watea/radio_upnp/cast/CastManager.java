@@ -41,6 +41,7 @@ import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.UpnpStreamServer;
 
 public class CastManager extends OpenCastManager<CastSessionDevice> {
   private static final String LOG_TAG = CastManager.class.getSimpleName();
@@ -161,12 +162,13 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   public CastSessionDevice getCastSessionDevice(
     @NonNull Context context,
     @NonNull ExoPlayer exoPlayer,
+    @NonNull UpnpStreamServer.ConnectionSetSupplier upnpStreamServerConnectionSetSupplier,
     @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio,
     @NonNull Uri radioUri,
     @Nullable Uri logoUri) {
     assert castSession != null;
-    return new CastSessionDevice(context, exoPlayer, listener, lockKey, radio, radioUri, logoUri, castSession);
+    return new CastSessionDevice(context, exoPlayer, upnpStreamServerConnectionSetSupplier, listener, lockKey, radio, radioUri, logoUri, castSession);
   }
 }
