@@ -365,6 +365,7 @@ public class UpnpSessionDevice extends SessionDevice {
     String content = PCM_MIME;
     String mime = PCM_MIME;
     if (!MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
+      // Relay
       content = (connectionSet == null) ? DEFAULT_MIME : connectionSet.getContent();
       switch (content) {
         case "audio/aac":
