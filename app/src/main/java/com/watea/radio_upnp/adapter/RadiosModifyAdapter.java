@@ -70,6 +70,24 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     return new ViewHolder(getView(parent));
   }
 
+  public class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
+    @NonNull
+    private final ImageButton preferredImageButton;
+
+    protected ViewHolder(@NonNull View itemView) {
+      super(itemView, R.id.row_modify_radio_text_view);
+      (preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button))
+        .setOnClickListener(v -> ((Radios) getRadios()).setPreferred(radio, !radio.isPreferred()));
+    }
+
+    @Override
+    protected void setView(@NonNull Radio radio) {
+      super.setView(radio);
+      preferredImageButton.setImageResource(this.radio.isPreferred() ?
+        R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+    }
+  }
+
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
     private static final int DRAG_FLAGS = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
     private static final int IDLE_FLAGS = ItemTouchHelper.START | ItemTouchHelper.END;
@@ -120,24 +138,6 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
           nestedScrollView.smoothScrollBy(0, dy);
         }
       }
-    }
-  }
-
-  public class ViewHolder extends RadiosDisplayAdapter<?>.ViewHolder {
-    @NonNull
-    private final ImageButton preferredImageButton;
-
-    protected ViewHolder(@NonNull View itemView) {
-      super(itemView, R.id.row_modify_radio_text_view);
-      (preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button))
-        .setOnClickListener(v -> ((Radios) getRadios()).setPreferred(radio, !radio.isPreferred()));
-    }
-
-    @Override
-    protected void setView(@NonNull Radio radio) {
-      super.setView(radio);
-      preferredImageButton.setImageResource(this.radio.isPreferred() ?
-        R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
     }
   }
 }

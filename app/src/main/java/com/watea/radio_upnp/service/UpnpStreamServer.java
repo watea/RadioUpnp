@@ -200,28 +200,6 @@ public class UpnpStreamServer extends HttpServer {
     void onConnected(@NonNull String lockKey);
   }
 
-  // Serves the radio logo as JPEG
-  private class LogoHandler implements HttpServer.Handler {
-    @Override
-    public void handle(
-      @NonNull HttpServer.Request request,
-      @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream) throws IOException {
-      if ((logoPath == null) || !logoPath.equals(request.getPath())) {
-        return; // Not our path
-      }
-      if (logoBytes == null) {
-        Log.e(LOG_TAG, "LogoHandler: no logo available");
-        return;
-      }
-      Log.d(LOG_TAG, "LogoHandler: serving logo");
-      response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
-      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
-      response.send();
-      responseStream.write(logoBytes);
-    }
-  }
-
   // Base handler for audio stream requests — validates method and lockKey,
   // dispatches to the concrete subclass only when the path matches
   private abstract class StreamHandler implements HttpServer.Handler {
@@ -308,6 +286,28 @@ public class UpnpStreamServer extends HttpServer {
         v.relaunch();
         return v;
       });
+    }
+  }
+
+  // Serves the radio logo as JPEG
+  private class LogoHandler implements HttpServer.Handler {
+    @Override
+    public void handle(
+      @NonNull HttpServer.Request request,
+      @NonNull HttpServer.Response response,
+      @NonNull OutputStream responseStream) throws IOException {
+      if ((logoPath == null) || !logoPath.equals(request.getPath())) {
+        return; // Not our path
+      }
+      if (logoBytes == null) {
+        Log.e(LOG_TAG, "LogoHandler: no logo available");
+        return;
+      }
+      Log.d(LOG_TAG, "LogoHandler: serving logo");
+      response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
+      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
+      response.send();
+      responseStream.write(logoBytes);
     }
   }
 
