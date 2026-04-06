@@ -106,7 +106,7 @@
     <string name="sleep_set">Таймер сна на %d мин установлен!</string>
     <string name="sleep_cancelled">Таймер сна отменён!</string>
     <string name="minutes">минут</string>
-    <string name="remote">(УДАЛЁННОЕ)</string>
+    <string name="remote">(ТРАНСЛЯЦИЯ)</string>
     <string name="sleep_timer_title">Сон</string>
     <string name="sleep_timer_set_for">Таймер сна установлен на: %d минут</string>
     <string name="cancel_sleep_timer">Отменить таймер сна</string>
