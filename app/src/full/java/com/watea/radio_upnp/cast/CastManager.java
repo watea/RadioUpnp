@@ -69,12 +69,12 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
 
     @Override
     public void onSessionEnding(@NonNull CastSession castSession) {
-      CastManager.this.castSession = null;
+      release();
     }
 
     @Override
     public void onSessionEnded(@NonNull CastSession session, int error) {
-      callback.onCastStop();
+      // Already handled in onSessionEnding
     }
 
     @Override

@@ -25,6 +25,8 @@ package com.watea.radio_upnp.cast;
 
 import android.content.Context;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
@@ -64,6 +66,9 @@ public class CastSessionDevice extends SessionDevice {
   private final Uri logoUri;
   @Nullable
   private RemoteMediaClient remoteMediaClient;
+  @Nullable
+  private ScheduledExecutorService heartbeat;
+  private boolean isStopping = false;
   private final RemoteMediaClient.Callback remoteCallback = new RemoteMediaClient.Callback() {
     @Override
     public void onStatusUpdated() {
@@ -84,15 +89,16 @@ public class CastSessionDevice extends SessionDevice {
           onState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case MediaStatus.PLAYER_STATE_IDLE:
-          onState(PlaybackStateCompat.STATE_ERROR);
+          if (!isStopping) {
+            onState(PlaybackStateCompat.STATE_ERROR);
+          }
+          isStopping = false;
           break;
         default:
           onState(PlaybackStateCompat.STATE_STOPPED);
       }
     }
   };
-  @Nullable
-  private ScheduledExecutorService heartbeat;
 
   public CastSessionDevice(
     @NonNull Context context,
@@ -146,15 +152,25 @@ public class CastSessionDevice extends SessionDevice {
   @Override
   public boolean prepareFromMediaId() {
     if (super.prepareFromMediaId()) {
-      remoteMediaClient = castSession.getRemoteMediaClient();
-      if (remoteMediaClient != null) {
-        remoteMediaClient.registerCallback(remoteCallback);
-        load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
-        // Heartbeat
-        heartbeat = Executors.newSingleThreadScheduledExecutor();
-        heartbeat.scheduleWithFixedDelay(() -> remoteMediaClient.requestStatus(), HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
-        return true;
-      }
+      new Handler(Looper.getMainLooper()).post(() -> {
+        remoteMediaClient = castSession.getRemoteMediaClient();
+        if (remoteMediaClient == null) {
+          Log.e(LOG_TAG, "Failed to get remote media client");
+          onState(PlaybackStateCompat.STATE_ERROR);
+        } else {
+          remoteMediaClient.registerCallback(remoteCallback);
+          load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
+          // Heartbeat
+          heartbeat = Executors.newSingleThreadScheduledExecutor();
+          heartbeat.scheduleWithFixedDelay(() -> {
+            final RemoteMediaClient client = remoteMediaClient;
+            if (client != null) {
+              client.requestStatus();
+            }
+          }, HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
+        }
+      });
+      return true;
     }
     return false;
   }
@@ -179,20 +195,22 @@ public class CastSessionDevice extends SessionDevice {
   public void stop() {
     super.stop();
     if (remoteMediaClient != null) {
+      isStopping = true;
       remoteMediaClient.stop();
-      clearCastUi(remoteMediaClient);
     }
   }
 
   @Override
   public void release() {
     super.release();
+    isStopping = false;
     if (heartbeat != null) {
       heartbeat.shutdownNow();
       heartbeat = null;
     }
     if (remoteMediaClient != null) {
       remoteMediaClient.unregisterCallback(remoteCallback);
+      clearCastUi(remoteMediaClient);
       remoteMediaClient = null;
     }
   }
