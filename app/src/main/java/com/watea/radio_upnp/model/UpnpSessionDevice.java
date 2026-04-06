@@ -37,7 +37,6 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
-import com.watea.radio_upnp.service.UpnpStreamServer;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
@@ -49,6 +48,8 @@ import java.util.function.Function;
 
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpSessionDevice extends SessionDevice {
+  public static final String PCM_MIME = "audio/wav";
+  public static final String DEFAULT_MIME = "audio/mpeg";
   public static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
@@ -334,10 +335,10 @@ public class UpnpSessionDevice extends SessionDevice {
   private String getDidlMime() {
     // PCM?
     if (MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
-      return UpnpStreamServer.PCM_MIME;
+      return PCM_MIME;
     }
     // Relay
-    final String content = (connectionSet == null) ? UpnpStreamServer.DEFAULT_MIME : connectionSet.getContent();
+    final String content = (connectionSet == null) ? DEFAULT_MIME : connectionSet.getContent();
     switch (content) {
       case "audio/aac":
       case "audio/x-aac":

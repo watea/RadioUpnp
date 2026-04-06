@@ -57,8 +57,6 @@ import java.util.regex.Pattern;
 
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpStreamServer extends HttpServer {
-  public static final String PCM_MIME = "audio/wav";
-  public static final String DEFAULT_MIME = "audio/mpeg";
   private static final String LOG_TAG = "UpnpStreamServer";
   private static final String HEAD = "HEAD";
   private static final String GET = "GET";
@@ -79,7 +77,6 @@ public class UpnpStreamServer extends HttpServer {
     "^/" + STREAM_PREFIX + "([^/]+?)" + "(?:" + Pattern.quote(STREAM_SUFFIX_PCM) + ")?$");
   @NonNull
   private final Callback callback;
-  private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
   private final ConcurrentHashMap<String, ConnectionSet> connectionSets = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Watchdog> watchdogs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Set<ArrayBlockingQueue<byte[]>>> queuess = new ConcurrentHashMap<>();
@@ -162,7 +159,7 @@ public class UpnpStreamServer extends HttpServer {
       httpURLConnection = new RadioURL(url)
         .getActualHttpURLConnection(conn -> conn.setRequestProperty("Icy-MetaData", "0")); // No ICY
       String contentType = RadioURL.getStreamContentType(httpURLConnection);
-      contentType = (contentType == null) ? DEFAULT_MIME : contentType;
+      contentType = (contentType == null) ? UpnpSessionDevice.DEFAULT_MIME : contentType;
       final URL actualUrl = httpURLConnection.getURL();
       connectionSets.put(lockKey, new ConnectionSet(actualUrl, contentType));
       Log.d(LOG_TAG, "setActualUrlAndContentType: content => " + contentType + " URL => " + actualUrl);
@@ -207,7 +204,8 @@ public class UpnpStreamServer extends HttpServer {
     void onConnected(@NonNull String lockKey);
   }
 
-  private class Watchdog {
+  private static class Watchdog {
+    private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
     @NonNull
     private final Runnable runnable;
     private final int timeoutS;
@@ -363,7 +361,7 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull String lockKey) throws IOException {
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
-      sendDlnaResponse(response, responseStream, PCM_MIME, true, lockKey);
+      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, true, lockKey);
       if (isHead) {
         return;
       }
