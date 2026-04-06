@@ -25,13 +25,10 @@ package com.watea.radio_upnp.service;
 
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
-import androidx.media3.common.util.UnstableApi;
 
 import com.watea.candidhttpserver.HttpServer;
 import com.watea.radio_upnp.model.ConnectionSet;
@@ -51,13 +48,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@OptIn(markerClass = UnstableApi.class)
 public class UpnpStreamServer extends HttpServer {
-  private static final String LOG_TAG = "UpnpStreamServer";
+  private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
   private static final String HEAD = "HEAD";
   private static final String GET = "GET";
   private static final String SCHEME = "http://";
@@ -102,7 +97,7 @@ public class UpnpStreamServer extends HttpServer {
     public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
       final Set<ArrayBlockingQueue<byte[]>> queues = queuess.get(lockKey);
       if ((queues == null) || (queues.isEmpty())) {
-        Log.w(LOG_TAG, "No queue to receive data");
+        Log.d(LOG_TAG, "No queue to receive data");
         return;
       }
       queues.forEach(queue -> {
@@ -156,8 +151,7 @@ public class UpnpStreamServer extends HttpServer {
     setLockKey(lockKey);
     HttpURLConnection httpURLConnection = null;
     try {
-      httpURLConnection = new RadioURL(url)
-        .getActualHttpURLConnection(conn -> conn.setRequestProperty("Icy-MetaData", "0")); // No ICY
+      httpURLConnection = new RadioURL(url).getActualHttpURLConnection();
       String contentType = RadioURL.getStreamContentType(httpURLConnection);
       contentType = (contentType == null) ? UpnpSessionDevice.DEFAULT_MIME : contentType;
       final URL actualUrl = httpURLConnection.getURL();
@@ -191,8 +185,10 @@ public class UpnpStreamServer extends HttpServer {
   private void setLockKey(@NonNull String lockKey) {
     Log.d(LOG_TAG, "setLockKey: " + lockKey);
     // Disconnect old upstream to unblock any ongoing relay read
-    queuess.clear();
     connectionSets.clear();
+    // Create new queue set
+    queuess.clear();
+    queuess.put(lockKey, new CopyOnWriteArraySet<>());
     // Update lockKey
     this.lockKey = lockKey;
     sampleRate = DEFAULT;
@@ -202,35 +198,6 @@ public class UpnpStreamServer extends HttpServer {
     void onDisconnected(@NonNull String lockKey);
 
     void onConnected(@NonNull String lockKey);
-  }
-
-  private static class Watchdog {
-    private final android.os.Handler handler = new android.os.Handler(Looper.getMainLooper());
-    @NonNull
-    private final Runnable runnable;
-    private final int timeoutS;
-
-    public Watchdog(@NonNull Consumer<String> consumer, @NonNull String lockKey, int timeoutS) {
-      this.runnable = () -> {
-        Log.d(LOG_TAG, "Watchdog fired for " + lockKey);
-        consumer.accept(lockKey);
-      };
-      this.timeoutS = timeoutS;
-      launch();
-    }
-
-    public void relaunch() {
-      cancel();
-      launch();
-    }
-
-    public void cancel() {
-      handler.removeCallbacks(runnable);
-    }
-
-    public void launch() {
-      handler.postDelayed(runnable, timeoutS * 1000L);
-    }
   }
 
   // Serves the radio logo as JPEG
@@ -267,11 +234,9 @@ public class UpnpStreamServer extends HttpServer {
       final String method = request.getMethod();
       Log.d(LOG_TAG, getClass().getSimpleName() + ": handle - " + method + " - " + incomingLockKey);
       if (lockKey.equals(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
-        Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + method + " - " + incomingLockKey);
         handleStream(response, responseStream, method.equals(HEAD), lockKey);
-        Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream exit - " + method + " - " + incomingLockKey);
       }
-      // This is not for us, nothing to do
+      Log.d(LOG_TAG, getClass().getSimpleName() + ": handle exit - " + method + " - " + incomingLockKey);
     }
 
     // Returns true if this handler is responsible for the given path
@@ -359,6 +324,7 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull String lockKey) throws IOException {
+      Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
       sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, true, lockKey);
@@ -367,8 +333,14 @@ public class UpnpStreamServer extends HttpServer {
       }
       // Create queue
       final ArrayBlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
-      final Set<ArrayBlockingQueue<byte[]>> queues = queuess.computeIfAbsent(lockKey, k -> new CopyOnWriteArraySet<>());
-      queues.add(queue);
+      final Set<ArrayBlockingQueue<byte[]>> queues = queuess.get(lockKey);
+      if (queues == null) {
+        Log.e(LOG_TAG, "PcmStreamHandler: no queue available - " + lockKey);
+        callback.onDisconnected(lockKey);
+        return;
+      } else {
+        queues.add(queue);
+      }
       // Wait for onFormatChanged()
       final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
       try {
@@ -390,7 +362,7 @@ public class UpnpStreamServer extends HttpServer {
         // We signal actual connection and start stream
         signalConnectionAndLaunchWatchdog(lockKey);
         responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
-        Log.d(LOG_TAG, "PcmStreamHandler: renderer started reading PCM stream - " + lockKey);
+        Log.d(LOG_TAG, "PcmStreamHandler: start streaming - " + lockKey);
         try {
           while (lockKey.equals(UpnpStreamServer.this.lockKey)) {
             final byte[] pcmData = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -450,6 +422,7 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull String lockKey) throws IOException {
+      Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Upstream
       final ConnectionSet connectionSet = connectionSets.get(lockKey);
       if (connectionSet == null) {
@@ -474,7 +447,7 @@ public class UpnpStreamServer extends HttpServer {
       // We signal actual connection and start stream
       signalConnectionAndLaunchWatchdog(lockKey);
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
-      Log.d(LOG_TAG, "RelayStreamHandler: renderer started reading stream - " + lockKey);
+      Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + lockKey);
       int n;
       try (final InputStream inputStream = httpURLConnection.getInputStream()) {
         while (lockKey.equals(UpnpStreamServer.this.lockKey) && ((n = inputStream.read(buf)) >= 0)) {

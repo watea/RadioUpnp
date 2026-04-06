@@ -147,15 +147,9 @@ public class RadioURL {
     return contentType;
   }
 
+  // Handle redirection
   @NonNull
   public HttpURLConnection getActualHttpURLConnection() throws IOException {
-    return getActualHttpURLConnection(null);
-  }
-
-  // Handle redirection.
-  // Consumer sets connection headers.
-  @NonNull
-  public HttpURLConnection getActualHttpURLConnection(@Nullable HttpURLConnectionConsumer httpURLConnectionConsumer) throws IOException {
     if (uRL == null) {
       throw new IOException("getActualHttpURLConnection: URL is null");
     }
@@ -188,10 +182,6 @@ public class RadioURL {
         // TLS support
         if (httpURLConnection instanceof HttpsURLConnection) {
           ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
-        }
-        // Allow consumer to set custom headers
-        if (httpURLConnectionConsumer != null) {
-          httpURLConnectionConsumer.accept(httpURLConnection); // exception → finally → disconnect
         }
         // Get HTTP response
         final int responseCode;
@@ -252,9 +242,5 @@ public class RadioURL {
       Log.d(LOG_TAG, "getBitmap: error decoding image on " + uRL, exception);
       return null;
     }
-  }
-
-  public interface HttpURLConnectionConsumer {
-    void accept(@NonNull HttpURLConnection httpURLConnection) throws IOException;
   }
 }
