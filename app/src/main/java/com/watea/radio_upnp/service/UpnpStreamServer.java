@@ -232,35 +232,9 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       @NonNull String mime,
-      boolean isPcm,
       @NonNull String lockKey) throws IOException {
       response.addHeader("transferMode.dlna.org", "Streaming");
-      final String dlnaOrgPn;
-      if (isPcm) {
-        dlnaOrgPn = "DLNA.ORG_PN=LPCM;";
-      } else {
-        switch (mime) {
-          case "audio/mpeg":
-            dlnaOrgPn = "DLNA.ORG_PN=MP3;";
-            break;
-          case "audio/aac":
-          case "audio/x-aac":
-          case "audio/aacp":
-            dlnaOrgPn = "DLNA.ORG_PN=AAC_ADTS;";
-            break;
-          case "audio/mp4":
-          case "audio/x-m4a":
-            dlnaOrgPn = "DLNA.ORG_PN=AAC_ISO;";
-            break;
-          case "audio/flac":
-          case "audio/x-flac":
-            // No standard DLNA profile for FLAC
-          default:
-            // OGG, unknown — no DLNA profile
-            dlnaOrgPn = "";
-        }
-      }
-      response.addHeader("contentFeatures.dlna.org", dlnaOrgPn + UpnpSessionDevice.PROTOCOL_INFO_TAIL);
+      response.addHeader("contentFeatures.dlna.org", UpnpSessionDevice.getDlnaTail(mime));
       response.addHeader(Response.CONTENT_TYPE, mime);
       try {
         response.send();
@@ -327,7 +301,7 @@ public class UpnpStreamServer extends HttpServer {
       Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
-      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, true, lockKey);
+      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, lockKey);
       if (isHead) {
         return;
       }
@@ -431,7 +405,7 @@ public class UpnpStreamServer extends HttpServer {
         return;
       }
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
-      sendDlnaResponse(response, responseStream, connectionSet.getContent(), false, lockKey);
+      sendDlnaResponse(response, responseStream, connectionSet.getContent(), lockKey);
       if (isHead) {
         return;
       }

@@ -50,7 +50,7 @@ import java.util.function.Function;
 public class UpnpSessionDevice extends SessionDevice {
   public static final String PCM_MIME = "audio/wav";
   public static final String DEFAULT_MIME = "audio/mpeg";
-  public static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
+  private static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
   private static final String RENDERING_CONTROL_ID = "RenderingControl";
@@ -105,6 +105,34 @@ public class UpnpSessionDevice extends SessionDevice {
     // Those services are mandatory in UPnP standard
     connectionManager = device.getShortService(CONNECTION_MANAGER_ID);
     renderingControl = device.getShortService(RENDERING_CONTROL_ID);
+  }
+
+  public static String getDlnaTail(@NonNull String mime) {
+    String result;
+    switch (mime) {
+      case PCM_MIME:
+        result = "DLNA.ORG_PN=LPCM;";
+        break;
+      case "audio/mpeg":
+        result = "DLNA.ORG_PN=MP3;";
+        break;
+      case "audio/aac":
+      case "audio/x-aac":
+      case "audio/aacp":
+        result = "DLNA.ORG_PN=AAC_ADTS;";
+        break;
+      case "audio/mp4":
+      case "audio/x-m4a":
+        result = "DLNA.ORG_PN=AAC_ISO;";
+        break;
+      case "audio/flac":
+      case "audio/x-flac":
+        // No standard DLNA profile for FLAC
+      default:
+        // OGG, unknown — no DLNA profile
+        result = "";
+    }
+    return result + PROTOCOL_INFO_TAIL;
   }
 
   @Override
@@ -332,35 +360,40 @@ public class UpnpSessionDevice extends SessionDevice {
   }
 
   @NonNull
-  private String getDidlMime() {
-    // PCM?
-    if (MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
-      return PCM_MIME;
+  private String getDidlDlnaTail() {
+    // Default is PCM
+    String content = PCM_MIME;
+    String mime = PCM_MIME;
+    if (!MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
+      content = (connectionSet == null) ? DEFAULT_MIME : connectionSet.getContent();
+      switch (content) {
+        case "audio/aac":
+        case "audio/x-aac":
+        case "audio/aacp":
+          // Renderers list audio/mp4, not raw AAC MIME types
+          mime = "audio/mp4";
+          break;
+        case "audio/x-mpeg":
+        case "audio/mp2":
+        case "audio/mpeg3":
+        case "audio/x-mp3":
+          // Normalize all MP3 variants
+          mime = "audio/mpeg";
+          break;
+        case "audio/x-m4a":
+          mime = "audio/mp4";
+          break;
+        case "audio/ogg":
+        case "audio/vorbis":
+        case "application/ogg":
+          // OGG: no standard DLNA MIME, best effort
+          mime = "audio/ogg";
+          break;
+        default:
+          mime = content;
+      }
     }
-    // Relay
-    final String content = (connectionSet == null) ? DEFAULT_MIME : connectionSet.getContent();
-    switch (content) {
-      case "audio/aac":
-      case "audio/x-aac":
-      case "audio/aacp":
-        // Renderers list audio/mp4, not raw AAC MIME types
-        return "audio/mp4";
-      case "audio/x-mpeg":
-      case "audio/mp2":
-      case "audio/mpeg3":
-      case "audio/x-mp3":
-        // Normalize all MP3 variants
-        return "audio/mpeg";
-      case "audio/x-m4a":
-        return "audio/mp4";
-      case "audio/ogg":
-      case "audio/vorbis":
-      case "application/ogg":
-        // OGG: no standard DLNA MIME, best effort
-        return "audio/ogg";
-      default:
-        return content;
-    }
+    return mime + ":" + getDlnaTail(content);
   }
 
   // Create DIDL-Lite metadata
@@ -376,7 +409,7 @@ public class UpnpSessionDevice extends SessionDevice {
       "<upnp:artist>" + information + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlMime() + ":" + PROTOCOL_INFO_TAIL + "\">" + radioUri + "</res>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlDlnaTail() + "\">" + radioUri + "</res>" +
       "</item>" +
       "</DIDL-Lite>";
   }
