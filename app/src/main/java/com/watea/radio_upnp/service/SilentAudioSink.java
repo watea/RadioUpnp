@@ -37,19 +37,45 @@ import java.nio.ByteBuffer;
 
 @OptIn(markerClass = UnstableApi.class)
 public class SilentAudioSink implements AudioSink {
+  private static final long SLEEP_THRESHOLD_US = 1_000L;
+  private long anchorRealtimeUs = Long.MIN_VALUE;
+  private long anchorPresentationUs = 0;
+  private long startTimeUs = Long.MIN_VALUE;
+
   @Override
   public void configure(@NonNull Format inputFormat, int specifiedBufferSize, @Nullable int[] outputChannels) {
   }
 
   @Override
   public boolean handleBuffer(@NonNull ByteBuffer buffer, long presentationTimeUs, int encodedAccessUnitCount) {
-    // Discard all audio data
+    // Throttle decoding to real-time so the upstream server doesn't close the connection
+    if (presentationTimeUs > 0) {
+      if (anchorRealtimeUs == Long.MIN_VALUE) {
+        // Anchor real-time clock to first presentation timestamp
+        anchorRealtimeUs = System.nanoTime() / 1000;
+        anchorPresentationUs = presentationTimeUs;
+      } else {
+        final long elapsedUs = System.nanoTime() / 1000 - anchorRealtimeUs;
+        final long aheadUs = (presentationTimeUs - anchorPresentationUs) - elapsedUs;
+        if (aheadUs > SLEEP_THRESHOLD_US) {
+          try {
+            Thread.sleep(aheadUs / 1000);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+          }
+        }
+      }
+    }
     buffer.position(buffer.limit());
     return true;
   }
 
   @Override
   public void play() {
+    if (startTimeUs == Long.MIN_VALUE) {
+      startTimeUs = System.nanoTime() / 1000;
+    }
   }
 
   @Override
@@ -58,10 +84,12 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public void flush() {
+    anchorRealtimeUs = Long.MIN_VALUE;
   }
 
   @Override
   public void reset() {
+    anchorRealtimeUs = Long.MIN_VALUE;
   }
 
   @Override
@@ -98,12 +126,12 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public boolean isEnded() {
-    return true;
+    return false;
   }
 
   @Override
   public boolean hasPendingData() {
-    return false;
+    return true;
   }
 
   @Override
@@ -118,7 +146,7 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public long getCurrentPositionUs(boolean sourceEnded) {
-    return CURRENT_POSITION_NOT_SET;
+    return (anchorRealtimeUs == Long.MIN_VALUE) ? 0 : (anchorPresentationUs + (System.nanoTime() / 1000 - anchorRealtimeUs));
   }
 
   @Override
