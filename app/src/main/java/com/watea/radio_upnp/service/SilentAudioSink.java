@@ -37,10 +37,7 @@ import java.nio.ByteBuffer;
 
 @OptIn(markerClass = UnstableApi.class)
 public class SilentAudioSink implements AudioSink {
-  private static final long SLEEP_THRESHOLD_US = 1_000L;
-  private long anchorRealtimeUs = Long.MIN_VALUE;
-  private long anchorPresentationUs = 0;
-  private long startTimeUs = Long.MIN_VALUE;
+  private long lastPresentationTimeUs = 0;
 
   @Override
   public void configure(@NonNull Format inputFormat, int specifiedBufferSize, @Nullable int[] outputChannels) {
@@ -48,24 +45,9 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public boolean handleBuffer(@NonNull ByteBuffer buffer, long presentationTimeUs, int encodedAccessUnitCount) {
-    // Throttle decoding to real-time so the upstream server doesn't close the connection
+    // Track last presentation time so MetadataRenderer clock stays in sync
     if (presentationTimeUs > 0) {
-      if (anchorRealtimeUs == Long.MIN_VALUE) {
-        // Anchor real-time clock to first presentation timestamp
-        anchorRealtimeUs = System.nanoTime() / 1000;
-        anchorPresentationUs = presentationTimeUs;
-      } else {
-        final long elapsedUs = System.nanoTime() / 1000 - anchorRealtimeUs;
-        final long aheadUs = (presentationTimeUs - anchorPresentationUs) - elapsedUs;
-        if (aheadUs > SLEEP_THRESHOLD_US) {
-          try {
-            Thread.sleep(aheadUs / 1000);
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
-          }
-        }
-      }
+      lastPresentationTimeUs = presentationTimeUs;
     }
     buffer.position(buffer.limit());
     return true;
@@ -73,9 +55,6 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public void play() {
-    if (startTimeUs == Long.MIN_VALUE) {
-      startTimeUs = System.nanoTime() / 1000;
-    }
   }
 
   @Override
@@ -84,12 +63,12 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public void flush() {
-    anchorRealtimeUs = Long.MIN_VALUE;
+    lastPresentationTimeUs = 0;
   }
 
   @Override
   public void reset() {
-    anchorRealtimeUs = Long.MIN_VALUE;
+    lastPresentationTimeUs = 0;
   }
 
   @Override
@@ -126,11 +105,14 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public boolean isEnded() {
+    // Must return false to keep ExoPlayer's rendering loop alive for live streams
     return false;
   }
 
   @Override
   public boolean hasPendingData() {
+    // Must return true to keep MediaCodecAudioRenderer.isReady() = true,
+    // which keeps the StandaloneMediaClock running for ICY metadata delivery
     return true;
   }
 
@@ -146,7 +128,8 @@ public class SilentAudioSink implements AudioSink {
 
   @Override
   public long getCurrentPositionUs(boolean sourceEnded) {
-    return (anchorRealtimeUs == Long.MIN_VALUE) ? 0 : (anchorPresentationUs + (System.nanoTime() / 1000 - anchorRealtimeUs));
+    // Return last known presentation time so MetadataRenderer can fire ICY events
+    return lastPresentationTimeUs;
   }
 
   @Override
