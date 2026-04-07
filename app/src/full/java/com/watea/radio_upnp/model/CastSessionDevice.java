@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.cast;
+package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.net.Uri;
@@ -41,10 +41,6 @@ import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.media.RemoteMediaClient;
 import com.google.android.gms.common.images.WebImage;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.model.CapturingAudioSink;
-import com.watea.radio_upnp.model.ConnectionSet;
-import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.SessionDevice;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
