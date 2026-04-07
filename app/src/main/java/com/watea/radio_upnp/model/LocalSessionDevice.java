@@ -28,23 +28,19 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.OptIn;
 import androidx.media3.common.Player;
-import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 
-@OptIn(markerClass = UnstableApi.class)
 public class LocalSessionDevice extends SessionDevice {
   private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
 
   public LocalSessionDevice(
     @NonNull Context context,
-    @NonNull ExoPlayer exoPlayer,
     @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio) {
-    super(context, exoPlayer, connectionSetSupplier, listener, lockKey, radio);
+    super(context, null, connectionSetSupplier, listener, lockKey, radio);
   }
 
   @Override

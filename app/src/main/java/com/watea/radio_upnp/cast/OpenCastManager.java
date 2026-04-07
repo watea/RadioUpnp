@@ -30,11 +30,11 @@ import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.ConnectionSet;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.CapturingAudioSink;
 
 // Singleton.
 // CastManager that does nothing.
@@ -66,7 +66,7 @@ public class OpenCastManager<T extends SessionDevice> {
   @Nullable
   public T getCastSessionDevice(
     @NonNull Context context,
-    @NonNull ExoPlayer exoPlayer,
+    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,

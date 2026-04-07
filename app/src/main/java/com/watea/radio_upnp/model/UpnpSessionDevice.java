@@ -33,10 +33,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.media3.common.util.UnstableApi;
-import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.audio.AudioSink;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
+import com.watea.radio_upnp.service.CapturingAudioSink;
+import com.watea.radio_upnp.service.SilentAudioSink;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
@@ -86,7 +88,7 @@ public class UpnpSessionDevice extends SessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
-    @NonNull ExoPlayer exoPlayer,
+    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
@@ -95,7 +97,7 @@ public class UpnpSessionDevice extends SessionDevice {
     @NonNull Uri logoUri,
     @NonNull Device device,
     @NonNull ActionController actionController) {
-    super(context, exoPlayer, connectionSetSupplier, listener, lockKey, radio);
+    super(context, capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.actionController = actionController;
     this.logoUri = logoUri;
@@ -196,6 +198,12 @@ public class UpnpSessionDevice extends SessionDevice {
   public void release() {
     super.release();
     scheduleActionStop();
+  }
+
+  @NonNull
+  @Override
+  protected AudioSink getAudioSink(@NonNull Context context, @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback, @NonNull String lockKey) {
+    return (capturingAudioSinkCallback == null) ? new SilentAudioSink() : super.getAudioSink(context, capturingAudioSinkCallback, lockKey);
   }
 
   private void scheduleMandatoryAction(

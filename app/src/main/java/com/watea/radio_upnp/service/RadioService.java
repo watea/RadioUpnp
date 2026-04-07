@@ -50,20 +50,11 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.VolumeProviderCompat;
 import androidx.media.session.MediaButtonReceiver;
-import androidx.media3.common.util.UnstableApi;
-import androidx.media3.exoplayer.ExoPlayer;
-import androidx.media3.exoplayer.Renderer;
-import androidx.media3.exoplayer.audio.AudioSink;
-import androidx.media3.exoplayer.audio.DefaultAudioSink;
-import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
-import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
-import androidx.media3.exoplayer.metadata.MetadataRenderer;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
@@ -92,7 +83,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@OptIn(markerClass = UnstableApi.class)
 public class RadioService
   extends MediaBrowserServiceCompat
   implements SessionDevice.Listener {
@@ -844,26 +834,6 @@ public class RadioService
       return false;
     }
 
-    @NonNull
-    private ExoPlayer getExoPlayer(@NonNull AudioSink audioSink) {
-      return new ExoPlayer.Builder(RadioService.this)
-        .setRenderersFactory(
-          (handler,
-           videoListener,
-           audioListener,
-           textOutput,
-           metadataOutput) -> new Renderer[]{
-            new MediaCodecAudioRenderer(
-              RadioService.this,
-              MediaCodecSelector.DEFAULT,
-              handler,
-              audioListener,
-              audioSink),
-            new MetadataRenderer(metadataOutput, handler.getLooper())
-          })
-        .build();
-    }
-
     private void skipTo(int direction) {
       final Radio radio = playerAdapter.getRadio();
       if (radio == null) {
@@ -888,14 +858,11 @@ public class RadioService
       final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = (localIp != null);
-      AudioSink audioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(RadioService.this).build(), lockKey); // Default: PCM
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
-        // Link capturingSink to upnpStreamServer
-        ((CapturingAudioSink) audioSink).setCallback(upnpStreamServer.getPcmCallback());
         return castManager.getCastSessionDevice(
           RadioService.this,
-          getExoPlayer(audioSink),
+          upnpStreamServer.getPcmCallback(),
           upnpStreamServer::getConnectionSet,
           RadioService.this,
           lockKey,
@@ -903,20 +870,11 @@ public class RadioService
           upnpStreamServer.getStreamUri(localIp, lockKey, true),
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
-        // PCM?
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
-        // Sync mode and lockKey
         Log.d(LOG_TAG, "getSessionDevice: UpnpSessionDevice with isPcm = " + isPcm);
-        if (isPcm) {
-          // Link capturingSink to upnpStreamServer
-          ((CapturingAudioSink) audioSink).setCallback(upnpStreamServer.getPcmCallback());
-        } else {
-          // Relay mode: stream original URL directly, ExoPlayer only for ICY metadata
-          audioSink = new SilentAudioSink();
-        }
         return new UpnpSessionDevice(
           RadioService.this,
-          getExoPlayer(audioSink),
+          isPcm ? upnpStreamServer.getPcmCallback() : null,
           upnpStreamServer::getConnectionSet,
           RadioService.this,
           lockKey,
@@ -929,7 +887,6 @@ public class RadioService
         Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
         return new LocalSessionDevice(
           RadioService.this,
-          getExoPlayer(audioSink),
           upnpStreamServer::getConnectionSet,
           RadioService.this,
           lockKey,

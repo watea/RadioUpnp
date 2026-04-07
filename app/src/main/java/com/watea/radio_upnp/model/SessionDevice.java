@@ -43,7 +43,15 @@ import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.Renderer;
+import androidx.media3.exoplayer.audio.AudioSink;
+import androidx.media3.exoplayer.audio.DefaultAudioSink;
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
+import androidx.media3.exoplayer.metadata.MetadataRenderer;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
+
+import com.watea.radio_upnp.service.CapturingAudioSink;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
@@ -67,18 +75,18 @@ public abstract class SessionDevice {
 
   public SessionDevice(
     @NonNull Context context,
-    @NonNull ExoPlayer exoplayer,
+    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio) {
     this.context = context;
-    this.exoPlayer = exoplayer;
     this.connectionSetSupplier = connectionSetSupplier;
     this.playerListener = getPlayerListener();
     this.listener = listener;
     this.lockKey = lockKey;
     this.radio = radio;
+    this.exoPlayer = getExoPlayer(this.context, capturingAudioSinkCallback, this.lockKey);
   }
 
   @NonNull
@@ -203,6 +211,41 @@ public abstract class SessionDevice {
   @NonNull
   protected Player.Listener getPlayerListener() {
     return new PlayerListener();
+  }
+
+  @NonNull
+  protected AudioSink getAudioSink(
+    @NonNull Context context,
+    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
+    @NonNull String lockKey) {
+    final CapturingAudioSink capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(context).build(), lockKey);
+    if (capturingAudioSinkCallback != null) {
+      capturingAudioSink.setCallback(capturingAudioSinkCallback);
+    }
+    return capturingAudioSink;
+  }
+
+  @NonNull
+  private ExoPlayer getExoPlayer(
+    @NonNull Context context,
+    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
+    @NonNull String lockKey) {
+    return new ExoPlayer.Builder(context)
+      .setRenderersFactory(
+        (handler,
+         videoListener,
+         audioListener,
+         textOutput,
+         metadataOutput) -> new Renderer[]{
+          new MediaCodecAudioRenderer(
+            context,
+            MediaCodecSelector.DEFAULT,
+            handler,
+            audioListener,
+            getAudioSink(context, capturingAudioSinkCallback, lockKey)),
+          new MetadataRenderer(metadataOutput, handler.getLooper())
+        })
+      .build();
   }
 
   public interface Listener {

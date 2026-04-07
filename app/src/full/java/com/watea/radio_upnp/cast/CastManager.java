@@ -31,7 +31,6 @@ import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.MenuItemCompat;
-import androidx.media3.exoplayer.ExoPlayer;
 import androidx.mediarouter.app.MediaRouteActionProvider;
 import androidx.mediarouter.media.MediaRouteSelector;
 
@@ -42,6 +41,7 @@ import com.google.android.gms.cast.framework.SessionManagerListener;
 import com.watea.radio_upnp.model.ConnectionSet;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.CapturingAudioSink;
 
 public class CastManager extends OpenCastManager<CastSessionDevice> {
   private static final String LOG_TAG = CastManager.class.getSimpleName();
@@ -161,7 +161,7 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   @NonNull
   public CastSessionDevice getCastSessionDevice(
     @NonNull Context context,
-    @NonNull ExoPlayer exoPlayer,
+    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull SessionDevice.Listener listener,
     @NonNull String lockKey,
@@ -169,6 +169,6 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
     @NonNull Uri radioUri,
     @Nullable Uri logoUri) {
     assert castSession != null;
-    return new CastSessionDevice(context, exoPlayer, connectionSetSupplier, listener, lockKey, radio, radioUri, logoUri, castSession);
+    return new CastSessionDevice(context, capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio, radioUri, logoUri, castSession);
   }
 }

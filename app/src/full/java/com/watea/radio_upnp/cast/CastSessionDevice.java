@@ -32,9 +32,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
-import androidx.media3.common.util.UnstableApi;
-import androidx.media3.exoplayer.ExoPlayer;
 
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaLoadRequestData;
@@ -47,13 +44,13 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.ConnectionSet;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.CapturingAudioSink;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@OptIn(markerClass = UnstableApi.class)
 public class CastSessionDevice extends SessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
   private static final double VOLUME_STEP = 0.05; // 5%
@@ -102,7 +99,7 @@ public class CastSessionDevice extends SessionDevice {
 
   public CastSessionDevice(
     @NonNull Context context,
-    @NonNull ExoPlayer exoPlayer,
+    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
@@ -110,7 +107,7 @@ public class CastSessionDevice extends SessionDevice {
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull CastSession castSession) {
-    super(context, exoPlayer, connectionSetSupplier, listener, lockKey, radio);
+    super(context, capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.logoUri = logoUri;
     this.castSession = castSession;
