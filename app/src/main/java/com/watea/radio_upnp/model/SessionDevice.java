@@ -51,8 +51,6 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.metadata.MetadataRenderer;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
 
-import com.watea.radio_upnp.service.CapturingAudioSink;
-
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
@@ -82,11 +80,11 @@ public abstract class SessionDevice {
     @NonNull Radio radio) {
     this.context = context;
     this.connectionSetSupplier = connectionSetSupplier;
-    this.playerListener = getPlayerListener();
     this.listener = listener;
     this.lockKey = lockKey;
     this.radio = radio;
-    this.exoPlayer = getExoPlayer(this.context, capturingAudioSinkCallback, this.lockKey);
+    this.playerListener = getPlayerListener();
+    this.exoPlayer = getExoPlayer(capturingAudioSinkCallback);
   }
 
   @NonNull
@@ -208,16 +206,15 @@ public abstract class SessionDevice {
     return availableActions;
   }
 
+  // Overrides must not reference subclass instance fields to avoid NPE on initialization
   @NonNull
   protected Player.Listener getPlayerListener() {
     return new PlayerListener();
   }
 
+  // Overrides must not reference subclass instance fields to avoid NPE on initialization
   @NonNull
-  protected AudioSink getAudioSink(
-    @NonNull Context context,
-    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
-    @NonNull String lockKey) {
+  protected AudioSink getAudioSink(@Nullable CapturingAudioSink.Callback capturingAudioSinkCallback) {
     final CapturingAudioSink capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(context).build(), lockKey);
     if (capturingAudioSinkCallback != null) {
       capturingAudioSink.setCallback(capturingAudioSinkCallback);
@@ -226,10 +223,7 @@ public abstract class SessionDevice {
   }
 
   @NonNull
-  private ExoPlayer getExoPlayer(
-    @NonNull Context context,
-    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
-    @NonNull String lockKey) {
+  private ExoPlayer getExoPlayer(@Nullable CapturingAudioSink.Callback capturingAudioSinkCallback) {
     return new ExoPlayer.Builder(context)
       .setRenderersFactory(
         (handler,
@@ -242,7 +236,7 @@ public abstract class SessionDevice {
             MediaCodecSelector.DEFAULT,
             handler,
             audioListener,
-            getAudioSink(context, capturingAudioSinkCallback, lockKey)),
+            getAudioSink(capturingAudioSinkCallback)),
           new MetadataRenderer(metadataOutput, handler.getLooper())
         })
       .build();

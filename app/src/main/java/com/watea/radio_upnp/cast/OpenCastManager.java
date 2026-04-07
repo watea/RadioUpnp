@@ -31,10 +31,10 @@ import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.ConnectionSet;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
-import com.watea.radio_upnp.service.CapturingAudioSink;
 
 // Singleton.
 // CastManager that does nothing.
