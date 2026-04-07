@@ -706,11 +706,11 @@ public class RadioService
       if (playerAdapter.isRemote()) {
         upnpStreamServer.launchWatchdog(lockKey);
       }
-      if (playerAdapter.prepareFromMediaId()) {
+      if (playerAdapter.prepare()) {
         startForegroundService(new Intent(RadioService.this, RadioService.class));
       } else {
         playerAdapter.stop();
-        Log.d(LOG_TAG, "onPlayFromMediaId: playerAdapter.prepareFromMediaId failed");
+        Log.d(LOG_TAG, "onPlayFromMediaId: playerAdapter failed");
       }
     }
 

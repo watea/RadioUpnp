@@ -147,8 +147,8 @@ public class CastSessionDevice extends SessionDevice {
   }
 
   @Override
-  public boolean prepareFromMediaId() {
-    if (super.prepareFromMediaId()) {
+  public boolean prepare() {
+    if (super.prepare()) {
       new Handler(Looper.getMainLooper()).post(() -> {
         remoteMediaClient = castSession.getRemoteMediaClient();
         if (remoteMediaClient == null) {

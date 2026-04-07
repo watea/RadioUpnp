@@ -165,8 +165,8 @@ public class UpnpSessionDevice extends SessionDevice {
   }
 
   @Override
-  public boolean prepareFromMediaId() {
-    if (super.prepareFromMediaId()) {
+  public boolean prepare() {
+    if (super.prepare()) {
       scheduleActionPrepareForConnection();
       scheduleActionSetAvTransportUri();
       scheduleActionPlay();

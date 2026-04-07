@@ -154,10 +154,10 @@ public abstract class SessionDevice {
 
   // Must be called in its own thread.
   // Fires ERROR if upstream connection failed.
-  public boolean prepareFromMediaId() {
+  public boolean prepare() {
     connectionSet = connectionSetSupplier.get(radio.getURL(), lockKey);
     if (connectionSet == null) {
-      Log.d(LOG_TAG, "prepareFromMediaId: unable to connect");
+      Log.d(LOG_TAG, "prepare: unable to connect");
       onState(PlaybackStateCompat.STATE_ERROR);
       return false;
     }

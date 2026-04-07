@@ -93,14 +93,14 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   // Must be called
-  public synchronized final boolean prepareFromMediaId() {
-    Log.d(LOG_TAG, "prepareFromMediaId");
+  public synchronized final boolean prepare() {
+    Log.d(LOG_TAG, "prepare");
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on prepareFromMediaId; no session device defined");
+      Log.e(LOG_TAG, "Internal failure on prepare; no session device defined");
     } else {
-      Log.d(LOG_TAG, "prepareFromMediaId on radio: " + sessionDevice.getRadio().getName());
+      Log.d(LOG_TAG, "prepare on radio: " + sessionDevice.getRadio().getName());
       if (isRemote() || requestAudioFocus()) {
-        onPrepareFromMediaId();
+        onPrepare();
         return true;
       }
     }
@@ -244,11 +244,11 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
     }
   }
 
-  private void onPrepareFromMediaId() {
+  private void onPrepare() {
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onPrepareFromMediaId; no session device defined");
+      Log.e(LOG_TAG, "Internal failure on onPrepare; no session device defined");
     } else {
-      new Thread(sessionDevice::prepareFromMediaId).start();
+      new Thread(sessionDevice::prepare).start();
     }
   }
 
