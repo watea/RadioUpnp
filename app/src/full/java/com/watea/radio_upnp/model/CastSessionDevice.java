@@ -58,10 +58,7 @@ public class CastSessionDevice extends SessionDevice {
   @Nullable
   private final Uri logoUri;
   @Nullable
-  private RemoteMediaClient remoteMediaClient;
-  @Nullable
-  private ScheduledExecutorService heartbeat;
-  private boolean isStopping = false;
+  private RemoteMediaClient remoteMediaClient = null;
   private final RemoteMediaClient.Callback remoteCallback = new RemoteMediaClient.Callback() {
     @Override
     public void onStatusUpdated() {
@@ -82,16 +79,18 @@ public class CastSessionDevice extends SessionDevice {
           onState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case MediaStatus.PLAYER_STATE_IDLE:
-          if (!isStopping) {
+          final int currentState = listener.getPlaybackState();
+          if ((currentState == PlaybackStateCompat.STATE_PLAYING) || (currentState == PlaybackStateCompat.STATE_PAUSED)) {
             onState(PlaybackStateCompat.STATE_ERROR);
           }
-          isStopping = false;
           break;
         default:
           onState(PlaybackStateCompat.STATE_STOPPED);
       }
     }
   };
+  @Nullable
+  private ScheduledExecutorService heartbeat = null;
 
   public CastSessionDevice(
     @NonNull Context context,
@@ -187,8 +186,9 @@ public class CastSessionDevice extends SessionDevice {
   @Override
   public void stop() {
     super.stop();
+    // Stop immediately
+    onState(PlaybackStateCompat.STATE_STOPPED);
     if (remoteMediaClient != null) {
-      isStopping = true;
       remoteMediaClient.stop();
     }
   }
@@ -196,7 +196,6 @@ public class CastSessionDevice extends SessionDevice {
   @Override
   public void release() {
     super.release();
-    isStopping = false;
     if (heartbeat != null) {
       heartbeat.shutdownNow();
       heartbeat = null;
