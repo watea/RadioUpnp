@@ -5,11 +5,11 @@ plugins {
 
 android {
     namespace = 'com.watea.radio_upnp'
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.watea.radio_upnp"
         minSdk = 26
-        compileSdk = 36
         targetSdk = 36
         versionCode = 300000
         versionName = "3.00.000"
