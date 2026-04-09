@@ -428,9 +428,7 @@ public class UpnpStreamServer extends HttpServer {
       signalConnectionAndLaunchWatchdog(lockKey);
       final String icyMetaIntValue = httpURLConnection.getHeaderField(ICY_METAINT_HEADER);
       final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
-        new IcyStreamParser(
-          Integer.parseInt(icyMetaIntValue),
-          title -> callback.onInformation(title, lockKey));
+        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onInformation(title, lockKey));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
       Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + lockKey);
