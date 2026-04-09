@@ -48,7 +48,6 @@ import java.util.function.Function;
 @OptIn(markerClass = UnstableApi.class)
 public class UpnpSessionDevice extends SessionDevice {
   public static final String PCM_MIME = "audio/wav";
-  public static final String DEFAULT_MIME = "audio/mpeg";
   private static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
@@ -86,15 +85,14 @@ public class UpnpSessionDevice extends SessionDevice {
   public UpnpSessionDevice(
     @NonNull Context context,
     @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
-    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
-    @NonNull String lockKey,
     @NonNull Radio radio,
+    @NonNull String lockKey,
     @NonNull Uri radioUri,
     @NonNull Uri logoUri,
     @NonNull Device device,
     @NonNull ActionController actionController) {
-    super(context, (capturingAudioSinkCallback != null), capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
+    super(context, (capturingAudioSinkCallback != null), capturingAudioSinkCallback, listener, radio, lockKey);
     this.radioUri = radioUri;
     this.actionController = actionController;
     this.logoUri = logoUri;
@@ -365,7 +363,7 @@ public class UpnpSessionDevice extends SessionDevice {
     String mime = PCM_MIME;
     if (!MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
       // Relay
-      content = (connectionSet == null) ? DEFAULT_MIME : connectionSet.getContent();
+      content = (connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent();
       switch (content) {
         case "audio/aac":
         case "audio/x-aac":

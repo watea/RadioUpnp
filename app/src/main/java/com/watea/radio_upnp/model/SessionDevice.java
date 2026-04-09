@@ -58,19 +58,17 @@ public abstract class SessionDevice {
   protected final Context context;
   protected final boolean isExoPlayerActive;
   @NonNull
-  protected final ExoPlayer exoPlayer;
+  protected final Radio radio;
   @NonNull
   protected final String lockKey; // Current tag
   @NonNull
-  protected final Radio radio;
-  @NonNull
   protected final Listener listener;
   @NonNull
-  private final ConnectionSet.Supplier connectionSetSupplier;
+  protected final ExoPlayer exoPlayer;
   @NonNull
   private final Player.Listener playerListener;
   @Nullable
-  protected ConnectionSet connectionSet = null;
+  protected Radio.ConnectionSet connectionSet = null;
   @Nullable
   CapturingAudioSink.Callback capturingAudioSinkCallback;
 
@@ -78,17 +76,15 @@ public abstract class SessionDevice {
     @NonNull Context context,
     boolean isExoPlayerActive,
     @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
-    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
-    @NonNull String lockKey,
-    @NonNull Radio radio) {
+    @NonNull Radio radio,
+    @NonNull String lockKey) {
     this.context = context;
     this.isExoPlayerActive = isExoPlayerActive;
     this.capturingAudioSinkCallback = capturingAudioSinkCallback;
-    this.connectionSetSupplier = connectionSetSupplier;
     this.listener = listener;
-    this.lockKey = lockKey;
     this.radio = radio;
+    this.lockKey = lockKey;
     this.playerListener = getPlayerListener();
     this.exoPlayer = getExoPlayer();
   }
@@ -167,7 +163,7 @@ public abstract class SessionDevice {
   // Must be called in its own thread.
   // Fires ERROR if upstream connection failed.
   public boolean prepare() {
-    connectionSet = connectionSetSupplier.get(radio.getURL(), lockKey);
+    connectionSet = radio.getConnectionSet();
     if (connectionSet == null) {
       Log.d(LOG_TAG, "prepare: unable to connect");
       onState(PlaybackStateCompat.STATE_ERROR);

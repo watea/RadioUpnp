@@ -390,9 +390,7 @@ public class RadioService
   @NonNull
   @Override
   public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
-    Log.d(LOG_TAG, "onGetRoot: with clientPackageName = " + clientPackageName +
-      ", rootHints = " + (rootHints == null ? "null" : rootHints.toString()));
-
+    Log.d(LOG_TAG, "onGetRoot: with clientPackageName = " + clientPackageName + ", rootHints = " + (rootHints == null ? "null" : rootHints.toString()));
     return new BrowserRoot(MEDIA_ROOT_ID, null);
   }
 
@@ -710,7 +708,7 @@ public class RadioService
       // Start service, must be done while activity has foreground
       isAllowedToRewind = false;
       if (playerAdapter.isRemote()) {
-        upnpStreamServer.launchWatchdog(lockKey);
+        upnpStreamServer.launch(lockKey);
       }
       if (playerAdapter.prepare()) {
         startForegroundService(new Intent(RadioService.this, RadioService.class));
@@ -871,11 +869,10 @@ public class RadioService
         return castManager.getCastSessionDevice(
           RadioService.this,
           upnpStreamServer.getPcmCallback(),
-          upnpStreamServer::getConnectionSet,
           RadioService.this,
-          lockKey,
           radio,
-          upnpStreamServer.getStreamUri(localIp, lockKey, true),
+          lockKey,
+          upnpStreamServer.getStreamUri(localIp, radio, lockKey, true),
           upnpStreamServer.setLogo(radio, localIp));
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
@@ -883,11 +880,10 @@ public class RadioService
         return new UpnpSessionDevice(
           RadioService.this,
           isPcm ? upnpStreamServer.getPcmCallback() : null,
-          upnpStreamServer::getConnectionSet,
           RadioService.this,
-          lockKey,
           radio,
-          upnpStreamServer.getStreamUri(localIp, lockKey, isPcm),
+          lockKey,
+          upnpStreamServer.getStreamUri(localIp, radio, lockKey, isPcm),
           upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
           upnpService.getActionController());
@@ -895,10 +891,9 @@ public class RadioService
         Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
         return new LocalSessionDevice(
           RadioService.this,
-          upnpStreamServer::getConnectionSet,
           RadioService.this,
-          lockKey,
-          radio);
+          radio,
+          lockKey);
       }
     }
   }

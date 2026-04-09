@@ -46,7 +46,7 @@ public class IcyStreamParser {
   private int metaLength;
   private int metaRead;
 
-  IcyStreamParser(int icyMetaInt, @NonNull Consumer<String> metaConsumer) {
+  public IcyStreamParser(int icyMetaInt, @NonNull Consumer<String> metaConsumer) {
     this.icyMetaInt = icyMetaInt;
     this.audioRemaining = icyMetaInt;
     this.metaConsumer = metaConsumer;
@@ -59,7 +59,7 @@ public class IcyStreamParser {
   }
 
   @NonNull
-  byte[] parse(@NonNull byte[] chunk, int length) {
+  public byte[] parse(@NonNull byte[] chunk, int length) {
     audioOut.reset();
     int pos = 0;
     while (pos < length) {

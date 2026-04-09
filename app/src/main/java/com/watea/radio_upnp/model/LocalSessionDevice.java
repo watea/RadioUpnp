@@ -36,11 +36,10 @@ public class LocalSessionDevice extends SessionDevice {
 
   public LocalSessionDevice(
     @NonNull Context context,
-    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
-    @NonNull String lockKey,
-    @NonNull Radio radio) {
-    super(context, true, null, connectionSetSupplier, listener, lockKey, radio);
+    @NonNull Radio radio,
+    @NonNull String lockKey) {
+    super(context, true, null, listener, radio, lockKey);
   }
 
   @Override

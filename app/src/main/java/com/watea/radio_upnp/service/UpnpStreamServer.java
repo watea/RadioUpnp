@@ -32,8 +32,8 @@ import androidx.annotation.Nullable;
 
 import com.watea.candidhttpserver.HttpServer;
 import com.watea.radio_upnp.model.CapturingAudioSink;
-import com.watea.radio_upnp.model.ConnectionSet;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
 
 import java.io.ByteArrayOutputStream;
@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collections;
@@ -55,17 +54,18 @@ public class UpnpStreamServer extends HttpServer {
   private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
+  private static final String ID_PARAM = "id";
   private static final String ICY_METADATA_HEADER = "icy-metadata";
   private static final String ICY_METAINT_HEADER = "icy-metaint";
   private static final String HEAD = "HEAD";
   private static final String GET = "GET";
-  private static final String SCHEME = "http://";
+  private static final String SCHEME = "http";
   private static final int DEFAULT = -1;
   private static final int GET_TIMEOUT = 10000; // ms
   private static final int QUEUE_SIZE = 300; // ~10s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private static final int PACER_POLL_TIMEOUT = 500; // ms
   private static final int REMOTE_LOGO_SIZE = 300;
-  private static final String LOGO_PREFIX = "logo";
+  private static final String LOGO_PATH = "/logo";
   private static final String LOGO_SUFFIX = ".jpg";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final int PIPE_BUFFER_SIZE = 8192; // Matches default Java I/O buffer size
@@ -73,7 +73,6 @@ public class UpnpStreamServer extends HttpServer {
   private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
   @NonNull
   private final Callback callback;
-  private final ConcurrentHashMap<String, ConnectionSet> connectionSets = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Watchdog> watchdogs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Set<ArrayBlockingQueue<byte[]>>> queuess = new ConcurrentHashMap<>();
   @NonNull
@@ -114,7 +113,7 @@ public class UpnpStreamServer extends HttpServer {
     }
   };
   @Nullable
-  private String logoPath = null;
+  private Uri logoUri = null;
   @Nullable
   private byte[] logoBytes = null;
 
@@ -136,66 +135,45 @@ public class UpnpStreamServer extends HttpServer {
     final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
     logoBytes = byteArrayOutputStream.toByteArray();
-    logoPath = "/" + LOGO_PREFIX + radio.getId() + LOGO_SUFFIX;
-    return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + logoPath);
-  }
-
-  // Change lockKey and update connection data
-  @Nullable
-  public ConnectionSet getConnectionSet(@NonNull URL url, @NonNull String lockKey) {
-    setLockKey(lockKey);
-    HttpURLConnection httpURLConnection = null;
-    try {
-      httpURLConnection = new RadioURL(url).getActualHttpURLConnection();
-      final URL actualUrl = httpURLConnection.getURL();
-      String contentType = RadioURL.getStreamContentType(httpURLConnection);
-      contentType = (contentType == null) ? UpnpSessionDevice.DEFAULT_MIME : contentType;
-      final String icyBr = httpURLConnection.getHeaderField("icy-br");
-      final String contentBitrate = (icyBr == null) ? httpURLConnection.getHeaderField("Content-Bitrate") : icyBr;
-      int bitrate = -1;
-      if (contentBitrate != null) {
-        try {
-          bitrate = Integer.parseInt(contentBitrate.split(",")[0].trim());
-        } catch (NumberFormatException numberFormatException) {
-          Log.w(LOG_TAG, "getConnectionSet: invalid bitrate header - " + contentBitrate);
-        }
-      }
-      connectionSets.put(lockKey, new ConnectionSet(actualUrl, contentType, bitrate));
-      Log.d(LOG_TAG, "setActualUrlAndContentType: content => " + contentType + " URL => " + actualUrl);
-    } catch (IOException ioException) {
-      Log.d(LOG_TAG, "setActualUrlAndContentType: unable to connect", ioException);
-    } finally {
-      if (httpURLConnection != null) {
-        httpURLConnection.disconnect();
-      }
-    }
-    return connectionSets.get(lockKey);
+    return logoUri = new Uri.Builder()
+      .scheme(SCHEME)
+      .encodedAuthority(localIp + ":" + getListeningPort())
+      .path(LOGO_PATH + radio.getId() + LOGO_SUFFIX)
+      .build();
   }
 
   public void release() {
-    setLockKey(RadioService.getLockKey());
+    launch(null);
   }
 
-  public void launchWatchdog(@NonNull String lockKey) {
-    watchdogs.clear();
-    watchdogs.put(lockKey, new Watchdog(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S));
+  public Uri getStreamUri(@NonNull String localIp, @NonNull Radio radio, @NonNull String lockKey, boolean isPcm) {
+    return new Uri.Builder()
+      .scheme(SCHEME)
+      .encodedAuthority(localIp + ":" + getListeningPort())
+      .path(STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : ""))
+      .appendQueryParameter(ID_PARAM, radio.getId())
+      .appendQueryParameter(LOCKKEY_PARAM, lockKey)
+      .build();
   }
 
-  public Uri getStreamUri(@NonNull String localIp, @NonNull String lockKey, boolean isPcm) {
-    return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : "") + "?" + LOCKKEY_PARAM + "=" + lockKey);
-  }
-
-  // Must be called early before any session is started
-  private void setLockKey(@NonNull String lockKey) {
-    Log.d(LOG_TAG, "setLockKey: " + lockKey);
-    // Disconnect old upstream to unblock any ongoing relay read
-    connectionSets.clear();
+  // Must be called early before any session is started.
+  // lockKey == null for release.
+  public void launch(@Nullable String lockKey) {
+    // isRelease?
+    final boolean isRelease = (lockKey == null);
+    Log.d(LOG_TAG, "setLockKey: " + (isRelease ? "release" : lockKey));
+    this.lockKey = isRelease ? RadioService.getLockKey() : lockKey;
     // Create new queue set
     queuess.clear();
-    queuess.put(lockKey, new CopyOnWriteArraySet<>());
     // Update lockKey
-    this.lockKey = lockKey;
     sampleRate = DEFAULT;
+    // Watchdog
+    watchdogs.clear();
+    // Launch
+    if (!isRelease) {
+      queuess.put(lockKey, new CopyOnWriteArraySet<>());
+      watchdogs.put(lockKey, new Watchdog(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S));
+    }
   }
 
   public interface Callback {
@@ -215,10 +193,12 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream) throws IOException {
       final String incomingLockKey = request.getParams(LOCKKEY_PARAM);
+      final String id = request.getParams(ID_PARAM);
+      final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
       final String method = request.getMethod();
-      Log.d(LOG_TAG, getClass().getSimpleName() + ": handle - " + method + " - " + incomingLockKey);
-      if (lockKey.equals(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
-        handleStream(response, responseStream, method.equals(HEAD), lockKey);
+      Log.d(LOG_TAG, getClass().getSimpleName() + ": handle - " + method + " - " + id + " -" + incomingLockKey);
+      if ((radio != null) && lockKey.equals(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
+        handleStream(response, responseStream, method.equals(HEAD), radio, lockKey);
       }
       Log.d(LOG_TAG, getClass().getSimpleName() + ": handle exit - " + method + " - " + incomingLockKey);
     }
@@ -231,6 +211,7 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
+      @NonNull Radio radio,
       @NonNull String lockKey) throws IOException;
 
     // Adds DLNA streaming headers common to both PCM and relay responses
@@ -276,7 +257,7 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Request request,
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream) throws IOException {
-      if ((logoPath == null) || !logoPath.equals(request.getPath())) {
+      if ((logoUri == null) || !request.getPath().equals(logoUri.getPath())) {
         return; // Not our path
       }
       if (logoBytes == null) {
@@ -303,6 +284,7 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
+      @NonNull Radio radio,
       @NonNull String lockKey) throws IOException {
       Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
@@ -401,10 +383,11 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
+      @NonNull Radio radio,
       @NonNull String lockKey) throws IOException {
       Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Upstream
-      final ConnectionSet connectionSet = connectionSets.get(lockKey);
+      final Radio.ConnectionSet connectionSet = radio.getConnectionSet();
       if (connectionSet == null) {
         Log.d(LOG_TAG, "RelayStreamHandler: upstream is not defined");
         callback.onDisconnected(lockKey);

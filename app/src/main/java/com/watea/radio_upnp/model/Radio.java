@@ -36,6 +36,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.watea.radio_upnp.service.RadioURL;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -43,10 +45,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
 public class Radio {
+  public static final String DEFAULT_MIME = "audio/mpeg";
   @NonNull
   public static final Radio DUMMY_RADIO;
   public static final int RADIO_ICON_SIZE = 300;
@@ -96,6 +101,8 @@ public class Radio {
   private URL url;
   @Nullable
   private URL webPageUrl;
+  @Nullable
+  private volatile ConnectionSet connectionSet = null;
   private boolean isPreferred;
 
   // icon and base64Icon are mutually exclusive, one at least not null
@@ -267,6 +274,7 @@ public class Radio {
 
   public void setURL(@NonNull URL uRL) {
     url = uRL;
+    connectionSet = null;
   }
 
   @NonNull
@@ -360,10 +368,70 @@ public class Radio {
     return Bitmap.createScaledBitmap(icon, targetWidth, targetHeight, true);
   }
 
+  @Nullable
+  public ConnectionSet getConnectionSet() {
+    if (connectionSet == null) {
+      HttpURLConnection httpURLConnection = null;
+      try {
+        httpURLConnection = new RadioURL(url).getActualHttpURLConnection();
+        final URL actualUrl = httpURLConnection.getURL();
+        String contentType = RadioURL.getStreamContentType(httpURLConnection);
+        contentType = (contentType == null) ? DEFAULT_MIME : contentType;
+        final String icyBr = httpURLConnection.getHeaderField("icy-br");
+        final String contentBitrate = (icyBr == null) ? httpURLConnection.getHeaderField("Content-Bitrate") : icyBr;
+        int bitrate = -1;
+        if (contentBitrate != null) {
+          try {
+            bitrate = Integer.parseInt(contentBitrate.split(",")[0].trim());
+          } catch (NumberFormatException numberFormatException) {
+            Log.w(LOG_TAG, "setConnectionSet: invalid bitrate header - " + contentBitrate);
+          }
+        }
+        Log.d(LOG_TAG, "ConnectionSet for radio " + name + ": content => " + contentType + " URL => " + actualUrl);
+        connectionSet = new ConnectionSet(actualUrl, contentType, bitrate);
+      } catch (IOException ioException) {
+        Log.d(LOG_TAG, "setConnectionSet: unable to connect", ioException);
+      } finally {
+        if (httpURLConnection != null) {
+          httpURLConnection.disconnect();
+        }
+      }
+    }
+    return connectionSet;
+  }
+
   @NonNull
   private String iconToBase64String() {
     final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     icon.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
     return Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.DEFAULT);
+  }
+
+  public static class ConnectionSet {
+    @NonNull
+    private final URL url;
+    @NonNull
+    private final String content;
+    private final int bitrate; // -1 if unknown
+
+    public ConnectionSet(@NonNull URL url, @NonNull String content, int bitrate) {
+      this.url = url;
+      this.content = content;
+      this.bitrate = bitrate;
+    }
+
+    public int getBitrate() {
+      return bitrate;
+    }
+
+    @NonNull
+    public String getContent() {
+      return content;
+    }
+
+    @NonNull
+    public URL getUrl() {
+      return url;
+    }
   }
 }

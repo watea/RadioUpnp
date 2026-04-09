@@ -95,14 +95,13 @@ public class CastSessionDevice extends SessionDevice {
   public CastSessionDevice(
     @NonNull Context context,
     @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
-    @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
-    @NonNull String lockKey,
     @NonNull Radio radio,
+    @NonNull String lockKey,
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull CastSession castSession) {
-    super(context, true, capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
+    super(context, true, capturingAudioSinkCallback, listener, radio, lockKey);
     this.radioUri = radioUri;
     this.logoUri = logoUri;
     this.castSession = castSession;
