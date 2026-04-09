@@ -150,6 +150,11 @@ public class RadioService
     }
 
     @Override
+    public void onInformation(@NonNull String information, @NonNull String lockKey) {
+      runIfLocked(lockKey, () -> onNewInformation(information, lockKey));
+    }
+
+    @Override
     public void onDisconnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onDisconnected: " + lockKey);
       runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
@@ -429,7 +434,8 @@ public class RadioService
       Log.d(LOG_TAG, "onNewBitrate: " + bitrate);
       // Rate in extras
       final Bundle extras = mediaController.getExtras();
-      extras.putString(getString(R.string.key_bitrate), Integer.toString(bitrate));
+      final String bitrateDisplay = (bitrate > 0) ? Integer.toString(bitrate) : "--";
+      extras.putString(getString(R.string.key_bitrate), bitrateDisplay);
       extras.putString(getString(R.string.key_mime_type), mimeType);
       session.setExtras(extras);
       // Update notification

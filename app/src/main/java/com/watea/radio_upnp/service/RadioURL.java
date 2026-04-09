@@ -42,8 +42,10 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -147,9 +149,14 @@ public class RadioURL {
     return contentType;
   }
 
-  // Handle redirection
   @NonNull
   public HttpURLConnection getActualHttpURLConnection() throws IOException {
+    return getActualHttpURLConnection(Collections.emptyMap());
+  }
+
+  // Handle redirection
+  @NonNull
+  public HttpURLConnection getActualHttpURLConnection(@NonNull Map<String, String> requestProperties) throws IOException {
     if (uRL == null) {
       throw new IOException("getActualHttpURLConnection: URL is null");
     }
@@ -183,6 +190,8 @@ public class RadioURL {
         if (httpURLConnection instanceof HttpsURLConnection) {
           ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
         }
+        // Parameters
+        requestProperties.forEach(httpURLConnection::setRequestProperty);
         // Get HTTP response
         final int responseCode;
         try {

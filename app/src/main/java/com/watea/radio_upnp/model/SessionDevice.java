@@ -56,6 +56,7 @@ public abstract class SessionDevice {
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
   @NonNull
   protected final Context context;
+  protected final boolean isExoPlayerActive;
   @NonNull
   protected final ExoPlayer exoPlayer;
   @NonNull
@@ -70,21 +71,26 @@ public abstract class SessionDevice {
   private final Player.Listener playerListener;
   @Nullable
   protected ConnectionSet connectionSet = null;
+  @Nullable
+  CapturingAudioSink.Callback capturingAudioSinkCallback;
 
   public SessionDevice(
     @NonNull Context context,
+    boolean isExoPlayerActive,
     @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull ConnectionSet.Supplier connectionSetSupplier,
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio) {
     this.context = context;
+    this.isExoPlayerActive = isExoPlayerActive;
+    this.capturingAudioSinkCallback = capturingAudioSinkCallback;
     this.connectionSetSupplier = connectionSetSupplier;
     this.listener = listener;
     this.lockKey = lockKey;
     this.radio = radio;
     this.playerListener = getPlayerListener();
-    this.exoPlayer = getExoPlayer(capturingAudioSinkCallback);
+    this.exoPlayer = getExoPlayer();
   }
 
   @NonNull
@@ -136,20 +142,26 @@ public abstract class SessionDevice {
   }
 
   public void play() {
-    exoPlayer.play();
+    if (isExoPlayerActive) {
+      exoPlayer.play();
+    }
   }
 
   public void pause() {
-    // UPnP session shall be relaunched after pause, so we stop it
-    if (isUpnp()) {
-      exoPlayer.stop();
-    } else {
-      exoPlayer.pause();
+    if (isExoPlayerActive) {
+      // UPnP session shall be relaunched after pause, so we stop it
+      if (isUpnp()) {
+        exoPlayer.stop();
+      } else {
+        exoPlayer.pause();
+      }
     }
   }
 
   public void stop() {
-    exoPlayer.stop();
+    if (isExoPlayerActive) {
+      exoPlayer.stop();
+    }
   }
 
   // Must be called in its own thread.
@@ -161,13 +173,17 @@ public abstract class SessionDevice {
       onState(PlaybackStateCompat.STATE_ERROR);
       return false;
     }
-    // Post ExoPlayer calls to the main thread
-    new Handler(Looper.getMainLooper()).post(() -> {
-      exoPlayer.addListener(playerListener);
-      exoPlayer.setMediaItem(MediaItem.fromUri(connectionSet.getUrl().toString()));
-      exoPlayer.prepare();
-      exoPlayer.setPlayWhenReady(true);
-    });
+    if (isExoPlayerActive) {
+      // Post ExoPlayer calls to the main thread
+      new Handler(Looper.getMainLooper()).post(() -> {
+        exoPlayer.addListener(playerListener);
+        exoPlayer.setMediaItem(MediaItem.fromUri(connectionSet.getUrl().toString()));
+        exoPlayer.prepare();
+        exoPlayer.setPlayWhenReady(true);
+      });
+    } else {
+      listener.onNewBitrate(connectionSet.getBitrate(), connectionSet.getContent(), lockKey);
+    }
     return true;
   }
 
@@ -212,9 +228,8 @@ public abstract class SessionDevice {
     return new PlayerListener();
   }
 
-  // Overrides must not reference subclass instance fields to avoid NPE on initialization
   @NonNull
-  protected AudioSink getAudioSink(@Nullable CapturingAudioSink.Callback capturingAudioSinkCallback) {
+  private AudioSink getAudioSink() {
     final CapturingAudioSink capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(context).build(), lockKey);
     if (capturingAudioSinkCallback != null) {
       capturingAudioSink.setCallback(capturingAudioSinkCallback);
@@ -223,7 +238,7 @@ public abstract class SessionDevice {
   }
 
   @NonNull
-  private ExoPlayer getExoPlayer(@Nullable CapturingAudioSink.Callback capturingAudioSinkCallback) {
+  private ExoPlayer getExoPlayer() {
     return new ExoPlayer.Builder(context)
       .setRenderersFactory(
         (handler,
@@ -236,7 +251,7 @@ public abstract class SessionDevice {
             MediaCodecSelector.DEFAULT,
             handler,
             audioListener,
-            getAudioSink(capturingAudioSinkCallback)),
+            getAudioSink()),
           new MetadataRenderer(metadataOutput, handler.getLooper())
         })
       .build();

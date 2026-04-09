@@ -33,10 +33,16 @@ public class ConnectionSet {
   private final URL url;
   @NonNull
   private final String content;
+  private final int bitrate; // -1 if unknown
 
-  public ConnectionSet(@NonNull URL url, @NonNull String content) {
+  public ConnectionSet(@NonNull URL url, @NonNull String content, int bitrate) {
     this.url = url;
     this.content = content;
+    this.bitrate = bitrate;
+  }
+
+  public int getBitrate() {
+    return bitrate;
   }
 
   @NonNull

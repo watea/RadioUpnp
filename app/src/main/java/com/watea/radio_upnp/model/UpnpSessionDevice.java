@@ -33,7 +33,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.media3.common.util.UnstableApi;
-import androidx.media3.exoplayer.audio.AudioSink;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
@@ -95,7 +94,7 @@ public class UpnpSessionDevice extends SessionDevice {
     @NonNull Uri logoUri,
     @NonNull Device device,
     @NonNull ActionController actionController) {
-    super(context, capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
+    super(context, (capturingAudioSinkCallback != null), capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.actionController = actionController;
     this.logoUri = logoUri;
@@ -196,12 +195,6 @@ public class UpnpSessionDevice extends SessionDevice {
   public void release() {
     super.release();
     scheduleActionStop();
-  }
-
-  @NonNull
-  @Override
-  protected AudioSink getAudioSink(@Nullable CapturingAudioSink.Callback capturingAudioSinkCallback) {
-    return (capturingAudioSinkCallback == null) ? new SilentAudioSink() : super.getAudioSink(capturingAudioSinkCallback);
   }
 
   private void scheduleMandatoryAction(

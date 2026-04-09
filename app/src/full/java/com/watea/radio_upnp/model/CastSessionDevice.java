@@ -102,7 +102,7 @@ public class CastSessionDevice extends SessionDevice {
     @NonNull Uri radioUri,
     @Nullable Uri logoUri,
     @NonNull CastSession castSession) {
-    super(context, capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
+    super(context, true, capturingAudioSinkCallback, connectionSetSupplier, listener, lockKey, radio);
     this.radioUri = radioUri;
     this.logoUri = logoUri;
     this.castSession = castSession;

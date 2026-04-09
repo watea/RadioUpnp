@@ -40,7 +40,7 @@ public class LocalSessionDevice extends SessionDevice {
     @NonNull Listener listener,
     @NonNull String lockKey,
     @NonNull Radio radio) {
-    super(context, null, connectionSetSupplier, listener, lockKey, radio);
+    super(context, true, null, connectionSetSupplier, listener, lockKey, radio);
   }
 
   @Override
@@ -61,26 +61,6 @@ public class LocalSessionDevice extends SessionDevice {
   // Not supported
   @Override
   public void adjustVolume(int direction) {
-  }
-
-  @Override
-  public long getAvailableActions(int state) {
-    long availableActions = super.getAvailableActions(state);
-    switch (state) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-        availableActions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      case PlaybackStateCompat.STATE_ERROR:
-        availableActions |= PlaybackStateCompat.ACTION_REWIND;
-        break;
-      default:
-        // Nothing else
-    }
-    return availableActions;
   }
 
   @NonNull

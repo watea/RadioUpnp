@@ -44,6 +44,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +55,8 @@ import java.util.regex.Pattern;
 
 public class UpnpStreamServer extends HttpServer {
   private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
+  private static final String ICY_METADATA_HEADER = "icy-metadata";
+  private static final String ICY_METAINT_HEADER = "icy-metaint";
   private static final String HEAD = "HEAD";
   private static final String GET = "GET";
   private static final String SCHEME = "http://";
@@ -153,10 +156,20 @@ public class UpnpStreamServer extends HttpServer {
     HttpURLConnection httpURLConnection = null;
     try {
       httpURLConnection = new RadioURL(url).getActualHttpURLConnection();
+      final URL actualUrl = httpURLConnection.getURL();
       String contentType = RadioURL.getStreamContentType(httpURLConnection);
       contentType = (contentType == null) ? UpnpSessionDevice.DEFAULT_MIME : contentType;
-      final URL actualUrl = httpURLConnection.getURL();
-      connectionSets.put(lockKey, new ConnectionSet(actualUrl, contentType));
+      final String icyBr = httpURLConnection.getHeaderField("icy-br");
+      final String contentBitrate = (icyBr == null) ? httpURLConnection.getHeaderField("Content-Bitrate") : icyBr;
+      int bitrate = -1;
+      if (contentBitrate != null) {
+        try {
+          bitrate = Integer.parseInt(contentBitrate.split(",")[0].trim());
+        } catch (NumberFormatException numberFormatException) {
+          Log.w(LOG_TAG, "getConnectionSet: invalid bitrate header - " + contentBitrate);
+        }
+      }
+      connectionSets.put(lockKey, new ConnectionSet(actualUrl, contentType, bitrate));
       Log.d(LOG_TAG, "setActualUrlAndContentType: content => " + contentType + " URL => " + actualUrl);
     } catch (IOException ioException) {
       Log.d(LOG_TAG, "setActualUrlAndContentType: unable to connect", ioException);
@@ -199,6 +212,8 @@ public class UpnpStreamServer extends HttpServer {
     void onDisconnected(@NonNull String lockKey);
 
     void onConnected(@NonNull String lockKey);
+
+    void onInformation(@NonNull String information, @NonNull String lockKey);
   }
 
   // Base handler for audio stream requests — validates method and lockKey,
@@ -413,7 +428,7 @@ public class UpnpStreamServer extends HttpServer {
       // New upstream connection per GET thread — a shared connection causes concurrent stream corruption
       final HttpURLConnection httpURLConnection;
       try {
-        httpURLConnection = new RadioURL(connectionSet.getUrl()).getActualHttpURLConnection();
+        httpURLConnection = new RadioURL(connectionSet.getUrl()).getActualHttpURLConnection(Collections.singletonMap(ICY_METADATA_HEADER, "1"));
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "RelayStreamHandler: unable to connect", ioException);
         callback.onDisconnected(lockKey);
@@ -421,13 +436,22 @@ public class UpnpStreamServer extends HttpServer {
       }
       // We signal actual connection and start stream
       signalConnectionAndLaunchWatchdog(lockKey);
+      final String icyMetaIntValue = httpURLConnection.getHeaderField(ICY_METAINT_HEADER);
+      final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
+        new IcyStreamParser(
+          Integer.parseInt(icyMetaIntValue),
+          title -> callback.onInformation(title, lockKey));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
-      Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + lockKey);
       int n;
+      Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + lockKey);
       try (final InputStream inputStream = httpURLConnection.getInputStream()) {
         while (lockKey.equals(UpnpStreamServer.this.lockKey) && ((n = inputStream.read(buf)) >= 0)) {
           relaunchWatchdog(lockKey);
-          responseStream.write(buf, 0, n);
+          if (parser == null) {
+            responseStream.write(buf, 0, n);
+          } else {
+            responseStream.write(parser.parse(buf, n));
+          }
         }
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "RelayStreamHandler: IOException - " + lockKey + "; " + ioException.getMessage());
