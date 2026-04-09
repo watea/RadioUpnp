@@ -50,11 +50,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class UpnpStreamServer extends HttpServer {
   private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
+  private static final String STREAM_PATH = "/stream";
+  private static final String LOCKKEY_PARAM = "lockkey";
   private static final String ICY_METADATA_HEADER = "icy-metadata";
   private static final String ICY_METAINT_HEADER = "icy-metaint";
   private static final String HEAD = "HEAD";
@@ -67,13 +67,10 @@ public class UpnpStreamServer extends HttpServer {
   private static final int REMOTE_LOGO_SIZE = 300;
   private static final String LOGO_PREFIX = "logo";
   private static final String LOGO_SUFFIX = ".jpg";
-  private static final String STREAM_PREFIX = "stream-";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final int PIPE_BUFFER_SIZE = 8192; // Matches default Java I/O buffer size
   private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
   private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
-  private static final Pattern STREAM_PATH_PATTERN = Pattern.compile(
-    "^/" + STREAM_PREFIX + "([^/]+?)" + "(?:" + Pattern.quote(STREAM_SUFFIX_PCM) + ")?$");
   @NonNull
   private final Callback callback;
   private final ConcurrentHashMap<String, ConnectionSet> connectionSets = new ConcurrentHashMap<>();
@@ -126,12 +123,6 @@ public class UpnpStreamServer extends HttpServer {
     addHandler(new LogoHandler());
     addHandler(new PcmStreamHandler());
     addHandler(new RelayStreamHandler());
-  }
-
-  @Nullable
-  private static String extractLockKey(@NonNull String path) {
-    final Matcher matcher = STREAM_PATH_PATTERN.matcher(path);
-    return matcher.matches() ? matcher.group(1) : null;
   }
 
   @NonNull
@@ -190,9 +181,8 @@ public class UpnpStreamServer extends HttpServer {
     watchdogs.put(lockKey, new Watchdog(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S));
   }
 
-  // Returns stream URI adapted to current mode (PCM vs relay)
   public Uri getStreamUri(@NonNull String localIp, @NonNull String lockKey, boolean isPcm) {
-    return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + "/" + STREAM_PREFIX + lockKey + (isPcm ? STREAM_SUFFIX_PCM : ""));
+    return Uri.parse(SCHEME + localIp + ":" + getListeningPort() + STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : "") + "?" + LOCKKEY_PARAM + "=" + lockKey);
   }
 
   // Must be called early before any session is started
@@ -224,7 +214,7 @@ public class UpnpStreamServer extends HttpServer {
       @NonNull HttpServer.Request request,
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream) throws IOException {
-      final String incomingLockKey = extractLockKey(request.getPath());
+      final String incomingLockKey = request.getParams(LOCKKEY_PARAM);
       final String method = request.getMethod();
       Log.d(LOG_TAG, getClass().getSimpleName() + ": handle - " + method + " - " + incomingLockKey);
       if (lockKey.equals(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
