@@ -478,7 +478,7 @@ public class RadioService
   }
 
   private void onPlaybackStateChange(@NonNull PlaybackStateCompat state) {
-    Log.d(LOG_TAG, "onPlaybackStateChange: " + SessionDevice.getStateName(state.getState()) + "/" + lockKey);
+    Log.d(LOG_TAG, "onPlaybackStateChange: " + SessionDevice.getStateName(state.getState()) + " - " + lockKey);
     final int currentState = getPlaybackState();
     // Nothing can change if Stopped
     if (currentState == PlaybackStateCompat.STATE_STOPPED) {
@@ -691,7 +691,6 @@ public class RadioService
       releaseScheduler();
       // PlayerAdapter settings
       final SessionDevice sessionDevice = getSessionDevice(radio, lockKey);
-      Log.d(LOG_TAG, "onPlayFromMediaId: sessionDevice => " + sessionDevice.getClass().getSimpleName());
       playerAdapter.setSessionDevice(sessionDevice);
       // Volume
       if (sessionDevice.isRemote()) {
@@ -863,34 +862,29 @@ public class RadioService
       assert upnpStreamServer != null;
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = new NetworkProxy(RadioService.this).isOnWifi();
-      if (isRemoteReady && castManager.hasCastSession()) {
-        Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
-        return castManager.getCastSessionDevice(
+      final SessionDevice result = (isRemoteReady && castManager.hasCastSession()) ?
+        castManager.getCastSessionDevice(
           RadioService.this,
           upnpStreamServer,
           RadioService.this,
           radio,
-          lockKey);
-      } else if (isRemoteReady && (upnpSelectedDevice != null)) {
-        final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
-        Log.d(LOG_TAG, "getSessionDevice: UpnpSessionDevice with isPcm = " + isPcm);
-        return new UpnpSessionDevice(
-          RadioService.this,
-          isPcm ? SessionDevice.Mode.PCM : SessionDevice.Mode.MUTE,
-          upnpStreamServer,
-          RadioService.this,
-          radio,
-          lockKey,
-          upnpSelectedDevice,
-          upnpService.getActionController());
-      } else {
-        Log.d(LOG_TAG, "getSessionDevice: LocalSessionDevice");
-        return new LocalSessionDevice(
-          RadioService.this,
-          RadioService.this,
-          radio,
-          lockKey);
-      }
+          lockKey) :
+        (isRemoteReady && (upnpSelectedDevice != null)) ?
+          new UpnpSessionDevice(
+            RadioService.this,
+            upnpStreamServer,
+            RadioService.this,
+            radio,
+            lockKey,
+            upnpSelectedDevice,
+            upnpService.getActionController()) :
+          new LocalSessionDevice(
+            RadioService.this,
+            RadioService.this,
+            radio,
+            lockKey);
+      Log.d(LOG_TAG, "getSessionDevice: " + result.getClass().getSimpleName() + " - " + lockKey);
+      return result;
     }
   }
 }

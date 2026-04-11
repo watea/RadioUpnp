@@ -84,14 +84,13 @@ public class UpnpSessionDevice extends SessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
-    @NonNull Mode mode,
     @NonNull UpnpServerCallback upnpServerCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
     @NonNull Device device,
     @NonNull ActionController actionController) {
-    super(context, mode, upnpServerCallback.getPcmCallback(), listener, radio, lockKey);
+    super(context, getMode(context), upnpServerCallback.getPcmCallback(), listener, radio, lockKey);
     this.radioUri = upnpServerCallback.getStreamUri(this.radio, this.lockKey, (this.mode == Mode.PCM));
     this.logoUri = upnpServerCallback.getLogoUri(this.radio);
     this.actionController = actionController;
@@ -129,6 +128,13 @@ public class UpnpSessionDevice extends SessionDevice {
         result = "";
     }
     return result + PROTOCOL_INFO_TAIL;
+  }
+
+  @NonNull
+  private static Mode getMode(@NonNull Context context) {
+    final Mode mode = MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true) ? Mode.PCM : Mode.MUTE;
+    Log.d(LOG_TAG, "Mode => " + mode);
+    return mode;
   }
 
   @Override
