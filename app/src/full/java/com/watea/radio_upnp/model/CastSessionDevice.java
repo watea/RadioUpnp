@@ -94,16 +94,14 @@ public class CastSessionDevice extends SessionDevice {
 
   public CastSessionDevice(
     @NonNull Context context,
-    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
+    @NonNull UpnpSessionDevice.UpnpServerCallback upnpServerCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
-    @NonNull Uri radioUri,
-    @Nullable Uri logoUri,
     @NonNull CastSession castSession) {
-    super(context, true, capturingAudioSinkCallback, listener, radio, lockKey);
-    this.radioUri = radioUri;
-    this.logoUri = logoUri;
+    super(context, Mode.PCM, upnpServerCallback.getPcmCallback(), listener, radio, lockKey);
+    this.radioUri = upnpServerCallback.getStreamUri(this.radio, this.lockKey, true);
+    this.logoUri = upnpServerCallback.getLogoUri(this.radio);
     this.castSession = castSession;
   }
 

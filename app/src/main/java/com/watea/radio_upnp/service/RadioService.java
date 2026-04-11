@@ -331,7 +331,7 @@ public class RadioService
     playerAdapter = new PlayerAdapter(this, mediaSessionCompatCallback::onPlay);
     // Launch HTTP server
     try {
-      upnpStreamServer = new UpnpStreamServer(upnpStreamCallback);
+      upnpStreamServer = new UpnpStreamServer(this, upnpStreamCallback);
       upnpStreamServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation failed", iOException);
@@ -861,30 +861,26 @@ public class RadioService
     @NonNull
     private SessionDevice getSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
       assert upnpStreamServer != null;
-      final String localIp = new NetworkProxy(RadioService.this).getWifiIpAddress();
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      final boolean isRemoteReady = (localIp != null);
+      final boolean isRemoteReady = new NetworkProxy(RadioService.this).isOnWifi();
       if (isRemoteReady && castManager.hasCastSession()) {
         Log.d(LOG_TAG, "getSessionDevice: CastSessionDevice");
         return castManager.getCastSessionDevice(
           RadioService.this,
-          upnpStreamServer.getPcmCallback(),
+          upnpStreamServer,
           RadioService.this,
           radio,
-          lockKey,
-          upnpStreamServer.getStreamUri(localIp, radio, lockKey, true),
-          upnpStreamServer.setLogo(radio, localIp));
+          lockKey);
       } else if (isRemoteReady && (upnpSelectedDevice != null)) {
         final boolean isPcm = MainActivity.getAppPreferences(RadioService.this).getBoolean(getString(R.string.key_pcm_mode), true);
         Log.d(LOG_TAG, "getSessionDevice: UpnpSessionDevice with isPcm = " + isPcm);
         return new UpnpSessionDevice(
           RadioService.this,
-          isPcm ? upnpStreamServer.getPcmCallback() : null,
+          isPcm ? SessionDevice.Mode.PCM : SessionDevice.Mode.MUTE,
+          upnpStreamServer,
           RadioService.this,
           radio,
           lockKey,
-          upnpStreamServer.getStreamUri(localIp, radio, lockKey, isPcm),
-          upnpStreamServer.setLogo(radio, localIp),
           upnpSelectedDevice,
           upnpService.getActionController());
       } else {

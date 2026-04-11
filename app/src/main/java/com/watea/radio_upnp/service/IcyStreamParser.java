@@ -106,5 +106,7 @@ public class IcyStreamParser {
     return audioOut.toByteArray();
   }
 
-  private enum State {AUDIO, META_LENGTH, META_DATA}
+  private enum State {
+    AUDIO, META_LENGTH, META_DATA
+  }
 }

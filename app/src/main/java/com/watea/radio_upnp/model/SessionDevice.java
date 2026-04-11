@@ -56,7 +56,6 @@ public abstract class SessionDevice {
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
   @NonNull
   protected final Context context;
-  protected final boolean isExoPlayerActive;
   @NonNull
   protected final Radio radio;
   @NonNull
@@ -66,6 +65,8 @@ public abstract class SessionDevice {
   @NonNull
   protected final ExoPlayer exoPlayer;
   @NonNull
+  protected final Mode mode;
+  @NonNull
   private final Player.Listener playerListener;
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
@@ -74,13 +75,13 @@ public abstract class SessionDevice {
 
   public SessionDevice(
     @NonNull Context context,
-    boolean isExoPlayerActive,
+    @NonNull Mode mode,
     @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey) {
     this.context = context;
-    this.isExoPlayerActive = isExoPlayerActive;
+    this.mode = mode;
     this.capturingAudioSinkCallback = capturingAudioSinkCallback;
     this.listener = listener;
     this.radio = radio;
@@ -138,13 +139,13 @@ public abstract class SessionDevice {
   }
 
   public void play() {
-    if (isExoPlayerActive) {
+    if (isExoPlayerActive()) {
       exoPlayer.play();
     }
   }
 
   public void pause() {
-    if (isExoPlayerActive) {
+    if (isExoPlayerActive()) {
       // UPnP session shall be relaunched after pause, so we stop it
       if (isUpnp()) {
         exoPlayer.stop();
@@ -155,7 +156,7 @@ public abstract class SessionDevice {
   }
 
   public void stop() {
-    if (isExoPlayerActive) {
+    if (isExoPlayerActive()) {
       exoPlayer.stop();
     }
   }
@@ -169,7 +170,7 @@ public abstract class SessionDevice {
       onState(PlaybackStateCompat.STATE_ERROR);
       return false;
     }
-    if (isExoPlayerActive) {
+    if (isExoPlayerActive()) {
       // Post ExoPlayer calls to the main thread
       new Handler(Looper.getMainLooper()).post(() -> {
         exoPlayer.addListener(playerListener);
@@ -224,11 +225,19 @@ public abstract class SessionDevice {
     return new PlayerListener();
   }
 
+  protected boolean isExoPlayerActive() {
+    return (mode != Mode.MUTE);
+  }
+
   @NonNull
   private AudioSink getAudioSink() {
     final CapturingAudioSink capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(context).build(), lockKey);
-    if (capturingAudioSinkCallback != null) {
-      capturingAudioSink.setCallback(capturingAudioSinkCallback);
+    if (mode == Mode.PCM) {
+      if (capturingAudioSinkCallback == null) {
+        Log.e(LOG_TAG, "getAudioSink: capturingAudioSinkCallback is null for PCM!");
+      } else {
+        capturingAudioSink.setCallback(capturingAudioSinkCallback);
+      }
     }
     return capturingAudioSink;
   }
@@ -251,6 +260,10 @@ public abstract class SessionDevice {
           new MetadataRenderer(metadataOutput, handler.getLooper())
         })
       .build();
+  }
+
+  public enum Mode {
+    LOCAL, PCM, MUTE
   }
 
   public interface Listener {

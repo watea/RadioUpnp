@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.cast;
 
 import android.content.Context;
-import android.net.Uri;
 import android.util.Log;
 import android.view.MenuItem;
 
@@ -38,10 +37,10 @@ import com.google.android.gms.cast.framework.CastContext;
 import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
-import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.CastSessionDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.model.UpnpSessionDevice;
 
 public class CastManager extends OpenCastManager<CastSessionDevice> {
   private static final String LOG_TAG = CastManager.class.getSimpleName();
@@ -161,13 +160,11 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   @NonNull
   public CastSessionDevice getCastSessionDevice(
     @NonNull Context context,
-    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
+    @NonNull UpnpSessionDevice.UpnpServerCallback upnpServerCallback,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey,
-    @NonNull Uri radioUri,
-    @Nullable Uri logoUri) {
+    @NonNull String lockKey) {
     assert castSession != null;
-    return new CastSessionDevice(context, capturingAudioSinkCallback, listener, radio, lockKey, radioUri, logoUri, castSession);
+    return new CastSessionDevice(context, upnpServerCallback, listener, radio, lockKey, castSession);
   }
 }

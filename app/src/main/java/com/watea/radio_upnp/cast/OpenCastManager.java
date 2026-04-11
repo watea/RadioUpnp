@@ -24,16 +24,15 @@
 package com.watea.radio_upnp.cast;
 
 import android.content.Context;
-import android.net.Uri;
 import android.util.Log;
 import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.model.UpnpSessionDevice;
 
 // Singleton.
 // CastManager that does nothing.
@@ -65,12 +64,10 @@ public class OpenCastManager<T extends SessionDevice> {
   @Nullable
   public T getCastSessionDevice(
     @NonNull Context context,
-    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
+    @NonNull UpnpSessionDevice.UpnpServerCallback upnpServerCallback,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey,
-    @NonNull Uri radioUri,
-    @Nullable Uri logoUri) {
+    @NonNull String lockKey) {
     Log.e(LOG_TAG, "getCastSessionDevice: invalid call");
     return null;
   }

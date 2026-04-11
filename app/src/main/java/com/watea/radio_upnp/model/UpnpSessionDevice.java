@@ -64,11 +64,11 @@ public class UpnpSessionDevice extends SessionDevice {
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
   @NonNull
-  private final ActionController actionController;
-  @NonNull
   private final Uri radioUri;
   @NonNull
   private final Uri logoUri;
+  @NonNull
+  private final ActionController actionController;
   @Nullable
   private final Service connectionManager;
   @Nullable
@@ -84,18 +84,17 @@ public class UpnpSessionDevice extends SessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
-    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
+    @NonNull Mode mode,
+    @NonNull UpnpServerCallback upnpServerCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
-    @NonNull Uri radioUri,
-    @NonNull Uri logoUri,
     @NonNull Device device,
     @NonNull ActionController actionController) {
-    super(context, (capturingAudioSinkCallback != null), capturingAudioSinkCallback, listener, radio, lockKey);
-    this.radioUri = radioUri;
+    super(context, mode, upnpServerCallback.getPcmCallback(), listener, radio, lockKey);
+    this.radioUri = upnpServerCallback.getStreamUri(this.radio, this.lockKey, (this.mode == Mode.PCM));
+    this.logoUri = upnpServerCallback.getLogoUri(this.radio);
     this.actionController = actionController;
-    this.logoUri = logoUri;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
     avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
@@ -404,11 +403,22 @@ public class UpnpSessionDevice extends SessionDevice {
       "<item id=\"" + Request.escapeXml(radio.getId()) + "\" parentID=\"0\" restricted=\"1\">" +
       "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
       "<dc:title>" + Request.escapeXml(radio.getName()) + "</dc:title>" +
-      "<upnp:artist>" + information + "</upnp:artist>" +
+      "<upnp:artist>" + Request.escapeXml(information) + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
-      "<upnp:albumArtURI>" + logoUri + "</upnp:albumArtURI>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlDlnaTail() + "\">" + radioUri + "</res>" +
+      "<upnp:albumArtURI>" + Request.escapeXml(logoUri.toString()) + "</upnp:albumArtURI>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlDlnaTail() + "\">" + Request.escapeXml(radioUri.toString()) + "</res>" +
       "</item>" +
       "</DIDL-Lite>";
+  }
+
+  public interface UpnpServerCallback {
+    @NonNull
+    CapturingAudioSink.Callback getPcmCallback();
+
+    @NonNull
+    Uri getLogoUri(@NonNull Radio radio);
+
+    @NonNull
+    Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm);
   }
 }

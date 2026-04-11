@@ -23,6 +23,7 @@
 
 package com.watea.radio_upnp.service;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.Log;
@@ -51,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 
-public class UpnpStreamServer extends HttpServer {
+public class UpnpStreamServer extends HttpServer implements UpnpSessionDevice.UpnpServerCallback {
   private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
@@ -66,14 +67,15 @@ public class UpnpStreamServer extends HttpServer {
   private static final int QUEUE_SIZE = 300; // ~10s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private static final int PACER_POLL_TIMEOUT = 500; // ms
   private static final int REMOTE_LOGO_SIZE = 300;
-  private static final String LOGO_PATH = "/logo";
-  private static final String LOGO_SUFFIX = ".jpg";
+  private static final String LOGO_PATH = "/logo.jpg";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final int PIPE_BUFFER_SIZE = 8192; // Matches default Java I/O buffer size
   private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
   private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
   @NonNull
   private final Callback callback;
+  @NonNull
+  private final Context context;
   private final ConcurrentHashMap<String, Watchdog> watchdogs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Set<ArrayBlockingQueue<byte[]>>> queuess = new ConcurrentHashMap<>();
   @NonNull
@@ -113,46 +115,38 @@ public class UpnpStreamServer extends HttpServer {
       });
     }
   };
-  @Nullable
-  private Uri logoUri = null;
-  @Nullable
-  private byte[] logoBytes = null;
 
-  public UpnpStreamServer(@NonNull Callback callback) throws IOException {
+  public UpnpStreamServer(@NonNull Context context, @NonNull Callback callback) throws IOException {
+    this.context = context;
     this.callback = callback;
     addHandler(new LogoHandler());
     addHandler(new PcmStreamHandler());
     addHandler(new RelayStreamHandler());
   }
 
+  public void release() {
+    launch(null);
+  }
+
+  @Override
   @NonNull
   public CapturingAudioSink.Callback getPcmCallback() {
     return capturingAudioSinkCallback;
   }
 
+  @Override
   @NonNull
-  public Uri setLogo(@NonNull final Radio radio, @NonNull final String localIp) {
-    final Bitmap bitmap = Bitmap.createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
-    final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
-    logoBytes = byteArrayOutputStream.toByteArray();
-    return logoUri = new Uri.Builder()
-      .scheme(SCHEME)
-      .encodedAuthority(localIp + ":" + getListeningPort())
-      .path(LOGO_PATH + radio.getId() + LOGO_SUFFIX)
+  public Uri getLogoUri(@NonNull Radio radio) {
+    return getUriBuilder(radio)
+      .path(LOGO_PATH)
       .build();
   }
 
-  public void release() {
-    launch(null);
-  }
-
-  public Uri getStreamUri(@NonNull String localIp, @NonNull Radio radio, @NonNull String lockKey, boolean isPcm) {
-    return new Uri.Builder()
-      .scheme(SCHEME)
-      .encodedAuthority(localIp + ":" + getListeningPort())
+  @Override
+  @NonNull
+  public Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm) {
+    return getUriBuilder(radio)
       .path(STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : ""))
-      .appendQueryParameter(ID_PARAM, radio.getId())
       .appendQueryParameter(LOCKKEY_PARAM, lockKey)
       .build();
   }
@@ -177,12 +171,53 @@ public class UpnpStreamServer extends HttpServer {
     }
   }
 
+  @NonNull
+  private Uri.Builder getUriBuilder(@NonNull Radio radio) {
+    final String localIp = new NetworkProxy(context).getWifiIpAddress();
+    return new Uri.Builder()
+      .scheme(SCHEME)
+      .encodedAuthority(((localIp == null) ? "0.0.0.0" : localIp) + ":" + getListeningPort())
+      .appendQueryParameter(ID_PARAM, radio.getId());
+  }
+
   public interface Callback {
     void onDisconnected(@NonNull String lockKey);
 
     void onConnected(@NonNull String lockKey);
 
     void onInformation(@NonNull String information, @NonNull String lockKey);
+  }
+
+  // Serves the radio logo as JPEG
+  private static class LogoHandler implements HttpServer.Handler {
+    @Override
+    public void handle(
+      @NonNull HttpServer.Request request,
+      @NonNull HttpServer.Response response,
+      @NonNull OutputStream responseStream) throws IOException {
+      if (!request.getPath().equals(LOGO_PATH)) {
+        return; // Not our path
+      }
+      final String id = request.getParams(ID_PARAM);
+      final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
+      if (radio == null) {
+        Log.e(LOG_TAG, "LogoHandler: no radio available");
+        return;
+      }
+      Log.d(LOG_TAG, "LogoHandler: serving logo");
+      final Bitmap bitmap = Bitmap.createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
+      final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+      bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
+      final byte[] logoBytes = byteArrayOutputStream.toByteArray();
+      if (logoBytes.length == 0) {
+        Log.e(LOG_TAG, "LogoHandler: no logo available");
+        return;
+      }
+      response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
+      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
+      response.send();
+      responseStream.write(logoBytes);
+    }
   }
 
   // Base handler for audio stream requests — validates method and lockKey,
@@ -248,28 +283,6 @@ public class UpnpStreamServer extends HttpServer {
         v.relaunch();
         return v;
       });
-    }
-  }
-
-  // Serves the radio logo as JPEG
-  private class LogoHandler implements HttpServer.Handler {
-    @Override
-    public void handle(
-      @NonNull HttpServer.Request request,
-      @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream) throws IOException {
-      if ((logoUri == null) || !request.getPath().equals(logoUri.getPath())) {
-        return; // Not our path
-      }
-      if (logoBytes == null) {
-        Log.e(LOG_TAG, "LogoHandler: no logo available");
-        return;
-      }
-      Log.d(LOG_TAG, "LogoHandler: serving logo");
-      response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
-      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
-      response.send();
-      responseStream.write(logoBytes);
     }
   }
 
