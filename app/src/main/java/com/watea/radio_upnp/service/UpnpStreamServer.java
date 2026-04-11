@@ -51,6 +51,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class UpnpStreamServer extends HttpServer implements UpnpSessionDevice.UpnpServerCallback {
   private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
@@ -72,6 +74,7 @@ public class UpnpStreamServer extends HttpServer implements UpnpSessionDevice.Up
   private static final int PIPE_BUFFER_SIZE = 8192; // Matches default Java I/O buffer size
   private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
   private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
+  private static final Pattern PARAM_PATTERN = Pattern.compile("[?&](?:amp;)*([^=]+)=([^&]*)");
   @NonNull
   private final Callback callback;
   @NonNull
@@ -122,6 +125,23 @@ public class UpnpStreamServer extends HttpServer implements UpnpSessionDevice.Up
     addHandler(new LogoHandler());
     addHandler(new PcmStreamHandler());
     addHandler(new RelayStreamHandler());
+  }
+
+  // Fallback for renderers sending HTML-encoded separators such as
+  // '&amp;amp;' instead of '&', which confuses request.getParam()
+  @Nullable
+  private static String getParam(@NonNull HttpServer.Request request, @NonNull String name) {
+    final String value = request.getParam(name);
+    if (value != null) {
+      return value;
+    }
+    final Matcher matcher = PARAM_PATTERN.matcher(request.getRawPath());
+    while (matcher.find()) {
+      if (name.equals(matcher.group(1))) {
+        return matcher.group(2);
+      }
+    }
+    return null;
   }
 
   public void release() {
@@ -198,7 +218,7 @@ public class UpnpStreamServer extends HttpServer implements UpnpSessionDevice.Up
       if (!request.getPath().equals(LOGO_PATH)) {
         return; // Not our path
       }
-      final String id = request.getParams(ID_PARAM);
+      final String id = getParam(request, ID_PARAM);
       final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
       if (radio == null) {
         Log.e(LOG_TAG, "LogoHandler: no radio available");
@@ -228,11 +248,11 @@ public class UpnpStreamServer extends HttpServer implements UpnpSessionDevice.Up
       @NonNull HttpServer.Request request,
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream) throws IOException {
-      final String incomingLockKey = request.getParams(LOCKKEY_PARAM);
-      final String id = request.getParams(ID_PARAM);
+      final String incomingLockKey = getParam(request, LOCKKEY_PARAM);
+      final String id = getParam(request, ID_PARAM);
       final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
       final String method = request.getMethod();
-      Log.d(LOG_TAG, getClass().getSimpleName() + ": handle - " + method + " - " + id + " -" + incomingLockKey);
+      Log.d(LOG_TAG, getClass().getSimpleName() + ": handle - " + method + " - " + id + " - " + incomingLockKey);
       if ((radio != null) && lockKey.equals(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
         handleStream(response, responseStream, method.equals(HEAD), radio, lockKey);
       }

@@ -90,7 +90,7 @@ dependencies {
     // apache
     implementation 'org.apache.commons:commons-io:1.3.2'
     // CandidHttpServer
-    implementation 'com.github.watea:candidhttpserver:1.0.14'
+    implementation 'com.github.watea:candidhttpserver:1.0.15'
     // AndroidSsdpClient
     implementation 'com.github.watea:androidssdpclient:1.0.8'
     // okhttp
