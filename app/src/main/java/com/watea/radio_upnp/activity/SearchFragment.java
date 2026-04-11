@@ -37,7 +37,7 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.service.RadioURL;
+import com.watea.radio_upnp.model.RadioURL;
 
 import org.json.JSONArray;
 import org.json.JSONException;

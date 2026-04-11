@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.service;
+package com.watea.radio_upnp.model;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -91,10 +91,10 @@ public class RadioURL {
   }
 
   @Nullable
-  public static Bitmap iconSearch(@NonNull URL url) {
+  public static Bitmap iconSearch(@NonNull URL uRL) {
     Bitmap result = null;
     try {
-      final Element head = Jsoup.connect(url.toString()).get().head();
+      final Element head = Jsoup.connect(uRL.toString()).get().head();
       final List<String> candidateUrls = new ArrayList<>();
       // Extract link[rel=icon]
       head.select("link[rel~=(?i)icon]").forEach(link -> {
@@ -129,7 +129,7 @@ public class RadioURL {
         }
       }
     } catch (Exception exception) {
-      Log.d(LOG_TAG, "Error performing icon web site search for URL: " + url, exception);
+      Log.d(LOG_TAG, "Error performing icon web site search for URL: " + uRL, exception);
     }
     return result;
   }

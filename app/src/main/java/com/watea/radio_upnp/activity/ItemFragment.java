@@ -51,7 +51,7 @@ import androidx.core.content.ContextCompat;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.service.RadioURL;
+import com.watea.radio_upnp.model.RadioURL;
 
 import java.io.File;
 import java.io.FileNotFoundException;
