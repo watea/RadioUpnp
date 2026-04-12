@@ -328,7 +328,7 @@ public class RadioService
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
     // Player
-    playerAdapter = new PlayerAdapter(this, mediaSessionCompatCallback::onPlay);
+    playerAdapter = new PlayerAdapter(this);
     // Launch HTTP server
     try {
       upnpStreamServer = new UpnpStreamServer(this, upnpStreamCallback);
@@ -877,7 +877,8 @@ public class RadioService
             radio,
             lockKey,
             upnpSelectedDevice,
-            upnpService.getActionController()) :
+            upnpService.getActionController(),
+            mediaSessionCompatCallback::onPlay) :
           new LocalSessionDevice(
             RadioService.this,
             RadioService.this,

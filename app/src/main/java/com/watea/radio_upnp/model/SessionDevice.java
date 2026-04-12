@@ -113,8 +113,6 @@ public abstract class SessionDevice {
 
   public abstract boolean isRemote();
 
-  public abstract boolean isUpnp();
-
   public abstract void setVolume(float volume);
 
   public abstract void adjustVolume(int direction);
@@ -132,10 +130,6 @@ public abstract class SessionDevice {
     return (getState() == PlaybackStateCompat.STATE_PLAYING);
   }
 
-  public boolean isPaused() {
-    return (getState() == PlaybackStateCompat.STATE_PAUSED);
-  }
-
   public void play() {
     if (isExoPlayerActive()) {
       exoPlayer.play();
@@ -144,12 +138,7 @@ public abstract class SessionDevice {
 
   public void pause() {
     if (isExoPlayerActive()) {
-      // UPnP session shall be relaunched after pause, so we stop it
-      if (isUpnp()) {
-        exoPlayer.stop();
-      } else {
-        exoPlayer.pause();
-      }
+      exoPlayer.pause();
     }
   }
 

@@ -40,6 +40,7 @@ import com.watea.radio_upnp.upnp.Request;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.UpnpAction;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class UpnpSessionDevice extends RemoteSessionDevice {
@@ -69,6 +70,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private final Service renderingControl;
   @NonNull
   private final String information; // Not final in further use
+  @NonNull
+  private final Consumer<Radio> onPlayCallback;
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -81,9 +84,11 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull Radio radio,
     @NonNull String lockKey,
     @NonNull Device device,
-    @NonNull ActionController actionController) {
+    @NonNull ActionController actionController,
+    @NonNull Consumer<Radio> onPlayCallback) {
     super(context, getMode(context), serverCallback, listener, radio, lockKey);
     this.actionController = actionController;
+    this.onPlayCallback = onPlayCallback;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
     avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
@@ -127,11 +132,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     return mode;
   }
 
-  @Override
-  public boolean isUpnp() {
-    return true;
-  }
-
   // Not implemented
   @Override
   public void setVolume(float volume) {
@@ -164,17 +164,21 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   @Override
   public void play() {
-    Log.e(LOG_TAG, "play: shall not be used!");
+    onPlayCallback.accept(radio);
   }
 
   @Override
   public void pause() {
-    super.pause();
+    // Pause immediately
+    onState(PlaybackStateCompat.STATE_PAUSED);
+    super.stop();
     scheduleActionStop();
   }
 
   @Override
   public void stop() {
+    // Stop immediately
+    onState(PlaybackStateCompat.STATE_STOPPED);
     super.stop();
     scheduleActionStop();
   }
@@ -227,14 +231,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     scheduleMandatoryAction(
       (avTransportService == null) ? null : avTransportService.getAction(ACTION_STOP),
       action -> new UpnpAction(action, actionController, instanceId) {
-        @Override
-        protected void onSuccess() {
-          if (isPaused()) {
-            onState(PlaybackStateCompat.STATE_PAUSED);
-          }
-          super.onSuccess();
-        }
-
         @Override
         protected void onFailure() {
           Log.d(LOG_TAG, "scheduleActionStop: error");

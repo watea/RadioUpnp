@@ -41,8 +41,6 @@ import androidx.annotation.Nullable;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.SessionDevice;
 
-import java.util.function.Consumer;
-
 // Player implementation that handles playing music with proper handling of headphones and audio focus
 public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   private static final String LOG_TAG = PlayerAdapter.class.getSimpleName();
@@ -59,8 +57,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   private final AudioManager audioManager;
   @NonNull
   private final AudioFocusRequest audioFocusRequest;
-  @NonNull
-  private final Consumer<Radio> onPlayCallback;
   @Nullable
   private SessionDevice sessionDevice = null;
   private boolean playOnAudioFocus = false;
@@ -74,9 +70,8 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   };
   private boolean audioNoisyReceiverRegistered = false;
 
-  public PlayerAdapter(@NonNull Context context, @NonNull Consumer<Radio> onPlayCallback) {
+  public PlayerAdapter(@NonNull Context context) {
     this.context = context;
-    this.onPlayCallback = onPlayCallback;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
@@ -118,11 +113,7 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
         if (!isRemote()) {
           registerAudioNoisyReceiver();
         }
-        if (sessionDevice.isUpnp()) {
-          onPlayCallback.accept(getRadio());
-        } else {
-          onPlay();
-        }
+        onPlay();
       }
     } else {
       Log.e(LOG_TAG, "Internal failure on play; not allowed");

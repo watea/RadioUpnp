@@ -48,11 +48,6 @@ public class LocalSessionDevice extends SessionDevice {
   }
 
   @Override
-  public boolean isUpnp() {
-    return false;
-  }
-
-  @Override
   public void setVolume(float volume) {
     exoPlayer.setVolume(volume);
   }

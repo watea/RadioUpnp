@@ -100,11 +100,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public boolean isUpnp() {
-    return false;
-  }
-
-  @Override
   public void setVolume(float volume) {
     try {
       castSession.setVolume(volume); // 0.0 to 1.0
@@ -171,9 +166,9 @@ public class CastSessionDevice extends RemoteSessionDevice {
 
   @Override
   public void stop() {
-    super.stop();
     // Stop immediately
     onState(PlaybackStateCompat.STATE_STOPPED);
+    super.stop();
     if (remoteMediaClient != null) {
       remoteMediaClient.stop();
     }
