@@ -25,14 +25,11 @@ package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.media.AudioManager;
-import android.net.Uri;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
-import androidx.media3.common.util.UnstableApi;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
@@ -45,8 +42,7 @@ import com.watea.radio_upnp.upnp.UpnpAction;
 
 import java.util.function.Function;
 
-@OptIn(markerClass = UnstableApi.class)
-public class UpnpSessionDevice extends SessionDevice {
+public class UpnpSessionDevice extends RemoteSessionDevice {
   public static final String PCM_MIME = "audio/wav";
   private static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
@@ -64,10 +60,6 @@ public class UpnpSessionDevice extends SessionDevice {
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
   @NonNull
-  private final Uri radioUri;
-  @NonNull
-  private final Uri logoUri;
-  @NonNull
   private final ActionController actionController;
   @Nullable
   private final Service connectionManager;
@@ -84,15 +76,13 @@ public class UpnpSessionDevice extends SessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
-    @NonNull UpnpServerCallback upnpServerCallback,
+    @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
     @NonNull Device device,
     @NonNull ActionController actionController) {
-    super(context, getMode(context), upnpServerCallback.getPcmCallback(), listener, radio, lockKey);
-    this.radioUri = upnpServerCallback.getStreamUri(this.radio, this.lockKey, (this.mode == Mode.PCM));
-    this.logoUri = upnpServerCallback.getLogoUri(this.radio);
+    super(context, getMode(context), serverCallback, listener, radio, lockKey);
     this.actionController = actionController;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
@@ -135,11 +125,6 @@ public class UpnpSessionDevice extends SessionDevice {
     final Mode mode = MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true) ? Mode.PCM : Mode.MUTE;
     Log.d(LOG_TAG, "Mode => " + mode);
     return mode;
-  }
-
-  @Override
-  public boolean isRemote() {
-    return true;
   }
 
   @Override
@@ -415,16 +400,5 @@ public class UpnpSessionDevice extends SessionDevice {
       "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlDlnaTail() + "\">" + Request.escapeXml(radioUri.toString()) + "</res>" +
       "</item>" +
       "</DIDL-Lite>";
-  }
-
-  public interface UpnpServerCallback {
-    @NonNull
-    CapturingAudioSink.Callback getPcmCallback();
-
-    @NonNull
-    Uri getLogoUri(@NonNull Radio radio);
-
-    @NonNull
-    Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm);
   }
 }

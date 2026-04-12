@@ -39,7 +39,7 @@ public class LocalSessionDevice extends SessionDevice {
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey) {
-    super(context, Mode.LOCAL, null, listener, radio, lockKey);
+    super(context, Mode.LOCAL, listener, radio, lockKey);
   }
 
   @Override

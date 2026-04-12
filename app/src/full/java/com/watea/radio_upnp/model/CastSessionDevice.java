@@ -47,16 +47,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class CastSessionDevice extends SessionDevice {
+public class CastSessionDevice extends RemoteSessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
   private static final double VOLUME_STEP = 0.05; // 5%
   private static final int HEART_BEAT = 60; // s
   @NonNull
   private final CastSession castSession;
-  @NonNull
-  private final Uri radioUri;
-  @Nullable
-  private final Uri logoUri;
   @Nullable
   private RemoteMediaClient remoteMediaClient = null;
   private final RemoteMediaClient.Callback remoteCallback = new RemoteMediaClient.Callback() {
@@ -94,20 +90,13 @@ public class CastSessionDevice extends SessionDevice {
 
   public CastSessionDevice(
     @NonNull Context context,
-    @NonNull UpnpSessionDevice.UpnpServerCallback upnpServerCallback,
+    @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
     @NonNull CastSession castSession) {
-    super(context, Mode.PCM, upnpServerCallback.getPcmCallback(), listener, radio, lockKey);
-    this.radioUri = upnpServerCallback.getStreamUri(this.radio, this.lockKey, true);
-    this.logoUri = upnpServerCallback.getLogoUri(this.radio);
+    super(context, Mode.PCM, serverCallback, listener, radio, lockKey);
     this.castSession = castSession;
-  }
-
-  @Override
-  public boolean isRemote() {
-    return true;
   }
 
   @Override
@@ -209,13 +198,11 @@ public class CastSessionDevice extends SessionDevice {
     @NonNull String keyTitle,
     @NonNull String keySubtitle,
     @NonNull String radioUri,
-    @Nullable Uri logoUri) {
+    @NonNull Uri logoUri) {
     final MediaMetadata movieMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
     movieMetadata.putString(MediaMetadata.KEY_TITLE, keyTitle);
     movieMetadata.putString(MediaMetadata.KEY_SUBTITLE, keySubtitle);
-    if (logoUri != null) {
-      movieMetadata.addImage(new WebImage(logoUri));
-    }
+    movieMetadata.addImage(new WebImage(logoUri));
     final MediaInfo mediaInfo = new MediaInfo.Builder(radioUri)
       .setStreamType(MediaInfo.STREAM_TYPE_LIVE) // Radio
       .setMetadata(movieMetadata)

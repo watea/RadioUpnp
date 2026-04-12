@@ -44,7 +44,6 @@ import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.Renderer;
-import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
@@ -67,25 +66,24 @@ public abstract class SessionDevice {
   @NonNull
   protected final Mode mode;
   @NonNull
+  protected final CapturingAudioSink capturingAudioSink;
+  @NonNull
   private final Player.Listener playerListener;
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
-  @Nullable
-  CapturingAudioSink.Callback capturingAudioSinkCallback;
 
   public SessionDevice(
     @NonNull Context context,
     @NonNull Mode mode,
-    @Nullable CapturingAudioSink.Callback capturingAudioSinkCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey) {
     this.context = context;
     this.mode = mode;
-    this.capturingAudioSinkCallback = capturingAudioSinkCallback;
     this.listener = listener;
     this.radio = radio;
     this.lockKey = lockKey;
+    this.capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build(), this.lockKey);
     this.playerListener = getPlayerListener();
     this.exoPlayer = getExoPlayer();
   }
@@ -225,21 +223,8 @@ public abstract class SessionDevice {
     return new PlayerListener();
   }
 
-  protected boolean isExoPlayerActive() {
+  private boolean isExoPlayerActive() {
     return (mode != Mode.MUTE);
-  }
-
-  @NonNull
-  private AudioSink getAudioSink() {
-    final CapturingAudioSink capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(context).build(), lockKey);
-    if (mode == Mode.PCM) {
-      if (capturingAudioSinkCallback == null) {
-        Log.e(LOG_TAG, "getAudioSink: capturingAudioSinkCallback is null for PCM!");
-      } else {
-        capturingAudioSink.setCallback(capturingAudioSinkCallback);
-      }
-    }
-    return capturingAudioSink;
   }
 
   @NonNull
@@ -256,7 +241,7 @@ public abstract class SessionDevice {
             MediaCodecSelector.DEFAULT,
             handler,
             audioListener,
-            getAudioSink()),
+            capturingAudioSink),
           new MetadataRenderer(metadataOutput, handler.getLooper())
         })
       .build();

@@ -36,6 +36,7 @@ import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 import com.watea.radio_upnp.model.Radios;
+import com.watea.radio_upnp.model.RemoteSessionDevice;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
 
 import java.io.ByteArrayOutputStream;
@@ -54,7 +55,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class UpnpStreamServer extends HttpServer implements UpnpSessionDevice.UpnpServerCallback {
+public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.ServerCallback {
   private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
