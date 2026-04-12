@@ -42,9 +42,9 @@ public abstract class RemoteSessionDevice extends SessionDevice {
     @NonNull Radio radio,
     @NonNull String lockKey) {
     super(context, mode, listener, radio, lockKey);
-    this.radioUri = serverCallback.getStreamUri(this.radio, this.lockKey, (this.mode == Mode.PCM));
-    this.logoUri = serverCallback.getLogoUri(this.radio);
-    if (mode == Mode.PCM) {
+    radioUri = serverCallback.getStreamUri(this.radio, this.lockKey, (this.mode == Mode.PCM));
+    logoUri = serverCallback.getLogoUri(this.radio);
+    if (this.mode == Mode.PCM) {
       capturingAudioSink.setCallback(serverCallback.getPcmCallback());
     }
   }
