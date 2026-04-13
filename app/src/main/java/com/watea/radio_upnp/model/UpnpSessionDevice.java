@@ -171,14 +171,11 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   public void pause() {
     // Pause immediately
     onState(PlaybackStateCompat.STATE_PAUSED);
-    super.stop();
-    scheduleActionStop();
+    stop();
   }
 
   @Override
   public void stop() {
-    // Stop immediately
-    onState(PlaybackStateCompat.STATE_STOPPED);
     super.stop();
     scheduleActionStop();
   }
