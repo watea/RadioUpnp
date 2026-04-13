@@ -182,8 +182,6 @@ public class RadioURL {
         httpURLConnection.setConnectTimeout(CONNECTION_TIMEOUT);
         httpURLConnection.setReadTimeout(READ_TIMEOUT);
         httpURLConnection.setInstanceFollowRedirects(false);
-        // Kill zombie connections
-        httpURLConnection.setRequestProperty("Connection", "close");
         // Restore method (relevant for 307/308 chains)
         httpURLConnection.setRequestMethod(pendingMethod);
         // TLS support
