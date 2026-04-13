@@ -57,8 +57,8 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   private final AudioManager audioManager;
   @NonNull
   private final AudioFocusRequest audioFocusRequest;
-  @Nullable
-  private SessionDevice sessionDevice = null;
+  @NonNull
+  private final SessionDevice sessionDevice;
   private boolean playOnAudioFocus = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
@@ -70,8 +70,9 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   };
   private boolean audioNoisyReceiverRegistered = false;
 
-  public PlayerAdapter(@NonNull Context context) {
+  public PlayerAdapter(@NonNull Context context, @NonNull SessionDevice sessionDevice) {
     this.context = context;
+    this.sessionDevice = sessionDevice;
     audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
@@ -79,35 +80,18 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
       .build();
   }
 
-  public boolean hasSessionDevice() {
-    return (sessionDevice != null);
-  }
-
-  public void setSessionDevice(@NonNull SessionDevice sessionDevice) {
-    this.sessionDevice = sessionDevice;
-  }
-
   // Must be called
   public synchronized final boolean prepare() {
-    Log.d(LOG_TAG, "prepare");
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on prepare; no session device defined");
-    } else {
-      Log.d(LOG_TAG, "prepare on radio: " + sessionDevice.getRadio().getName());
-      if (isRemote() || requestAudioFocus()) {
-        onPrepare();
-        return true;
-      }
+    Log.d(LOG_TAG, "prepare on radio: " + sessionDevice.getRadio().getName());
+    if (isRemote() || requestAudioFocus()) {
+      onPrepare();
+      return true;
     }
     return false;
   }
 
   public synchronized final void play() {
     Log.d(LOG_TAG, "play");
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on play; no session device defined");
-      return;
-    }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PLAY)) {
       if (isRemote() || requestAudioFocus()) {
         if (!isRemote()) {
@@ -122,10 +106,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   public synchronized final void pause() {
     Log.d(LOG_TAG, "pause");
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on pause; no session device defined");
-      return;
-    }
     if (isAvailableAction(PlaybackStateCompat.ACTION_PAUSE)) {
       if (!isRemote() && !playOnAudioFocus) {
         releaseAudioFocus();
@@ -140,10 +120,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   public synchronized final void stop() {
     Log.d(LOG_TAG, "stop");
-    if (sessionDevice == null) {
-      Log.d(LOG_TAG, "stop: no session device defined");
-      return;
-    }
     // Stop immediately
     sessionDevice.onState(PlaybackStateCompat.STATE_STOPPED);
     if (!isRemote()) {
@@ -170,28 +146,16 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   public void setVolume(float volume) {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on setVolume; no session device defined");
-    } else {
-      sessionDevice.setVolume(volume);
-    }
+    sessionDevice.setVolume(volume);
   }
 
   public void adjustVolume(int direction) {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on adjustVolume; no session device defined");
-    } else {
-      sessionDevice.adjustVolume(direction);
-    }
+    sessionDevice.adjustVolume(direction);
   }
 
   @Override
   public void onAudioFocusChange(int focusChange) {
     Log.d(LOG_TAG, "onAudioFocusChange: " + focusChange);
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onAudioFocusChange; no session device defined");
-      return;
-    }
     // No effect on remote playback
     if (isRemote()) {
       return;
@@ -223,59 +187,34 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   @Nullable
   public Radio getRadio() {
-    return (sessionDevice == null) ? null : sessionDevice.getRadio();
+    return sessionDevice.getRadio();
   }
 
   public boolean isRemote() {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on isRemote; no session device defined");
-      return false;
-    } else {
-      return sessionDevice.isRemote();
-    }
+    return sessionDevice.isRemote();
   }
 
   private void onPrepare() {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onPrepare; no session device defined");
-    } else {
-      new Thread(sessionDevice::prepare).start();
-    }
+    new Thread(sessionDevice::prepare).start();
   }
 
   // Called when media is ready to be played and indicates the app has audio focus
   private void onPlay() {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onPlay; no session device defined");
-    } else {
-      sessionDevice.play();
-    }
+    sessionDevice.play();
   }
 
   // Called when media must be paused
   private void onPause() {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onPause; no session device defined");
-    } else {
-      sessionDevice.pause();
-    }
+    sessionDevice.pause();
   }
 
   // Called when the media must be stopped. The player should clean up resources at this point
   private void onStop() {
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "Internal failure on onStop; no session device defined");
-    } else {
-      sessionDevice.stop();
-    }
+    sessionDevice.stop();
   }
 
   private void onRelease() {
-    if (sessionDevice == null) {
-      Log.d(LOG_TAG, "onRelease; no session device defined");
-    } else {
-      sessionDevice.release();
-    }
+    sessionDevice.release();
   }
 
   private void registerAudioNoisyReceiver() {
@@ -304,6 +243,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   private boolean isAvailableAction(long action) {
-    return (sessionDevice != null) && ((sessionDevice.getAvailableActions(sessionDevice.getState()) & action) > 0L);
+    return (sessionDevice.getAvailableActions(sessionDevice.getState()) & action) > 0L;
   }
 }

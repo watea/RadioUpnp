@@ -108,7 +108,8 @@ public class RadioService
   private volatile boolean isAllowedToRewind = false;
   @NonNull
   private volatile String lockKey = getLockKey();
-  private PlayerAdapter playerAdapter;
+  @Nullable
+  private PlayerAdapter playerAdapter = null;
   private final VolumeProviderCompat volumeProviderCompat = new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
     @Override
     public void onAdjustVolume(int direction) {
@@ -327,8 +328,6 @@ public class RadioService
     // Create radios if needed
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
-    // Player
-    playerAdapter = new PlayerAdapter(this);
     // Launch HTTP server
     try {
       upnpStreamServer = new UpnpStreamServer(this, upnpStreamCallback);
@@ -369,7 +368,9 @@ public class RadioService
     // Radios
     Radios.getInstance().removeListener(radiosListener);
     // Stop player to be clean on resources (if not, audio focus is not well handled)
-    playerAdapter.stop();
+    if (playerAdapter != null) {
+      playerAdapter.stop();
+    }
     // Release HTTP server
     if (upnpStreamServer != null) {
       try {
@@ -414,7 +415,7 @@ public class RadioService
   public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onNewInformation: " + information);
-      final Radio radio = playerAdapter.getRadio();
+      final Radio radio = (playerAdapter == null) ? null : playerAdapter.getRadio();
       if (radio != null) {
         final MediaMetadataCompat mediaMetadataCompat = mediaController.getMetadata();
         if (mediaMetadataCompat != null) {
@@ -490,7 +491,7 @@ public class RadioService
       return;
     }
     // Error is not accepted if remote and paused
-    if ((playerAdapter.isRemote() && (intState == PlaybackStateCompat.STATE_ERROR) && (currentState == PlaybackStateCompat.STATE_PAUSED))) {
+    if ((playerAdapter == null) || playerAdapter.isRemote() && (intState == PlaybackStateCompat.STATE_ERROR) && (currentState == PlaybackStateCompat.STATE_PAUSED)) {
       return;
     }
     // Report the state to the MediaSession
@@ -539,7 +540,7 @@ public class RadioService
   private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information, @NonNull String playlist) {
     session.setMetadata(radio.getMediaMetadataBuilder(
         getString(R.string.app_name),
-        playerAdapter.isRemote() ? " " + getString(R.string.remote) : "",
+        (playerAdapter != null) && playerAdapter.isRemote() ? " " + getString(R.string.remote) : "",
         information)
       .putString(PLAYLIST, playlist).build());
   }
@@ -573,7 +574,7 @@ public class RadioService
         // Radio current track
         .setContentText(description.getSubtitle())
         // Remote?
-        .setSubText(playerAdapter.isRemote() ? getString(R.string.remote) : "");
+        .setSubText((playerAdapter != null) && playerAdapter.isRemote() ? getString(R.string.remote) : "");
     }
     final androidx.media.app.NotificationCompat.MediaStyle mediaStyle =
       new androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(getSessionToken());
@@ -682,7 +683,7 @@ public class RadioService
       // Store
       MainActivity.getAppPreferences(RadioService.this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
       // Retrieve last radio
-      final Radio lastRadio = playerAdapter.getRadio();
+      final Radio lastRadio = (playerAdapter == null) ? null : playerAdapter.getRadio();
       // Change session tag
       lockKey = getLockKey();
       // Clean current PlayerAdapter; must be done at each new lockKey
@@ -691,7 +692,7 @@ public class RadioService
       releaseScheduler();
       // PlayerAdapter settings
       final SessionDevice sessionDevice = getSessionDevice(radio, lockKey);
-      playerAdapter.setSessionDevice(sessionDevice);
+      playerAdapter = new PlayerAdapter(RadioService.this, sessionDevice);
       // Volume
       if (sessionDevice.isRemote()) {
         session.setPlaybackToRemote(volumeProviderCompat);
@@ -747,21 +748,21 @@ public class RadioService
     @Override
     public void onPlay() {
       Log.d(LOG_TAG, "onPlay");
-      final int state = getPlaybackState();
       // Is it an init call?
-      if (playerAdapter.hasSessionDevice() &&
-        ((state == PlaybackStateCompat.STATE_PAUSED) ||
-          (state == PlaybackStateCompat.STATE_BUFFERING) ||
-          (state == PlaybackStateCompat.STATE_PLAYING))) {
-        playerAdapter.play();
-      } else {
+      if (playerAdapter == null) {
         isLastRadioToLaunch = !launchLastRadio();
+      } else {
+        playerAdapter.play();
       }
     }
 
     @Override
     public void onPause() {
       Log.d(LOG_TAG, "onPause");
+      if (playerAdapter == null) {
+        Log.e(LOG_TAG, "onPause: playerAdapter is null!");
+        return;
+      }
       playerAdapter.pause();
     }
 
@@ -778,6 +779,10 @@ public class RadioService
     @Override
     public void onRewind() {
       Log.d(LOG_TAG, "onRewind");
+      if (playerAdapter == null) {
+        Log.e(LOG_TAG, "onRewind: playerAdapter is null!");
+        return;
+      }
       // We relaunch a session
       final Radio radio = playerAdapter.getRadio();
       if (radio != null) {
@@ -788,6 +793,10 @@ public class RadioService
     @Override
     public void onStop() {
       Log.d(LOG_TAG, "onStop");
+      if (playerAdapter == null) {
+        Log.e(LOG_TAG, "onStop: playerAdapter is null!");
+        return;
+      }
       playerAdapter.stop();
     }
 
@@ -840,6 +849,10 @@ public class RadioService
     }
 
     private void skipTo(int direction) {
+      if (playerAdapter == null) {
+        Log.e(LOG_TAG, "skipTo: playerAdapter is null!");
+        return;
+      }
       final Radio radio = playerAdapter.getRadio();
       if (radio == null) {
         // Should not happen
