@@ -367,11 +367,11 @@ public class Radio {
   }
 
   @Nullable
-  public ConnectionSet getConnectionSet() {
+  public ConnectionSet getConnectionSet(@NonNull String userAgent) {
     if (connectionSet == null) {
       HttpURLConnection httpURLConnection = null;
       try {
-        httpURLConnection = new RadioURL(url).getActualHttpURLConnection();
+        httpURLConnection = new RadioURL(url).getActualHttpURLConnection(userAgent);
         final URL actualUrl = httpURLConnection.getURL();
         String contentType = RadioURL.getStreamContentType(httpURLConnection);
         contentType = (contentType == null) ? DEFAULT_MIME : contentType;

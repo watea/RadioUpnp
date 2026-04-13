@@ -150,13 +150,13 @@ public class RadioURL {
   }
 
   @NonNull
-  public HttpURLConnection getActualHttpURLConnection() throws IOException {
-    return getActualHttpURLConnection(Collections.emptyMap());
+  public HttpURLConnection getActualHttpURLConnection(@NonNull String userAgent) throws IOException {
+    return getActualHttpURLConnection(userAgent, Collections.emptyMap());
   }
 
   // Handle redirection
   @NonNull
-  public HttpURLConnection getActualHttpURLConnection(@NonNull Map<String, String> requestProperties) throws IOException {
+  public HttpURLConnection getActualHttpURLConnection(@NonNull String userAgent, @NonNull Map<String, String> requestProperties) throws IOException {
     if (uRL == null) {
       throw new IOException("getActualHttpURLConnection: URL is null");
     }
@@ -189,6 +189,8 @@ public class RadioURL {
           ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
         }
         // Parameters
+        httpURLConnection.setRequestProperty("User-Agent", userAgent);
+        httpURLConnection.setRequestProperty("Icy-Metadata", "1");
         requestProperties.forEach(httpURLConnection::setRequestProperty);
         // Get HTTP response
         final int responseCode;

@@ -32,6 +32,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.candidhttpserver.HttpServer;
+import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
@@ -46,7 +47,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,8 +60,6 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
   private static final String ID_PARAM = "id";
-  private static final String ICY_METADATA_HEADER = "icy-metadata";
-  private static final String ICY_METAINT_HEADER = "icy-metaint";
   private static final String HEAD = "HEAD";
   private static final String GET = "GET";
   private static final String SCHEME = "http";
@@ -422,7 +420,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       @NonNull String lockKey) throws IOException {
       Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Upstream
-      final Radio.ConnectionSet connectionSet = radio.getConnectionSet();
+      final Radio.ConnectionSet connectionSet = radio.getConnectionSet(context.getString(R.string.app_name));
       if (connectionSet == null) {
         Log.d(LOG_TAG, "RelayStreamHandler: upstream is not defined");
         callback.onDisconnected(lockKey);
@@ -436,7 +434,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       // New upstream connection per GET thread — a shared connection causes concurrent stream corruption
       final HttpURLConnection httpURLConnection;
       try {
-        httpURLConnection = new RadioURL(connectionSet.getUrl()).getActualHttpURLConnection(Collections.singletonMap(ICY_METADATA_HEADER, "1"));
+        httpURLConnection = new RadioURL(connectionSet.getUrl()).getActualHttpURLConnection(context.getString(R.string.app_name));
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "RelayStreamHandler: unable to connect", ioException);
         callback.onDisconnected(lockKey);
@@ -444,7 +442,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       }
       // We signal actual connection and start stream
       signalConnectionAndLaunchWatchdog(lockKey);
-      final String icyMetaIntValue = httpURLConnection.getHeaderField(ICY_METAINT_HEADER);
+      final String icyMetaIntValue = httpURLConnection.getHeaderField("Icy-Metaint");
       final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
         new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onInformation(title, lockKey));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];

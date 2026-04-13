@@ -42,13 +42,19 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.Renderer;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.metadata.MetadataRenderer;
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
+
+import com.watea.radio_upnp.R;
+
+import java.util.Collections;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
@@ -151,7 +157,7 @@ public abstract class SessionDevice {
   // Must be called in its own thread.
   // Fires ERROR if upstream connection failed.
   public boolean prepare() {
-    connectionSet = radio.getConnectionSet();
+    connectionSet = radio.getConnectionSet(context.getString(R.string.app_name));
     if (connectionSet == null) {
       Log.d(LOG_TAG, "prepare: unable to connect");
       onState(PlaybackStateCompat.STATE_ERROR);
@@ -218,7 +224,10 @@ public abstract class SessionDevice {
 
   @NonNull
   private ExoPlayer getExoPlayer() {
+    final DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
+      .setDefaultRequestProperties(Collections.singletonMap("User-Agent", context.getString(R.string.app_name)));
     return new ExoPlayer.Builder(context)
+      .setMediaSourceFactory(new DefaultMediaSourceFactory(httpDataSourceFactory))
       .setRenderersFactory(
         (handler,
          videoListener,

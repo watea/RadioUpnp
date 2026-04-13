@@ -343,7 +343,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     @Override
     protected void onSearch() {
       try {
-        httpURLConnection = new RadioURL(url).getActualHttpURLConnection();
+        httpURLConnection = new RadioURL(url).getActualHttpURLConnection(getMainActivity().getString(R.string.app_name));
         streamContent = RadioURL.getStreamContentType(httpURLConnection);
         actualUrl = httpURLConnection.getURL().toString();
       } catch (IOException ioException) {
