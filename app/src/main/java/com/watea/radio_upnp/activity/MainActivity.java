@@ -30,7 +30,6 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -48,7 +47,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -221,30 +219,6 @@ public class MainActivity
   }
 
   @NonNull
-  private static PrintWriter getPrintWriter(@NonNull Process process, @NonNull File logFile) throws IOException {
-    final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-    final FileOutputStream fileOutputStream = new FileOutputStream(logFile);
-    final PrintWriter printWriter = new PrintWriter(fileOutputStream);
-    // --- Device info ---
-    printWriter.println("===== DEVICE INFO =====");
-    printWriter.println("App version : " + BuildConfig.VERSION_NAME);
-    printWriter.println("Android     : " + Build.VERSION.RELEASE);
-    printWriter.println("SDK         : " + Build.VERSION.SDK_INT);
-    printWriter.println("Device      : " + Build.MANUFACTURER + " " + Build.MODEL);
-    printWriter.println("Brand       : " + Build.BRAND);
-    printWriter.println("Board       : " + Build.BOARD);
-    printWriter.println("========================");
-    printWriter.println();
-    // --- Logcat ---
-    String line;
-    while ((line = bufferedReader.readLine()) != null) {
-      printWriter.println(line);
-    }
-    printWriter.flush();
-    return printWriter;
-  }
-
-  @NonNull
   public SharedPreferences getSharedPreferences() {
     return sharedPreferences;
   }
@@ -299,9 +273,9 @@ public class MainActivity
         break;
       default:
         // Shall not fail to find!
-        for (final Class<? extends Fragment> fragment : FRAGMENT_MENU_IDS.keySet()) {
-          if (id.equals(FRAGMENT_MENU_IDS.get(fragment))) {
-            setFragment(fragment);
+        for (final Map.Entry<Class<? extends Fragment>, Integer> entry : FRAGMENT_MENU_IDS.entrySet()) {
+          if (id.equals(entry.getValue())) {
+            setFragment(entry.getKey());
           }
         }
     }
@@ -316,7 +290,7 @@ public class MainActivity
       mainActivityFragment.getFloatingActionButtonOnClickListener());
     floatingActionButton.setOnLongClickListener(
       mainActivityFragment.getFloatingActionButtonOnLongClickListener());
-    int resource = mainActivityFragment.getFloatingActionButtonResource();
+    final int resource = mainActivityFragment.getFloatingActionButtonResource();
     if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
       floatingActionButton.setImageResource(resource);
     }
@@ -494,8 +468,8 @@ public class MainActivity
       result -> {
         if (result.getResultCode() == RESULT_OK) {
           final Intent data = result.getData();
-          if (data != null && data.getData() != null) {
-            final Uri uri = result.getData().getData();
+          if (data != null) {
+            final Uri uri = data.getData();
             if (uri != null) {
               assert importExportAction != null;
               switch (importExportAction) {
@@ -745,17 +719,27 @@ public class MainActivity
     final Handler handler = new Handler(Looper.getMainLooper());
     new Thread(() -> {
       final File logFile = new File(getFilesDir(), "logcat.txt");
-      final String[] command = new String[]{
-        "logcat",
-        "-d",
-        "-b", "all",
-        "-v", "threadtime",
-        "*:V"
-      };
+      final String[] command = {"logcat", "-d", "-b", "all", "-v", "threadtime", "*:V"};
       try {
         final Process process = Runtime.getRuntime().exec(command);
-        final PrintWriter writer = getPrintWriter(process, logFile);
-        writer.close();
+        try (final PrintWriter writer = new PrintWriter(new FileOutputStream(logFile));
+             final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+          // --- Device info ---
+          writer.println("===== DEVICE INFO =====");
+          writer.println("App version : " + BuildConfig.VERSION_NAME);
+          writer.println("Android     : " + Build.VERSION.RELEASE);
+          writer.println("SDK         : " + Build.VERSION.SDK_INT);
+          writer.println("Device      : " + Build.MANUFACTURER + " " + Build.MODEL);
+          writer.println("Brand       : " + Build.BRAND);
+          writer.println("Board       : " + Build.BOARD);
+          writer.println("========================");
+          writer.println();
+          // --- Logcat ---
+          String line;
+          while ((line = reader.readLine()) != null) {
+            writer.println(line);
+          }
+        }
         process.waitFor();
         if (logFile.length() > 0) {
           handler.post(() -> {
@@ -886,10 +870,6 @@ public class MainActivity
     final String docId = DocumentsContract.getTreeDocumentId(treeUri);
     // Build the document URI for the file
     final Uri docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
-    // Create the file using MediaStore API
-    final ContentValues values = new ContentValues();
-    values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
-    values.put(MediaStore.MediaColumns.MIME_TYPE, type);
     // Important: use the document URI as the parent for the new file
     return DocumentsContract.createDocument(getContentResolver(), docUri, type, fileName);
   }
@@ -904,11 +884,11 @@ public class MainActivity
             (importExportAction == ImportExportAction.JSON_IMPORT),
             inputStream,
             () -> true,
-            result -> tell(result ? R.string.import_successful : string.import_failed));
+            result -> runSafelyOnUiThread(() -> tell(result ? R.string.import_successful : string.import_failed)));
         }
       } catch (Exception exception) {
         Log.e(LOG_TAG, "importFrom: I/O failure", exception);
-        runOnUiThread(() -> tell(R.string.import_failed));
+        runSafelyOnUiThread(() -> tell(R.string.import_failed));
       }
     }).start();
   }
