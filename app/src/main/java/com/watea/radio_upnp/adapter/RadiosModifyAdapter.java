@@ -93,6 +93,15 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     private static final int IDLE_FLAGS = ItemTouchHelper.START | ItemTouchHelper.END;
 
     @Override
+    public void clearView(
+      @NonNull RecyclerView recyclerView,
+      @NonNull RecyclerView.ViewHolder viewHolder) {
+      super.clearView(recyclerView, viewHolder);
+      // Write once, after drag gesture is fully complete
+      ((Radios) getRadios()).write();
+    }
+
+    @Override
     public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
       return makeMovementFlags(DRAG_FLAGS, IDLE_FLAGS);
     }

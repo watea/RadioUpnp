@@ -101,6 +101,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -843,28 +844,37 @@ public class MainActivity
   }
 
   private void exportTo(@NonNull Uri treeUri, @NonNull String type) {
-    try {
-      // Create the file using the tree URI
-      final Uri fileUri = createFileInTree(treeUri, getString(R.string.app_name), type);
-      // Write the data to the file
-      if (fileUri == null) {
-        Log.e(LOG_TAG, "exportTo: internal failure, file not created");
-        tell(R.string.export_failed_not_created);
-        return;
-      }
-      try (final OutputStream outputStream = getContentResolver().openOutputStream(fileUri)) {
-        if (outputStream == null) {
+    final List<Radio> snapshot = new ArrayList<>(Radios.getInstance());
+    new Thread(() -> {
+      try {
+        final Uri fileUri = createFileInTree(treeUri, getString(R.string.app_name), type);
+        if (fileUri == null) {
           Log.e(LOG_TAG, "exportTo: internal failure, file not created");
-          tell(R.string.export_failed);
-        } else {
-          Radios.getInstance().write(outputStream, type);
-          tell(getString(R.string.export_done) + getString(R.string.app_name));
+          runSafelyOnUiThread(() -> tell(R.string.export_failed_not_created));
+          return;
         }
+        try (final OutputStream outputStream = getContentResolver().openOutputStream(fileUri)) {
+          if (outputStream == null) {
+            Log.e(LOG_TAG, "exportTo: internal failure, file not created");
+            runSafelyOnUiThread(() -> tell(R.string.export_failed));
+          } else {
+            Radios.write(snapshot, outputStream, type);
+            runSafelyOnUiThread(() -> tell(getString(R.string.export_done) + getString(R.string.app_name)));
+          }
+        }
+      } catch (JSONException | IOException exception) {
+        Log.e(LOG_TAG, "exportTo: internal failure", exception);
+        runSafelyOnUiThread(() -> tell(R.string.export_failed));
       }
-    } catch (JSONException | IOException iOException) {
-      Log.e(LOG_TAG, "exportTo: internal failure", iOException);
-      tell(R.string.export_failed);
-    }
+    }).start();
+  }
+
+  private void runSafelyOnUiThread(@NonNull Runnable runnable) {
+    runOnUiThread(() -> {
+      if (!isFinishing() && !isDestroyed()) {
+        runnable.run();
+      }
+    });
   }
 
   @Nullable

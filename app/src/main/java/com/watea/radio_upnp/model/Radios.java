@@ -143,6 +143,34 @@ public class Radios extends ArrayList<Radio> {
     return isInit;
   }
 
+  // Private snapshot-based write (safe to call from background thread)
+  public static void write(@NonNull List<Radio> snapshot, @NonNull OutputStream outputStream, @NonNull String type)
+    throws JSONException, IOException {
+    switch (type) {
+      case MIME_CSV:
+        outputStream.write((Radio.EXPORT_HEAD + CR).getBytes());
+        for (final Radio radio : snapshot) {
+          outputStream.write((radio.export() + CR).getBytes());
+        }
+        break;
+      case MIME_JSON:
+        // Add the leading [
+        outputStream.write(JSON_ARRAY_START);
+        for (int i = 0; i < snapshot.size(); i++) {
+          outputStream.write(snapshot.get(i).getJSONObject().toString().getBytes());
+          // Add ',' for all elements except the last one
+          if (i < snapshot.size() - 1) {
+            outputStream.write(JSON_ARRAY_COMMA);
+          }
+        }
+        // Add the closing ]
+        outputStream.write(JSON_ARRAY_END);
+        break;
+      default:
+        // Shall not happen
+    }
+  }
+
   private static void onInit() {
     getInstance().tellListeners(true, false, Listener::onInitEnd);
     isInit = true;
@@ -169,7 +197,8 @@ public class Radios extends ArrayList<Radio> {
       return false;
     }
     set(from, set(to, get(from)));
-    return tellListeners(listener -> listener.onMove(from, to));
+    // No write here: caller is responsible for triggering write after drag ends
+    return tellListeners(true, false, listener -> listener.onMove(from, to));
   }
 
   @Override
@@ -181,7 +210,7 @@ public class Radios extends ArrayList<Radio> {
   @Override
   public Radio remove(int index) {
     final Radio result = super.remove(index);
-    tellListeners(listener -> listener.onRemove(index));
+    tellListeners(true, true, listener -> listener.onRemove(index));
     return result;
   }
 
@@ -202,7 +231,7 @@ public class Radios extends ArrayList<Radio> {
     final int index = indexOf(radio);
     if (index >= 0) {
       set(index, radio);
-      return tellListeners(listener -> listener.onChange(radio));
+      return tellListeners(true, true, listener -> listener.onChange(radio));
     }
     return false;
   }
@@ -231,33 +260,6 @@ public class Radios extends ArrayList<Radio> {
     return stream().filter(radio -> uRL.equals(radio.getURL().toString())).findFirst().orElse(null);
   }
 
-  public void write(@NonNull OutputStream outputStream, @NonNull String type)
-    throws JSONException, IOException {
-    switch (type) {
-      case MIME_CSV:
-        outputStream.write((Radio.EXPORT_HEAD + CR).getBytes());
-        for (final Radio radio : this) {
-          outputStream.write((radio.export() + CR).getBytes());
-        }
-        break;
-      case MIME_JSON:
-        // Add the leading [
-        outputStream.write(JSON_ARRAY_START);
-        for (int i = 0; i < size(); i++) {
-          outputStream.write(get(i).getJSONObject().toString().getBytes());
-          // Add ',' for all elements except the last one
-          if (i < size() - 1) {
-            outputStream.write(JSON_ARRAY_COMMA);
-          }
-        }
-        // Add the closing ]
-        outputStream.write(JSON_ARRAY_END);
-        break;
-      default:
-        // Shall not happen
-    }
-  }
-
   // isJSON: true if JSON, false if CSV.
   // Intended to be called in own thread.
   public void importFrom(
@@ -269,9 +271,23 @@ public class Radios extends ArrayList<Radio> {
     putOnUiThread(() -> {
       callback.accept(result);
       if (isToWrite.get()) {
-        new Thread(this::write).start();
+        write();
       }
     });
+  }
+
+  // Write JSON asynchronously.
+  // Intended to be called in UI thread.
+  public void write() {
+    final List<Radio> snapshot = new ArrayList<>(this); // on UI thread
+    Log.d(LOG_TAG, "write");
+    new Thread(() -> {
+      try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
+        write(snapshot, fileOutputStream, MIME_JSON);
+      } catch (IOException | JSONException exception) {
+        Log.e(LOG_TAG, "write: internal failure", exception);
+      }
+    }).start();
   }
 
   private void putOnUiThread(@NonNull Runnable runnable) {
@@ -331,17 +347,6 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
-  // Write JSON
-  private void write() {
-    Log.d(LOG_TAG, "write");
-    try (final FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
-      write(fileOutputStream, MIME_JSON);
-    } catch (IOException | JSONException iOException) {
-      Log.e(LOG_TAG, "write: internal failure", iOException);
-    }
-  }
-
-  // Shall be called in UI thread
   private boolean add(@NonNull Radio radio, boolean isToWrite) {
     return tellListeners(super.add(radio), isToWrite, listener -> listener.onAdd(radio));
   }
@@ -350,14 +355,11 @@ public class Radios extends ArrayList<Radio> {
     if (test) {
       new ArrayList<>(listeners).forEach(consumer); // Safe way for listeners.forEach(consumer)
       if (isToWrite) {
-        new Thread(this::write).start();
+        // Snapshot on UI thread to avoid concurrent access
+        write();
       }
     }
     return test;
-  }
-
-  private boolean tellListeners(@NonNull Consumer<Listener> consumer) {
-    return tellListeners(true, true, consumer);
   }
 
   public interface Listener {
