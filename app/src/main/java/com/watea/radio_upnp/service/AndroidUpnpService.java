@@ -250,10 +250,12 @@ public class AndroidUpnpService extends android.app.Service {
     public synchronized void process(@NonNull SsdpService service) {
       final String uUID = Device.getUUID(service);
       final Device knownDevice = (uUID == null) ? null : get(uUID);
+      final SsdpService.Status status = service.getStatus();
+      final boolean isAlive = Device.isAlive(status);
       if (knownDevice == null) {
-        // Skip BYEBYE announcements for unknown devices — location is null
+        // Skip BYEBYE/EXPIRED announcements for unknown devices — location is null
         // and there is nothing useful to fetch
-        if (!Device.isAlive(service.getStatus())) {
+        if (!isAlive) {
           return;
         }
         // Skip if this UUID is already being fetched asynchronously —
@@ -292,16 +294,13 @@ public class AndroidUpnpService extends android.app.Service {
             }
           }
         });
-      } else {
-        final boolean isAlive = Device.isAlive(service.getStatus());
-        if (knownDevice.isAlive() != isAlive) {
-          Log.d(LOG_TAG, "Device announcement: " + knownDevice.getDisplayString() + " => " + service.getStatus());
-          knownDevice.setAlive(isAlive);
-          if (isAlive) {
-            tellAddListeners(knownDevice);
-          } else {
-            tellRemoveListeners(knownDevice);
-          }
+      } else if (knownDevice.isAlive() != isAlive) {
+        Log.d(LOG_TAG, "Device announcement: " + knownDevice.getDisplayString() + " => " + status);
+        knownDevice.setAlive(isAlive);
+        if (isAlive) {
+          tellAddListeners(knownDevice);
+        } else {
+          tellRemoveListeners(knownDevice);
         }
       }
     }

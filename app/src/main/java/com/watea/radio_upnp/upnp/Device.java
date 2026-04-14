@@ -152,7 +152,7 @@ public class Device extends Asset {
   }
 
   public static boolean isAlive(@NonNull SsdpService.Status status) {
-    return (status != SsdpService.Status.BYEBYE);
+    return (status != SsdpService.Status.BYEBYE) && (status != SsdpService.Status.EXPIRED);
   }
 
   public boolean isAlive() {
