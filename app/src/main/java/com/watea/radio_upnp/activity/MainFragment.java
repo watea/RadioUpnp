@@ -146,7 +146,9 @@ public class MainFragment extends MainActivityFragment {
   @Override
   public void onDestroy() {
     super.onDestroy();
-    radiosMainAdapter.onDestroy();
+    if (radiosMainAdapter != null) {
+      radiosMainAdapter.onDestroy();
+    }
   }
 
   @Override

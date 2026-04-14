@@ -113,17 +113,23 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
     return (CastManager) instance;
   }
 
-  public static void mediaRouteActionProviderSetRouteSelector(@NonNull Context context, @NonNull MenuItem castItem) {
-    final MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(castItem);
+  public static void mediaRouteActionProviderSetRouteSelector(
+    @NonNull Context context, @NonNull MenuItem castItem) {
+    final MediaRouteActionProvider mediaRouteActionProvider =
+      (MediaRouteActionProvider) MenuItemCompat.getActionProvider(castItem);
     if (mediaRouteActionProvider == null) {
       Log.e(LOG_TAG, "setRouteSelector: mediaRouteActionProvider not found");
     } else {
-      final CastContext castContext = CastContext.getSharedInstance(context);
-      final MediaRouteSelector mediaRouteSelector = castContext.getMergedSelector();
-      if (mediaRouteSelector == null) {
-        Log.e(LOG_TAG, "setRouteSelector: mediaRouteSelector not found");
-      } else {
-        mediaRouteActionProvider.setRouteSelector(mediaRouteSelector);
+      try {
+        final CastContext castContext = CastContext.getSharedInstance(context);
+        final MediaRouteSelector mediaRouteSelector = castContext.getMergedSelector();
+        if (mediaRouteSelector == null) {
+          Log.e(LOG_TAG, "setRouteSelector: mediaRouteSelector not found");
+        } else {
+          mediaRouteActionProvider.setRouteSelector(mediaRouteSelector);
+        }
+      } catch (RuntimeException e) {
+        Log.e(LOG_TAG, "setRouteSelector: Cast unavailable", e);
       }
     }
   }
@@ -131,21 +137,29 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   @Override
   public void setContext(@NonNull Context context, @NonNull OpenCastManager.Callback callback) {
     this.callback = callback;
-    final SessionManager sessionManager = CastContext.getSharedInstance(context).getSessionManager();
-    sessionManager.addSessionManagerListener(sessionManagerListener, CastSession.class);
-    // Session is already running?
-    final CastSession currentCastSession = sessionManager.getCurrentCastSession();
-    if ((currentCastSession != null) && currentCastSession.isConnected()) {
-      castSession = currentCastSession;
-      callback.onCastStarted();
+    try {
+      final SessionManager sessionManager = CastContext.getSharedInstance(context).getSessionManager();
+      sessionManager.addSessionManagerListener(sessionManagerListener, CastSession.class);
+      // Session is already running?
+      final CastSession currentCastSession = sessionManager.getCurrentCastSession();
+      if ((currentCastSession != null) && currentCastSession.isConnected()) {
+        castSession = currentCastSession;
+        callback.onCastStarted();
+      }
+    } catch (RuntimeException runtimeException) {
+      Log.e(LOG_TAG, "setContext: Cast unavailable", runtimeException);
     }
   }
 
   @Override
   public void resetContext(@NonNull Context context) {
-    CastContext.getSharedInstance(context).getSessionManager().removeSessionManagerListener(
-      sessionManagerListener,
-      CastSession.class);
+    try {
+      CastContext.getSharedInstance(context)
+        .getSessionManager()
+        .removeSessionManagerListener(sessionManagerListener, CastSession.class);
+    } catch (RuntimeException runtimeException) {
+      Log.e(LOG_TAG, "resetContext: Cast unavailable", runtimeException);
+    }
     callback = new Callback() {
     };
     castSession = null;
