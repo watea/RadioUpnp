@@ -30,7 +30,6 @@ import androidx.annotation.Nullable;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 @SuppressWarnings("unused")
 public class Action extends Asset {
@@ -39,7 +38,8 @@ public class Action extends Asset {
   @NonNull
   private final Service service;
   private final Set<Argument> arguments = new HashSet<>();
-  private final AtomicReference<Argument> currentArgument = new AtomicReference<>();
+  @Nullable
+  private volatile Argument currentArgument = null;
   @Nullable
   private String name = null;
 
@@ -51,13 +51,13 @@ public class Action extends Asset {
   public void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     // Process Argument, if any
     if (currentTag.equals(Argument.XML_NAME)) {
-      currentArgument.set(new Argument());
+      currentArgument = new Argument();
     }
   }
 
   @Override
   public void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
-    final Argument argument = currentArgument.get();
+    final Argument argument = currentArgument;
     if (argument == null) {
       // Process Action field
       switch (currentTag) {
@@ -85,7 +85,7 @@ public class Action extends Asset {
         } else {
           arguments.add(argument);
         }
-        currentArgument.set(null);
+        currentArgument = null;
       }
     }
   }
@@ -97,8 +97,7 @@ public class Action extends Asset {
 
   @NonNull
   public String getName() {
-    assert name != null;
-    return name;
+    return (name == null) ? "Unknown" : name;
   }
 
   public boolean hasName(@NonNull String name) {

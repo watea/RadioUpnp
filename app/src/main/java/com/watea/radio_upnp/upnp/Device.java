@@ -39,7 +39,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -107,9 +106,10 @@ public class Device extends Asset {
   private final Device superDevice;
   private final Set<Service> services = new HashSet<>();
   private final Set<Device> embeddedDevices = new HashSet<>();
-  private final AtomicReference<Device> currentDevice = new AtomicReference<>();
   @NonNull
   private final URL location;
+  @Nullable
+  private volatile Device currentDevice = null;
   @Nullable
   private String deviceType = null;
   @Nullable
@@ -202,7 +202,7 @@ public class Device extends Asset {
         isEmbeddedDevices = true;
         break;
       case XML_TAG:
-        currentDevice.set(isEmbeddedDevices ? new Device(this) : this);
+        currentDevice = isEmbeddedDevices ? new Device(this) : this;
         break;
       default:
         // Nothing to do
@@ -211,7 +211,7 @@ public class Device extends Asset {
 
   @Override
   public void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
-    final Device device = currentDevice.get();
+    final Device device = currentDevice;
     switch (currentTag) {
       case DEVICE_LIST:
         isEmbeddedDevices = false;

@@ -36,7 +36,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 @SuppressWarnings("unused")
 // <actionList>
@@ -60,7 +59,6 @@ public class Service extends Asset {
   public static final String SCPDURL = "SCPDURL";
   public static final String CONTROL_URL = "controlURL";
   private static final String LOG_TAG = Service.class.getSimpleName();
-  private final AtomicReference<Action> currentAction = new AtomicReference<>();
   @NonNull
   private final Device device;
   @NonNull
@@ -74,6 +72,8 @@ public class Service extends Asset {
   @NonNull
   private final URI descriptionURL;
   private final Set<Action> actions = new HashSet<>();
+  @Nullable
+  private volatile Action currentAction = null;
 
   // Service does not call setOnError(); isOnError() is always false
   public Service(
@@ -98,9 +98,9 @@ public class Service extends Asset {
   public void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     // Process Action, if any
     if (currentTag.equals(Action.XML_NAME)) {
-      currentAction.set(new Action(this));
+      currentAction = new Action(this);
     }
-    final Action action = currentAction.get();
+    final Action action = currentAction;
     if (action != null) {
       action.startAccept(urlService, currentTag);
     }
@@ -109,7 +109,7 @@ public class Service extends Asset {
   @Override
   public void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     // Process Action, if any
-    final Action action = currentAction.get();
+    final Action action = currentAction;
     if (action != null) {
       // Process Action, if any
       action.endAccept(urlService, currentTag);
@@ -121,7 +121,7 @@ public class Service extends Asset {
         } else {
           actions.add(action);
         }
-        currentAction.set(null);
+        currentAction = null;
       }
     }
   }
