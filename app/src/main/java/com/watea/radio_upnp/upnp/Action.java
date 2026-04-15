@@ -118,7 +118,9 @@ public class Action extends Asset {
   public static class Argument extends Asset {
     private static final String XML_NAME = "argument";
     private static final String LOG_TAG = Argument.class.getSimpleName();
+    @Nullable
     private String name = null;
+    @Nullable
     private String direction = null;
 
     @Override
@@ -141,7 +143,7 @@ public class Action extends Asset {
 
     @NonNull
     public String getName() {
-      return name;
+      return (name == null) ? "Unknown" : name;
     }
   }
 }

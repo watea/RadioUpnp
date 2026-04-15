@@ -78,7 +78,7 @@ public abstract class SessionDevice {
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
 
-  public SessionDevice(
+  protected SessionDevice(
     @NonNull Context context,
     @NonNull Mode mode,
     @NonNull Listener listener,
@@ -92,6 +92,7 @@ public abstract class SessionDevice {
     this.capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build(), this.lockKey);
     this.playerListener = getPlayerListener();
     this.exoPlayer = getExoPlayer();
+    Log.d(LOG_TAG, "mode => " + mode);
   }
 
   @NonNull
@@ -245,7 +246,7 @@ public abstract class SessionDevice {
       .build();
   }
 
-  public enum Mode {
+  protected enum Mode {
     LOCAL, PCM, MUTE
   }
 

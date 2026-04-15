@@ -47,7 +47,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   @NonNull
   private List<Radio> radios;
 
-  public RadiosAdapter(
+  protected RadiosAdapter(
     @NonNull Supplier<List<Radio>> radiosSupplier,
     int row,
     @NonNull RecyclerView recyclerView) {

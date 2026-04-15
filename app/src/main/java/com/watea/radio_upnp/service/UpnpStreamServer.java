@@ -209,6 +209,8 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
 
   // Serves the radio logo as JPEG
   private static class LogoHandler implements HttpServer.Handler {
+    private static final String LOG_TAG = LogoHandler.class.getSimpleName();
+
     @Override
     public void handle(
       @NonNull HttpServer.Request request,
@@ -220,16 +222,16 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       final String id = getParam(request, ID_PARAM);
       final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
       if (radio == null) {
-        Log.e(LOG_TAG, "LogoHandler: no radio available");
+        Log.e(LOG_TAG, "handle: no radio available");
         return;
       }
-      Log.d(LOG_TAG, "LogoHandler: serving logo");
+      Log.d(LOG_TAG, "handle: serving logo");
       final Bitmap bitmap = Bitmap.createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
       final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
       bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
       final byte[] logoBytes = byteArrayOutputStream.toByteArray();
       if (logoBytes.length == 0) {
-        Log.e(LOG_TAG, "LogoHandler: no logo available");
+        Log.e(LOG_TAG, "handle: no logo available");
         return;
       }
       response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
@@ -251,11 +253,14 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       final String id = getParam(request, ID_PARAM);
       final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
       final String method = request.getMethod();
-      Log.d(LOG_TAG, getClass().getSimpleName() + ": handle - " + method + " - " + id + " - " + incomingLockKey);
+      final String className = getClass().getSimpleName();
+      Log.d(LOG_TAG, className + ": handle - " + method + " - " + id + " - " + incomingLockKey);
       if ((radio != null) && lockKey.equals(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
-        handleStream(response, responseStream, method.equals(HEAD), radio, lockKey);
+        final boolean isHead = method.equals(HEAD);
+        Log.d(LOG_TAG, className + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
+        handleStream(response, responseStream, isHead, radio, lockKey);
       }
-      Log.d(LOG_TAG, getClass().getSimpleName() + ": handle exit - " + method + " - " + incomingLockKey);
+      Log.d(LOG_TAG, className + ": handle exit - " + method + " - " + incomingLockKey);
     }
 
     // Returns true if this handler is responsible for the given path
@@ -319,7 +324,6 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       boolean isHead,
       @NonNull Radio radio,
       @NonNull String lockKey) throws IOException {
-      Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
       sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, lockKey);
@@ -418,7 +422,6 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       boolean isHead,
       @NonNull Radio radio,
       @NonNull String lockKey) throws IOException {
-      Log.d(LOG_TAG, getClass().getSimpleName() + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
       // Upstream
       final Radio.ConnectionSet connectionSet = radio.getConnectionSet(context.getString(R.string.app_name));
       if (connectionSet == null) {

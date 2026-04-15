@@ -79,7 +79,7 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     }
   };
 
-  public RadiosDisplayAdapter(
+  protected RadiosDisplayAdapter(
     @NonNull Supplier<List<Radio>> radiosSupplier,
     int row,
     @NonNull RecyclerView recyclerView,

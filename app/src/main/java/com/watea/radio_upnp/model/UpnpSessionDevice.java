@@ -78,7 +78,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
-    @NonNull Mode mode,
+    boolean isPcm,
     @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
@@ -86,7 +86,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull Device device,
     @NonNull ActionController actionController,
     @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, mode, serverCallback, listener, radio, lockKey);
+    super(context, isPcm ? Mode.PCM : Mode.MUTE, serverCallback, listener, radio, lockKey);
     this.actionController = actionController;
     this.onPlayCallback = onPlayCallback;
     information = this.context.getString(R.string.app_name);
