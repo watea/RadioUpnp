@@ -260,12 +260,9 @@ public class AndroidUpnpService extends android.app.Service {
         }
         // Skip if this UUID is already being fetched asynchronously —
         // prevents duplicate Device objects from concurrent SSDP announcements
-        if ((uUID != null) && pendingUUIDs.contains(uUID)) {
+        if (!pendingUUIDs.add(uUID)) {
           Log.d(LOG_TAG, "Device fetch already in progress for UUID: " + uUID);
           return;
-        }
-        if (uUID != null) {
-          pendingUUIDs.add(uUID);
         }
         // Submit the blocking HTTP fetch to the bounded executor and
         // enforce a timeout via a second executor task to avoid hanging threads
