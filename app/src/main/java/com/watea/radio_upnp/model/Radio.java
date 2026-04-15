@@ -201,15 +201,14 @@ public class Radio {
 
   // Store bitmap as filename.png
   @NonNull
-  public static File storeToFile(
-    @NonNull Context context, @NonNull Bitmap bitmap, @NonNull String fileName)
-    throws FileNotFoundException {
+  public static File storeToFile(@NonNull Context context, @NonNull Bitmap bitmap, @NonNull String fileName)
+    throws IOException {
     fileName = fileName + ".png";
-    final FileOutputStream fileOutputStream =
-      context.openFileOutput(fileName, Context.MODE_PRIVATE);
-    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream)) {
-      Log.e(LOG_TAG, "bitmapToFile: internal failure");
-      throw new FileNotFoundException();
+    try (final FileOutputStream fileOutputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE)) {
+      if (!bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream)) {
+        Log.e(LOG_TAG, "bitmapToFile: internal failure");
+        throw new FileNotFoundException();
+      }
     }
     return new File(context.getFilesDir().getPath() + "/" + fileName);
   }

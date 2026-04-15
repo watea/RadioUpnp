@@ -36,7 +36,6 @@ import androidx.appcompat.app.AlertDialog;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -92,7 +91,7 @@ public class Radios extends ArrayList<Radio> {
   public static void setInstance(@NonNull Context context, @Nullable AlertDialog loadingAlertDialog) {
     if (radios == null) {
       radios = new Radios(context);
-      final SharedPreferences sharedPreferences = context.getSharedPreferences("activity." + MainActivity.class.getSimpleName(), Context.MODE_PRIVATE);
+      final SharedPreferences sharedPreferences = context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
       if (sharedPreferences.getBoolean(context.getString(R.string.key_first_start), true)) {
         if (radios.addAll(DefaultRadios.get(context, Radio.RADIO_ICON_SIZE))) {
           // Robustness: store immediately to avoid bad user experience in case of app crash

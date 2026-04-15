@@ -54,7 +54,6 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -99,8 +98,8 @@ public abstract class ItemFragment extends MainActivityFragment {
         final File file = Radio.storeToFile(getContext(), icon, Integer.toString(hashCode()));
         outState.putString(getString(R.string.key_radio_icon_file), file.getPath());
       }
-    } catch (FileNotFoundException fileNotFoundException) {
-      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", fileNotFoundException);
+    } catch (IOException ioException) {
+      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", ioException);
     }
   }
 
