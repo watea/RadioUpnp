@@ -53,7 +53,7 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
     @NonNull RecyclerView recyclerView) {
     this.radiosSupplier = radiosSupplier;
     this.row = row;
-    radios = radiosSupplier.get();
+    setRadios();
     // Adapter shall be defined for RecyclerView
     recyclerView.setAdapter(this);
   }

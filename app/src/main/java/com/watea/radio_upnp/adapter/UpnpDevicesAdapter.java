@@ -128,8 +128,9 @@ public class UpnpDevicesAdapter
   }
 
   private void notifyChange(@Nullable Device device) {
-    if ((device != null) && devices.contains(device)) {
-      notifyItemChanged(devices.indexOf(device));
+    final int index = devices.indexOf(device);
+    if (index >= 0) {
+      notifyItemChanged(index);
     }
   }
 
