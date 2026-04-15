@@ -47,7 +47,7 @@ import com.android.billingclient.api.QueryProductDetailsParams;
 import com.google.common.collect.ImmutableList;
 import com.watea.radio_upnp.R;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -148,19 +148,14 @@ public class DonationFragment extends OpenDonationFragment
   }
 
   private void queryGoogleProducts() {
-    final List<QueryProductDetailsParams.Product> googleProducts = Arrays.asList(
-      QueryProductDetailsParams.Product.newBuilder()
-        .setProductId(productIds[0])
-        .setProductType(BillingClient.ProductType.INAPP)
-        .build(),
-      QueryProductDetailsParams.Product.newBuilder()
-        .setProductId(productIds[1])
-        .setProductType(BillingClient.ProductType.INAPP)
-        .build(),
-      QueryProductDetailsParams.Product.newBuilder()
-        .setProductId(productIds[2])
-        .setProductType(BillingClient.ProductType.INAPP)
-        .build());
+    final List<QueryProductDetailsParams.Product> googleProducts = new ArrayList<>();
+    for (final String productId : productIds) {
+      googleProducts.add(
+        QueryProductDetailsParams.Product.newBuilder()
+          .setProductId(productId)
+          .setProductType(BillingClient.ProductType.INAPP)
+          .build());
+    }
     final QueryProductDetailsParams queryProductDetailsParams = QueryProductDetailsParams.newBuilder()
       .setProductList(googleProducts)
       .build();
