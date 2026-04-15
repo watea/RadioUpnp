@@ -259,6 +259,11 @@ public class Radios extends ArrayList<Radio> {
     return stream().filter(radio -> uRL.equals(radio.getURL().toString())).findFirst().orElse(null);
   }
 
+  @Nullable
+  public Radio getRadioFromName(@NonNull String name) {
+    return stream().filter(radio -> name.equals(radio.getName())).findFirst().orElse(null);
+  }
+
   // isJSON: true if JSON, false if CSV.
   // Intended to be called in own thread.
   public void importFrom(
