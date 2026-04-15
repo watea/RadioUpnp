@@ -25,11 +25,12 @@ package com.watea.radio_upnp.upnp;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ActionController {
-  private final List<UpnpAction> upnpActions = new ArrayList<>();
+  private final ArrayDeque<UpnpAction> upnpActions = new ArrayDeque<>();
 
   public synchronized void release(@NonNull Device device) {
     upnpActions.removeIf(upnpAction -> upnpAction.hasDevice(device));
@@ -37,7 +38,7 @@ public class ActionController {
 
   public synchronized void runNextAction() {
     if (!upnpActions.isEmpty()) {
-      upnpActions.remove(0);
+      upnpActions.poll();
       pullAction(false);
     }
   }
@@ -51,8 +52,9 @@ public class ActionController {
   }
 
   private void pullAction(boolean isOnOwnThread) {
-    if (!upnpActions.isEmpty()) {
-      upnpActions.get(0).execute(isOnOwnThread);
+    final UpnpAction upnpAction = upnpActions.peekFirst();
+    if (upnpAction != null) {
+      upnpAction.execute(isOnOwnThread);
     }
   }
 }

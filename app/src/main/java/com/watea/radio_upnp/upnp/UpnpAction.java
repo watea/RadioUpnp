@@ -58,8 +58,8 @@ public abstract class UpnpAction {
   }
 
   @Nullable
-  public String getResponse(@NonNull String Name) {
-    return responses.get(Name);
+  public String getResponse(@NonNull String name) {
+    return responses.get(name);
   }
 
   public UpnpAction addArgument(@NonNull String name, @NonNull String value) {
