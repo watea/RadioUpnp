@@ -79,6 +79,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   public UpnpSessionDevice(
     @NonNull Context context,
+    @NonNull Mode mode,
     @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
@@ -86,7 +87,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull Device device,
     @NonNull ActionController actionController,
     @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, getMode(context), serverCallback, listener, radio, lockKey);
+    super(context, mode, serverCallback, listener, radio, lockKey);
     this.actionController = actionController;
     this.onPlayCallback = onPlayCallback;
     information = this.context.getString(R.string.app_name);
@@ -123,13 +124,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
         result = "";
     }
     return result + PROTOCOL_INFO_TAIL;
-  }
-
-  @NonNull
-  private static Mode getMode(@NonNull Context context) {
-    final Mode mode = MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true) ? Mode.PCM : Mode.MUTE;
-    Log.d(LOG_TAG, "Mode => " + mode);
-    return mode;
   }
 
   // Not implemented
@@ -344,7 +338,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     // Default is PCM
     String content = PCM_MIME;
     String mime = PCM_MIME;
-    if (!MainActivity.getAppPreferences(context).getBoolean(context.getString(R.string.key_pcm_mode), true)) {
+    if (mode != Mode.PCM) {
       // Relay
       content = (connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent();
       switch (content) {

@@ -875,6 +875,8 @@ public class RadioService
       assert upnpStreamServer != null;
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = new NetworkProxy(RadioService.this).isOnWifi();
+      final SessionDevice.Mode mode = MainActivity.getAppPreferences(RadioService.this).getBoolean(RadioService.this.getString(R.string.key_pcm_mode), true) ?
+        SessionDevice.Mode.PCM : SessionDevice.Mode.MUTE;
       final SessionDevice result = (isRemoteReady && castManager.hasCastSession()) ?
         castManager.getCastSessionDevice(
           RadioService.this,
@@ -885,6 +887,7 @@ public class RadioService
         (isRemoteReady && (upnpSelectedDevice != null)) ?
           new UpnpSessionDevice(
             RadioService.this,
+            mode,
             upnpStreamServer,
             RadioService.this,
             radio,
