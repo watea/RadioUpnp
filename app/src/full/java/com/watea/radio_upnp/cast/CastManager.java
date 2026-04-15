@@ -105,6 +105,7 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   private CastManager() {
   }
 
+  // Must be called from UI thread
   @NonNull
   public static CastManager getInstance() {
     if (instance == null) {
