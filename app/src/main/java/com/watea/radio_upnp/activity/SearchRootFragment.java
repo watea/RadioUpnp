@@ -220,7 +220,7 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   }
 
   private void cancelSearch() {
-    if (currentSearchFuture != null && !currentSearchFuture.isDone()) {
+    if ((currentSearchFuture != null) && !currentSearchFuture.isDone()) {
       currentSearchFuture.cancel(true);
       protectedRunOnUiThread(() -> radiosSearchAdapter.clear());
     }
