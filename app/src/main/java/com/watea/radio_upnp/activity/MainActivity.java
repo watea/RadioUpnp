@@ -255,7 +255,7 @@ public class MainActivity
       exportFile();
     } else if (id == R.id.action_import) {
       importFile();
-    } else if (id == R.id.action_parameters) {
+    } else if (id == R.id.action_settings) {
       parametersAlertDialog.show();
     } else if (id == R.id.action_about) {
       aboutAlertDialog.show();
@@ -568,7 +568,7 @@ public class MainActivity
     final int pcmRadioButtonId = isPcm ? R.id.pcm_radio_button : id.relay_radio_button;
     ((RadioButton) parametersView.findViewById(pcmRadioButtonId)).setChecked(true);
     parametersAlertDialog = new AlertDialog.Builder(this)
-      .setTitle(string.title_parameters)
+      .setTitle(string.title_settings)
       .setIcon(R.drawable.ic_settings_white_24dp)
       .setView(parametersView)
       // Restore checked item

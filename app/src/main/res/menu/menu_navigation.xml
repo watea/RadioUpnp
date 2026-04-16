@@ -91,9 +91,9 @@
             android:title="@string/title_log" />
 
         <item
-            android:id="@+id/action_parameters"
+            android:id="@+id/action_settings"
             android:icon="@drawable/ic_settings_white_24dp"
-            android:title="@string/title_parameters" />
+            android:title="@string/title_settings" />
 
         <item
             android:id="@+id/action_donate"
