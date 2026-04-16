@@ -6,9 +6,11 @@
 
 <ul>
   <li>Search and add radios directly in the app.</li>
-  <li>Share results from RadioGarden straight to <i>RadioUpnp</i>.</li>
+  <li>Share results from RadioGarden straight to RadioUpnp.</li>
   <li>Still missing a station? Add it manually.</li>
 </ul>
+
+<p>Two UPnP streaming modes are available: <b>Passthrough</b> (the original stream is relayed directly to the device) or <b>PCM</b> (the stream is transcoded to a standard PCM format for maximum compatibility).</p>
 
 <p>Completely free and ad-free. Support development via the <b>Donate</b> menu. Thank you!</p>
 
