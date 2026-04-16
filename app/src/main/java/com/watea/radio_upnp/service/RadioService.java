@@ -687,7 +687,9 @@ public class RadioService
       // Change session tag
       lockKey = getLockKey();
       // Clean current PlayerAdapter; must be done at each new lockKey
-      playerAdapter.clean();
+      if (playerAdapter != null) {
+        playerAdapter.clean();
+      }
       // Stop scheduler if any
       releaseScheduler();
       // PlayerAdapter settings
