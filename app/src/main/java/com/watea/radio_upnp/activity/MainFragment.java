@@ -115,7 +115,7 @@ public class MainFragment extends MainActivityFragment {
 
   @Override
   public int getFloatingActionButtonResource() {
-    return R.drawable.ic_cast_blue_24dp;
+    return R.drawable.ic_cast_warm_24dp;
   }
 
   @Override

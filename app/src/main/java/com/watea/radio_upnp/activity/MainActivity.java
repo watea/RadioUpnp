@@ -679,7 +679,7 @@ public class MainActivity
         upnpIconConsumer.accept(null);
       } else {
         final Bitmap icon = device.getIcon();
-        upnpIconConsumer.accept((icon == null) ? getDefaultIcon(R.drawable.ic_cast_blue) : icon);
+        upnpIconConsumer.accept((icon == null) ? getDefaultIcon(R.drawable.ic_cast_warm) : icon);
       }
     }
   }

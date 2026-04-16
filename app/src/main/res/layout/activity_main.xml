@@ -84,6 +84,8 @@
             android:layout_gravity="bottom|end"
             android:layout_marginEnd="@dimen/app_margin"
             android:layout_marginBottom="@dimen/app_bottom_margin"
+            app:backgroundTint="@color/warm_orange"
+            app:tint="@color/warm_beige"
             tools:ignore="ContentDescription" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
