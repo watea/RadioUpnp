@@ -210,22 +210,20 @@ public class MainFragment extends MainActivityFragment {
     }
   }
 
-  @SuppressLint("NonConstantResourceId")
   @Override
   protected boolean onMenuItemSelected(@NonNull MenuItem item) {
-    switch (item.getItemId()) {
-      case R.id.action_preferred:
-        Radios.setPreferred(!Radios.isPreferred());
-        setPreferredMenuItem();
-        preferredRadiosUserHint.show();
-        return true;
-      case R.id.action_upnp:
-        getMainActivity().resetSelectedDevice();
-        tell(R.string.no_dlna_selection);
-        return true;
-      default:
-        return false;
+    final int id = item.getItemId();
+    if (id == R.id.action_preferred) {
+      Radios.setPreferred(!Radios.isPreferred());
+      setPreferredMenuItem();
+      preferredRadiosUserHint.show();
+      return true;
+    } else if (id == R.id.action_upnp) {
+      getMainActivity().resetSelectedDevice();
+      tell(R.string.no_dlna_selection);
+      return true;
     }
+    return false;
   }
 
   private void wifiTest(@NonNull Runnable runnable) {

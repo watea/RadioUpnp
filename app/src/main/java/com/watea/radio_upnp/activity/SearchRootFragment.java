@@ -155,19 +155,17 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     menuInflater.inflate(R.menu.menu_search, menu);
   }
 
-  @SuppressLint("NonConstantResourceId")
   protected boolean onMenuItemSelected(@NonNull MenuItem item) {
-    switch (item.getItemId()) {
-      case R.id.action_all:
-        radiosSearchAdapter.selectAll();
-        return true;
-      case R.id.action_done:
-        Radios.getInstance().addAll(radiosSearchAdapter.getSelectedRadios());
-        onBackPressed();
-        return true;
-      default:
-        return false;
+    final int id = item.getItemId();
+    if (id == R.id.action_all) {
+      radiosSearchAdapter.selectAll();
+      return true;
+    } else if (id == R.id.action_done) {
+      Radios.getInstance().addAll(radiosSearchAdapter.getSelectedRadios());
+      onBackPressed();
+      return true;
     }
+    return false;
   }
 
   protected Radio buildRadio() throws MalformedURLException {

@@ -239,46 +239,35 @@ public class MainActivity
     appBarLayout.setExpanded(isExpanded, true);
   }
 
-  @SuppressLint("NonConstantResourceId")
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-    final Integer id = menuItem.getItemId();
-    // Note: switch not to use as id not final
-    switch (id) {
-      case R.id.action_alarm:
-        alarmController.launch();
-        break;
-      case R.id.action_sleep:
-        // Check permission
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-          if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_POST_NOTIFICATIONS);
-          }
+    final int id = menuItem.getItemId();
+    if (id == R.id.action_alarm) {
+      alarmController.launch();
+    } else if (id == R.id.action_sleep) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+          requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_POST_NOTIFICATIONS);
         }
-        sleepAlertDialog.show();
-        break;
-      case R.id.action_export:
-        exportFile();
-        break;
-      case R.id.action_import:
-        importFile();
-        break;
-      case R.id.action_parameters:
-        parametersAlertDialog.show();
-        break;
-      case R.id.action_about:
-        aboutAlertDialog.show();
-        break;
-      case R.id.action_log:
-        sendLogcatMail();
-        break;
-      default:
-        // Shall not fail to find!
-        for (final Map.Entry<Class<? extends Fragment>, Integer> entry : FRAGMENT_MENU_IDS.entrySet()) {
-          if (id.equals(entry.getValue())) {
-            setFragment(entry.getKey());
-          }
+      }
+      sleepAlertDialog.show();
+    } else if (id == R.id.action_export) {
+      exportFile();
+    } else if (id == R.id.action_import) {
+      importFile();
+    } else if (id == R.id.action_parameters) {
+      parametersAlertDialog.show();
+    } else if (id == R.id.action_about) {
+      aboutAlertDialog.show();
+    } else if (id == R.id.action_log) {
+      sendLogcatMail();
+    } else {
+      // Shall not fail to find!
+      for (final Map.Entry<Class<? extends Fragment>, Integer> entry : FRAGMENT_MENU_IDS.entrySet()) {
+        if (id == entry.getValue()) {
+          setFragment(entry.getKey());
         }
+      }
     }
     drawerLayout.closeDrawers();
     return true;
@@ -537,15 +526,12 @@ public class MainActivity
     final RadioGroup themeRadioGroup = parametersView.findViewById(R.id.theme_radio_group);
     themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
       final Theme previousTheme = theme;
-      switch (group.getCheckedRadioButtonId()) {
-        case R.id.dark_radio_button:
-          theme = Theme.DARK;
-          break;
-        case id.light_radio_button:
-          theme = Theme.LIGHT;
-          break;
-        default:
-          theme = Theme.SYSTEM;
+      if (checkedId == R.id.dark_radio_button) {
+        theme = Theme.DARK;
+      } else if (checkedId == R.id.light_radio_button) {
+        theme = Theme.LIGHT;
+      } else {
+        theme = Theme.SYSTEM;
       }
       if (theme != previousTheme) {
         recreate();
