@@ -78,7 +78,7 @@ public class AlarmService extends Service {
     .build();
   // Wait for internet connection
   private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
-  private String CHANNEL_ID;
+  private String channelId;
   private MediaBrowserCompat mediaBrowser;
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
@@ -96,15 +96,15 @@ public class AlarmService extends Service {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Notification
-    CHANNEL_ID = getResources().getString(R.string.app_name) + "." + LOG_TAG;
+    channelId = getResources().getString(R.string.app_name) + "." + LOG_TAG;
     final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
     // Cancel all notifications to handle the case where the Service was killed and
     // restarted by the system
     notificationManager.cancelAll();
     // Create the (mandatory) notification channel
-    if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+    if (notificationManager.getNotificationChannel(channelId) == null) {
       final NotificationChannel notificationChannel = new NotificationChannel(
-        CHANNEL_ID,
+        channelId,
         getString(R.string.alarm_service_notification_name),
         NotificationManager.IMPORTANCE_HIGH);
       // Configure the notification channel
@@ -223,7 +223,7 @@ public class AlarmService extends Service {
   private Notification getNotification() {
     final AlarmServiceBinder alarmServiceBinder = (AlarmServiceBinder) binder;
     final String radioName = (alarmServiceBinder.getRadio() == null) ? getString(R.string.no_radio_available) : alarmServiceBinder.getRadio().getName();
-    return new NotificationCompat.Builder(this, CHANNEL_ID)
+    return new NotificationCompat.Builder(this, channelId)
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
       .setContentTitle(getString(R.string.alarm_title))
       .setContentText(getString(R.string.alarm_set_for, alarmServiceBinder.getHour(), alarmServiceBinder.getMinute()) + " / " + radioName)

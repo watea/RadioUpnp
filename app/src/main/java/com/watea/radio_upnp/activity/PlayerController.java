@@ -28,7 +28,6 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -282,10 +281,18 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     }
   }
 
-  private void onPlayClick() {
+  // Returns false and notifies the user if mediaController is not yet available
+  private boolean isMediaControllerAvailable() {
     if (mediaController == null) { // Should not happen
       mainActivity.tell(R.string.radio_connection_waiting);
-    } else {
+      return false;
+    }
+    return true;
+  }
+
+  private void onPlayClick() {
+    if (isMediaControllerAvailable()) {
+      assert mediaController != null;
       // Tag on button has stored state to reach
       switch ((int) playImageButton.getTag()) {
         case PlaybackStateCompat.STATE_PLAYING:
@@ -309,18 +316,15 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   }
 
   private void onPlayLongClick() {
-    if (mediaController == null) { // Should not happen
-      mainActivity.tell(R.string.radio_connection_waiting);
-    } else {
+    if (isMediaControllerAvailable()) {
+      assert mediaController != null;
       mediaController.getTransportControls().stop();
     }
   }
 
   private void onPlayDoubleClick() {
-    // Should not happen
-    if (mediaController == null) {
-      mainActivity.tell(R.string.radio_connection_waiting);
-    } else {
+    if (isMediaControllerAvailable()) {
+      assert mediaController != null;
       final boolean isSleepSet = mediaController.getExtras().getBoolean(mainActivity.getString(R.string.key_sleep_set), false);
       final String key = mainActivity.getString(R.string.key_sleep);
       final int sleep = mainActivity.getSharedPreferences().getInt(key, MainActivity.SLEEP_MIN);

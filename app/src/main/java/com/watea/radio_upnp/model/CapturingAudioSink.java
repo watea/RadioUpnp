@@ -250,8 +250,6 @@ public class CapturingAudioSink implements AudioSink {
     void onPcmData(@NonNull byte[] data, @NonNull String lockKey);
   }
 
-  // callback != null.
-  // PCM: Pulse Code Modulation.
   private class Pacer extends Thread {
     private long bytesConsumed = 0L;
 

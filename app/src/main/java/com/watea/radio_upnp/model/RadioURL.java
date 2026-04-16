@@ -238,7 +238,7 @@ public class RadioURL {
     throw new IOException("getActualHttpURLConnection: too many redirects, last URL: " + currentURL + " (original: " + originalURL + ")");
   }
 
-  // Redirection will not be handheld here
+  // Redirection will not be handled here
   @Nullable
   public Bitmap getBitmap() {
     if (uRL == null) {
