@@ -113,6 +113,10 @@ public class RadioService
   private final VolumeProviderCompat volumeProviderCompat = new VolumeProviderCompat(VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, 100, 50) {
     @Override
     public void onAdjustVolume(int direction) {
+      if (playerAdapter == null) {
+        Log.e(LOG_TAG, "onAdjustVolume: playerAdapter is null!");
+        return;
+      }
       playerAdapter.adjustVolume(direction);
     }
   };
