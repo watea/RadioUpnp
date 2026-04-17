@@ -52,6 +52,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private static final String PROTOCOL_INFO_HEADER = "http-get:*:";
   private static final String ACTION_PREPARE_FOR_CONNECTION = "PrepareForConnection";
   private static final String ACTION_SET_AV_TRANSPORT_URI = "SetAVTransportURI";
+  private static final String ACTION_GET_PROTOCOL_INFO = "GetProtocolInfo";
   private static final String ACTION_PLAY = "Play";
   private static final String ACTION_STOP = "Stop";
   private static final String ACTION_SET_VOLUME = "SetVolume";
@@ -147,6 +148,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   @Override
   public boolean prepare() {
     if (super.prepare()) {
+      scheduleActionGetProtocolInfo();
       scheduleActionPrepareForConnection();
       scheduleActionSetAvTransportUri();
       scheduleActionPlay();
@@ -195,6 +197,26 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     if (action != null) {
       function.apply(action).schedule();
     }
+  }
+
+  private void scheduleActionGetProtocolInfo() {
+    scheduleOptionalAction(
+      (connectionManager == null) ? null : connectionManager.getAction(ACTION_GET_PROTOCOL_INFO),
+      action -> new UpnpAction(action, actionController) {
+        @Override
+        protected void onSuccess() {
+          final String sink = getResponse("Sink");
+          if (sink == null) {
+            Log.i(LOG_TAG, "ProtocolInfo: null");
+          } else {
+            for (final String entry : sink.split(",")) {
+              Log.i(LOG_TAG, "ProtocolInfo: " + entry);
+            }
+          }
+          super.onSuccess();
+        }
+        // Note: failure is not taken into account
+      });
   }
 
   private void scheduleActionPlay() {
