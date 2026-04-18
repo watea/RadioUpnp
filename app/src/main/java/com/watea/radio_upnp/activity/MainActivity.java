@@ -691,16 +691,11 @@ public class MainActivity
     snackbar.setTextColor(getThemeAttributeColor(R.attr.colorAccent)).show();
   }
 
-  @SuppressLint("DiscouragedApi")
   private int getCurrentTheme() {
     // Check the actual system setting
     final int uiMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-    return getResources().getIdentifier(
-      (((theme == Theme.SYSTEM) && (uiMode == Configuration.UI_MODE_NIGHT_NO)) ||
-        (theme == Theme.LIGHT)) ?
-        "AppTheme.Light" : "AppTheme.Dark",
-      "style",
-      getPackageName());
+    return (((theme == Theme.SYSTEM) && (uiMode == Configuration.UI_MODE_NIGHT_NO)) || (theme == Theme.LIGHT)) ?
+      R.style.AppTheme_Light : R.style.AppTheme_Dark;
   }
 
   private void tellReportError() {
