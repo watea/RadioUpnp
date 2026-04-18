@@ -32,6 +32,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.media.AudioManager;
@@ -86,6 +87,7 @@ import java.util.concurrent.TimeUnit;
 public class RadioService
   extends MediaBrowserServiceCompat
   implements SessionDevice.Listener {
+  public static final boolean KEY_PCM_MODE_DEFAULT = true;
   public static final String DATE = "date";
   public static final String INFORMATION = "information";
   public static final String PLAYLIST = "playlist";
@@ -270,6 +272,11 @@ public class RadioService
   @NonNull
   public static String getLockKey() {
     return UUID.randomUUID().toString();
+  }
+
+  @NonNull
+  private static SharedPreferences getAppPreferences(@NonNull Context context) {
+    return context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
   }
 
   @NonNull
@@ -685,7 +692,7 @@ public class RadioService
       }
       Log.d(LOG_TAG, "onPlayFromMediaId with radio: " + radio.getName() + " => " + radio.getUri());
       // Store
-      MainActivity.getAppPreferences(RadioService.this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
+      getAppPreferences(RadioService.this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
       // Retrieve last radio
       final Radio lastRadio = (playerAdapter == null) ? null : playerAdapter.getRadio();
       // Change session tag
@@ -846,7 +853,7 @@ public class RadioService
         final Radios radios = Radios.getInstance();
         if (!radios.isEmpty()) {
           onPlayFromMediaId(
-            MainActivity.getAppPreferences(RadioService.this).getString(getString(R.string.key_last_played_radio), radios.get(0).getId()),
+            getAppPreferences(RadioService.this).getString(getString(R.string.key_last_played_radio), radios.get(0).getId()),
             new Bundle());
         }
         return true;
@@ -891,7 +898,7 @@ public class RadioService
         (isRemoteReady && (upnpSelectedDevice != null)) ?
           new UpnpSessionDevice(
             RadioService.this,
-            MainActivity.getAppPreferences(RadioService.this).getBoolean(RadioService.this.getString(R.string.key_pcm_mode), true),
+            getAppPreferences(RadioService.this).getBoolean(RadioService.this.getString(R.string.key_pcm_mode), KEY_PCM_MODE_DEFAULT),
             upnpStreamServer,
             RadioService.this,
             radio,

@@ -86,6 +86,7 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.AndroidUpnpService;
 import com.watea.radio_upnp.service.NetworkProxy;
+import com.watea.radio_upnp.service.RadioService;
 import com.watea.radio_upnp.upnp.Device;
 
 import org.json.JSONException;
@@ -215,11 +216,6 @@ public class MainActivity
   };
 
   @NonNull
-  public static SharedPreferences getAppPreferences(@NonNull Context context) {
-    return context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
-  }
-
-  @NonNull
   public SharedPreferences getSharedPreferences() {
     return sharedPreferences;
   }
@@ -276,10 +272,8 @@ public class MainActivity
   public void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
     invalidateOptionsMenu();
     actionBarLayout.setTitle(getResources().getString(mainActivityFragment.getTitle()));
-    floatingActionButton.setOnClickListener(
-      mainActivityFragment.getFloatingActionButtonOnClickListener());
-    floatingActionButton.setOnLongClickListener(
-      mainActivityFragment.getFloatingActionButtonOnLongClickListener());
+    floatingActionButton.setOnClickListener(mainActivityFragment.getFloatingActionButtonOnClickListener());
+    floatingActionButton.setOnLongClickListener(mainActivityFragment.getFloatingActionButtonOnLongClickListener());
     final int resource = mainActivityFragment.getFloatingActionButtonResource();
     if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
       floatingActionButton.setImageResource(resource);
@@ -292,8 +286,7 @@ public class MainActivity
     // Back button?
     final boolean isMainFragment = getCurrentFragment() instanceof MainFragment;
     drawerToggle.setDrawerIndicatorEnabled(isMainFragment);
-    drawerLayout.setDrawerLockMode(
-      isMainFragment ? DrawerLayout.LOCK_MODE_UNLOCKED : DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
+    drawerLayout.setDrawerLockMode(isMainFragment ? DrawerLayout.LOCK_MODE_UNLOCKED : DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
   }
 
   public void tell(int message) {
@@ -429,7 +422,7 @@ public class MainActivity
     // Layout
     layout = Layout.valueOf(sharedPreferences.getString(getString(R.string.key_layout), layout.toString()));
     // PCM
-    final boolean isPcm = sharedPreferences.getBoolean(getString(string.key_pcm_mode), true);
+    final boolean isPcm = sharedPreferences.getBoolean(getString(string.key_pcm_mode), RadioService.KEY_PCM_MODE_DEFAULT);
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // Inflate view
