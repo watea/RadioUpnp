@@ -34,6 +34,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -82,17 +83,17 @@ public class AlarmController {
 
   public AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
-    // Create view
-    final View view = View.inflate(this.mainActivity, R.layout.view_alarm, null);
+    // Build alert dialogs
+    batteryOptimisationUserHint = mainActivity
+      .new UserHint(R.string.key_battery_optimization_press_got_it, R.string.battery_optimization);
+    final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this.mainActivity);
+    final View view = LayoutInflater.from(alertDialogBuilder.getContext()).inflate(R.layout.view_alarm, null);
     timePicker = view.findViewById(R.id.timePicker);
     timePicker.setIs24HourView(true);
     toggleButton = view.findViewById(R.id.toggleButton);
     imageView = view.findViewById(R.id.imageView);
     textView = view.findViewById(R.id.text_view);
-    // Build alert dialogs
-    batteryOptimisationUserHint = mainActivity
-      .new UserHint(R.string.key_battery_optimization_press_got_it, R.string.battery_optimization);
-    alertDialog = new AlertDialog.Builder(this.mainActivity)
+    alertDialog = alertDialogBuilder
       .setTitle(R.string.title_alarm)
       .setIcon(R.drawable.ic_alarm_white_24dp)
       .setView(view)

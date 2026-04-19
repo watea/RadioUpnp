@@ -141,10 +141,9 @@ public class SearchFragment extends SearchRootFragment {
 
   @Override
   protected void setDialogItems() {
-    assert getContext() != null;
-    final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(getContext(), R.layout.view_spinner_item, countries);
-    final ArrayAdapter<String> radioTagsAdapter = new ArrayAdapter<>(getContext(), R.layout.view_spinner_item, radioTags);
-    final ArrayAdapter<String> bitratesAdapter = new ArrayAdapter<>(getContext(), R.layout.view_spinner_item, bitrates);
+    final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(countrySpinner.getContext(), R.layout.view_spinner_item, countries);
+    final ArrayAdapter<String> radioTagsAdapter = new ArrayAdapter<>(radioTagSpinner.getContext(), R.layout.view_spinner_item, radioTags);
+    final ArrayAdapter<String> bitratesAdapter = new ArrayAdapter<>(bitrateSpinner.getContext(), R.layout.view_spinner_item, bitrates);
     setSpinner(countrySpinner, countriesAdapter, countries, R.string.key_country);
     setSpinner(radioTagSpinner, radioTagsAdapter, radioTags, R.string.key_radio_tag);
     setSpinner(bitrateSpinner, bitratesAdapter, bitrates, R.string.key_bitrate);

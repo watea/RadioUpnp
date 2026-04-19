@@ -26,6 +26,7 @@ package com.watea.radio_upnp.activity;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -47,7 +48,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
@@ -243,6 +243,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   // Utility class to listen for URL edition
   protected class UrlWatcher implements TextWatcher {
     private final int defaultColor;
+    private final int errorColor;
     @NonNull
     private final EditText editText;
     @Nullable
@@ -252,6 +253,9 @@ public abstract class ItemFragment extends MainActivityFragment {
       this.editText = editText;
       this.editText.addTextChangedListener(this);
       defaultColor = this.editText.getCurrentTextColor();
+      try (final TypedArray ta = requireContext().obtainStyledAttributes(new int[]{androidx.appcompat.R.attr.colorError})) {
+        errorColor = ta.getColor(0, 0);
+      }
     }
 
     @Override
@@ -270,7 +274,7 @@ public abstract class ItemFragment extends MainActivityFragment {
         url = null;
       }
       assert getContext() != null;
-      editText.setTextColor((url == null) ? ContextCompat.getColor(getContext(), R.color.dark_red) : defaultColor);
+      editText.setTextColor((url == null) ? errorColor : defaultColor);
     }
   }
 

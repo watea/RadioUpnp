@@ -70,7 +70,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="?android:attr/actionBarSize"
                     app:layout_collapseMode="pin"
-                    app:popupTheme="@style/AppTheme.AppBarOverlay" />
+                    app:popupTheme="@style/ThemeOverlay.AppCompat.DayNight" />
 
             </com.google.android.material.appbar.CollapsingToolbarLayout>
 
@@ -84,8 +84,8 @@
             android:layout_gravity="bottom|end"
             android:layout_marginEnd="@dimen/app_margin"
             android:layout_marginBottom="@dimen/app_bottom_margin"
-            app:backgroundTint="@color/warm_orange"
-            app:tint="@color/warm_beige"
+            app:backgroundTint="?attr/colorAccent"
+            app:tint="?android:attr/textColorPrimary"
             tools:ignore="ContentDescription" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

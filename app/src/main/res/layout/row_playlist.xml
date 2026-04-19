@@ -33,7 +33,7 @@
         android:layout_height="wrap_content"
         android:padding="@dimen/app_horizontal_margin"
         android:textAllCaps="true"
-        android:textColor="?attr/android:textColorHighlight" />
+        android:textColor="?android:attr/textColorHighlight" />
 
     <TextView
         android:id="@+id/row_playlist_information_text_view"

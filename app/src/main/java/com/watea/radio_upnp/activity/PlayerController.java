@@ -123,13 +123,14 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       .new UserHint(R.string.key_information_press_got_it, R.string.information_press, 40);
     informationSelectPressUserHint = this.mainActivity
       .new UserHint(R.string.key_information_select_press_got_it, R.string.information_select_press, 2);
+    final AlertDialog.Builder playlistAlertDialogBuilder = new AlertDialog.Builder(this.mainActivity);
     final SimpleAdapter playlistAdapter = new SimpleAdapter(
-      this.mainActivity,
+      playlistAlertDialogBuilder.getContext(),
       playInformations,
       R.layout.row_playlist,
       new String[]{RadioService.DATE, RadioService.INFORMATION},
       new int[]{R.id.row_playlist_date_text_view, R.id.row_playlist_information_text_view});
-    playlistAlertDialog = new AlertDialog.Builder(this.mainActivity)
+    playlistAlertDialog = playlistAlertDialogBuilder
       .setAdapter(playlistAdapter, null)
       .create();
     playlistAlertDialog.getListView().setOnItemLongClickListener((parent, itemView, position, id) -> {
@@ -485,6 +486,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         // Order matters here for display coherence
         mediaControllerCallback.onPlaybackStateChanged(mediaController.getPlaybackState());
         mediaControllerCallback.onMetadataChanged(mediaMetadataCompat);
+        mediaControllerCallback.onExtrasChanged(mediaController.getExtras());
       }
       // Nota: no mediaBrowser.subscribe here needed
     }

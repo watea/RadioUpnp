@@ -26,13 +26,14 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorControlHighlight">@color/warm_amber</item>
         <item name="colorAccent">@color/warm_orange</item>
+        <item name="colorError">@color/dark_red</item>
         <item name="imageButtonStyle">@style/Widget.AppCompat.Button.Borderless</item>
         <item name="alertDialogTheme">@style/AlertDialogTheme</item>
         <item name="android:textColorHighlight">@color/warm_amber</item>
         <item name="android:textColorPrimaryDisableOnly">@color/warm_amber</item>
         <item name="android:textColorHint">@color/warm_amber</item>
         <item name="android:listDivider">@color/warm_amber</item>
-        <item name="mediaRouteTheme">@style/Theme.MediaRouter</item>
+        <item name="mediaRouteTheme">@style/MediaRouterTheme</item>
     </style>
 
     <style name="AppTheme.Dark" parent="AppTheme">
@@ -66,10 +67,18 @@
         <item name="android:popupBackground">@color/dark_brown</item>
     </style>
 
+    <style name="MediaRouterTheme" parent="Theme.MediaRouter">
+        <item name="android:colorBackground">@color/dark_brown</item>
+        <item name="android:textColor">@color/warm_beige</item>
+        <item name="android:textColorPrimary">@color/warm_beige</item>
+        <item name="android:textColorSecondary">@color/warm_amber</item>
+    </style>
+
     <style name="AlertDialogTheme" parent="Theme.AppCompat.Dialog.Alert">
         <item name="colorControlActivated">@color/warm_orange</item>
         <item name="android:textColor">@color/warm_beige</item>
         <item name="android:textColorPrimary">@color/warm_beige</item>
+        <item name="android:textColorHighlight">@color/warm_amber</item>
     </style>
 
 </resources>

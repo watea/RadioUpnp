@@ -48,6 +48,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -480,22 +481,24 @@ public class MainActivity
     navigationView.setNavigationItemSelectedListener(this);
     navigationMenu = navigationView.getMenu();
     // Build about dialog
-    final View aboutView = getLayoutInflater().inflate(R.layout.view_about, null);
+    final AlertDialog.Builder aboutAlertDialogBuilder = new AlertDialog.Builder(this);
+    final View aboutView = LayoutInflater.from(aboutAlertDialogBuilder.getContext()).inflate(R.layout.view_about, null);
     ((TextView) aboutView.findViewById(R.id.version_name_text_view))
       .setText(BuildConfig.VERSION_NAME);
-    aboutAlertDialog = new AlertDialog.Builder(this)
+    aboutAlertDialog = aboutAlertDialogBuilder
       .setView(aboutView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
     // Build sleep dialog
-    final View sleepView = getLayoutInflater().inflate(R.layout.view_sleep, null);
+    final AlertDialog.Builder sleepAlertDialogBuilder = new AlertDialog.Builder(this);
+    final View sleepView = LayoutInflater.from(sleepAlertDialogBuilder.getContext()).inflate(R.layout.view_sleep, null);
     final NumberPicker minutePicker = sleepView.findViewById(id.numberPicker);
     minutePicker.setMinValue(SLEEP_MIN);
     minutePicker.setMaxValue(SLEEP_MAX);
     minutePicker.setValue(sharedPreferences.getInt(getString(R.string.key_sleep), SLEEP_MIN));
     minutePicker.setOnValueChangedListener((picker, oldVal, newVal) -> sharedPreferences.edit().putInt(getString(R.string.key_sleep), newVal).apply());
-    sleepAlertDialog = new AlertDialog.Builder(this)
+    sleepAlertDialog = sleepAlertDialogBuilder
       .setTitle(R.string.title_sleep)
       .setIcon(R.drawable.ic_hourglass_bottom_white_24dp)
       .setView(sleepView)
@@ -503,18 +506,20 @@ public class MainActivity
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
     // Specific UPnP devices dialog
-    final View contentUpnp = getLayoutInflater().inflate(R.layout.content_upnp, null);
+    final AlertDialog.Builder upnpAlertDialogBuilder = new AlertDialog.Builder(this);
+    final View contentUpnp = LayoutInflater.from(upnpAlertDialogBuilder.getContext()).inflate(R.layout.content_upnp, null);
     final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       getThemeAttributeColor(android.R.attr.textColorHighlight),
       contentUpnp.findViewById(R.id.devices_default_linear_layout));
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
-    upnpAlertDialog = new AlertDialog.Builder(this)
+    upnpAlertDialog = upnpAlertDialogBuilder
       .setView(contentUpnp)
       .create();
     // Parameters dialog
-    final View parametersView = getLayoutInflater().inflate(R.layout.view_parameters, null);
+    final AlertDialog.Builder parametersAlertDialogBuilder = new AlertDialog.Builder(this);
+    final View parametersView = LayoutInflater.from(parametersAlertDialogBuilder.getContext()).inflate(R.layout.view_parameters, null);
     // Parameters dialog: theme
     final RadioGroup themeRadioGroup = parametersView.findViewById(R.id.theme_radio_group);
     themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -560,7 +565,7 @@ public class MainActivity
       sharedPreferences.edit().putBoolean(getString(R.string.key_pcm_mode), (group.getCheckedRadioButtonId() == id.pcm_radio_button)).commit());
     final int pcmRadioButtonId = isPcm ? R.id.pcm_radio_button : id.relay_radio_button;
     ((RadioButton) parametersView.findViewById(pcmRadioButtonId)).setChecked(true);
-    parametersAlertDialog = new AlertDialog.Builder(this)
+    parametersAlertDialog = parametersAlertDialogBuilder
       .setTitle(string.title_settings)
       .setIcon(R.drawable.ic_settings_white_24dp)
       .setView(parametersView)
@@ -656,6 +661,13 @@ public class MainActivity
     }
   }
 
+  private void tell(@NonNull Snackbar snackbar) {
+    final Context dialogContext = new AlertDialog.Builder(this).getContext();
+    try (final TypedArray typedArray = dialogContext.obtainStyledAttributes(new int[]{android.R.attr.textColorPrimary})) {
+      snackbar.setTextColor(typedArray.getColor(0, 0)).show();
+    }
+  }
+
   private void handleIntent(@NonNull Intent intent) {
     final String radioName = intent.getStringExtra(EXTRA_RADIO_NAME);
     if (radioName != null) {
@@ -677,18 +689,12 @@ public class MainActivity
     }
   }
 
-  @SuppressWarnings({"resource", "SameParameterValue"})
+  @SuppressWarnings("SameParameterValue")
   private int getThemeAttributeColor(int attr) {
     final int[] attrs = {attr};
-    final TypedArray typedArray = obtainStyledAttributes(attrs);
-    final int result = typedArray.getColor(0, 0); // Get the color value
-    typedArray.recycle(); // Always recycle TypedArray
-    return result;
-  }
-
-  // Customize snackbar for both dark and light theme
-  private void tell(@NonNull Snackbar snackbar) {
-    snackbar.setTextColor(getThemeAttributeColor(R.attr.colorAccent)).show();
+    try (TypedArray typedArray = obtainStyledAttributes(attrs)) {
+      return typedArray.getColor(0, 0);
+    }
   }
 
   private int getCurrentTheme() {

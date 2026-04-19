@@ -26,6 +26,7 @@ package com.watea.radio_upnp.activity;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -111,13 +112,13 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
-    assert getActivity() != null;
-    final View searchView = getActivity().getLayoutInflater().inflate(viewId, null);
+    assert getContext() != null;
+    final AlertDialog.Builder searchAlertDialogBuilder = new AlertDialog.Builder(getContext());
+    final View searchView = LayoutInflater.from(searchAlertDialogBuilder.getContext()).inflate(viewId, null);
     progressBar = searchView.findViewById(R.id.progressBar);
     linearLayout = searchView.findViewById(R.id.linearLayout);
     radiosSearchAdapter = new RadiosSearchAdapter(radiosRecyclerView);
-    assert getContext() != null;
-    searchAlertDialog = new AlertDialog.Builder(getContext())
+    searchAlertDialog = searchAlertDialogBuilder
       .setView(searchView)
       .setPositiveButton(R.string.action_go, (dialogInterface, i) -> search())
       .create();
