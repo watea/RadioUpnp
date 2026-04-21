@@ -132,7 +132,7 @@ public class MainActivity
   private Menu navigationMenu;
   private AlertDialog loadingAlertDialog = null; // null when not initialized
   private AlertDialog upnpAlertDialog;
-  private AlertDialog parametersAlertDialog;
+  private AlertDialog settingsAlertDialog;
   private AlertDialog aboutAlertDialog;
   private AlertDialog sleepAlertDialog;
   private UserHint toolbarUserHint;
@@ -253,7 +253,7 @@ public class MainActivity
     } else if (id == R.id.action_import) {
       importFile();
     } else if (id == R.id.action_settings) {
-      parametersAlertDialog.show();
+      settingsAlertDialog.show();
     } else if (id == R.id.action_about) {
       aboutAlertDialog.show();
     } else if (id == R.id.action_log) {
@@ -517,11 +517,11 @@ public class MainActivity
     upnpAlertDialog = upnpAlertDialogBuilder
       .setView(contentUpnp)
       .create();
-    // Parameters dialog
-    final AlertDialog.Builder parametersAlertDialogBuilder = new AlertDialog.Builder(this);
-    final View parametersView = LayoutInflater.from(parametersAlertDialogBuilder.getContext()).inflate(R.layout.view_parameters, null);
-    // Parameters dialog: theme
-    final RadioGroup themeRadioGroup = parametersView.findViewById(R.id.theme_radio_group);
+    // Settings dialog
+    final AlertDialog.Builder settingsAlertDialogBuilder = new AlertDialog.Builder(this);
+    final View settingsView = LayoutInflater.from(settingsAlertDialogBuilder.getContext()).inflate(R.layout.view_settings, null);
+    // Settings dialog: theme
+    final RadioGroup themeRadioGroup = settingsView.findViewById(R.id.theme_radio_group);
     themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
       final Theme previousTheme = theme;
       if (checkedId == R.id.dark_radio_button) {
@@ -546,9 +546,9 @@ public class MainActivity
       default:
         themeRadioButtonId = R.id.system_radio_button;
     }
-    ((RadioButton) parametersView.findViewById(themeRadioButtonId)).setChecked(true);
-    // Parameters dialog: layout
-    final RadioGroup layoutRadioGroup = parametersView.findViewById(R.id.layout_radio_group);
+    ((RadioButton) settingsView.findViewById(themeRadioButtonId)).setChecked(true);
+    // Settings dialog: layout
+    final RadioGroup layoutRadioGroup = settingsView.findViewById(R.id.layout_radio_group);
     layoutRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
       final Layout previousLayout = layout;
       layout = (group.getCheckedRadioButtonId() == id.row_radio_button) ? Layout.ROW : Layout.TILE;
@@ -558,17 +558,17 @@ public class MainActivity
       }
     });
     final int layoutRadioButtonId = (layout == Layout.TILE) ? R.id.tile_radio_button : R.id.row_radio_button;
-    ((RadioButton) parametersView.findViewById(layoutRadioButtonId)).setChecked(true);
-    // Parameters dialog: PCM
-    final RadioGroup pcmRadioGroup = parametersView.findViewById(R.id.pcm_radio_group);
+    ((RadioButton) settingsView.findViewById(layoutRadioButtonId)).setChecked(true);
+    // Settings dialog: PCM
+    final RadioGroup pcmRadioGroup = settingsView.findViewById(R.id.pcm_radio_group);
     pcmRadioGroup.setOnCheckedChangeListener((group, checkedId) ->
       sharedPreferences.edit().putBoolean(getString(R.string.key_pcm_mode), (group.getCheckedRadioButtonId() == id.pcm_radio_button)).commit());
     final int pcmRadioButtonId = isPcm ? R.id.pcm_radio_button : id.relay_radio_button;
-    ((RadioButton) parametersView.findViewById(pcmRadioButtonId)).setChecked(true);
-    parametersAlertDialog = parametersAlertDialogBuilder
+    ((RadioButton) settingsView.findViewById(pcmRadioButtonId)).setChecked(true);
+    settingsAlertDialog = settingsAlertDialogBuilder
       .setTitle(string.title_settings)
       .setIcon(R.drawable.ic_settings_white_24dp)
-      .setView(parametersView)
+      .setView(settingsView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
