@@ -216,6 +216,13 @@ public class MainActivity
     }
   };
 
+  public static int getThemeAttributeColor(@NonNull Context context, int attr) {
+    final int[] attrs = {attr};
+    try (final TypedArray typedArray = context.obtainStyledAttributes(attrs)) {
+      return typedArray.getColor(0, 0);
+    }
+  }
+
   @NonNull
   public SharedPreferences getSharedPreferences() {
     return sharedPreferences;
@@ -511,7 +518,7 @@ public class MainActivity
     final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
-      getThemeAttributeColor(android.R.attr.textColorHighlight),
+      getThemeAttributeColor(this, android.R.attr.textColorHighlight),
       contentUpnp.findViewById(R.id.devices_default_linear_layout));
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = upnpAlertDialogBuilder
@@ -663,9 +670,7 @@ public class MainActivity
 
   private void tell(@NonNull Snackbar snackbar) {
     final Context dialogContext = new AlertDialog.Builder(this).getContext();
-    try (final TypedArray typedArray = dialogContext.obtainStyledAttributes(new int[]{android.R.attr.textColorPrimary})) {
-      snackbar.setTextColor(typedArray.getColor(0, 0)).show();
-    }
+    snackbar.setTextColor(getThemeAttributeColor(dialogContext, android.R.attr.textColorPrimary)).show();
   }
 
   private void handleIntent(@NonNull Intent intent) {
@@ -686,14 +691,6 @@ public class MainActivity
         final Bitmap icon = device.getIcon();
         upnpIconConsumer.accept((icon == null) ? getDefaultIcon(R.drawable.ic_cast_warm) : icon);
       }
-    }
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  private int getThemeAttributeColor(int attr) {
-    final int[] attrs = {attr};
-    try (TypedArray typedArray = obtainStyledAttributes(attrs)) {
-      return typedArray.getColor(0, 0);
     }
   }
 

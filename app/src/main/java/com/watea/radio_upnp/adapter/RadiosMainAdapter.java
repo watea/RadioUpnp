@@ -25,7 +25,6 @@ package com.watea.radio_upnp.adapter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
@@ -152,10 +151,7 @@ public class RadiosMainAdapter
     }
 
     private int getTextViewColor(int color) {
-      try (final TypedArray typedArray = radioTextView
-        .getContext().getTheme().obtainStyledAttributes(new int[]{color})) {
-        return typedArray.getColor(0, 0);
-      }
+      return MainActivity.getThemeAttributeColor(radioTextView.getContext(), color);
     }
   }
 }

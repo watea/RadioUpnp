@@ -26,7 +26,6 @@ package com.watea.radio_upnp.activity;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -253,9 +252,7 @@ public abstract class ItemFragment extends MainActivityFragment {
       this.editText = editText;
       this.editText.addTextChangedListener(this);
       defaultColor = this.editText.getCurrentTextColor();
-      try (final TypedArray ta = requireContext().obtainStyledAttributes(new int[]{androidx.appcompat.R.attr.colorError})) {
-        errorColor = ta.getColor(0, 0);
-      }
+      errorColor = MainActivity.getThemeAttributeColor(requireContext(), androidx.appcompat.R.attr.colorError);
     }
 
     @Override
