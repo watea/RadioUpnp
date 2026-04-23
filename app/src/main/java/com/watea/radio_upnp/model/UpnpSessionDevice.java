@@ -30,8 +30,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
-import androidx.media3.common.util.UnstableApi;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.upnp.Action;
@@ -147,13 +145,12 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     }
   }
 
-  @OptIn(markerClass = UnstableApi.class)
   @Override
   public boolean prepare() {
     // super.prepare() blocks until the upstream HTTP connection is established.
     // By the time it returns, the session may have been released (e.g. by a
     // connect watchdog). Guard against scheduling stale UPnP actions.
-    if (super.prepare() && !exoPlayer.isReleased()) {
+    if (super.prepare() && !isReleased) {
       scheduleActionGetProtocolInfo();
       scheduleActionPrepareForConnection();
       scheduleActionSetAvTransportUri();

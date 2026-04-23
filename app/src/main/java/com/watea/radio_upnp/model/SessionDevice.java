@@ -77,6 +77,7 @@ public abstract class SessionDevice {
   private final Player.Listener playerListener;
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
+  protected volatile boolean isReleased = false;
 
   protected SessionDevice(
     @NonNull Context context,
@@ -188,6 +189,7 @@ public abstract class SessionDevice {
   public void release() {
     exoPlayer.removeListener(playerListener);
     exoPlayer.release();
+    isReleased = true;
   }
 
   // Set the current capabilities available on this session
