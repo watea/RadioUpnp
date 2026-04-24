@@ -42,6 +42,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -115,14 +116,12 @@ public class Radios extends ArrayList<Radio> {
               true,
               fileInputStream,
               Radio::isBackwardCompatible,
-              unused -> {
-                if ((loadingAlertDialog != null) && loadingAlertDialog.isShowing()) {
-                  loadingAlertDialog.dismiss();
-                }
-                onInit();
-              });
+              unused -> onInitFailed(loadingAlertDialog));
+          } catch (FileNotFoundException fileNotFoundException) {
+            Log.w(LOG_TAG, "setInstance: file not found, starting with empty radio list");
+            radios.putOnUiThread(() -> onInitFailed(loadingAlertDialog));
           } catch (Exception exception) {
-            Log.e(LOG_TAG, "init: internal failure", exception);
+            Log.e(LOG_TAG, "setInstance: internal failure", exception);
           }
         }).start();
       }
@@ -173,6 +172,13 @@ public class Radios extends ArrayList<Radio> {
   private static void onInit() {
     getInstance().tellListeners(true, false, Listener::onInitEnd);
     isInit = true;
+  }
+
+  private static void onInitFailed(@Nullable AlertDialog loadingAlertDialog) {
+    if ((loadingAlertDialog != null) && loadingAlertDialog.isShowing()) {
+      loadingAlertDialog.dismiss();
+    }
+    onInit();
   }
 
   public void addListener(@NonNull Listener listener) {
