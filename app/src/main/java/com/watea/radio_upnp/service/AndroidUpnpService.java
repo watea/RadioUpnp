@@ -107,9 +107,6 @@ public class AndroidUpnpService extends android.app.Service {
     }
   };
   private final SsdpClient ssdpClient = new SsdpClient(DEVICE + DEVICE_VERSION, ssdpClientListener);
-  private ConnectivityManager connectivityManager;
-  private NetworkProxy networkProxy;
-  private volatile boolean isDestroyed = false;
   private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
     @Override
     public void onAvailable(@NonNull Network network) {
@@ -127,6 +124,9 @@ public class AndroidUpnpService extends android.app.Service {
       }
     }
   };
+  private ConnectivityManager connectivityManager;
+  private NetworkProxy networkProxy;
+  private volatile boolean isDestroyed = false;
 
   @Override
   public void onCreate() {
