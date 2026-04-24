@@ -100,15 +100,21 @@ public class AndroidUpnpService extends android.app.Service {
       Log.d(LOG_TAG, "onStop");
       devices.forEach(AndroidUpnpService.this::tellRemoveListeners);
       devices.clear();
+      // If we missed the onAvailable() because the client was still started
+      if (!isDestroyed && networkProxy.isOnWifi()) {
+        ssdpClient.start();
+      }
     }
   };
   private final SsdpClient ssdpClient = new SsdpClient(DEVICE + DEVICE_VERSION, ssdpClientListener);
   private ConnectivityManager connectivityManager;
   private NetworkProxy networkProxy;
+  private volatile boolean isDestroyed = false;
   private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
     @Override
     public void onAvailable(@NonNull Network network) {
-      if (!ssdpClient.isStarted() && networkProxy.isOnWifi()) {
+      final NetworkCapabilities cap = connectivityManager.getNetworkCapabilities(network);
+      if (!ssdpClient.isStarted() && (cap != null) && cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
         devices.clear();
         ssdpClient.start();
       }
@@ -134,6 +140,8 @@ public class AndroidUpnpService extends android.app.Service {
   @Override
   public void onDestroy() {
     super.onDestroy();
+    // Tag we are destroyed
+    isDestroyed = true;
     connectivityManager.unregisterNetworkCallback(networkCallback);
     // Clear listeners BEFORE stopping the SSDP client to prevent
     // spurious onDeviceRemove() notifications during shutdown
