@@ -418,10 +418,10 @@ public class MainActivity
   @Override
   @SuppressLint({"InflateParams", "NonConstantResourceId"})
   protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
     Log.d(LOG_TAG, "onCreate");
-    // Create radios if needed
+    // Must be before super.onCreate: fragment restoration calls Radios.getInstance()
     Radios.setInstance(this, getLoadingAlertDialog());
+    super.onCreate(savedInstanceState);
     // Fetch preferences
     sharedPreferences = getPreferences(Context.MODE_PRIVATE);
     // Theme
