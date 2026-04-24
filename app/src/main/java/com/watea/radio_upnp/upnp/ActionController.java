@@ -34,25 +34,29 @@ public class ActionController {
     upnpActions.removeIf(upnpAction -> upnpAction.hasDevice(device));
   }
 
-  public synchronized void runNextAction() {
-    if (!upnpActions.isEmpty()) {
+  public void runNextAction() {
+    final UpnpAction nextAction;
+    synchronized (this) {
+      if (upnpActions.isEmpty()) {
+        return;
+      }
       upnpActions.poll();
-      pullAction(false);
+      nextAction = upnpActions.peekFirst();
+    }
+    if (nextAction != null) {
+      nextAction.execute(false);
     }
   }
 
-  public synchronized void schedule(@NonNull UpnpAction upnpAction) {
-    upnpActions.add(upnpAction);
+  public void schedule(@NonNull UpnpAction upnpAction) {
+    final boolean isFirst;
+    synchronized (this) {
+      upnpActions.add(upnpAction);
+      isFirst = upnpActions.size() == 1;
+    }
     // First action? => Start new thread
-    if (upnpActions.size() == 1) {
-      pullAction(true);
-    }
-  }
-
-  private void pullAction(boolean isOnOwnThread) {
-    final UpnpAction upnpAction = upnpActions.peekFirst();
-    if (upnpAction != null) {
-      upnpAction.execute(isOnOwnThread);
+    if (isFirst) {
+      upnpAction.execute(true);
     }
   }
 }
