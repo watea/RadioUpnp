@@ -11,8 +11,8 @@ android {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 36
-        versionCode = 300007
-        versionName = '3.00.007'
+        versionCode = 300008
+        versionName = '3.00.008'
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -84,9 +84,9 @@ dependencies {
     // Cast
     fullImplementation 'com.google.android.gms:play-services-cast-framework:22.3.1'
     // GSON
-    implementation 'com.google.code.gson:gson:2.13.2'
+    implementation 'com.google.code.gson:gson:2.14.0'
     // jsoup HTML parser library @ http://jsoup.org/
-    implementation 'org.jsoup:jsoup:1.22.1'
+    implementation 'org.jsoup:jsoup:1.22.2'
     // apache
     implementation 'org.apache.commons:commons-io:1.3.2'
     // CandidHttpServer
