@@ -52,7 +52,7 @@ public class ActionController {
     final boolean isFirst;
     synchronized (this) {
       upnpActions.add(upnpAction);
-      isFirst = upnpActions.size() == 1;
+      isFirst = (upnpActions.size() == 1);
     }
     // First action? => Start new thread
     if (isFirst) {
