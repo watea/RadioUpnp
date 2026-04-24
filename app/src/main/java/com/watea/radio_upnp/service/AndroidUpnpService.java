@@ -77,53 +77,9 @@ public class AndroidUpnpService extends android.app.Service {
   // add/remove can happen from binder threads concurrently
   private final Set<Listener> listeners = new CopyOnWriteArraySet<>();
   private final ExecutorService deviceExecutor = Executors.newCachedThreadPool(); // Bounded executor for device HTTP fetches — prevents unbounded raw thread creation
-  private final SsdpClient.Listener ssdpClientListener = new SsdpClient.Listener() {
-    public void onServiceDiscovered(@NonNull SsdpService service) {
-      Log.d(LOG_TAG, "Found SsdpService: " + service);
-      devices.process(service);
-    }
-
-    @Override
-    public void onServiceAnnouncement(@NonNull SsdpService service) {
-      Log.d(LOG_TAG, "Announce SsdpService: " + service);
-      devices.process(service);
-    }
-
-    @Override
-    public void onFatalError() {
-      Log.d(LOG_TAG, "onFatalError");
-      listeners.forEach(Listener::onFatalError);
-    }
-
-    @Override
-    public void onStop() {
-      Log.d(LOG_TAG, "onStop");
-      devices.forEach(AndroidUpnpService.this::tellRemoveListeners);
-      devices.clear();
-      // If we missed the onAvailable() because the client was still started
-      if (!isDestroyed && networkProxy.isOnWifi()) {
-        ssdpClient.start();
-      }
-    }
-  };
+  private final SsdpClient.Listener ssdpClientListener = new SsdpClientListener();
   private final SsdpClient ssdpClient = new SsdpClient(DEVICE + DEVICE_VERSION, ssdpClientListener);
-  private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
-    @Override
-    public void onAvailable(@NonNull Network network) {
-      final NetworkCapabilities cap = connectivityManager.getNetworkCapabilities(network);
-      if (!ssdpClient.isStarted() && (cap != null) && cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-        devices.clear();
-        ssdpClient.start();
-      }
-    }
-
-    @Override
-    public void onLost(@NonNull Network network) {
-      if (!networkProxy.isOnWifi()) {
-        ssdpClient.stop();
-      }
-    }
-  };
+  private final ConnectivityManager.NetworkCallback networkCallback = new NetworkCallback();
   private ConnectivityManager connectivityManager;
   private NetworkProxy networkProxy;
   private volatile boolean isDestroyed = false;
@@ -226,6 +182,55 @@ public class AndroidUpnpService extends android.app.Service {
     public Device getActiveSelectedDevice() {
       final Device result = getSelectedDevice();
       return ((result == null) || result.isAlive()) ? result : null;
+    }
+  }
+
+  private class SsdpClientListener implements SsdpClient.Listener {
+    @Override
+    public void onServiceDiscovered(@NonNull SsdpService service) {
+      Log.d(LOG_TAG, "Found SsdpService: " + service);
+      devices.process(service);
+    }
+
+    @Override
+    public void onServiceAnnouncement(@NonNull SsdpService service) {
+      Log.d(LOG_TAG, "Announce SsdpService: " + service);
+      devices.process(service);
+    }
+
+    @Override
+    public void onFatalError() {
+      Log.d(LOG_TAG, "onFatalError");
+      listeners.forEach(Listener::onFatalError);
+    }
+
+    @Override
+    public void onStop() {
+      Log.d(LOG_TAG, "onStop");
+      devices.forEach(AndroidUpnpService.this::tellRemoveListeners);
+      devices.clear();
+      // If we missed the onAvailable() because the client was still started
+      if (!isDestroyed && networkProxy.isOnWifi()) {
+        ssdpClient.start();
+      }
+    }
+  }
+
+  private class NetworkCallback extends ConnectivityManager.NetworkCallback {
+    @Override
+    public void onAvailable(@NonNull Network network) {
+      final NetworkCapabilities cap = connectivityManager.getNetworkCapabilities(network);
+      if (!ssdpClient.isStarted() && (cap != null) && cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+        devices.clear();
+        ssdpClient.start();
+      }
+    }
+
+    @Override
+    public void onLost(@NonNull Network network) {
+      if (!networkProxy.isOnWifi()) {
+        ssdpClient.stop();
+      }
     }
   }
 
