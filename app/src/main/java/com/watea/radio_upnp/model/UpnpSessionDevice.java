@@ -140,7 +140,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       // Do only if nothing done currently
       if (volumeDirection == AudioManager.ADJUST_SAME) {
         volumeDirection = direction;
-        upnpAction.execute(true);
+        upnpAction.ownThreadExecute();
       }
     }
   }
@@ -292,7 +292,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       }
         .addArgument(INPUT_CHANNEL, INPUT_MASTER)
         .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume))
-        .execute(false);
+        .execute();
     }
   }
 

@@ -44,7 +44,7 @@ public class ActionController {
       nextAction = upnpActions.peekFirst();
     }
     if (nextAction != null) {
-      nextAction.execute(false);
+      nextAction.execute();
     }
   }
 
@@ -56,7 +56,7 @@ public class ActionController {
     }
     // First action? => Start new thread
     if (isFirst) {
-      upnpAction.execute(true);
+      upnpAction.ownThreadExecute();
     }
   }
 }

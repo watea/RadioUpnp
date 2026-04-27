@@ -67,9 +67,9 @@ public abstract class UpnpAction {
     return this;
   }
 
-  public void execute(boolean isOnOwnThread) {
+  public void execute() {
     Log.d(LOG_TAG, "execute: " + action.getName() + " on: " + action.getDevice().getDisplayString());
-    final Request request = new Request(action.getService(), action.getName(), arguments) {
+    new Request(action.getService(), action.getName(), arguments) {
       @Override
       public void onSuccess(@NonNull Map<String, String> responses) {
         Log.d(LOG_TAG, "Successfully called UPnP action: " + action.getName());
@@ -83,12 +83,11 @@ public abstract class UpnpAction {
         Log.d(LOG_TAG, "Failed to call UPnP action: " + action.getName() + " => " + faultCode + "/" + faultString + "/" + faultDetail);
         UpnpAction.this.onFailure();
       }
-    };
-    if (isOnOwnThread) {
-      new Thread(request::call).start();
-    } else {
-      request.call();
-    }
+    }.call();
+  }
+
+  public void ownThreadExecute() {
+    new Thread(this::execute).start();
   }
 
   public void schedule() {
