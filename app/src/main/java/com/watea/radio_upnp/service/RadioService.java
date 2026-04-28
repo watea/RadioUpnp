@@ -904,7 +904,7 @@ public class RadioService
             radio,
             lockKey,
             upnpSelectedDevice,
-            upnpService.getActionController(),
+            upnpService.getRequestController(),
             mediaSessionCompatCallback::onPlay) :
           new LocalSessionDevice(
             RadioService.this,

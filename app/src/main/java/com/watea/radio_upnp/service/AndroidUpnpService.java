@@ -40,8 +40,8 @@ import androidx.annotation.Nullable;
 import com.watea.androidssdpclient.SsdpClient;
 import com.watea.androidssdpclient.SsdpService;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
+import com.watea.radio_upnp.upnp.RequestController;
 
 import java.util.HashSet;
 import java.util.List;
@@ -70,7 +70,7 @@ public class AndroidUpnpService extends android.app.Service {
     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) // Internet
     .build();
   private final Binder binder = new UpnpService();
-  private final ActionController actionController = new ActionController();
+  private final RequestController requestController = new RequestController();
   private final Devices devices = new Devices();
   // CopyOnWriteArraySet ensures thread-safe iteration and modification:
   // listener notifications are dispatched from background threads while
@@ -147,8 +147,8 @@ public class AndroidUpnpService extends android.app.Service {
 
   public class UpnpService extends android.os.Binder {
     @NonNull
-    public ActionController getActionController() {
-      return actionController;
+    public RequestController getRequestController() {
+      return requestController;
     }
 
     public void addListener(@NonNull Listener listener) {

@@ -33,11 +33,10 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.upnp.Action;
-import com.watea.radio_upnp.upnp.ActionController;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Request;
+import com.watea.radio_upnp.upnp.RequestController;
 import com.watea.radio_upnp.upnp.Service;
-import com.watea.radio_upnp.upnp.UpnpAction;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -61,7 +60,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
   @NonNull
-  private final ActionController actionController;
+  private final RequestController requestController;
   @Nullable
   private final Service connectionManager;
   @Nullable
@@ -85,10 +84,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull Radio radio,
     @NonNull String lockKey,
     @NonNull Device device,
-    @NonNull ActionController actionController,
+    @NonNull RequestController requestController,
     @NonNull Consumer<Radio> onPlayCallback) {
     super(context, isPcm ? Mode.PCM : Mode.MUTE, serverCallback, listener, radio, lockKey);
-    this.actionController = actionController;
+    this.requestController = requestController;
     this.onPlayCallback = onPlayCallback;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
@@ -133,14 +132,14 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   @Override
   public void adjustVolume(int direction) {
-    final UpnpAction upnpAction = getActionGetVolume();
-    if (upnpAction == null) {
+    final Request request = getActionGetVolume();
+    if (request == null) {
       Log.e(LOG_TAG, "adjustVolume: scheduleActionGetVolume() is null!");
     } else {
       // Do only if nothing done currently
       if (volumeDirection == AudioManager.ADJUST_SAME) {
         volumeDirection = direction;
-        upnpAction.ownThreadExecute();
+        request.ownThreadExecute();
       }
     }
   }
@@ -184,8 +183,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     scheduleActionStop();
   }
 
-  private void scheduleMandatoryAction(
-    @Nullable Action action, @NonNull Function<Action, UpnpAction> function) {
+  private void scheduleMandatoryAction(@Nullable Action action, @NonNull Function<Action, Request> function) {
     if (action == null) {
       // Shall not happen
       Log.e(LOG_TAG, "scheduleMandatoryAction: mandatory UPnP action not found");
@@ -195,8 +193,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     }
   }
 
-  private void scheduleOptionalAction(
-    @Nullable Action action, @NonNull Function<Action, UpnpAction> function) {
+  private void scheduleOptionalAction(@Nullable Action action, @NonNull Function<Action, Request> function) {
     if (action != null) {
       function.apply(action).schedule();
     }
@@ -205,7 +202,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private void scheduleActionGetProtocolInfo() {
     scheduleOptionalAction(
       (connectionManager == null) ? null : connectionManager.getAction(ACTION_GET_PROTOCOL_INFO),
-      action -> new UpnpAction(action, actionController) {
+      action -> new Request(action, requestController) {
         @Override
         protected void onSuccess() {
           final String sink = getResponse("Sink");
@@ -225,7 +222,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private void scheduleActionPlay() {
     scheduleMandatoryAction(
       (avTransportService == null) ? null : avTransportService.getAction(ACTION_PLAY),
-      action -> new UpnpAction(action, actionController, instanceId) {
+      action -> new Request(action, requestController, instanceId) {
         @Override
         protected void onSuccess() {
           onState(PlaybackStateCompat.STATE_PLAYING);
@@ -245,7 +242,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private void scheduleActionStop() {
     scheduleMandatoryAction(
       (avTransportService == null) ? null : avTransportService.getAction(ACTION_STOP),
-      action -> new UpnpAction(action, actionController, instanceId) {
+      action -> new Request(action, requestController, instanceId) {
         @Override
         protected void onFailure() {
           Log.d(LOG_TAG, "scheduleActionStop: error");
@@ -258,7 +255,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private void scheduleActionPrepareForConnection() {
     scheduleOptionalAction(
       (connectionManager == null) ? null : connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION),
-      action -> new UpnpAction(action, actionController) {
+      action -> new Request(action, requestController) {
         @Override
         protected void onSuccess() {
           final String aVTransportID = getResponse("AVTransportID");
@@ -282,7 +279,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     final Action action = (renderingControl == null) ? null : renderingControl.getAction(ACTION_SET_VOLUME);
     if (action != null) {
       Log.d(LOG_TAG, "Volume required: " + currentVolume);
-      new UpnpAction(action, actionController, instanceId) {
+      new Request(action, requestController, instanceId) {
         @Override
         protected void onSuccess() {
           volumeDirection = AudioManager.ADJUST_SAME;
@@ -297,10 +294,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Nullable
-  private UpnpAction getActionGetVolume() {
+  private Request getActionGetVolume() {
     final Action action = (renderingControl == null) ? null : renderingControl.getAction(ACTION_GET_VOLUME);
     return (action == null) ? null :
-      new UpnpAction(action, actionController, instanceId) {
+      new Request(action, requestController, instanceId) {
         @Override
         protected void onSuccess() {
           final String response = getResponse("CurrentVolume");
@@ -337,7 +334,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private void scheduleActionSetAvTransportUri() {
     scheduleMandatoryAction(
       (avTransportService == null) ? null : avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
-      action -> new UpnpAction(action, actionController, instanceId) {
+      action -> new Request(action, requestController, instanceId) {
         @Override
         protected void onSuccess() {
           onState(PlaybackStateCompat.STATE_BUFFERING);
@@ -349,7 +346,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
           Log.d(LOG_TAG, "scheduleActionSetAvTransportUri: error");
           onState(PlaybackStateCompat.STATE_ERROR);
           // Release other UPnP actions on this device
-          actionController.release(action.getDevice());
+          requestController.release(action.getDevice());
           super.onFailure();
         }
       }

@@ -27,36 +27,36 @@ import androidx.annotation.NonNull;
 
 import java.util.ArrayDeque;
 
-public class ActionController {
-  private final ArrayDeque<UpnpAction> upnpActions = new ArrayDeque<>();
+public class RequestController {
+  private final ArrayDeque<Request> requests = new ArrayDeque<>();
 
   public synchronized void release(@NonNull Device device) {
-    upnpActions.removeIf(upnpAction -> upnpAction.hasDevice(device));
+    requests.removeIf(request -> request.hasDevice(device));
   }
 
-  public void runNextAction() {
-    final UpnpAction nextAction;
+  public void runNextRequest() {
+    final Request next;
     synchronized (this) {
-      if (upnpActions.isEmpty()) {
+      if (requests.isEmpty()) {
         return;
       }
-      upnpActions.poll();
-      nextAction = upnpActions.peekFirst();
+      requests.poll();
+      next = requests.peekFirst();
     }
-    if (nextAction != null) {
-      nextAction.execute();
+    if (next != null) {
+      next.execute();
     }
   }
 
-  public void schedule(@NonNull UpnpAction upnpAction) {
+  public void schedule(@NonNull Request request) {
     final boolean isFirst;
     synchronized (this) {
-      upnpActions.add(upnpAction);
-      isFirst = (upnpActions.size() == 1);
+      requests.add(request);
+      isFirst = (requests.size() == 1);
     }
     // First action? => Start new thread
     if (isFirst) {
-      upnpAction.ownThreadExecute();
+      request.ownThreadExecute();
     }
   }
 }
