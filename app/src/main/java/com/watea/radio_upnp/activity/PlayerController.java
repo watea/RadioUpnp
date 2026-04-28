@@ -237,7 +237,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     try {
       mediaBrowser.connect();
     } catch (IllegalStateException illegalStateException) {
-      Log.e(LOG_TAG, "onActivityResume: mediaBrowser.connect() failed", illegalStateException);
+      Log.e(LOG_TAG, "onActivityCreate: mediaBrowser.connect() failed", illegalStateException);
     }
   }
 

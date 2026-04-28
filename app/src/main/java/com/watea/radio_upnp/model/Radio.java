@@ -381,13 +381,13 @@ public class Radio {
           try {
             bitrate = Integer.parseInt(contentBitrate.split(",")[0].trim());
           } catch (NumberFormatException numberFormatException) {
-            Log.w(LOG_TAG, "setConnectionSet: invalid bitrate header - " + contentBitrate);
+            Log.w(LOG_TAG, "getConnectionSet: invalid bitrate header - " + contentBitrate);
           }
         }
         Log.d(LOG_TAG, "ConnectionSet for radio " + name + ": content => " + contentType + " URL => " + actualUrl);
         connectionSet = new ConnectionSet(actualUrl, contentType, bitrate);
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "setConnectionSet: unable to connect", ioException);
+        Log.d(LOG_TAG, "getConnectionSet: unable to connect", ioException);
       } finally {
         if (httpURLConnection != null) {
           httpURLConnection.disconnect();
