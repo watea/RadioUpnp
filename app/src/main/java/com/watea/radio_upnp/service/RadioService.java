@@ -107,6 +107,8 @@ public class RadioService
   @Nullable
   private Result<List<MediaBrowserCompat.MediaItem>> loadResult = null;
   private boolean isLastRadioToLaunch = false;
+  @Nullable
+  private String pendingSearchQuery = null;
   private volatile boolean isAllowedToRewind = false;
   @NonNull
   private volatile String lockKey = getLockKey();
@@ -228,7 +230,10 @@ public class RadioService
           onLoadChildren(loadResult);
           loadResult = null;
         }
-        if (isLastRadioToLaunch) {
+        if (pendingSearchQuery != null) {
+          mediaSessionCompatCallback.onPlayFromSearch(pendingSearchQuery, new Bundle());
+          pendingSearchQuery = null;
+        } else if (isLastRadioToLaunch) {
           mediaSessionCompatCallback.launchLastRadio();
           isLastRadioToLaunch = false;
         }
@@ -734,6 +739,10 @@ public class RadioService
     @Override
     public void onPlayFromSearch(String query, Bundle extras) {
       Log.d(LOG_TAG, "onPlayFromSearch: query = " + query);
+      if (!Radios.isInit()) {
+        pendingSearchQuery = query;
+        return;
+      }
       final Radios radios = Radios.getInstance();
       Radio match = null;
       if ((query == null) || query.trim().isEmpty()) {
