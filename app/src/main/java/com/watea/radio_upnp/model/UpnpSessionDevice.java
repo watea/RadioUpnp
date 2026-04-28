@@ -392,7 +392,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     return mime + ":" + getDlnaTail(content);
   }
 
-  // Create DIDL-Lite metadata
+  // Creates DIDL-Lite metadata
   @NonNull
   private String getMetaData() {
     return "<DIDL-Lite " +

@@ -404,7 +404,7 @@ public class MainActivity
     return layout;
   }
 
-  // Build load dialog if necessary
+  // Builds load dialog if necessary
   public AlertDialog getLoadingAlertDialog() {
     return (loadingAlertDialog == null) ?
       loadingAlertDialog = new AlertDialog.Builder(this)

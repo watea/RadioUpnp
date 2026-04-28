@@ -239,7 +239,7 @@ public class AndroidUpnpService extends android.app.Service {
     // construction when two SSDP announcements for the same UUID arrive in quick succession
     private final Set<String> pendingUUIDs = new HashSet<>();
 
-    // Add device if it has the expected device type and is not already known
+    // Adds device if it has the expected device type and is not already known
     @Override
     public synchronized boolean add(Device device) {
       final boolean added = !device.isOnError() &&

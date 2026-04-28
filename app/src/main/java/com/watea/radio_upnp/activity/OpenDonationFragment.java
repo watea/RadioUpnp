@@ -37,7 +37,7 @@ public class OpenDonationFragment extends MainActivityFragment {
   private static final Uri LIBERAPAY_URI = Uri.parse("https://liberapay.com/watea/donate");
   private static final Uri PAYPAL_URI = Uri.parse("https://paypal.me/frwatea?country.x=FR&locale.x=fr_FR");
 
-  // Send a mail for contact
+  // Sends a mail for contact
   @NonNull
   @Override
   public View.OnClickListener getFloatingActionButtonOnClickListener() {

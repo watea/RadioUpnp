@@ -231,12 +231,12 @@ public abstract class Request {
     return responses.get(name);
   }
 
-  // Run next by default
+  // Runs next by default
   protected void onSuccess() {
     requestController.runNextRequest();
   }
 
-  // Run next by default
+  // Runs next by default
   protected void onFailure() {
     requestController.runNextRequest();
   }

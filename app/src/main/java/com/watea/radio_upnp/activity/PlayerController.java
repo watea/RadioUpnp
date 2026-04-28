@@ -242,7 +242,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   }
 
   // Must be called on activity destroy.
-  // Handle services.
+  // Handles services.
   public void onActivityDestroy() {
     // Disconnect mediaBrowser
     mediaBrowser.disconnect();

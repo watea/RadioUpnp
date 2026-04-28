@@ -192,7 +192,7 @@ public abstract class SessionDevice {
     isReleased = true;
   }
 
-  // Set the current capabilities available on this session
+  // Sets the current capabilities available on this session
   public long getAvailableActions(int state) {
     long availableActions = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
       PlaybackStateCompat.ACTION_STOP |

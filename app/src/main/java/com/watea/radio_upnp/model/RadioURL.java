@@ -154,7 +154,7 @@ public class RadioURL {
     return getActualHttpURLConnection(userAgent, Collections.emptyMap());
   }
 
-  // Handle redirection
+  // Handles redirection
   @NonNull
   public HttpURLConnection getActualHttpURLConnection(@NonNull String userAgent, @NonNull Map<String, String> requestProperties) throws IOException {
     if (uRL == null) {
