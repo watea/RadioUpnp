@@ -28,4 +28,5 @@
     <string name="key_toolbar_got_it" translatable="false">key_toolbar_got_it</string>
     <string name="key_battery_optimization_press_got_it" translatable="false">key_battery_optimization_press_got_it</string>
     <string name="key_pcm_mode" translatable="false">key_pcm_mode</string>
+    <string name="key_radio_name" translatable="false">radio_name</string>
 </resources>

@@ -101,11 +101,20 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   // MediaController from the MediaBrowser when it has successfully connected
   @Nullable
   private MediaControllerCompat mediaController = null;
+  @Nullable
+  private String pendingRadioName = null;
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onChange(@NonNull Radio radio) {
       if (radio == getCurrentRadio()) {
         setPreferredButton(radio.isPreferred());
+      }
+    }
+
+    @Override
+    public void onInitEnd() {
+      if (pendingRadioName != null) {
+        playFromName(pendingRadioName);
       }
     }
   };
@@ -250,6 +259,14 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     mediaBrowserConnectionCallback.onConnectionSuspended();
   }
 
+  public void startReadingFromName(@NonNull String radioName) {
+    if (mediaController == null) {
+      pendingRadioName = radioName;
+    } else {
+      playFromName(radioName);
+    }
+  }
+
   public void startReading(@NonNull Radio radio) {
     if (mediaController == null) {
       // Should not happen
@@ -279,6 +296,18 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     // Init listener
     if (listener != null) {
       listener.accept(getCurrentRadio());
+    }
+  }
+
+  private void playFromName(@NonNull String radioName) {
+    if (!Radios.isInit()) {
+      pendingRadioName = radioName;
+      return;
+    }
+    pendingRadioName = null;
+    final Radio radio = Radios.getInstance().getRadioFromName(radioName);
+    if (radio != null) {
+      startReading(radio);
     }
   }
 
@@ -477,6 +506,10 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       Radios.getInstance().addListener(radiosListener);
       // Get a MediaController for the MediaSession
       mediaController = new MediaControllerCompat(mainActivity, mediaBrowser.getSessionToken());
+      // Handle pending voice command
+      if (pendingRadioName != null) {
+        playFromName(pendingRadioName);
+      }
       // Link to the callback controller
       mediaController.registerCallback(mediaControllerCallback);
       // Sync existing MediaSession state with UI

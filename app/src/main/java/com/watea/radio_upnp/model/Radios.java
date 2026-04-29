@@ -53,6 +53,7 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -267,7 +268,16 @@ public class Radios extends ArrayList<Radio> {
 
   @Nullable
   public Radio getRadioFromName(@NonNull String name) {
-    return stream().filter(radio -> name.equals(radio.getName())).findFirst().orElse(null);
+    final String normalized = name.trim().toLowerCase(Locale.getDefault());
+    Radio result = stream()
+      .filter(radio -> radio.getName().toLowerCase(Locale.getDefault()).equals(normalized))
+      .findFirst().orElse(null);
+    if (result == null) {
+      result = stream()
+        .filter(radio -> radio.getName().toLowerCase(Locale.getDefault()).contains(normalized))
+        .findFirst().orElse(null);
+    }
+    return result;
   }
 
   // isJSON: true if JSON, false if CSV.

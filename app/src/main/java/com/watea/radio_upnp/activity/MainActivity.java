@@ -113,7 +113,6 @@ public class MainActivity
   implements NavigationView.OnNavigationItemSelectedListener {
   public static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
-  private static final String EXTRA_RADIO_NAME = "radio_name";
   private static final int SLEEP_MAX = 90;
   private static final int REQUEST_CODE_POST_NOTIFICATIONS = 101;
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
@@ -674,12 +673,9 @@ public class MainActivity
   }
 
   private void handleIntent(@NonNull Intent intent) {
-    final String radioName = intent.getStringExtra(EXTRA_RADIO_NAME);
+    final String radioName = intent.getStringExtra(getString(R.string.key_radio_name));
     if (radioName != null) {
-      final Radio radio = Radios.getInstance().getRadioFromName(radioName);
-      if (radio != null) {
-        playerController.startReading(radio);
-      }
+      playerController.startReadingFromName(radioName);
     }
   }
 

@@ -19,7 +19,7 @@
 
             <parameter
                 android:name="media.name"
-                android:key="radio_name" />
+                android:key="@string/key_radio_name" />
 
         </intent>
 
