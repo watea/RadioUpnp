@@ -10,6 +10,6 @@
         android:id="@+id/action_done"
         android:icon="@drawable/ic_done_white_30dp"
         android:title="@string/action_done"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
 </menu>
