@@ -155,7 +155,8 @@ public class URLService {
   }
 
   public interface Consumer {
-    void endParseAccept(@NonNull URLService uRLService);
+    default void endParseAccept(@NonNull URLService uRLService) {
+    }
 
     default void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     }

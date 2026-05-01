@@ -37,10 +37,6 @@ public abstract class Asset implements URLService.Consumer {
     return (tag == null) ? "Unknown" : tag;
   }
 
-  @Override
-  public void endParseAccept(@NonNull URLService uRLService) {
-  }
-
   public boolean isOnError() {
     return isOnError;
   }
