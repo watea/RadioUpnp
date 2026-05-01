@@ -45,8 +45,7 @@ public abstract class Asset implements URLService.Consumer {
     isOnError = true;
   }
 
-  protected void hydrate
-    (@NonNull URLService uRLService) throws IOException, XmlPullParserException {
+  protected void hydrate(@NonNull URLService uRLService) throws IOException, XmlPullParserException {
     uRLService.fetchContent().parseXml(this);
   }
 }
