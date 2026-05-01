@@ -3,7 +3,7 @@
 
     <item
         android:id="@+id/action_done"
-        android:icon="@drawable/ic_done_white_30dp"
+        android:icon="@drawable/ic_done_white_24dp"
         android:title="@string/action_done"
         app:showAsAction="always" />
 

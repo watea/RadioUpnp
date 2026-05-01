@@ -513,15 +513,15 @@ public class MainActivity
       .create();
     // Specific UPnP devices dialog
     final AlertDialog.Builder upnpAlertDialogBuilder = new AlertDialog.Builder(this);
-    final View contentUpnp = LayoutInflater.from(upnpAlertDialogBuilder.getContext()).inflate(R.layout.content_upnp, null);
-    final RecyclerView devicesRecyclerView = contentUpnp.findViewById(R.id.devices_recycler_view);
+    final View upnpView = LayoutInflater.from(upnpAlertDialogBuilder.getContext()).inflate(R.layout.view_upnp, null);
+    final RecyclerView devicesRecyclerView = upnpView.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       getThemeAttributeColor(this, android.R.attr.textColorHighlight),
-      contentUpnp.findViewById(R.id.devices_default_linear_layout));
+      upnpView.findViewById(R.id.devices_default_linear_layout));
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = upnpAlertDialogBuilder
-      .setView(contentUpnp)
+      .setView(upnpView)
       .create();
     // Settings dialog
     final AlertDialog.Builder settingsAlertDialogBuilder = new AlertDialog.Builder(this);
