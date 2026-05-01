@@ -416,7 +416,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
 
   private void setPreferredButton(boolean isPreferred) {
     preferredImageButton.setImageResource(
-      isPreferred ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+      isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp);
   }
 
   private class MediaControllerCompatCallback extends MediaControllerCompat.Callback {

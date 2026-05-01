@@ -236,7 +236,7 @@ public class MainFragment extends MainActivityFragment {
 
   private void setPreferredMenuItem() {
     preferredMenuItem.setIcon(
-      Radios.isPreferred() ? R.drawable.ic_star_white_30dp : R.drawable.ic_star_border_white_30dp);
+      Radios.isPreferred() ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp);
   }
 
   private static class VarColumnGridLayoutManager extends GridLayoutManager {

@@ -31,7 +31,7 @@
             android:layout_toStartOf="@+id/row_modify_radio_move_image_button"
             android:contentDescription="@string/preferred"
             android:gravity="center"
-            app:srcCompat="@drawable/ic_star_border_white_30dp"
+            app:srcCompat="@drawable/ic_star_border_white_24dp"
             app:tint="?attr/colorControlHighlight" />
 
         <ImageButton
