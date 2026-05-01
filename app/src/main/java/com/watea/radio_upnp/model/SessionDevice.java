@@ -207,7 +207,8 @@ public abstract class SessionDevice {
         availableActions |= PlaybackStateCompat.ACTION_PLAY;
         break;
       case PlaybackStateCompat.STATE_ERROR:
-        availableActions |= PlaybackStateCompat.ACTION_REWIND;
+        availableActions |= PlaybackStateCompat.ACTION_REWIND |
+          PlaybackStateCompat.ACTION_PLAY;
         break;
       default:
         // Nothing else
