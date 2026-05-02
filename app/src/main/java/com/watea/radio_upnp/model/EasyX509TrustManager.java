@@ -27,12 +27,16 @@ import android.annotation.SuppressLint;
 
 import androidx.annotation.NonNull;
 
+import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
@@ -51,6 +55,13 @@ public class EasyX509TrustManager implements X509TrustManager {
       throw new NoSuchAlgorithmException("No trust manager found");
     }
     standardTrustManager = (X509TrustManager) trustManagers[0];
+  }
+
+  @NonNull
+  public static SSLSocketFactory getSSLSocketFactory(@NonNull EasyX509TrustManager easyX509TrustManager) throws NoSuchAlgorithmException, KeyManagementException {
+    final SSLContext sSLContext = SSLContext.getInstance("TLS");
+    sSLContext.init(null, new TrustManager[]{easyX509TrustManager}, new SecureRandom());
+    return sSLContext.getSocketFactory();
   }
 
   @Override

@@ -42,7 +42,9 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DefaultHttpDataSource;
+import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.Renderer;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
@@ -54,7 +56,12 @@ import androidx.media3.extractor.metadata.icy.IcyInfo;
 
 import com.watea.radio_upnp.R;
 
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
+
+import okhttp3.OkHttpClient;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
@@ -228,8 +235,18 @@ public abstract class SessionDevice {
 
   @NonNull
   private ExoPlayer getExoPlayer() {
-    final DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
-      .setDefaultRequestProperties(Collections.singletonMap("User-Agent", context.getString(R.string.app_name)));
+    DataSource.Factory httpDataSourceFactory;
+    try {
+      final EasyX509TrustManager easyX509TrustManager = new EasyX509TrustManager();
+      httpDataSourceFactory = new OkHttpDataSource.Factory(new OkHttpClient.Builder()
+        .sslSocketFactory(EasyX509TrustManager.getSSLSocketFactory(easyX509TrustManager), easyX509TrustManager)
+        .build())
+        .setDefaultRequestProperties(Collections.singletonMap("User-Agent", context.getString(R.string.app_name)));
+    } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
+      Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
+      httpDataSourceFactory = new DefaultHttpDataSource.Factory()
+        .setDefaultRequestProperties(Collections.singletonMap("User-Agent", context.getString(R.string.app_name)));
+    }
     return new ExoPlayer.Builder(context)
       .setMediaSourceFactory(new DefaultMediaSourceFactory(httpDataSourceFactory))
       .setRenderersFactory(

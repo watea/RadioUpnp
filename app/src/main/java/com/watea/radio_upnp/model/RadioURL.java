@@ -51,9 +51,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
 
 public class RadioURL {
   private static final String LOG_TAG = RadioURL.class.getSimpleName();
@@ -65,17 +63,15 @@ public class RadioURL {
   private static final int READ_TIMEOUT = 10000; // ms
   private static final int CONNECTION_TIMEOUT = 5000; // ms
   // Create the SSL connection for HTTPS
-  private static final SSLSocketFactory sSLSocketFactory;
+  @Nullable
+  private static SSLSocketFactory sSLSocketFactory = null;
 
   static {
-    SSLContext sSLContext = null;
     try {
-      sSLContext = SSLContext.getInstance("TLS");
-      sSLContext.init(null, new TrustManager[]{new EasyX509TrustManager()}, new java.security.SecureRandom());
+      sSLSocketFactory = EasyX509TrustManager.getSSLSocketFactory(new EasyX509TrustManager());
     } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
       Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
     }
-    sSLSocketFactory = (sSLContext == null) ? null : sSLContext.getSocketFactory();
   }
 
   @Nullable
@@ -185,7 +181,7 @@ public class RadioURL {
         // Restore method (relevant for 307/308 chains)
         httpURLConnection.setRequestMethod(pendingMethod);
         // TLS support
-        if (httpURLConnection instanceof HttpsURLConnection) {
+        if ((httpURLConnection instanceof HttpsURLConnection) && (sSLSocketFactory != null)) {
           ((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sSLSocketFactory);
         }
         // Parameters

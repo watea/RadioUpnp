@@ -79,6 +79,7 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer:1.10.0' // Exoplayer
     implementation 'androidx.media3:media3-exoplayer-hls:1.10.0' // Exoplayer codec
     implementation 'androidx.media3:media3-exoplayer-dash:1.10.0' // Exoplayer codec
+    implementation 'androidx.media3:media3-datasource-okhttp:1.10.0' // Exoplayer OkHttp data source
     implementation 'androidx.mediarouter:mediarouter:1.8.1'
     implementation 'androidx.car.app:app:1.7.0' // Car App Library
     // Cast
