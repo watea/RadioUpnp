@@ -114,8 +114,7 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
     return (CastManager) instance;
   }
 
-  public static void mediaRouteActionProviderSetRouteSelector(
-    @NonNull Context context, @NonNull MenuItem castItem) {
+  public static void mediaRouteActionProviderSetRouteSelector(@NonNull Context context, @NonNull MenuItem castItem) {
     final MediaRouteActionProvider mediaRouteActionProvider =
       (MediaRouteActionProvider) MenuItemCompat.getActionProvider(castItem);
     if (mediaRouteActionProvider == null) {

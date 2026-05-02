@@ -205,24 +205,23 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         return true;
       }
     });
-    playImageButton.setOnTouchListener(
-      (v, event) -> {
-        switch (event.getAction()) {
-          case MotionEvent.ACTION_DOWN:
-            isLongPress = false;
-            longClickHandler.postDelayed(() -> {
-              isLongPress = true;
-              onPlayLongClick();
-            }, 500);
-            break;
-          case MotionEvent.ACTION_UP:
-          case MotionEvent.ACTION_CANCEL:
-            // No long click
-            longClickHandler.removeCallbacksAndMessages(null);
-            break;
-        }
-        return gestureDetector.onTouchEvent(event);
-      });
+    playImageButton.setOnTouchListener((v, event) -> {
+      switch (event.getAction()) {
+        case MotionEvent.ACTION_DOWN:
+          isLongPress = false;
+          longClickHandler.postDelayed(() -> {
+            isLongPress = true;
+            onPlayLongClick();
+          }, 500);
+          break;
+        case MotionEvent.ACTION_UP:
+        case MotionEvent.ACTION_CANCEL:
+          // No long click
+          longClickHandler.removeCallbacksAndMessages(null);
+          break;
+      }
+      return gestureDetector.onTouchEvent(event);
+    });
     preferredImageButton = view.findViewById(R.id.preferred_image_button);
     preferredImageButton.setOnClickListener(v -> {
       final Radio radio = getCurrentRadio();
@@ -415,8 +414,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   }
 
   private void setPreferredButton(boolean isPreferred) {
-    preferredImageButton.setImageResource(
-      isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp);
+    preferredImageButton.setImageResource(isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp);
   }
 
   private class MediaControllerCompatCallback extends MediaControllerCompat.Callback {

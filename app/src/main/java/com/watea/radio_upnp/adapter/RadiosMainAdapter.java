@@ -110,8 +110,7 @@ public class RadiosMainAdapter
       backgroundColor = getTextViewColor(android.R.attr.colorPrimary);
       textColor = getTextViewColor(android.R.attr.textColorPrimary);
       windowBackgroundColor = getTextViewColor(android.R.attr.windowBackground);
-      radioTextView.setOnLongClickListener(
-        v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
+      radioTextView.setOnLongClickListener(v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
       context = itemView.getContext();
     }
 
@@ -129,8 +128,7 @@ public class RadiosMainAdapter
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
       // Change background color for current radio
-      final int radioBackgroundColor =
-        (radio == currentRadio) ? backgroundColor : getDominantColor(this.radio.getIcon());
+      final int radioBackgroundColor = (radio == currentRadio) ? backgroundColor : getDominantColor(this.radio.getIcon());
       radioTextView.setBackgroundColor(radioBackgroundColor);
       radioTextView.setTextColor(
         (ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ||

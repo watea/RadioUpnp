@@ -104,8 +104,7 @@ public class AlarmController {
 
   public void onActivityStart() {
     // Bind to AlarmService
-    if (!mainActivity.bindService(
-      new Intent(mainActivity, AlarmService.class), alarmConnection, BIND_AUTO_CREATE)) {
+    if (!mainActivity.bindService(new Intent(mainActivity, AlarmService.class), alarmConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AlarmService not bound");
     }
   }

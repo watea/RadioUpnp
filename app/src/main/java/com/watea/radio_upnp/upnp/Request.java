@@ -68,17 +68,12 @@ public abstract class Request {
   private final List<Argument> arguments = new ArrayList<>();
   private final Map<String, String> responses = new HashMap<>();
 
-  public Request(
-    @NonNull Action action,
-    @NonNull RequestController requestController) {
+  public Request(@NonNull Action action, @NonNull RequestController requestController) {
     this.action = action;
     this.requestController = requestController;
   }
 
-  public Request(
-    @NonNull Action action,
-    @NonNull RequestController requestController,
-    @NonNull String instanceId) {
+  public Request(@NonNull Action action, @NonNull RequestController requestController, @NonNull String instanceId) {
     this(action, requestController);
     addArgument("InstanceID", instanceId);
   }
@@ -184,8 +179,7 @@ public abstract class Request {
         onFailure();
         return;
       }
-      final NodeList responseNodes =
-        document.getElementsByTagNameNS(serviceType, name + "Response");
+      final NodeList responseNodes = document.getElementsByTagNameNS(serviceType, name + "Response");
       final Node node = (responseNodes.getLength() > 0) ? responseNodes.item(0) : null;
       if (node == null) {
         Log.d(LOG_TAG, "execute: " + name + " => no response element");

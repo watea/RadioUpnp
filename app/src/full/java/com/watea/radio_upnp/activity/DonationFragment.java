@@ -99,7 +99,7 @@ public class DonationFragment extends OpenDonationFragment
   @Override
   public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
     if ((billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) && (purchases != null)) {
-      for (Purchase purchase : purchases) {
+      for (final Purchase purchase : purchases) {
         final ConsumeParams consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build();
         billingClient.consumeAsync(consumeParams, this);
       }
@@ -150,11 +150,10 @@ public class DonationFragment extends OpenDonationFragment
   private void queryGoogleProducts() {
     final List<QueryProductDetailsParams.Product> googleProducts = new ArrayList<>();
     for (final String productId : productIds) {
-      googleProducts.add(
-        QueryProductDetailsParams.Product.newBuilder()
-          .setProductId(productId)
-          .setProductType(BillingClient.ProductType.INAPP)
-          .build());
+      googleProducts.add(QueryProductDetailsParams.Product.newBuilder()
+        .setProductId(productId)
+        .setProductType(BillingClient.ProductType.INAPP)
+        .build());
     }
     final QueryProductDetailsParams queryProductDetailsParams = QueryProductDetailsParams.newBuilder()
       .setProductList(googleProducts)
@@ -162,7 +161,7 @@ public class DonationFragment extends OpenDonationFragment
     billingClient.queryProductDetailsAsync(queryProductDetailsParams, (billingResult, productDetailsResult) -> {
       if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
         final List<ProductDetails> productDetailss = productDetailsResult.getProductDetailsList();
-        for (ProductDetails productDetails : productDetailss) {
+        for (final ProductDetails productDetails : productDetailss) {
           ownProductDetailss.put(productDetails.getProductId(), productDetails);
         }
       } else {

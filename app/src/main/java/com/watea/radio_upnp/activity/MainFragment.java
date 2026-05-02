@@ -190,15 +190,14 @@ public class MainFragment extends MainActivityFragment {
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     setPreferredMenuItem();
     // Set listener
-    getMainActivity().setUpnpIconConsumer(
-      bitmap -> {
-        if ((upnpMenuItem != null) && isAdded()) {
-          upnpMenuItem.setVisible((bitmap != null));
-          if (bitmap != null) {
-            upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
-          }
+    getMainActivity().setUpnpIconConsumer(bitmap -> {
+      if ((upnpMenuItem != null) && isAdded()) {
+        upnpMenuItem.setVisible((bitmap != null));
+        if (bitmap != null) {
+          upnpMenuItem.setIcon(new BitmapDrawable(getResources(), bitmap));
         }
-      });
+      }
+    });
     // Cast item - only visible in "full" flavor
     final MenuItem castItem = menu.findItem(R.id.action_cast);
     if (castItem != null) {

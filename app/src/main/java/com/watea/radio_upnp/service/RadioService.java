@@ -334,8 +334,7 @@ public class RadioService
       Log.d(LOG_TAG, "Existing channel reused");
     }
     // Bind to UPnP service
-    if (!bindService(
-      new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+    if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     // Cast
@@ -368,13 +367,11 @@ public class RadioService
     actionSkipToNext = new NotificationCompat.Action(
       R.drawable.ic_skip_next_white_24dp,
       getString(R.string.action_skip_to_next),
-      MediaButtonReceiver.buildMediaButtonPendingIntent(
-        this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT));
+      MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT));
     actionSkipToPrevious = new NotificationCompat.Action(
       R.drawable.ic_skip_previous_white_24dp,
       getString(R.string.action_skip_to_previous),
-      MediaButtonReceiver.buildMediaButtonPendingIntent(
-        this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS));
+      MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS));
   }
 
   @Override

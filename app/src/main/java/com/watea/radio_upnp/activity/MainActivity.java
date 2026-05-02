@@ -478,8 +478,7 @@ public class MainActivity
         }
       });
     // Set navigation drawer toggle (according to documentation)
-    drawerToggle = new ActionBarDrawerToggle(
-      this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
+    drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
     // Set the drawer toggle as the DrawerListener
     drawerLayout.addDrawerListener(drawerToggle);
     // Navigation drawer
@@ -642,8 +641,7 @@ public class MainActivity
   protected void onStart() {
     super.onStart();
     // Bind to UPnP service
-    if (!bindService(
-      new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
+    if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
     // AlarmController init
