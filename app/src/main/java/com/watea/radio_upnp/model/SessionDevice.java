@@ -60,12 +60,15 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
+  private static final int CONNECTION_TIMEOUT_S = 10;
   @NonNull
   protected final Context context;
   @NonNull
@@ -235,17 +238,19 @@ public abstract class SessionDevice {
 
   @NonNull
   private ExoPlayer getExoPlayer() {
+    final Map<String, String> userAgentProperty = Collections.singletonMap("User-Agent", context.getString(R.string.app_name));
     DataSource.Factory httpDataSourceFactory;
     try {
       final EasyX509TrustManager easyX509TrustManager = new EasyX509TrustManager();
       httpDataSourceFactory = new OkHttpDataSource.Factory(new OkHttpClient.Builder()
         .sslSocketFactory(EasyX509TrustManager.getSSLSocketFactory(easyX509TrustManager), easyX509TrustManager)
+        .connectTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
+        .readTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
         .build())
-        .setDefaultRequestProperties(Collections.singletonMap("User-Agent", context.getString(R.string.app_name)));
+        .setDefaultRequestProperties(userAgentProperty);
     } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
       Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
-      httpDataSourceFactory = new DefaultHttpDataSource.Factory()
-        .setDefaultRequestProperties(Collections.singletonMap("User-Agent", context.getString(R.string.app_name)));
+      httpDataSourceFactory = new DefaultHttpDataSource.Factory().setDefaultRequestProperties(userAgentProperty);
     }
     return new ExoPlayer.Builder(context)
       .setMediaSourceFactory(new DefaultMediaSourceFactory(httpDataSourceFactory))
