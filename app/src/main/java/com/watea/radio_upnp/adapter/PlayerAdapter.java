@@ -243,6 +243,6 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
   }
 
   private boolean isAvailableAction(long action) {
-    return (sessionDevice.getAvailableActions(sessionDevice.getState()) & action) > 0L;
+    return ((sessionDevice.getAvailableActions(sessionDevice.getState()) & action) > 0L);
   }
 }
