@@ -68,6 +68,7 @@ public class AlarmService extends Service {
   private static final int NOTIFICATION_ID = 10;
   private static final int DEFAULT_TIME = -1;
   private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
+  private static final String ALARM_CANCEL = "com.watea.radio_upnp.ALARM_CANCEL";
   private final Binder binder = new AlarmServiceBinder();
   // Callback from media control
   private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();
@@ -161,7 +162,10 @@ public class AlarmService extends Service {
     if (intent == null) {
       return super.onStartCommand(null, flags, startId);
     }
-    if (ALARM_TRIGGERED.equals(intent.getAction())) {
+    if (ALARM_CANCEL.equals(intent.getAction())) {
+      ((AlarmServiceBinder) binder).cancelAlarm();
+      return super.onStartCommand(intent, flags, startId);
+    } else if (ALARM_TRIGGERED.equals(intent.getAction())) {
       // Wake lock
       final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
       final PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
@@ -227,6 +231,7 @@ public class AlarmService extends Service {
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
       .setContentTitle(getString(R.string.alarm_title))
       .setContentText(getString(R.string.alarm_set_for, alarmServiceBinder.getHour(), alarmServiceBinder.getMinute()) + " / " + radioName)
+      .addAction(R.drawable.ic_stop_white_24dp, getString(android.R.string.cancel), getCancelPendingIntent())
       .build();
   }
 
@@ -249,12 +254,25 @@ public class AlarmService extends Service {
   }
 
   @NonNull
+  private PendingIntent getCancelPendingIntent() {
+    return PendingIntent.getForegroundService(
+      this,
+      1,
+      new Intent(ALARM_CANCEL, null, this, AlarmService.class),
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+  }
+
+  @NonNull
   private PendingIntent getPendingIntent() {
     return PendingIntent.getBroadcast(
-      AlarmService.this,
+      this,
       0,
-      new Intent(AlarmService.this, AlarmReceiver.class),
+      new Intent(this, AlarmReceiver.class),
       PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+  }
+
+  public interface Listener {
+    void onAlarmCancelled();
   }
 
   public static class AlarmReceiver extends BroadcastReceiver {
@@ -268,6 +286,13 @@ public class AlarmService extends Service {
   }
 
   public class AlarmServiceBinder extends android.os.Binder {
+    @Nullable
+    private Listener listener = null;
+
+    public void setListener(@Nullable Listener listener) {
+      this.listener = listener;
+    }
+
     public boolean setAlarm(int hour, int minute, @NonNull String radioURL) {
       getSharedPreferences()
         .edit()
@@ -291,6 +316,9 @@ public class AlarmService extends Service {
       isStarted = false;
       releaseAlarm();
       releaseMediaBrowser();
+      if (listener != null) {
+        listener.onAlarmCancelled();
+      }
     }
 
     public int getHour() {

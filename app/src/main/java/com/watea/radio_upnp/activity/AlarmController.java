@@ -73,10 +73,19 @@ public class AlarmController {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       alarmService = (AlarmService.AlarmServiceBinder) service;
+      alarmService.setListener(() -> {
+        if (alertDialog.isShowing()) {
+          toggleButton.setOnCheckedChangeListener(null);
+          toggleButton.setChecked(false);
+        }
+      });
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
+      if (alarmService != null) {
+        alarmService.setListener(null);
+      }
       alarmService = null;
     }
   };
