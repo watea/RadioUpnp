@@ -226,7 +226,11 @@ public class PlayerAdapter implements AudioManager.OnAudioFocusChangeListener {
 
   private void unregisterAudioNoisyReceiver() {
     if (audioNoisyReceiverRegistered) {
-      context.unregisterReceiver(audioNoisyReceiver);
+      try {
+        context.unregisterReceiver(audioNoisyReceiver);
+      } catch (IllegalArgumentException ignored) {
+        // Receiver already unregistered by the system (e.g. during context destruction)
+      }
       audioNoisyReceiverRegistered = false;
     }
   }
