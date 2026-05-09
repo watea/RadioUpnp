@@ -51,6 +51,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -279,31 +280,44 @@ public class AndroidUpnpService extends android.app.Service {
         }
         // Submit the blocking HTTP fetch to the bounded executor and
         // enforce a timeout via a second executor task to avoid hanging threads
-        final Future<Device> future = deviceExecutor.submit(() -> new Device(service));
-        deviceExecutor.execute(() -> {
-          try {
-            final Device device = future.get(DEVICE_FETCH_TIMEOUT_S, TimeUnit.SECONDS);
-            final Set<Device> embeddedDevices = device.getEmbeddedDevices();
-            Log.d(LOG_TAG, "Device found (embedded: " + embeddedDevices.size() + ", onError: " + device.isOnError() + "): " + device.getDisplayString());
-            add(device);
-            addAll(embeddedDevices);
-          } catch (TimeoutException timeoutException) {
-            Log.w(LOG_TAG, "Device fetch timed out: " + service);
-            future.cancel(true);
-          } catch (ExecutionException executionException) {
-            Log.e(LOG_TAG, "process: add device failed!", executionException.getCause());
-          } catch (InterruptedException interruptedException) {
-            Thread.currentThread().interrupt();
-          } finally {
-            // Always release the pending guard, even on failure, so
-            // subsequent announcements for this UUID are not permanently blocked
-            if (uUID != null) {
-              synchronized (Devices.this) {
-                pendingUUIDs.remove(uUID);
+        // RejectedExecutionException can occur if the executor is shut down while
+        // an SSDP event is still being delivered (race between onDestroy and SsdpClient thread)
+        final Future<Device> future;
+        try {
+          future = deviceExecutor.submit(() -> new Device(service));
+        } catch (RejectedExecutionException ignored) {
+          pendingUUIDs.remove(uUID);
+          return;
+        }
+        try {
+          deviceExecutor.execute(() -> {
+            try {
+              final Device device = future.get(DEVICE_FETCH_TIMEOUT_S, TimeUnit.SECONDS);
+              final Set<Device> embeddedDevices = device.getEmbeddedDevices();
+              Log.d(LOG_TAG, "Device found (embedded: " + embeddedDevices.size() + ", onError: " + device.isOnError() + "): " + device.getDisplayString());
+              add(device);
+              addAll(embeddedDevices);
+            } catch (TimeoutException timeoutException) {
+              Log.w(LOG_TAG, "Device fetch timed out: " + service);
+              future.cancel(true);
+            } catch (ExecutionException executionException) {
+              Log.e(LOG_TAG, "process: add device failed!", executionException.getCause());
+            } catch (InterruptedException interruptedException) {
+              Thread.currentThread().interrupt();
+            } finally {
+              // Always release the pending guard, even on failure, so
+              // subsequent announcements for this UUID are not permanently blocked
+              if (uUID != null) {
+                synchronized (Devices.this) {
+                  pendingUUIDs.remove(uUID);
+                }
               }
             }
-          }
-        });
+          });
+        } catch (RejectedExecutionException ignored) {
+          future.cancel(true);
+          pendingUUIDs.remove(uUID);
+        }
       } else if (knownDevice.isAlive() != isAlive) {
         Log.d(LOG_TAG, "Device announcement: " + knownDevice.getDisplayString() + " => " + status);
         knownDevice.setAlive(isAlive);
