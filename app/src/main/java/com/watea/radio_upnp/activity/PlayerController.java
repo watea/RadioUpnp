@@ -103,6 +103,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   private MediaControllerCompat mediaController = null;
   @Nullable
   private String pendingRadioName = null;
+  private boolean pendingAutoPlay = false;
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onChange(@NonNull Radio radio) {
@@ -113,9 +114,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
 
     @Override
     public void onInitEnd() {
-      if (pendingRadioName != null) {
-        playFromName(pendingRadioName);
-      }
+      handleInit();
     }
   };
   @Nullable
@@ -258,12 +257,13 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     mediaBrowserConnectionCallback.onConnectionSuspended();
   }
 
+  public void enableAutoPlay() {
+    pendingAutoPlay = true;
+  }
+
   public void startReadingFromName(@NonNull String radioName) {
-    if (mediaController == null) {
-      pendingRadioName = radioName;
-    } else {
-      playFromName(radioName);
-    }
+    pendingRadioName = radioName;
+    handleInit();
   }
 
   public void startReading(@NonNull Radio radio) {
@@ -272,13 +272,6 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       mainActivity.tell(R.string.radio_connection_waiting);
     } else {
       mediaController.getTransportControls().playFromMediaId(radio.getId(), null);
-    }
-  }
-
-  public void startReading() {
-    final Radio radio = getCurrentRadio();
-    if (radio != null) {
-      startReading(radio);
     }
   }
 
@@ -298,15 +291,29 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     }
   }
 
-  private void playFromName(@NonNull String radioName) {
-    if (!Radios.isInit()) {
-      pendingRadioName = radioName;
+  private void handleInit() {
+    if (!Radios.isInit() || (mediaController == null)) {
       return;
     }
-    pendingRadioName = null;
-    final Radio radio = Radios.getInstance().getRadioFromName(radioName);
-    if (radio != null) {
-      startReading(radio);
+    if (pendingRadioName == null) {
+      if (pendingAutoPlay) {
+        pendingAutoPlay = false;
+        final PlaybackStateCompat state = mediaController.getPlaybackState();
+        final int stateInt = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
+        if ((stateInt == PlaybackStateCompat.STATE_NONE) || (stateInt == PlaybackStateCompat.STATE_STOPPED)) {
+          final Radio radio = mainActivity.getLastPlayedRadio();
+          if (radio != null) {
+            startReading(radio);
+          }
+        }
+      }
+    } else {
+      final Radio radio = Radios.getInstance().getRadioFromName(pendingRadioName);
+      if (radio != null) {
+        startReading(radio);
+      }
+      pendingAutoPlay = false;
+      pendingRadioName = null;
     }
   }
 
@@ -504,10 +511,8 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       Radios.getInstance().addListener(radiosListener);
       // Get a MediaController for the MediaSession
       mediaController = new MediaControllerCompat(mainActivity, mediaBrowser.getSessionToken());
-      // Handle pending voice command
-      if (pendingRadioName != null) {
-        playFromName(pendingRadioName);
-      }
+      // Launch any radio?
+      handleInit();
       // Link to the callback controller
       mediaController.registerCallback(mediaControllerCallback);
       // Sync existing MediaSession state with UI

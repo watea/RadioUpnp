@@ -182,7 +182,10 @@ public class MainActivity
             tell(R.string.no_dlna_selection);
           } else {
             tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
-            playerController.startReading();
+            final Radio radio = playerController.getCurrentRadio();
+            if (radio != null) {
+              startReading(radio);
+            }
           }
           upnpAlertDialog.dismiss();
         }
@@ -314,7 +317,7 @@ public class MainActivity
 
   @Nullable
   public Radio getLastPlayedRadio() {
-    final String id = sharedPreferences.getString(getString(R.string.key_last_played_radio), "");
+    final String id = getLastPlayedRadioId();
     return id.isEmpty() ? null : Radios.getInstance().getRadioFromId(id);
   }
 
@@ -602,6 +605,10 @@ public class MainActivity
     });
     // PlayerController init
     playerController.onActivityCreate();
+    // Auto-restart last played radio on fresh start
+    if ((savedInstanceState == null) && !getLastPlayedRadioId().isEmpty()) {
+      playerController.enableAutoPlay();
+    }
     // Intent
     handleIntent(getIntent());
   }
@@ -663,6 +670,11 @@ public class MainActivity
     if (currentFragment != null) {
       outState.putString(getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
     }
+  }
+
+  @NonNull
+  private String getLastPlayedRadioId() {
+    return sharedPreferences.getString(getString(R.string.key_last_played_radio), "");
   }
 
   private void tell(@NonNull Snackbar snackbar) {
