@@ -46,6 +46,7 @@ public class CapturingAudioSink implements AudioSink {
   private static final int PACER_TIMEOUT = 2; // s
   private static final long LONG_DEFAULT = -1L;
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
+  private static final int PCM_BUFFER_LOW_THRESHOLD = 10; // ~0.25s
   private static final long ONE_SECOND_US = 1_000_000L;
   private static final long PACER_SLEEP_MIN_US = 1_000L;
   @NonNull
@@ -95,6 +96,7 @@ public class CapturingAudioSink implements AudioSink {
       lastPresentationTimeUs = presentationTimeUs;
       if (buffer.hasRemaining()) {
         if (pcmBuffer.remainingCapacity() == 0) {
+          Log.w(LOG_TAG, "pcmBuffer FULL — backpressure to ExoPlayer");
           return false; // ExoPlayer will retry later
         }
         final byte[] pcmData = new byte[buffer.remaining()];
@@ -270,6 +272,10 @@ public class CapturingAudioSink implements AudioSink {
           if (pcmData == null) {
             Log.e(LOG_TAG, "pcmBuffer EMPTY — ExoPlayer stopped feeding");
             continue;
+          }
+          final int bufferSize = pcmBuffer.size();
+          if (bufferSize < PCM_BUFFER_LOW_THRESHOLD) {
+            Log.w(LOG_TAG, "pcmBuffer LOW: " + bufferSize + "/" + PCM_BUFFER_SIZE);
           }
           // Guard byteRate
           if (byteRate <= 0) {
