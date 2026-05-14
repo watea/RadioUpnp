@@ -444,9 +444,9 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       Log.d(LOG_TAG, "onPlaybackStateChanged: " + intState);
       // Play button stores state to reach
       setDefaultPlayImageButton();
+      boolean isConnecting = false;
       switch (intState) {
         case PlaybackStateCompat.STATE_PLAYING:
-          // UPnP device doesn't support PAUSE but STOP
           playImageButton.setImageResource(R.drawable.ic_pause_white_24dp);
           playImageButton.setTag(PlaybackStateCompat.STATE_PAUSED);
         case PlaybackStateCompat.STATE_PAUSED:
@@ -454,13 +454,11 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
           break;
         case PlaybackStateCompat.STATE_BUFFERING:
         case PlaybackStateCompat.STATE_CONNECTING:
-          final boolean isVisible = onNewCurrentRadio();
-          setPlayImageButtonVisibility(isVisible, isVisible);
-          break;
+          isConnecting = true;
         case PlaybackStateCompat.STATE_NONE:
         case PlaybackStateCompat.STATE_STOPPED:
-          onNewCurrentRadio();
-          setPlayImageButtonVisibility(false, false);
+          final boolean isVisible = onNewCurrentRadio();
+          setPlayImageButtonVisibility(isVisible, isVisible && isConnecting);
           break;
         default:
           // On error, leave radio data visibility

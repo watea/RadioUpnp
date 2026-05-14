@@ -543,8 +543,8 @@ public class RadioService
         assert upnpStreamServer != null;
         upnpStreamServer.release();
         playerAdapter.release();
+        playerAdapter = null;
         releaseScheduler();
-        session.setMetadata(null);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
