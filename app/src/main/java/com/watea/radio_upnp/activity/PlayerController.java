@@ -299,8 +299,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       if (pendingAutoPlay) {
         pendingAutoPlay = false;
         final PlaybackStateCompat state = mediaController.getPlaybackState();
-        final int stateInt = (state == null) ? PlaybackStateCompat.STATE_NONE : state.getState();
-        if ((stateInt == PlaybackStateCompat.STATE_NONE) || (stateInt == PlaybackStateCompat.STATE_STOPPED)) {
+        if ((state == null) || (state.getState() == PlaybackStateCompat.STATE_NONE)) {
           final Radio radio = mainActivity.getLastPlayedRadio();
           if (radio != null) {
             startReading(radio);

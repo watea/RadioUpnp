@@ -605,8 +605,8 @@ public class MainActivity
     });
     // PlayerController init
     playerController.onActivityCreate();
-    // Auto-restart last played radio on fresh start
-    if ((savedInstanceState == null) && !getLastPlayedRadioId().isEmpty()) {
+    // Auto-restart last played radio (fresh start or process kill recovery)
+    if (!getLastPlayedRadioId().isEmpty()) {
       playerController.enableAutoPlay();
     }
     // Intent
