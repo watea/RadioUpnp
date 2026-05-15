@@ -11,8 +11,8 @@ android {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 36
-        versionCode = 300008
-        versionName = '3.00.008'
+        versionCode = 301000
+        versionName = '3.01.000'
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -71,10 +71,10 @@ android {
 dependencies {
     // AndroidX
     implementation 'androidx.core:core:1.18.0'
-    implementation 'androidx.media:media:1.7.1'
+    implementation 'androidx.media:media:1.8.0'
     implementation 'androidx.gridlayout:gridlayout:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'com.google.android.material:material:1.14.0'
     implementation 'androidx.activity:activity:1.13.0'
     implementation 'androidx.media3:media3-exoplayer:1.9.3' // Exoplayer - 1.10.x has HLS AIOOBE bug in BaseTrackSelection.isTrackExcluded (fixed on main, not yet released)
     implementation 'androidx.media3:media3-exoplayer-hls:1.9.3' // Exoplayer codec
