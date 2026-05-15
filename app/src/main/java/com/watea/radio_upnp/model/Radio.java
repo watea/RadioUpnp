@@ -324,13 +324,14 @@ public class Radio {
     @NonNull String postfix,
     @NonNull String information) {
     information = name.equals(information) ? "" : information;
+    final String postfixName = name + postfix;
     return new MediaMetadataCompat.Builder()
       .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, appId + getId())
       .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
       .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, icon)
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, name + postfix)
-      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, name + postfix)
-      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, information)
+      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, postfixName)
+      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, information.isEmpty() ? "" : postfixName)
+      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, information.isEmpty() ? postfixName : information)
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, information)
       .putRating(
         MediaMetadataCompat.METADATA_KEY_RATING,

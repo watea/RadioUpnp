@@ -476,8 +476,8 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     @Override
     public void onMetadataChanged(@Nullable MediaMetadataCompat mediaMetadata) {
       if ((mediaMetadata != null) && RadioService.isValid(mainActivity, mediaMetadata)) {
-        // Use title metadata
-        playedRadioInformationTextView.setText(mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE));
+        // Use display title metadata (ICY info only, not radio name)
+        playedRadioInformationTextView.setText(mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE));
         // User help for fist valid information after a few time
         informationPressUserHint.show();
       }
