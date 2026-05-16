@@ -333,9 +333,7 @@ public class Radio {
       .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, information.isEmpty() ? "" : postfixName)
       .putString(MediaMetadataCompat.METADATA_KEY_TITLE, information.isEmpty() ? postfixName : information)
       .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, information)
-      .putRating(
-        MediaMetadataCompat.METADATA_KEY_RATING,
-        RatingCompat.newPercentageRating(isPreferred ? 100 : 0));
+      .putRating(MediaMetadataCompat.METADATA_KEY_RATING, RatingCompat.newPercentageRating(isPreferred ? 100 : 0));
   }
 
   @NonNull
