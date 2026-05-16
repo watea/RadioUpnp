@@ -8,6 +8,7 @@
     <string name="version">Version: </string>
     <string name="no_web_page">Keine Webseite für diesen Sender!</string>
     <string name="radio_connection_error">Verbindungsfehler mit dem Sender!</string>
+    <string name="media_session_stopped">Mediensitzung beendet.</string>
     <string name="no_internet">Internetverbindung nicht verfügbar!</string>
     <string name="radio_connection_waiting">Sender-Service startet, bitte warten&#8230;</string>
     <string name="radio_no_radio">Keine Sender</string>

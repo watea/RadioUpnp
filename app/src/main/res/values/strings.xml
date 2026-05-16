@@ -18,6 +18,7 @@
     <string name="void_string" translatable="false"> </string>
     <string name="no_web_page">No web page for this radio!</string>
     <string name="radio_connection_error">Radio connection error!</string>
+    <string name="media_session_stopped">Media session stopped.</string>
     <string name="no_internet">Internet connexion not available!</string>
     <string name="radio_connection_waiting">Radio service is starting, please wait&#8230;</string>
     <string name="radio_no_radio">No radio</string>

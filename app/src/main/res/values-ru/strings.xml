@@ -8,6 +8,7 @@
     <string name="version">Версия: </string>
     <string name="no_web_page">У этой радиостанции нет веб-страницы!</string>
     <string name="radio_connection_error">Ошибка подключения к радиостанции!</string>
+    <string name="media_session_stopped">Медиасессия завершена.</string>
     <string name="no_internet">Нет подключения к интернету!</string>
     <string name="radio_connection_waiting">Сервис радио запускается, подождите&#8230;</string>
     <string name="radio_no_radio">Нет радиостанций</string>

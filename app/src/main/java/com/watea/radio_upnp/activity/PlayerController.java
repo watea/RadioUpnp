@@ -451,11 +451,14 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         case PlaybackStateCompat.STATE_PAUSED:
           setPlayImageButtonVisibility(true, false);
           break;
+        case PlaybackStateCompat.STATE_STOPPED:
+          mainActivity.tell(R.string.media_session_stopped);
+          setPlayImageButtonVisibility(onNewCurrentRadio(), false);
+          break;
         case PlaybackStateCompat.STATE_BUFFERING:
         case PlaybackStateCompat.STATE_CONNECTING:
           isConnecting = true;
         case PlaybackStateCompat.STATE_NONE:
-        case PlaybackStateCompat.STATE_STOPPED:
           final boolean isVisible = onNewCurrentRadio();
           setPlayImageButtonVisibility(isVisible, isVisible && isConnecting);
           break;
