@@ -42,6 +42,8 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RemoteSessionDevice;
 import com.watea.radio_upnp.model.SessionDevice;
 
+import java.util.function.Consumer;
+
 public class CastManager extends OpenCastManager<CastSessionDevice> {
   private static final String LOG_TAG = CastManager.class.getSimpleName();
   @NonNull
@@ -177,8 +179,9 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
     @NonNull RemoteSessionDevice.ServerCallback remoteSessionDeviceServerCallback,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey) {
+    @NonNull String lockKey,
+    @NonNull Consumer<Radio> onPlayCallback) {
     assert castSession != null;
-    return new CastSessionDevice(context, remoteSessionDeviceServerCallback, listener, radio, lockKey, castSession);
+    return new CastSessionDevice(context, remoteSessionDeviceServerCallback, listener, radio, lockKey, castSession, onPlayCallback);
   }
 }

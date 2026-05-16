@@ -96,7 +96,6 @@ public class CapturingAudioSink implements AudioSink {
       lastPresentationTimeUs = presentationTimeUs;
       if (buffer.hasRemaining()) {
         if (pcmBuffer.remainingCapacity() == 0) {
-          Log.w(LOG_TAG, "pcmBuffer FULL — backpressure to ExoPlayer");
           return false; // ExoPlayer will retry later
         }
         final byte[] pcmData = new byte[buffer.remaining()];

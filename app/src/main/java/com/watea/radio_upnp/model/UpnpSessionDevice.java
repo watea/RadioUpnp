@@ -69,8 +69,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private final Service renderingControl;
   @NonNull
   private final String information; // Not final in further use
-  @NonNull
-  private final Consumer<Radio> onPlayCallback;
   private int currentVolume;
   private int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
@@ -86,9 +84,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull Device device,
     @NonNull RequestController requestController,
     @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, isPcm ? Mode.PCM : Mode.MUTE, serverCallback, listener, radio, lockKey);
+    super(context, isPcm ? Mode.PCM : Mode.MUTE, serverCallback, listener, radio, lockKey, onPlayCallback);
     this.requestController = requestController;
-    this.onPlayCallback = onPlayCallback;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
     avTransportService = device.getShortService(AV_TRANSPORT_SERVICE_ID);
@@ -160,15 +157,9 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public void play() {
-    onPlayCallback.accept(radio);
-  }
-
-  @Override
   public void pause() {
-    // Pause immediately
-    onState(PlaybackStateCompat.STATE_PAUSED);
-    stop();
+    super.pause();
+    scheduleActionStop();
   }
 
   @Override

@@ -57,6 +57,17 @@ public class LocalSessionDevice extends SessionDevice {
   public void adjustVolume(int direction) {
   }
 
+  @Override
+  public void play() {
+    if (isReleased) {
+      Log.e(LOG_TAG, "play: already released");
+    } else if (connectionSet != null) {
+      restartExoPlayer();
+    } else {
+      super.play();
+    }
+  }
+
   @NonNull
   protected Player.Listener getPlayerListener() {
     return new PlayerListener() {

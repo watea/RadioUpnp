@@ -25,14 +25,19 @@ package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.net.Uri;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import androidx.annotation.NonNull;
+
+import java.util.function.Consumer;
 
 public abstract class RemoteSessionDevice extends SessionDevice {
   @NonNull
   protected final Uri radioUri;
   @NonNull
   protected final Uri logoUri;
+  @NonNull
+  private final Consumer<Radio> onPlayCallback;
 
   protected RemoteSessionDevice(
     @NonNull Context context,
@@ -40,8 +45,10 @@ public abstract class RemoteSessionDevice extends SessionDevice {
     @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey) {
+    @NonNull String lockKey,
+    @NonNull Consumer<Radio> onPlayCallback) {
     super(context, mode, listener, radio, lockKey);
+    this.onPlayCallback = onPlayCallback;
     radioUri = serverCallback.getStreamUri(this.radio, this.lockKey, (this.mode == Mode.PCM));
     logoUri = serverCallback.getLogoUri(this.radio);
     if (this.mode == Mode.PCM) {
@@ -52,6 +59,17 @@ public abstract class RemoteSessionDevice extends SessionDevice {
   @Override
   public final boolean isRemote() {
     return true;
+  }
+
+  @Override
+  public void play() {
+    onPlayCallback.accept(radio);
+  }
+
+  @Override
+  public void pause() {
+    onState(PlaybackStateCompat.STATE_PAUSED);
+    super.stop();
   }
 
   public interface ServerCallback {

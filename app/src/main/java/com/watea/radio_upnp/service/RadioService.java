@@ -900,7 +900,8 @@ public class RadioService
           upnpStreamServer,
           RadioService.this,
           radio,
-          lockKey) :
+          lockKey,
+          mediaSessionCompatCallback::onPlay) :
         (isRemoteReady && (upnpSelectedDevice != null)) ?
           new UpnpSessionDevice(
             RadioService.this,

@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class CastSessionDevice extends RemoteSessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
@@ -75,8 +76,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
           onState(PlaybackStateCompat.STATE_BUFFERING);
           break;
         case MediaStatus.PLAYER_STATE_IDLE:
-          final int currentState = listener.getPlaybackState();
-          if ((currentState == PlaybackStateCompat.STATE_PLAYING) || (currentState == PlaybackStateCompat.STATE_PAUSED)) {
+          if (listener.getPlaybackState() == PlaybackStateCompat.STATE_PLAYING) {
             onState(PlaybackStateCompat.STATE_ERROR);
           }
           break;
@@ -94,8 +94,9 @@ public class CastSessionDevice extends RemoteSessionDevice {
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull String lockKey,
-    @NonNull CastSession castSession) {
-    super(context, Mode.PCM, serverCallback, listener, radio, lockKey);
+    @NonNull CastSession castSession,
+    @NonNull Consumer<Radio> onPlayCallback) {
+    super(context, Mode.PCM, serverCallback, listener, radio, lockKey, onPlayCallback);
     this.castSession = castSession;
   }
 
@@ -146,14 +147,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
       return true;
     }
     return false;
-  }
-
-  @Override
-  public void play() {
-    super.play();
-    if (remoteMediaClient != null) {
-      remoteMediaClient.play();
-    }
   }
 
   @Override

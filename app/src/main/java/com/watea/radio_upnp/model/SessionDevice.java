@@ -177,12 +177,7 @@ public abstract class SessionDevice {
     }
     if (isExoPlayerActive()) {
       // Post ExoPlayer calls to the main thread
-      new Handler(Looper.getMainLooper()).post(() -> {
-        exoPlayer.addListener(playerListener);
-        exoPlayer.setMediaItem(MediaItem.fromUri(connectionSet.getUrl().toString()));
-        exoPlayer.prepare();
-        exoPlayer.setPlayWhenReady(true);
-      });
+      new Handler(Looper.getMainLooper()).post(this::startExoPlayer);
     } else {
       listener.onNewBitrate(connectionSet.getBitrate(), connectionSet.getContent(), lockKey);
     }
@@ -230,6 +225,21 @@ public abstract class SessionDevice {
   @NonNull
   protected Player.Listener getPlayerListener() {
     return new PlayerListener();
+  }
+
+  protected void startExoPlayer() {
+    exoPlayer.addListener(playerListener);
+    assert connectionSet != null;
+    exoPlayer.setMediaItem(MediaItem.fromUri(connectionSet.getUrl().toString()));
+    exoPlayer.prepare();
+    exoPlayer.setPlayWhenReady(true);
+  }
+
+  protected void restartExoPlayer() {
+    exoPlayer.removeListener(playerListener);
+    exoPlayer.stop();
+    exoPlayer.clearMediaItems();
+    startExoPlayer();
   }
 
   private boolean isExoPlayerActive() {

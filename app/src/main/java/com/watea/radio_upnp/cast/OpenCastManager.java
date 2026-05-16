@@ -34,6 +34,8 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RemoteSessionDevice;
 import com.watea.radio_upnp.model.SessionDevice;
 
+import java.util.function.Consumer;
+
 // Singleton.
 // CastManager that does nothing.
 @SuppressWarnings("unused")
@@ -67,7 +69,8 @@ public class OpenCastManager<T extends SessionDevice> {
     @NonNull RemoteSessionDevice.ServerCallback remoteSessionDeviceServerCallback,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey) {
+    @NonNull String lockKey,
+    @NonNull Consumer<Radio> onPlayCallback) {
     Log.e(LOG_TAG, "getCastSessionDevice: invalid call");
     return null;
   }
