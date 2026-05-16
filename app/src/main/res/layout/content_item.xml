@@ -13,8 +13,7 @@
         android:drawablePadding="@dimen/app_horizontal_margin"
         android:hint="@string/radio_name"
         android:importantForAutofill="no"
-        android:inputType="textCapCharacters"
-        android:textAllCaps="true" />
+        android:inputType="textCapCharacters" />
 
     <TextView
         android:layout_width="match_parent"

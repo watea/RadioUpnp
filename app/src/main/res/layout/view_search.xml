@@ -48,7 +48,6 @@
                 android:hint="@string/searched_words"
                 android:importantForAutofill="no"
                 android:inputType="textCapCharacters"
-                android:textAllCaps="true"
                 android:textSize="30sp" />
 
             <Spinner
