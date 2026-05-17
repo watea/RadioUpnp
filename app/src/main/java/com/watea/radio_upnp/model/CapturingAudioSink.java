@@ -263,7 +263,6 @@ public class CapturingAudioSink implements AudioSink {
     @Override
     public void run() {
       long startTimeUs = LONG_DEFAULT;
-
       while (!Thread.currentThread().isInterrupted()) {
         try {
           assert callback != null;
@@ -288,7 +287,8 @@ public class CapturingAudioSink implements AudioSink {
             } else {
               elapsedUs = getTimestamp() - startTimeUs;
             }
-            final long sleepUs = getExpectedUs() - elapsedUs;
+            final long expectedUs = (bytesConsumed * ONE_SECOND_US) / byteRate;
+            final long sleepUs = expectedUs - elapsedUs;
             if (sleepUs >= PACER_SLEEP_MIN_US) {
               //noinspection BusyWait
               Thread.sleep(sleepUs / 1000);
@@ -304,10 +304,6 @@ public class CapturingAudioSink implements AudioSink {
 
     private long getTimestamp() {
       return System.nanoTime() / 1000;
-    }
-
-    private long getExpectedUs() {
-      return (bytesConsumed * ONE_SECOND_US) / byteRate;
     }
   }
 }
