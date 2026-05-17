@@ -51,8 +51,11 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.car.app.connection.CarConnection;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.VolumeProviderCompat;
 import androidx.media.session.MediaButtonReceiver;
@@ -169,6 +172,13 @@ public class RadioService
       runIfLocked(lockKey, () -> onPlaybackStateChange(SessionDevice.getPlaybackStateCompatBuilder(PlaybackStateCompat.STATE_ERROR).build()));
     }
   };
+  private boolean isAndroidAutoConnected = false;
+  private final Observer<Integer> carConnectionObserver = type -> {
+    isAndroidAutoConnected = (type != null) && (type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
+    Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
+  };
+  @Nullable
+  private LiveData<Integer> carConnectionLiveData = null;
   private CastManager castManager;
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
@@ -337,6 +347,9 @@ public class RadioService
     if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
     }
+    // Android Auto detection
+    carConnectionLiveData = new CarConnection(this).getType();
+    carConnectionLiveData.observeForever(carConnectionObserver);
     // Cast
     castManager = CastManager.getInstance();
     castManager.setContext(this, castManagerCallback);
@@ -394,6 +407,10 @@ public class RadioService
     }
     // Release UPnP service
     unbindService(upnpConnection);
+    // Android Auto detection
+    if (carConnectionLiveData != null) {
+      carConnectionLiveData.removeObserver(carConnectionObserver);
+    }
     // Release Cast
     castManager.resetContext(this);
     // Finally session
@@ -894,16 +911,18 @@ public class RadioService
       assert upnpStreamServer != null;
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       final boolean isRemoteReady = new NetworkProxy(RadioService.this).isOnWifi();
-      final SessionDevice result = (isRemoteReady && castManager.hasCastSession()) ?
-        castManager.getCastSessionDevice(
-          RadioService.this,
-          upnpStreamServer,
-          RadioService.this,
-          radio,
-          lockKey,
-          mediaSessionCompatCallback::onPlay) :
-        (isRemoteReady && (upnpSelectedDevice != null)) ?
-          new UpnpSessionDevice(
+      SessionDevice result = null;
+      if (!isAndroidAutoConnected && isRemoteReady) {
+        if (castManager.hasCastSession()) {
+          result = castManager.getCastSessionDevice(
+            RadioService.this,
+            upnpStreamServer,
+            RadioService.this,
+            radio,
+            lockKey,
+            mediaSessionCompatCallback::onPlay);
+        } else if (upnpSelectedDevice != null) {
+          result = new UpnpSessionDevice(
             RadioService.this,
             getAppPreferences(RadioService.this).getBoolean(RadioService.this.getString(R.string.key_pcm_mode), KEY_PCM_MODE_DEFAULT),
             upnpStreamServer,
@@ -912,12 +931,16 @@ public class RadioService
             lockKey,
             upnpSelectedDevice,
             upnpService.getRequestController(),
-            mediaSessionCompatCallback::onPlay) :
-          new LocalSessionDevice(
-            RadioService.this,
-            RadioService.this,
-            radio,
-            lockKey);
+            mediaSessionCompatCallback::onPlay);
+        }
+      }
+      if (result == null) {
+        result = new LocalSessionDevice(
+          RadioService.this,
+          RadioService.this,
+          radio,
+          lockKey);
+      }
       Log.d(LOG_TAG, "getSessionDevice: " + result.getClass().getSimpleName() + " - " + lockKey);
       return result;
     }
