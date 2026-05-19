@@ -159,8 +159,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
 
   @Override
   public void stop() {
-    // Stop immediately
-    onState(PlaybackStateCompat.STATE_STOPPED);
     super.stop();
     if (remoteMediaClient != null) {
       remoteMediaClient.stop();
