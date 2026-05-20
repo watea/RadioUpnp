@@ -95,6 +95,8 @@
     <string name="row_radio_button">Zeilen</string>
     <string name="upnp_stream_mode">UPnP Streaming Modus</string>
     <string name="relay_radio_button">Durchleitung</string>
+    <string name="pcm_radio_button_hint">Gewährleistet Kompatibilität mit allen Sendern</string>
+    <string name="relay_radio_button_hint">Stream wird unverändert weitergeleitet; der Renderer muss den Codec unterstützen</string>
     <string name="radio_information">Titelinformationen</string>
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dunkel</string>

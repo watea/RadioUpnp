@@ -95,6 +95,8 @@
     <string name="row_radio_button">Строка</string>
     <string name="upnp_stream_mode">Режим потоковой передачи UPnP</string>
     <string name="relay_radio_button">Сквозной</string>
+    <string name="pcm_radio_button_hint">Обеспечивает совместимость со всеми радиостанциями</string>
+    <string name="relay_radio_button_hint">Поток передаётся как есть; рендерер должен поддерживать кодек</string>
     <string name="radio_information">Информация о радиостанции</string>
     <string name="system_radio_button">Системная</string>
     <string name="dark_radio_button">Тёмная</string>

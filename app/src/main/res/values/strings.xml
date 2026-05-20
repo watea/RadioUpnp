@@ -110,7 +110,9 @@
     <string name="row_radio_button">Row</string>
     <string name="upnp_stream_mode">UPnP stream mode</string>
     <string name="pcm_radio_button" translatable="false">PCM</string>
+    <string name="pcm_radio_button_hint">Ensures compatibility with all radios</string>
     <string name="relay_radio_button">Passthrough</string>
+    <string name="relay_radio_button_hint">Stream forwarded as-is; renderer must support the codec</string>
     <string name="radio_information">Radio information</string>
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dark</string>
