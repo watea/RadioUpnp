@@ -76,7 +76,8 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.14.0'
     implementation 'androidx.activity:activity:1.13.0'
-    implementation 'androidx.media3:media3-exoplayer:1.9.3' // Exoplayer - 1.10.x has HLS AIOOBE bug in BaseTrackSelection.isTrackExcluded (fixed on main, not yet released)
+    implementation 'androidx.media3:media3-exoplayer:1.9.3'
+    // Exoplayer - 1.10.x has HLS AIOOBE bug in BaseTrackSelection.isTrackExcluded (fixed on main, not yet released)
     implementation 'androidx.media3:media3-exoplayer-hls:1.9.3' // Exoplayer codec
     implementation 'androidx.media3:media3-exoplayer-dash:1.9.3' // Exoplayer codec
     implementation 'androidx.media3:media3-datasource-okhttp:1.9.3' // Exoplayer OkHttp data source
