@@ -53,6 +53,7 @@ public class Radio {
   @NonNull
   public static final Radio DUMMY_RADIO;
   public static final int RADIO_ICON_SIZE = 300;
+  public static final int RADIO_SMALL_ICON_SIZE = 48;
   private static final String LOG_TAG = Radio.class.getSimpleName();
   private static final String SPACER = ";";
   public static final String EXPORT_HEAD =
@@ -302,6 +303,11 @@ public class Radio {
   public void setIcon(@NonNull Bitmap icon) {
     this.icon = iconResize(crop(icon));
     base64Icon = iconToBase64String();
+  }
+
+  @NonNull
+  public Bitmap getSmallIcon() {
+    return createScaledBitmap(icon, RADIO_SMALL_ICON_SIZE);
   }
 
   public boolean isPreferred() {

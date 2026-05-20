@@ -500,7 +500,7 @@ public class RadioService
       final MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
         .setMediaId(radioId)
         .setTitle(radio.getName())
-        .setIconBitmap(radio.getIcon())
+        .setIconBitmap(radio.getSmallIcon())
         .build();
       final MediaBrowserCompat.MediaItem item = new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
       mediaItems.add(item);

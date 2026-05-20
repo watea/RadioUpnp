@@ -118,11 +118,9 @@ public class Radios extends ArrayList<Radio> {
               fileInputStream,
               Radio::isBackwardCompatible,
               unused -> onInitFailed(loadingAlertDialog));
-          } catch (FileNotFoundException fileNotFoundException) {
-            Log.w(LOG_TAG, "setInstance: file not found, starting with empty radio list");
-            radios.putOnUiThread(() -> onInitFailed(loadingAlertDialog));
           } catch (Exception exception) {
             Log.e(LOG_TAG, "setInstance: internal failure", exception);
+            radios.putOnUiThread(() -> onInitFailed(loadingAlertDialog));
           }
         }).start();
       }
