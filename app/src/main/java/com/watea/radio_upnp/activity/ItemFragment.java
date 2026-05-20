@@ -108,8 +108,8 @@ public abstract class ItemFragment extends MainActivityFragment {
     super.onPause();
   }
 
-  @NonNull
   @Override
+  @NonNull
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
       if (!getNetworkProxy().isDeviceOnline()) {

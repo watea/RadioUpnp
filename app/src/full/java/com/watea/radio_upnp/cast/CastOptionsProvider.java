@@ -38,8 +38,8 @@ import java.util.List;
 
 @SuppressWarnings("unused")
 public class CastOptionsProvider implements OptionsProvider {
-  @NonNull
   @Override
+  @NonNull
   public CastOptions getCastOptions(@NonNull Context context) {
     final CastMediaOptions mediaOptions = new CastMediaOptions.Builder()
       .setExpandedControllerActivityClassName("") // No widget

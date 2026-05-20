@@ -95,8 +95,8 @@ public class MainFragment extends MainActivityFragment {
     onConfigurationChanged(getActivity().getResources().getConfiguration());
   }
 
-  @NonNull
   @Override
+  @NonNull
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> wifiTest(() -> {
       getMainActivity().onUpnp();
@@ -104,8 +104,8 @@ public class MainFragment extends MainActivityFragment {
     });
   }
 
-  @NonNull
   @Override
+  @NonNull
   public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
       wifiTest(() -> getMainActivity().onUpnp());

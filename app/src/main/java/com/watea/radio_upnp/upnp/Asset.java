@@ -33,6 +33,7 @@ import java.io.IOException;
 public abstract class Asset implements URLService.Consumer {
   private boolean isOnError = false;
 
+  @NonNull
   protected static String getTag(@Nullable String tag) {
     return (tag == null) ? "Unknown" : tag;
   }

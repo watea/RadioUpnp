@@ -83,8 +83,8 @@ public class EasyX509TrustManager implements X509TrustManager {
     }
   }
 
-  @NonNull
   @Override
+  @NonNull
   public X509Certificate[] getAcceptedIssuers() {
     return standardTrustManager.getAcceptedIssuers();
   }

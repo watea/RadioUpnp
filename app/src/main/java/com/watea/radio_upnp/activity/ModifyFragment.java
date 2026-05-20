@@ -59,8 +59,8 @@ public class ModifyFragment extends MainActivityFragment {
     radiosModifyAdapter.onDestroy();
   }
 
-  @NonNull
   @Override
+  @NonNull
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> getMainActivity().setFragment(ItemAddFragment.class);
   }

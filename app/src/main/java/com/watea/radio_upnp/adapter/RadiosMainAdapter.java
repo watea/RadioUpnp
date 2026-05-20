@@ -61,8 +61,8 @@ public class RadiosMainAdapter
     this.currentRadioSupplier.accept(this);
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     return new ViewHolder(getView(parent));
   }

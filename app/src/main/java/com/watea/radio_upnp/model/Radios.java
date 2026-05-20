@@ -209,8 +209,8 @@ public class Radios extends ArrayList<Radio> {
     return add(radio, true);
   }
 
-  @NonNull
   @Override
+  @NonNull
   public Radio remove(int index) {
     final Radio result = super.remove(index);
     tellListeners(true, true, listener -> listener.onRemove(index));

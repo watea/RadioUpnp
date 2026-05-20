@@ -418,8 +418,8 @@ public class RadioService
     session.release();
   }
 
-  @NonNull
   @Override
+  @NonNull
   public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
     Log.d(LOG_TAG, "onGetRoot: with clientPackageName = " + clientPackageName + ", rootHints = " + (rootHints == null ? "null" : rootHints.toString()));
     return new BrowserRoot(MEDIA_ROOT_ID, null);

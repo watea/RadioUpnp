@@ -402,11 +402,13 @@ public class MainActivity
     drawerToggle.onConfigurationChanged(newConfig);
   }
 
+  @NonNull
   public Layout getLayout() {
     return layout;
   }
 
   // Builds load dialog if necessary
+  @NonNull
   public AlertDialog getLoadingAlertDialog() {
     return (loadingAlertDialog == null) ?
       loadingAlertDialog = new AlertDialog.Builder(this)

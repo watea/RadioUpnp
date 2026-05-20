@@ -106,6 +106,7 @@ public class SearchFragment extends SearchRootFragment {
   }
 
   @Override
+  @NonNull
   protected JSONArray getStations() throws IOException, JSONException {
     return getJSONArray(getRequest());
   }
@@ -170,18 +171,22 @@ public class SearchFragment extends SearchRootFragment {
     return false;
   }
 
+  @NonNull
   private String getCountry() {
     return getSpinnerValue(countrySpinner);
   }
 
+  @NonNull
   private String getRadioTag() {
     return getSpinnerValue(radioTagSpinner);
   }
 
+  @NonNull
   private String getBitrate() {
     return getSpinnerValue(bitrateSpinner);
   }
 
+  @NonNull
   private String getSpinnerValue(@NonNull Spinner spinner) {
     return (spinner.getSelectedItemPosition() > 0) ? spinner.getSelectedItem().toString() : "";
   }

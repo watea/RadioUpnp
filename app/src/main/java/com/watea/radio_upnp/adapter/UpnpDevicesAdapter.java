@@ -70,8 +70,8 @@ public class UpnpDevicesAdapter
     }
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
     return new ViewHolder(LayoutInflater
       .from(viewGroup.getContext())

@@ -94,6 +94,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     renderingControl = device.getShortService(RENDERING_CONTROL_ID);
   }
 
+  @NonNull
   public static String getDlnaTail(@NonNull String mime) {
     String result;
     switch (mime) {

@@ -64,8 +64,8 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     return context.createDisplayContext(defaultDisplay).getResources().getDisplayMetrics();
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     return new ViewHolder(getView(parent));
   }

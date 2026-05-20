@@ -156,8 +156,8 @@ public class CapturingAudioSink implements AudioSink {
     return (callback == null) ? delegate.hasPendingData() : !pcmBuffer.isEmpty();
   }
 
-  @NonNull
   @Override
+  @NonNull
   public PlaybackParameters getPlaybackParameters() {
     return delegate.getPlaybackParameters();
   }

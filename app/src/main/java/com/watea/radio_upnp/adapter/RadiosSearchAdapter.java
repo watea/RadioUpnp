@@ -59,8 +59,8 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
     notifyDataSetChanged();
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     return new ViewHolder(getView(parent));
   }

@@ -38,8 +38,8 @@ public class OpenDonationFragment extends MainActivityFragment {
   private static final Uri PAYPAL_URI = Uri.parse("https://paypal.me/frwatea?country.x=FR&locale.x=fr_FR");
 
   // Sends a mail for contact
-  @NonNull
   @Override
+  @NonNull
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> startActivity(getMainActivity().getNewSendIntent());
   }

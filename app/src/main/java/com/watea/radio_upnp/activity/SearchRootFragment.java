@@ -74,8 +74,8 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   private RadiosSearchAdapter radiosSearchAdapter;
   private boolean isServerAvailable = false;
 
-  @NonNull
   @Override
+  @NonNull
   public View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
       // If search dialog already built, use it, or else build it
@@ -134,6 +134,7 @@ public abstract class SearchRootFragment extends MainActivityFragment {
 
   protected abstract void clearDialog();
 
+  @NonNull
   protected abstract JSONArray getStations() throws IOException, JSONException;
 
   protected abstract void fetchDialogItems() throws IOException, JSONException;
@@ -169,6 +170,7 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     return false;
   }
 
+  @NonNull
   protected Radio buildRadio() throws MalformedURLException {
     return new Radio(
       name,
