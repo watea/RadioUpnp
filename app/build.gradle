@@ -11,8 +11,8 @@ android {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 36
-        versionCode = 301002
-        versionName = '3.01.002'
+        versionCode = 301003
+        versionName = '3.01.003'
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -76,8 +76,7 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.14.0'
     implementation 'androidx.activity:activity:1.13.0'
-    implementation 'androidx.media3:media3-exoplayer:1.9.3'
-    // Exoplayer - 1.10.x has HLS AIOOBE bug in BaseTrackSelection.isTrackExcluded (fixed on main, not yet released)
+    implementation 'androidx.media3:media3-exoplayer:1.9.3' // Exoplayer - 1.10.x has HLS AIOOBE bug in BaseTrackSelection.isTrackExcluded (fixed on main, not yet released)
     implementation 'androidx.media3:media3-exoplayer-hls:1.9.3' // Exoplayer codec
     implementation 'androidx.media3:media3-exoplayer-dash:1.9.3' // Exoplayer codec
     implementation 'androidx.media3:media3-datasource-okhttp:1.9.3' // Exoplayer OkHttp data source
@@ -98,5 +97,5 @@ dependencies {
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.3.2'
     // Billing
-    fullImplementation 'com.android.billingclient:billing:8.3.0'
+    fullImplementation 'com.android.billingclient:billing:9.0.0'
 }
