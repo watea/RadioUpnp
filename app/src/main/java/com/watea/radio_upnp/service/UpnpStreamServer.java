@@ -49,7 +49,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -78,10 +77,8 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
   private final Callback callback;
   @NonNull
   private final Context context;
-  private final ConcurrentHashMap<String, Watchdog> watchdogs = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, Set<ArrayBlockingQueue<byte[]>>> queuess = new ConcurrentHashMap<>();
-  @NonNull
-  private volatile String lockKey = RadioService.getLockKey(); // Current stream signature
+  @Nullable
+  private volatile StreamResource streamResource = null;
   // Audio format — set by setAudioFormat(), DEFAULT until ExoPlayer codec is configured.
   // Volatile because setAudioFormat() runs on an ExoPlayer thread while StreamHandler
   // may be polling these values from the CandidHttpServer thread.
@@ -100,21 +97,12 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
 
     @Override
     public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
-      final Set<ArrayBlockingQueue<byte[]>> queues = queuess.get(lockKey);
-      if ((queues == null) || (queues.isEmpty())) {
+      final StreamResource streamResource = UpnpStreamServer.this.streamResource;
+      if (streamResource == null) {
         Log.d(LOG_TAG, "No queue to receive data");
-        return;
+      } else {
+        streamResource.onPcmData(pcmData);
       }
-      queues.forEach(queue -> {
-        final int remaining = queue.remainingCapacity();
-        if (remaining < QUEUE_SIZE * 0.2F) {
-          Log.w(LOG_TAG, "Queue fill: " + (QUEUE_SIZE - remaining) + "/" + QUEUE_SIZE);
-        }
-        if (!queue.offer(pcmData)) {
-          Log.e(LOG_TAG, "QUEUE FULL => DROP (" + pcmData.length + " bytes)");
-          queues.remove(queue);
-        }
-      });
     }
   };
 
@@ -173,21 +161,15 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
   // Must be called early before any session is started.
   // lockKey == null for release.
   public void launch(@Nullable String lockKey) {
-    // isRelease?
     final boolean isRelease = (lockKey == null);
     Log.d(LOG_TAG, "setLockKey: " + (isRelease ? "release" : lockKey));
-    this.lockKey = isRelease ? RadioService.getLockKey() : lockKey;
-    // Create new queue set
-    queuess.clear();
-    // Update lockKey
     sampleRate = DEFAULT;
-    // Watchdog
-    watchdogs.clear();
-    // Launch
-    if (!isRelease) {
-      queuess.put(lockKey, new CopyOnWriteArraySet<>());
-      watchdogs.put(lockKey, new Watchdog(callback::onDisconnected, lockKey, CONNECT_WATCHDOG_TIMEOUT_S));
-    }
+    streamResource = isRelease ? null : new StreamResource(lockKey);
+  }
+
+  public boolean hasLockKey(@Nullable String lockKey) {
+    final StreamResource streamResource = this.streamResource;
+    return (streamResource != null) && streamResource.lockKey.equals(lockKey);
   }
 
   @NonNull
@@ -255,10 +237,15 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       final String method = request.getMethod();
       final String className = getClass().getSimpleName();
       Log.d(LOG_TAG, className + ": handle - " + method + " - " + id + " - " + incomingLockKey);
-      if ((radio != null) && lockKey.equals(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
+      final StreamResource streamResource = UpnpStreamServer.this.streamResource;
+      if (streamResource == null) {
+        Log.d(LOG_TAG, "handle: no resource defined - " + incomingLockKey);
+        return;
+      }
+      if ((radio != null) && streamResource.hasLockKey(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
         final boolean isHead = method.equals(HEAD);
-        Log.d(LOG_TAG, className + ": handleStream - " + (isHead ? HEAD : GET) + " - " + lockKey);
-        handleStream(response, responseStream, isHead, radio, lockKey);
+        Log.d(LOG_TAG, className + ": handleStream - " + (isHead ? HEAD : GET) + " - " + incomingLockKey);
+        handleStream(response, responseStream, isHead, radio, streamResource);
       }
       Log.d(LOG_TAG, className + ": handle exit - " + method + " - " + incomingLockKey);
     }
@@ -272,7 +259,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull Radio radio,
-      @NonNull String lockKey) throws IOException;
+      @NonNull StreamResource streamResource) throws IOException;
 
     // Adds DLNA streaming headers common to both PCM and relay responses
     protected void sendDlnaResponse(
@@ -292,21 +279,68 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
         throw ioException;
       }
     }
+  }
 
-    protected void signalConnectionAndLaunchWatchdog(@NonNull String lockKey) {
-      callback.onConnected(lockKey);
-      watchdogs.computeIfPresent(lockKey, (k, v) -> {
-        v.cancel();
-        return v;
-      });
-      watchdogs.put(lockKey, new Watchdog(callback::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S));
+  private class StreamResource {
+    @NonNull
+    private final String lockKey;
+    private final Set<ArrayBlockingQueue<byte[]>> queues = new CopyOnWriteArraySet<>();
+    private Watchdog watchdog;
+
+    public StreamResource(@NonNull String lockKey) {
+      this.lockKey = lockKey;
+      watchdog = new Watchdog(callback::onDisconnected, this.lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
     }
 
-    protected void relaunchWatchdog(@NonNull String lockKey) {
-      watchdogs.computeIfPresent(lockKey, (k, v) -> {
-        v.relaunch();
-        return v;
+    public void onPcmData(@NonNull byte[] pcmData) {
+      if (queues.isEmpty()) {
+        Log.d(LOG_TAG, "No queue to receive data");
+        return;
+      }
+      queues.forEach(queue -> {
+        final int remaining = queue.remainingCapacity();
+        if (remaining < QUEUE_SIZE * 0.2F) {
+          Log.w(LOG_TAG, "Queue fill: " + (QUEUE_SIZE - remaining) + "/" + QUEUE_SIZE);
+        }
+        if (!queue.offer(pcmData)) {
+          Log.e(LOG_TAG, "QUEUE FULL => DROP (" + pcmData.length + " bytes)");
+          queues.remove(queue);
+        }
       });
+    }
+
+    @NonNull
+    public String getLockKey() {
+      return lockKey;
+    }
+
+    public void relaunchWatchdog() {
+      watchdog.relaunch();
+    }
+
+    public void onConnected() {
+      callback.onConnected(lockKey);
+      watchdog.cancel();
+      watchdog = new Watchdog(callback::onDisconnected, this.lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+    }
+
+    @NonNull
+    public ArrayBlockingQueue<byte[]> addQueue() {
+      final ArrayBlockingQueue<byte[]> result = new ArrayBlockingQueue<>(QUEUE_SIZE);
+      queues.add(result);
+      return result;
+    }
+
+    public void removeQueue(@NonNull ArrayBlockingQueue<byte[]> queue) {
+      queues.remove(queue);
+    }
+
+    public boolean hasLockKey(@Nullable String lockKey) {
+      return UpnpStreamServer.this.hasLockKey(lockKey);
+    }
+
+    public boolean hasLockKey() {
+      return hasLockKey(lockKey);
     }
   }
 
@@ -323,30 +357,22 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull Radio radio,
-      @NonNull String lockKey) throws IOException {
+      @NonNull StreamResource streamResource) throws IOException {
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
-      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, lockKey);
+      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, streamResource.getLockKey());
       if (isHead) {
         return;
       }
       // Create queue
-      final ArrayBlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
-      final Set<ArrayBlockingQueue<byte[]>> queues = queuess.get(lockKey);
-      if (queues == null) {
-        Log.e(LOG_TAG, "PcmStreamHandler: no queue available - " + lockKey);
-        callback.onDisconnected(lockKey);
-        return;
-      } else {
-        queues.add(queue);
-      }
+      final ArrayBlockingQueue<byte[]> queue = streamResource.addQueue();
       // Wait for onFormatChanged()
       final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
       try {
         while (sampleRate == DEFAULT) {
           if (System.currentTimeMillis() > deadline) {
-            Log.e(LOG_TAG, "PcmStreamHandler: timeout waiting for audio format - " + lockKey);
-            callback.onDisconnected(lockKey);
+            Log.e(LOG_TAG, "PcmStreamHandler: timeout waiting for audio format - " + streamResource.getLockKey());
+            callback.onDisconnected(streamResource.getLockKey());
             return;
           }
           try {
@@ -354,21 +380,21 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
             Thread.sleep(50);
           } catch (InterruptedException interruptedException) {
             Thread.currentThread().interrupt();
-            callback.onDisconnected(lockKey);
+            callback.onDisconnected(streamResource.getLockKey());
             return;
           }
         }
         // We signal actual connection and start stream
-        signalConnectionAndLaunchWatchdog(lockKey);
+        streamResource.onConnected();
         responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
-        Log.d(LOG_TAG, "PcmStreamHandler: start streaming - " + lockKey);
+        Log.d(LOG_TAG, "PcmStreamHandler: start streaming - " + streamResource.getLockKey());
         try {
-          while (lockKey.equals(UpnpStreamServer.this.lockKey)) {
+          while (streamResource.hasLockKey()) {
             final byte[] pcmData = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.MILLISECONDS);
             if (pcmData == null) {
               Log.d(LOG_TAG, "PcmStreamHandler: pcmData is null");
             } else {
-              relaunchWatchdog(lockKey);
+              streamResource.relaunchWatchdog();
               responseStream.write(pcmData);
             }
           }
@@ -376,10 +402,10 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
           Thread.currentThread().interrupt();
         }
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "PcmStreamHandler: IOException - " + lockKey + "; " + ioException.getMessage());
+        Log.d(LOG_TAG, "PcmStreamHandler: IOException - " + streamResource.getLockKey() + "; " + ioException.getMessage());
         throw ioException;
       } finally {
-        queues.remove(queue);
+        streamResource.removeQueue(queue);
       }
     }
 
@@ -421,16 +447,16 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull Radio radio,
-      @NonNull String lockKey) throws IOException {
+      @NonNull StreamResource streamResource) throws IOException {
       // Upstream
       final Radio.ConnectionSet connectionSet = radio.getConnectionSet(context.getString(R.string.app_name));
       if (connectionSet == null) {
         Log.d(LOG_TAG, "RelayStreamHandler: upstream is not defined");
-        callback.onDisconnected(lockKey);
+        callback.onDisconnected(streamResource.getLockKey());
         return;
       }
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
-      sendDlnaResponse(response, responseStream, connectionSet.getContent(), lockKey);
+      sendDlnaResponse(response, responseStream, connectionSet.getContent(), streamResource.getLockKey());
       if (isHead) {
         return;
       }
@@ -440,20 +466,20 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
         httpURLConnection = new RadioURL(connectionSet.getUrl()).getActualHttpURLConnection(context.getString(R.string.app_name));
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "RelayStreamHandler: unable to connect", ioException);
-        callback.onDisconnected(lockKey);
+        callback.onDisconnected(streamResource.getLockKey());
         throw ioException;
       }
       // We signal actual connection and start stream
-      signalConnectionAndLaunchWatchdog(lockKey);
+      streamResource.onConnected();
       final String icyMetaIntValue = httpURLConnection.getHeaderField("Icy-Metaint");
       final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
-        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onInformation(title, lockKey));
+        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onInformation(title, streamResource.getLockKey()));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
-      Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + lockKey);
+      Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + streamResource.getLockKey());
       try (final InputStream inputStream = httpURLConnection.getInputStream()) {
-        while (lockKey.equals(UpnpStreamServer.this.lockKey) && ((n = inputStream.read(buf)) >= 0)) {
-          relaunchWatchdog(lockKey);
+        while (streamResource.hasLockKey() && ((n = inputStream.read(buf)) >= 0)) {
+          streamResource.relaunchWatchdog();
           if (parser == null) {
             responseStream.write(buf, 0, n);
           } else {
@@ -461,7 +487,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
           }
         }
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "RelayStreamHandler: IOException - " + lockKey + "; " + ioException.getMessage());
+        Log.d(LOG_TAG, "RelayStreamHandler: IOException - " + streamResource.getLockKey() + "; " + ioException.getMessage());
         throw ioException;
       } finally {
         httpURLConnection.disconnect();
