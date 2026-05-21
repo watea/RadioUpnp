@@ -79,7 +79,6 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
   private final Context context;
   @Nullable
   private volatile StreamResource streamResource = null;
-
   private final CapturingAudioSink.Callback capturingAudioSinkCallback = new CapturingAudioSink.Callback() {
     // Must be called before any PCM streaming is started
     @Override
@@ -160,7 +159,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
   // lockKey == null for release.
   public void launch(@Nullable String lockKey) {
     final boolean isRelease = (lockKey == null);
-    Log.d(LOG_TAG, "setLockKey: " + (isRelease ? "release" : lockKey));
+    Log.d(LOG_TAG, "launch: " + (isRelease ? "release" : lockKey));
     streamResource = isRelease ? null : new StreamResource(lockKey);
   }
 
