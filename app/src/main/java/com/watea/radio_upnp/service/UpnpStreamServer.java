@@ -163,7 +163,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     streamResource = isRelease ? null : new StreamResource(lockKey);
   }
 
-  public boolean hasLockKey(@Nullable String lockKey) {
+  private boolean hasLockKey(@Nullable String lockKey) {
     final StreamResource streamResource = this.streamResource;
     return (streamResource != null) && streamResource.lockKey.equals(lockKey);
   }
