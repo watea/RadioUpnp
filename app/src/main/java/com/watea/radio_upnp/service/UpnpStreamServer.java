@@ -79,20 +79,18 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
   private final Context context;
   @Nullable
   private volatile StreamResource streamResource = null;
-  // Audio format — set by setAudioFormat(), DEFAULT until ExoPlayer codec is configured.
-  // Volatile because setAudioFormat() runs on an ExoPlayer thread while StreamHandler
-  // may be polling these values from the CandidHttpServer thread.
-  private volatile int sampleRate = DEFAULT;
-  private volatile int channelCount = DEFAULT;
-  private volatile int bitsPerSample = DEFAULT;
+
   private final CapturingAudioSink.Callback capturingAudioSinkCallback = new CapturingAudioSink.Callback() {
     // Must be called before any PCM streaming is started
     @Override
     public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
       Log.d(LOG_TAG, "onFormatChanged");
-      UpnpStreamServer.this.sampleRate = sampleRate;
-      UpnpStreamServer.this.channelCount = channelCount;
-      UpnpStreamServer.this.bitsPerSample = bitsPerSample;
+      final StreamResource streamResource = UpnpStreamServer.this.streamResource;
+      if (streamResource == null) {
+        Log.d(LOG_TAG, "No resource to receive format data");
+      } else {
+        streamResource.onFormatChanged(sampleRate, channelCount, bitsPerSample);
+      }
     }
 
     @Override
@@ -163,7 +161,6 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
   public void launch(@Nullable String lockKey) {
     final boolean isRelease = (lockKey == null);
     Log.d(LOG_TAG, "setLockKey: " + (isRelease ? "release" : lockKey));
-    sampleRate = DEFAULT;
     streamResource = isRelease ? null : new StreamResource(lockKey);
   }
 
@@ -285,11 +282,33 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     @NonNull
     private final String lockKey;
     private final Set<ArrayBlockingQueue<byte[]>> queues = new CopyOnWriteArraySet<>();
-    private Watchdog watchdog;
+    private volatile Watchdog watchdog;
+    // Audio format — set by onFormatChanged() on ExoPlayer thread, read on HTTP server thread.
+    private volatile int sampleRate = DEFAULT;
+    private volatile int channelCount = DEFAULT;
+    private volatile int bitsPerSample = DEFAULT;
 
     public StreamResource(@NonNull String lockKey) {
       this.lockKey = lockKey;
       watchdog = new Watchdog(callback::onDisconnected, this.lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
+    }
+
+    public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
+      this.sampleRate = sampleRate;
+      this.channelCount = channelCount;
+      this.bitsPerSample = bitsPerSample;
+    }
+
+    public int getBitsPerSample() {
+      return bitsPerSample;
+    }
+
+    public int getChannelCount() {
+      return channelCount;
+    }
+
+    public int getSampleRate() {
+      return sampleRate;
     }
 
     public void onPcmData(@NonNull byte[] pcmData) {
@@ -369,7 +388,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       // Wait for onFormatChanged()
       final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
       try {
-        while (sampleRate == DEFAULT) {
+        while (streamResource.getSampleRate() == DEFAULT) {
           if (System.currentTimeMillis() > deadline) {
             Log.e(LOG_TAG, "PcmStreamHandler: timeout waiting for audio format - " + streamResource.getLockKey());
             callback.onDisconnected(streamResource.getLockKey());
@@ -386,7 +405,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
         }
         // We signal actual connection and start stream
         streamResource.onConnected();
-        responseStream.write(buildWavHeader(sampleRate, channelCount, bitsPerSample));
+        responseStream.write(buildWavHeader(streamResource.getSampleRate(), streamResource.getChannelCount(), streamResource.getBitsPerSample()));
         Log.d(LOG_TAG, "PcmStreamHandler: start streaming - " + streamResource.getLockKey());
         try {
           while (streamResource.hasLockKey()) {
