@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -216,6 +217,36 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
       response.send();
       responseStream.write(logoBytes);
+    }
+  }
+
+  private static class Watchdog {
+    private static final String LOG_TAG = Watchdog.class.getSimpleName();
+    private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    @NonNull
+    private final Runnable runnable;
+    private final int timeoutS;
+
+    public Watchdog(@NonNull Consumer<String> consumer, @NonNull String lockKey, int timeoutS) {
+      this.runnable = () -> {
+        Log.d(LOG_TAG, "Watchdog fired for " + lockKey);
+        consumer.accept(lockKey);
+      };
+      this.timeoutS = timeoutS;
+      launch();
+    }
+
+    public void relaunch() {
+      cancel();
+      launch();
+    }
+
+    public void cancel() {
+      handler.removeCallbacks(runnable);
+    }
+
+    private void launch() {
+      handler.postDelayed(runnable, timeoutS * 1000L);
     }
   }
 
