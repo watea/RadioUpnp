@@ -98,9 +98,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   public static String getDlnaTail(@NonNull String mime) {
     String result;
     switch (mime) {
-      case PCM_MIME:
-        result = "DLNA.ORG_PN=LPCM;";
-        break;
       case "audio/mpeg":
         result = "DLNA.ORG_PN=MP3;";
         break;
@@ -113,6 +110,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       case "audio/x-m4a":
         result = "DLNA.ORG_PN=AAC_ISO;";
         break;
+      case PCM_MIME:
+        // audio/wav (RIFF, little-endian) has no DLNA profile — LPCM mandates raw audio/L16 big-endian
       case "audio/flac":
       case "audio/x-flac":
         // No standard DLNA profile for FLAC
