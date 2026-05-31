@@ -54,8 +54,6 @@ import androidx.media3.exoplayer.metadata.MetadataRenderer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
 
-import com.watea.radio_upnp.R;
-
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -67,6 +65,8 @@ import okhttp3.OkHttpClient;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice {
+  // VLC UA is universally accepted by Icecast/Shoutcast CDNs; the app name alone gets filtered
+  public static final String STREAMING_USER_AGENT = "Mozilla/5.0 (compatible; RadioUpnp)";
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
   private static final int CONNECTION_TIMEOUT_S = 10;
   @NonNull
@@ -169,11 +169,18 @@ public abstract class SessionDevice {
   // Must be called in its own thread.
   // Fires ERROR if upstream connection failed.
   public boolean prepare() {
-    connectionSet = radio.getConnectionSet(context.getString(R.string.app_name));
+    connectionSet = radio.getConnectionSet(STREAMING_USER_AGENT);
     if (connectionSet == null) {
-      Log.d(LOG_TAG, "prepare: unable to connect");
-      onState(PlaybackStateCompat.STATE_ERROR);
-      return false;
+      if (isExoPlayerActive()) {
+        // Pre-check failed but ExoPlayer may still connect (e.g. server rejects our probe headers)
+        Log.d(LOG_TAG, "prepare: pre-check failed, trying ExoPlayer directly");
+        connectionSet = new Radio.ConnectionSet(radio.getURL(), Radio.DEFAULT_MIME, -1);
+      } else {
+        // connectionSet must be defined at this point, so we fire an error
+        Log.d(LOG_TAG, "prepare: unable to connect");
+        onState(PlaybackStateCompat.STATE_ERROR);
+        return false;
+      }
     }
     if (isExoPlayerActive()) {
       // Post ExoPlayer calls to the main thread
@@ -248,7 +255,7 @@ public abstract class SessionDevice {
 
   @NonNull
   private ExoPlayer getExoPlayer() {
-    final Map<String, String> userAgentProperty = Collections.singletonMap("User-Agent", context.getString(R.string.app_name));
+    final Map<String, String> userAgentProperty = Collections.singletonMap("User-Agent", STREAMING_USER_AGENT);
     DataSource.Factory httpDataSourceFactory;
     try {
       final EasyX509TrustManager easyX509TrustManager = new EasyX509TrustManager();

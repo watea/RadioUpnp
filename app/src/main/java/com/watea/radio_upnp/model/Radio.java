@@ -44,7 +44,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -373,14 +372,12 @@ public class Radio {
   @Nullable
   public ConnectionSet getConnectionSet(@NonNull String userAgent) {
     if (connectionSet == null) {
-      HttpURLConnection httpURLConnection = null;
-      try {
-        httpURLConnection = new RadioURL(url).getActualHttpURLConnection(userAgent);
-        final URL actualUrl = httpURLConnection.getURL();
-        String contentType = RadioURL.getStreamContentType(httpURLConnection);
+      try (final okhttp3.Response response = new RadioURL(url).getActualOkHttpResponse(userAgent)) {
+        final URL actualUrl = response.request().url().url();
+        String contentType = RadioURL.getStreamContentType(response);
         contentType = (contentType == null) ? DEFAULT_MIME : contentType;
-        final String icyBr = httpURLConnection.getHeaderField("icy-br");
-        final String contentBitrate = (icyBr == null) ? httpURLConnection.getHeaderField("Content-Bitrate") : icyBr;
+        final String icyBr = response.header("icy-br");
+        final String contentBitrate = (icyBr == null) ? response.header("Content-Bitrate") : icyBr;
         int bitrate = -1;
         if (contentBitrate != null) {
           try {
@@ -393,10 +390,6 @@ public class Radio {
         connectionSet = new ConnectionSet(actualUrl, contentType, bitrate);
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "getConnectionSet: unable to connect", ioException);
-      } finally {
-        if (httpURLConnection != null) {
-          httpURLConnection.disconnect();
-        }
       }
     }
     return connectionSet;

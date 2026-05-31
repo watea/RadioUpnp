@@ -32,19 +32,18 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.candidhttpserver.HttpServer;
-import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.model.RemoteSessionDevice;
+import com.watea.radio_upnp.model.SessionDevice;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Set;
@@ -498,7 +497,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       @NonNull Radio radio,
       @NonNull StreamResource streamResource) throws IOException {
       // Upstream
-      final Radio.ConnectionSet connectionSet = radio.getConnectionSet(context.getString(R.string.app_name));
+      final Radio.ConnectionSet connectionSet = radio.getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
       if (connectionSet == null) {
         Log.d(LOG_TAG, "RelayStreamHandler: upstream is not defined");
         callback.onDisconnected(streamResource.getLockKey());
@@ -510,9 +509,11 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
         return;
       }
       // New upstream connection per GET thread — a shared connection causes concurrent stream corruption
-      final HttpURLConnection httpURLConnection;
+      final okhttp3.Response upstreamResponse;
       try {
-        httpURLConnection = new RadioURL(connectionSet.getUrl()).getActualHttpURLConnection(context.getString(R.string.app_name));
+        upstreamResponse = new RadioURL(connectionSet.getUrl()).getActualOkHttpResponse(
+          SessionDevice.STREAMING_USER_AGENT,
+          java.util.Collections.singletonMap("Icy-Metadata", "1"));
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "RelayStreamHandler: unable to connect", ioException);
         callback.onDisconnected(streamResource.getLockKey());
@@ -520,13 +521,13 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       }
       // We signal actual connection and start stream
       streamResource.onConnected();
-      final String icyMetaIntValue = httpURLConnection.getHeaderField("Icy-Metaint");
+      final String icyMetaIntValue = upstreamResponse.header("Icy-Metaint");
       final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
         new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onInformation(title, streamResource.getLockKey()));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
       Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + streamResource.getLockKey());
-      try (final InputStream inputStream = httpURLConnection.getInputStream()) {
+      try (final InputStream inputStream = upstreamResponse.body().byteStream()) {
         while (streamResource.hasLockKey() && ((n = inputStream.read(buf)) >= 0)) {
           streamResource.relaunchWatchdog();
           if (parser == null) {
@@ -539,7 +540,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
         Log.d(LOG_TAG, "RelayStreamHandler: IOException - " + streamResource.getLockKey() + "; " + ioException.getMessage());
         throw ioException;
       } finally {
-        httpURLConnection.disconnect();
+        upstreamResponse.close();
       }
     }
   }

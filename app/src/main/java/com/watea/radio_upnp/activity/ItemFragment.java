@@ -54,7 +54,6 @@ import com.watea.radio_upnp.model.RadioURL;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -330,8 +329,6 @@ public abstract class ItemFragment extends MainActivityFragment {
     private String streamContent = null;
     @Nullable
     private String actualUrl = null;
-    @Nullable
-    private HttpURLConnection httpURLConnection = null;
 
     private UrlTester(@NonNull URL url) {
       super();
@@ -342,16 +339,11 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     protected void onSearch() {
-      try {
-        httpURLConnection = new RadioURL(url).getActualHttpURLConnection(getMainActivity().getString(R.string.app_name));
-        streamContent = RadioURL.getStreamContentType(httpURLConnection);
-        actualUrl = httpURLConnection.getURL().toString();
+      try (final okhttp3.Response response = new RadioURL(url).getActualOkHttpResponse(getMainActivity().getString(R.string.app_name))) {
+        streamContent = RadioURL.getStreamContentType(response);
+        actualUrl = response.request().url().url().toString();
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "UrlTester: IOException", ioException);
-      } finally {
-        if (httpURLConnection != null) {
-          httpURLConnection.disconnect();
-        }
       }
     }
 
