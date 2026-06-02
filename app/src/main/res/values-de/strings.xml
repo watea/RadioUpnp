@@ -125,7 +125,6 @@
     <string name="action_pause">Pause</string>
     <string name="action_done">OK</string>
     <string name="action_move">Verschieben</string>
-    <string name="action_relaunch">Neustart</string>
     <string name="action_skip_to_next">Nächster Sender</string>
     <string name="action_skip_to_previous">Vorheriger Sender</string>
     <string name="action_browse">Manuell</string>

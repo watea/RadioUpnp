@@ -27,7 +27,6 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -66,22 +65,22 @@ public class CastSessionDevice extends RemoteSessionDevice {
       Log.d(LOG_TAG, "onStatusUpdated: state = " + playerState);
       switch (playerState) {
         case MediaStatus.PLAYER_STATE_PLAYING:
-          onState(PlaybackStateCompat.STATE_PLAYING);
+          onState(State.PLAYING);
           break;
         case MediaStatus.PLAYER_STATE_PAUSED:
-          onState(PlaybackStateCompat.STATE_PAUSED);
+          onState(State.PAUSED);
           break;
         case MediaStatus.PLAYER_STATE_BUFFERING:
         case MediaStatus.PLAYER_STATE_LOADING:
-          onState(PlaybackStateCompat.STATE_BUFFERING);
+          onState(State.BUFFERING);
           break;
         case MediaStatus.PLAYER_STATE_IDLE:
-          if (listener.getPlaybackState() == PlaybackStateCompat.STATE_PLAYING) {
-            onState(PlaybackStateCompat.STATE_ERROR);
+          if (listener.getPlaybackState() == State.PLAYING) {
+            onState(State.ERROR);
           }
           break;
         default:
-          onState(PlaybackStateCompat.STATE_STOPPED);
+          onState(State.STOPPED);
       }
     }
   };
@@ -130,7 +129,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
         remoteMediaClient = castSession.getRemoteMediaClient();
         if (remoteMediaClient == null) {
           Log.e(LOG_TAG, "Failed to get remote media client");
-          onState(PlaybackStateCompat.STATE_ERROR);
+          onState(State.ERROR);
         } else {
           remoteMediaClient.registerCallback(remoteCallback);
           load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);

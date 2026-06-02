@@ -25,7 +25,6 @@ package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.net.Uri;
-import android.support.v4.media.session.PlaybackStateCompat;
 
 import androidx.annotation.NonNull;
 
@@ -68,7 +67,7 @@ public abstract class RemoteSessionDevice extends SessionDevice {
 
   @Override
   public void pause() {
-    onState(PlaybackStateCompat.STATE_PAUSED);
+    onState(State.PAUSED);
     super.stop();
   }
 

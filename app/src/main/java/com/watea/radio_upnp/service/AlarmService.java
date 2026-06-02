@@ -42,12 +42,8 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Binder;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.support.v4.media.MediaBrowserCompat;
-import android.support.v4.media.session.MediaControllerCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -56,7 +52,12 @@ import androidx.car.app.connection.CarConnection;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.lifecycle.Observer;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.Player;
+import androidx.media3.session.MediaController;
+import androidx.media3.session.SessionToken;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
@@ -71,23 +72,29 @@ public class AlarmService extends Service {
   private static final String ALARM_CANCEL = "com.watea.radio_upnp.ALARM_CANCEL";
   private final Binder binder = new AlarmServiceBinder();
   // Callback from media control
-  private final MediaControllerCompatCallback mediaControllerCallback = new MediaControllerCompatCallback();
-  // Callback from connection to MediaBrowserServiceCompat
-  private final MediaBrowserCompatConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserCompatConnectionCallback();
+  private final MediaControllerListener mediaControllerListener = new MediaControllerListener();
+  private final MediaControllerPlayerListener mediaControllerPlayerListener = new MediaControllerPlayerListener();
+  // Callback from connection to RadioService
+  private final MediaBrowserConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserConnectionCallback();
   private final NetworkRequest networkRequest = new NetworkRequest.Builder()
     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     .build();
   // Wait for internet connection
   private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
   private String channelId;
-  private MediaBrowserCompat mediaBrowser;
+  @Nullable
+  private ListenableFuture<MediaController> controllerFuture = null;
+  @Nullable
+  private MediaController mediaController = null;
+  private SessionToken sessionToken;
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
   private boolean isStarted = false;
   private boolean isAndroidAutoConnected = false;
   private final Observer<Integer> carConnectionObserver = type -> {
-    isAndroidAutoConnected = (type == CarConnection.CONNECTION_TYPE_PROJECTION);
-    Log.d(LOG_TAG, "Android Auto " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
+    final boolean connected = (type == CarConnection.CONNECTION_TYPE_PROJECTION);
+    isAndroidAutoConnected = connected;
+    Log.d(LOG_TAG, "Android Auto " + (connected ? "CONNECTED" : "DISCONNECTED"));
   };
   @Nullable
   private CarConnection carConnection = null;
@@ -121,12 +128,8 @@ public class AlarmService extends Service {
     } else {
       Log.d(LOG_TAG, "Existing channel reused");
     }
-    // Create MediaBrowserServiceCompat
-    mediaBrowser = new MediaBrowserCompat(
-      this,
-      new ComponentName(this, RadioService.class),
-      mediaBrowserConnectionCallback,
-      null);
+    // RadioService session token
+    sessionToken = new SessionToken(this, new ComponentName(this, RadioService.class));
     // AlarmManager
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
     // ConnectivityManager
@@ -142,7 +145,7 @@ public class AlarmService extends Service {
     Log.d(LOG_TAG, "onDestroy");
     // Robustness
     releaseAlarm();
-    releaseMediaBrowser();
+    releaseController();
     releaseConnectivityManagerCallback();
     if (carConnection != null) {
       carConnection.getType().removeObserver(carConnectionObserver);
@@ -235,10 +238,17 @@ public class AlarmService extends Service {
       .build();
   }
 
-  private void releaseMediaBrowser() {
-    mediaBrowser.disconnect();
+  private void releaseController() {
     // Robustness: force suspended connection
-    mediaBrowserConnectionCallback.onConnectionSuspended();
+    if (mediaController != null) {
+      mediaController.removeListener(mediaControllerPlayerListener);
+      mediaController.release();
+      mediaController = null;
+    }
+    if (controllerFuture != null) {
+      MediaController.releaseFuture(controllerFuture);
+      controllerFuture = null;
+    }
   }
 
   private void releaseAlarm() {
@@ -315,7 +325,7 @@ public class AlarmService extends Service {
       }
       isStarted = false;
       releaseAlarm();
-      releaseMediaBrowser();
+      releaseController();
       if (listener != null) {
         listener.onAlarmCancelled();
       }
@@ -349,11 +359,10 @@ public class AlarmService extends Service {
     public void onAvailable(@NonNull Network network) {
       Log.d(LOG_TAG, "onAvailable");
       // Launch RadioService, may fail if already called and connection not ended
-      try {
-        mediaBrowser.connect();
-      } catch (IllegalStateException illegalStateException) {
-        Log.e(LOG_TAG, "onAvailable: mediaBrowser.connect() failed", illegalStateException);
-      }
+      controllerFuture = new MediaController.Builder(AlarmService.this, sessionToken)
+        .setListener(mediaControllerListener)
+        .buildAsync();
+      controllerFuture.addListener(mediaBrowserConnectionCallback, new android.os.Handler(android.os.Looper.getMainLooper())::post);
       releaseConnectivityManagerCallback();
     }
 
@@ -363,28 +372,29 @@ public class AlarmService extends Service {
     }
   }
 
-  private class MediaControllerCompatCallback extends MediaControllerCompat.Callback {
-    // This might happen if the RadioService is killed while the Activity is in the
-    // foreground and onStart() has been called (but not onStop())
+  // This might happen if the RadioService is killed while the Activity is in the
+  // foreground and onStart() has been called (but not onStop())
+  private class MediaControllerListener implements MediaController.Listener {
     @Override
-    public void onSessionDestroyed() {
-      Log.d(LOG_TAG, "onSessionDestroyed");
-      releaseMediaBrowser();
+    public void onDisconnected(@NonNull MediaController controller) {
+      Log.d(LOG_TAG, "onDisconnected");
+      mediaController = null;
     }
+  }
 
+  private class MediaControllerPlayerListener implements Player.Listener {
     @Override
-    public void onPlaybackStateChanged(@Nullable final PlaybackStateCompat state) {
-      Log.d(LOG_TAG, "onPlaybackStateChanged: " + state);
+    public void onPlaybackStateChanged(int playbackState) {
+      Log.d(LOG_TAG, "onPlaybackStateChanged: " + playbackState);
       // If we are here, RadioService is started
-      if (state != null) {
-        releaseMediaBrowser();
+      if (playbackState != Player.STATE_IDLE) {
+        releaseController();
       }
     }
   }
 
-  private class MediaBrowserCompatConnectionCallback extends MediaBrowserCompat.ConnectionCallback {
-    @Nullable
-    private MediaControllerCompat mediaController = null;
+  // Runnable executed when controller future completes
+  private class MediaBrowserConnectionCallback implements Runnable {
     private final Radios.Listener radiosListener = new Radios.Listener() {
       @Override
       public void onInitEnd() {
@@ -394,49 +404,39 @@ public class AlarmService extends Service {
     };
 
     @Override
-    public void onConnected() {
-      Log.d(LOG_TAG, "onConnected");
-      // Get a MediaController for the MediaSession
-      mediaController = new MediaControllerCompat(AlarmService.this, mediaBrowser.getSessionToken());
-      // Link to the callback controller
-      mediaController.registerCallback(mediaControllerCallback);
-      // Launch radio
-      if (Radios.isInit()) {
-        launch();
-      } else {
-        Radios.getInstance().addListener(radiosListener);
+    public void run() {
+      if (controllerFuture == null) {
+        return;
       }
-    }
-
-    @Override
-    public void onConnectionSuspended() {
-      Log.d(LOG_TAG, "onConnectionSuspended");
-      if (mediaController != null) {
-        mediaController.unregisterCallback(mediaControllerCallback);
-        // Robustness
-        Radios.getInstance().removeListener(radiosListener);
+      try {
+        // Get a MediaController for the MediaSession
+        mediaController = controllerFuture.get();
+        // Link to the callback controller
+        mediaController.addListener(mediaControllerPlayerListener);
+        Log.d(LOG_TAG, "onConnected");
+        // Launch radio
+        if (Radios.isInit()) {
+          launch();
+        } else {
+          // Robustness
+          Radios.getInstance().addListener(radiosListener);
+        }
+      } catch (Exception e) {
+        Log.e(LOG_TAG, "MediaController connection failed", e);
       }
-      mediaController = null;
-    }
-
-    @Override
-    public void onConnectionFailed() {
-      Log.d(LOG_TAG, "onConnectionFailed");
     }
 
     private void launch() {
       if (!isAndroidAutoConnected) {
         final Radio radio = ((AlarmServiceBinder) binder).getRadio();
         if (radio == null) {
-          Log.e(LOG_TAG, "launch: alarm radio is null!");
+          Log.e(LOG_TAG, "launch: alarm radio is null");
+        } else if (mediaController == null) {
+          Log.e(LOG_TAG, "launch: mediaController is null");
         } else {
           Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
-          if (mediaController == null) {
-            Log.e(LOG_TAG, "launch: mediaController is null!");
-          } else {
-            mediaController.getTransportControls().playFromMediaId(radio.getId(), new Bundle());
-            return;
-          }
+          mediaController.addMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
+          return;
         }
       }
       // Something went wrong, cancel alarm

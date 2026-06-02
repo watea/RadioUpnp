@@ -50,7 +50,7 @@ public class NetworkProxy {
     return isOnNetworkCapability(NetworkCapabilities.TRANSPORT_WIFI);
   }
 
-  // Only Wifi and Cellular is supported
+  // Only Wi-Fi and Cellular is supported
   public boolean isDeviceOnline() {
     return isOnWifi() || isOnNetworkCapability(NetworkCapabilities.TRANSPORT_CELLULAR);
   }

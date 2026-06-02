@@ -70,7 +70,7 @@ android {
 
 dependencies {
     // AndroidX
-    implementation 'androidx.core:core:1.18.0'
+    implementation 'androidx.core:core:1.19.0'
     implementation 'androidx.media:media:1.8.0'
     implementation 'androidx.gridlayout:gridlayout:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
@@ -81,6 +81,7 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer-hls:1.9.3' // Exoplayer codec
     implementation 'androidx.media3:media3-exoplayer-dash:1.9.3' // Exoplayer codec
     implementation 'androidx.media3:media3-datasource-okhttp:1.9.3' // Exoplayer OkHttp data source
+    implementation 'androidx.media3:media3-session:1.9.3' // Media3 session
     implementation 'androidx.mediarouter:mediarouter:1.8.1'
     implementation 'androidx.car.app:app:1.7.0' // Car App Library
     // Cast

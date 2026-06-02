@@ -65,9 +65,12 @@
             tools:ignore="ExportedService">
 
             <intent-filter>
+                <!-- Required for Media3 MediaController (PlayerController, AlarmService) -->
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+                <!-- Required for Android Auto and legacy clients -->
                 <action android:name="android.media.browse.MediaBrowserService" />
-                <!-- Required for Google Assistant voice commands -->
-                <action android:name="android.intent.action.MEDIA_PLAY_FROM_SEARCH" />
+                <!-- Required for Google Assistant voice commands (API 21+) -->
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
 
             </intent-filter>
 
@@ -93,26 +96,6 @@
             </intent-filter>
 
         </service>
-
-        <!--
-         MediaSession, prior to API 21, uses a broadcast receiver to communicate with a
-         media session. It does not have to be this broadcast receiver, but it must
-         handle the action "android.intent.action.MEDIA_BUTTON".
-
-         AND, this is used to resume the service from an inactive state upon
-         receiving a media button event (such as "play").
-        -->
-        <receiver
-            android:name="androidx.media.session.MediaButtonReceiver"
-            android:enabled="true"
-            android:exported="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MEDIA_BUTTON" />
-
-            </intent-filter>
-
-        </receiver>
 
         <receiver
             android:name=".service.AlarmService$AlarmReceiver"

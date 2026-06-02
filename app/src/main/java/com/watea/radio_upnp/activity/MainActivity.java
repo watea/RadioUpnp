@@ -377,9 +377,9 @@ public class MainActivity
   public void resetSelectedDevice() {
     if (upnpService == null) {
       Log.e(LOG_TAG, "resetSelectedDevice: internal failure, upnpService not defined");
-    } else {
-      upnpService.setSelectedDeviceIdentity(null);
+      return;
     }
+    upnpService.setSelectedDeviceIdentity(null);
   }
 
   @NonNull

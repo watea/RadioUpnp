@@ -25,7 +25,6 @@ package com.watea.radio_upnp.model;
 
 import android.content.Context;
 import android.media.AudioManager;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -131,13 +130,13 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   public void adjustVolume(int direction) {
     final Request request = getActionGetVolume();
     if (request == null) {
-      Log.e(LOG_TAG, "adjustVolume: scheduleActionGetVolume() is null!");
-    } else {
-      // Do only if nothing done currently
-      if (volumeDirection == AudioManager.ADJUST_SAME) {
-        volumeDirection = direction;
-        request.ownThreadExecute();
-      }
+      Log.e(LOG_TAG, "adjustVolume: scheduleActionGetVolume() is null");
+      return;
+    }
+    // Do only if nothing done currently
+    if (volumeDirection == AudioManager.ADJUST_SAME) {
+      volumeDirection = direction;
+      request.ownThreadExecute();
     }
   }
 
@@ -178,10 +177,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     if (action == null) {
       // Shall not happen
       Log.e(LOG_TAG, "scheduleMandatoryAction: mandatory UPnP action not found");
-      onState(PlaybackStateCompat.STATE_ERROR);
-    } else {
-      function.apply(action).schedule();
+      onState(State.ERROR);
+      return;
     }
+    function.apply(action).schedule();
   }
 
   private void scheduleOptionalAction(@Nullable Action action, @NonNull Function<Action, Request> function) {
@@ -216,14 +215,14 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       action -> new Request(action, requestController, instanceId) {
         @Override
         protected void onSuccess() {
-          onState(PlaybackStateCompat.STATE_PLAYING);
+          onState(State.PLAYING);
           super.onSuccess();
         }
 
         @Override
         protected void onFailure() {
           Log.d(LOG_TAG, "scheduleActionPlay: error");
-          onState(PlaybackStateCompat.STATE_ERROR);
+          onState(State.ERROR);
           super.onFailure();
         }
       }
@@ -237,7 +236,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
         @Override
         protected void onFailure() {
           Log.d(LOG_TAG, "scheduleActionStop: error");
-          onState(PlaybackStateCompat.STATE_ERROR);
+          onState(State.ERROR);
           super.onFailure();
         }
       });
@@ -328,14 +327,14 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       action -> new Request(action, requestController, instanceId) {
         @Override
         protected void onSuccess() {
-          onState(PlaybackStateCompat.STATE_BUFFERING);
+          onState(State.BUFFERING);
           super.onSuccess();
         }
 
         @Override
         protected void onFailure() {
           Log.d(LOG_TAG, "scheduleActionSetAvTransportUri: error");
-          onState(PlaybackStateCompat.STATE_ERROR);
+          onState(State.ERROR);
           // Release other UPnP actions on this device
           requestController.release(action.getDevice());
           super.onFailure();

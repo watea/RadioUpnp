@@ -125,7 +125,6 @@
     <string name="action_pause">Пауза</string>
     <string name="action_done">ОК</string>
     <string name="action_move">Переместить</string>
-    <string name="action_relaunch">Перезапустить</string>
     <string name="action_skip_to_next">Перейти к следующей</string>
     <string name="action_skip_to_previous">Перейти к предыдущей</string>
     <string name="action_browse">Обзор</string>

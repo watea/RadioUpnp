@@ -23,13 +23,9 @@
 
 package com.watea.radio_upnp.model;
 
-import static android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN;
-
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -88,6 +84,7 @@ public abstract class SessionDevice {
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
   protected volatile boolean isReleased = false;
+  private boolean isAllowedToRewind = false;
 
   protected SessionDevice(
     @NonNull Context context,
@@ -106,29 +103,6 @@ public abstract class SessionDevice {
     Log.d(LOG_TAG, "mode => " + mode);
   }
 
-  @NonNull
-  public static String getStateName(int state) {
-    switch (state) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        return "PLAYING";
-      case PlaybackStateCompat.STATE_PAUSED:
-        return "PAUSED";
-      case PlaybackStateCompat.STATE_BUFFERING:
-        return "BUFFERING";
-      case PlaybackStateCompat.STATE_STOPPED:
-        return "STOPPED";
-      case PlaybackStateCompat.STATE_ERROR:
-        return "ERROR";
-      default:
-        return "UNKNOWN";
-    }
-  }
-
-  @NonNull
-  public static PlaybackStateCompat.Builder getPlaybackStateCompatBuilder(int state) {
-    return new PlaybackStateCompat.Builder().setState(state, PLAYBACK_POSITION_UNKNOWN, 1.0f, SystemClock.elapsedRealtime());
-  }
-
   public abstract boolean isRemote();
 
   public abstract void setVolume(float volume);
@@ -140,12 +114,12 @@ public abstract class SessionDevice {
     return radio;
   }
 
-  public int getState() {
+  public State getState() {
     return listener.getPlaybackState();
   }
 
   public boolean isPlaying() {
-    return (getState() == PlaybackStateCompat.STATE_PLAYING);
+    return (getState() == State.PLAYING);
   }
 
   public void play() {
@@ -178,7 +152,7 @@ public abstract class SessionDevice {
       } else {
         // connectionSet must be defined at this point, so we fire an error
         Log.d(LOG_TAG, "prepare: unable to connect");
-        onState(PlaybackStateCompat.STATE_ERROR);
+        onState(State.ERROR);
         return false;
       }
     }
@@ -191,41 +165,28 @@ public abstract class SessionDevice {
     return true;
   }
 
-  public void onState(int state) {
-    Log.d(LOG_TAG, "onState: " + getStateName(state) + "/" + lockKey);
-    listener.onPlaybackStateChange(
-      getPlaybackStateCompatBuilder(state).setActions(getAvailableActions(state)).build(),
-      lockKey);
+  public void allowRewind() {
+    isAllowedToRewind = true;
+  }
+
+  public boolean consumeRewind() {
+    final boolean result = isAllowedToRewind;
+    isAllowedToRewind = false;
+    return result;
+  }
+
+  public void onState(@NonNull State state) {
+    Log.d(LOG_TAG, "onState: " + state.name() + "/" + lockKey);
+    if ((state == State.PLAYING) && !isRemote()) {
+      allowRewind();
+    }
+    listener.onState(state, lockKey);
   }
 
   public void release() {
     exoPlayer.removeListener(playerListener);
     exoPlayer.release();
     isReleased = true;
-  }
-
-  // Sets the current capabilities available on this session
-  public long getAvailableActions(int state) {
-    long availableActions = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
-      PlaybackStateCompat.ACTION_STOP |
-      PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-      PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
-    switch (state) {
-      case PlaybackStateCompat.STATE_PLAYING:
-        availableActions |= PlaybackStateCompat.ACTION_PAUSE;
-        break;
-      case PlaybackStateCompat.STATE_PAUSED:
-      case PlaybackStateCompat.STATE_BUFFERING:
-        availableActions |= PlaybackStateCompat.ACTION_PLAY;
-        break;
-      case PlaybackStateCompat.STATE_ERROR:
-        availableActions |= PlaybackStateCompat.ACTION_REWIND |
-          PlaybackStateCompat.ACTION_PLAY;
-        break;
-      default:
-        // Nothing else
-    }
-    return availableActions;
   }
 
   // Overrides must not reference subclass instance fields to avoid NPE on initialization
@@ -235,8 +196,11 @@ public abstract class SessionDevice {
   }
 
   protected void startExoPlayer() {
+    if (connectionSet == null) {
+      Log.d(LOG_TAG, "startExoPlayer: internal failure, connectionSet is null!");
+      return;
+    }
     exoPlayer.addListener(playerListener);
-    assert connectionSet != null;
     exoPlayer.setMediaItem(MediaItem.fromUri(connectionSet.getUrl().toString()));
     exoPlayer.prepare();
     exoPlayer.setPlayWhenReady(true);
@@ -288,18 +252,23 @@ public abstract class SessionDevice {
       .build();
   }
 
+  public enum State {
+    IDLE, PLAYING, PAUSED, BUFFERING, ERROR, STOPPED
+  }
+
   protected enum Mode {
     LOCAL, PCM, MUTE
   }
 
   public interface Listener {
-    void onPlaybackStateChange(@NonNull PlaybackStateCompat state, @NonNull String lockKey);
+    void onState(@NonNull State state, @NonNull String lockKey);
 
     void onNewInformation(@NonNull String information, @NonNull String lockKey);
 
     void onNewBitrate(int bitrate, @NonNull String mimeType, @NonNull String lockKey);
 
-    int getPlaybackState();
+    @NonNull
+    State getPlaybackState();
   }
 
   protected class PlayerListener implements Player.Listener {
@@ -334,7 +303,7 @@ public abstract class SessionDevice {
     @Override
     public void onPlayerError(@NonNull PlaybackException error) {
       Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
-      onState(PlaybackStateCompat.STATE_ERROR);
+      onState(State.ERROR);
     }
   }
 }

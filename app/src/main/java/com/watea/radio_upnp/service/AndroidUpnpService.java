@@ -301,7 +301,7 @@ public class AndroidUpnpService extends android.app.Service {
               Log.w(LOG_TAG, "Device fetch timed out: " + service);
               future.cancel(true);
             } catch (ExecutionException executionException) {
-              Log.e(LOG_TAG, "process: add device failed!", executionException.getCause());
+              Log.e(LOG_TAG, "process: add device failed", executionException.getCause());
             } catch (InterruptedException interruptedException) {
               Thread.currentThread().interrupt();
             } finally {

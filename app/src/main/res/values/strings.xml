@@ -143,7 +143,6 @@
     <string name="action_pause">Pause</string>
     <string name="action_done">OK</string>
     <string name="action_move">Move</string>
-    <string name="action_relaunch">Relaunch</string>
     <string name="action_skip_to_next">Skip to next</string>
     <string name="action_skip_to_previous">Skip to previous</string>
     <string name="action_browse">Browse</string>

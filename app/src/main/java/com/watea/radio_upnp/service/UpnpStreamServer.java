@@ -97,7 +97,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       final StreamResource streamResource = UpnpStreamServer.this.streamResource;
       if (streamResource == null) {
         Log.d(LOG_TAG, "No queue to receive data");
-      } else {
+      } else if (streamResource.lockKey.equals(lockKey)) {
         streamResource.onPcmData(pcmData);
       }
     }

@@ -28,13 +28,13 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.RatingCompat;
 import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.StarRating;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -52,7 +52,6 @@ public class Radio {
   @NonNull
   public static final Radio DUMMY_RADIO;
   public static final int RADIO_ICON_SIZE = 300;
-  public static final int RADIO_SMALL_ICON_SIZE = 48;
   private static final String LOG_TAG = Radio.class.getSimpleName();
   private static final String SPACER = ";";
   public static final String EXPORT_HEAD =
@@ -304,11 +303,6 @@ public class Radio {
     base64Icon = iconToBase64String();
   }
 
-  @NonNull
-  public Bitmap getSmallIcon() {
-    return createScaledBitmap(icon, RADIO_SMALL_ICON_SIZE);
-  }
-
   public boolean isPreferred() {
     return isPreferred;
   }
@@ -322,23 +316,19 @@ public class Radio {
     return id;
   }
 
-  // METADATA_KEY_MEDIA_ID starts with appId and ends with getId()
   @NonNull
-  public MediaMetadataCompat.Builder getMediaMetadataBuilder(
-    @NonNull String appId,
+  public MediaMetadata.Builder getMediaMetadataBuilder(
     @NonNull String postfix,
     @NonNull String information) {
     information = name.equals(information) ? "" : information;
     final String postfixName = name + postfix;
-    return new MediaMetadataCompat.Builder()
-      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, appId + getId())
-      .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, icon)
-      .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, icon)
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, postfixName)
-      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, information.isEmpty() ? "" : postfixName)
-      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, information.isEmpty() ? postfixName : information)
-      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, information)
-      .putRating(MediaMetadataCompat.METADATA_KEY_RATING, RatingCompat.newPercentageRating(isPreferred ? 100 : 0));
+    return new MediaMetadata.Builder()
+      .setArtworkData(iconToBytes(), MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+      .setSubtitle(postfixName)
+      .setAlbumTitle(information.isEmpty() ? "" : postfixName)
+      .setTitle(information.isEmpty() ? postfixName : information)
+      .setDisplayTitle(information)
+      .setUserRating(new StarRating(5, isPreferred ? 5 : 0));
   }
 
   @NonNull
@@ -396,10 +386,15 @@ public class Radio {
   }
 
   @NonNull
-  private String iconToBase64String() {
+  private byte[] iconToBytes() {
     final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     icon.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-    return Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.DEFAULT);
+    return byteArrayOutputStream.toByteArray();
+  }
+
+  @NonNull
+  private String iconToBase64String() {
+    return Base64.encodeToString(iconToBytes(), Base64.DEFAULT);
   }
 
   public static class ConnectionSet {
