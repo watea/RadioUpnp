@@ -57,6 +57,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
+import com.watea.radio_upnp.service.RadioPlayer;
 import com.watea.radio_upnp.service.RadioService;
 
 import java.util.ArrayList;
@@ -231,7 +232,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       playlistAlertDialogBuilder.getContext(),
       playInformations,
       R.layout.row_playlist,
-      new String[]{RadioService.DATE, RadioService.INFORMATION},
+      new String[]{RadioPlayer.DATE, RadioPlayer.INFORMATION},
       new int[]{R.id.row_playlist_date_text_view, R.id.row_playlist_information_text_view});
     playlistAlertDialog = playlistAlertDialogBuilder
       .setAdapter(playlistAdapter, null)
@@ -239,7 +240,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     playlistAlertDialog.getListView().setOnItemLongClickListener((parent, itemView, position, id) -> {
       // Concatenate all entries from the playlist
       copyToClipBoard(playInformations.stream()
-        .map(item -> item.get(RadioService.INFORMATION))
+        .map(item -> item.get(RadioPlayer.INFORMATION))
         .collect(Collectors.joining("\n\n")));
       // Dismiss the dialog after handling the long press
       playlistAlertDialog.dismiss();
@@ -248,7 +249,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     });
     playlistAlertDialog.getListView().setOnItemClickListener((parent, rowView, position, id) -> {
       // Get the selected item from the playlist
-      final String selectedInformation = playInformations.get(position).get(RadioService.INFORMATION);
+      final String selectedInformation = playInformations.get(position).get(RadioPlayer.INFORMATION);
       assert selectedInformation != null;
       copyToClipBoard(selectedInformation);
       // Dismiss the dialog after handling the click
@@ -263,9 +264,9 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         playInformations.clear();
         final MediaMetadata metadata = mediaController.getMediaMetadata();
         if (metadata.extras != null) {
-          final String playInformation = metadata.extras.getString(RadioService.PLAYLIST);
+          final String playInformation = metadata.extras.getString(RadioPlayer.PLAYLIST);
           if (playInformation != null) {
-            playInformations.addAll(RadioService.getPlaylist(playInformation));
+            playInformations.addAll(RadioPlayer.getPlaylist(playInformation));
           }
         }
         if (playInformations.isEmpty()) {

@@ -47,16 +47,23 @@ import com.watea.radio_upnp.model.SessionDevice;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @OptIn(markerClass = UnstableApi.class)
 public class RadioPlayer extends SimpleBasePlayer {
+  public static final String DATE = "date";
+  public static final String INFORMATION = "information";
+  public static final String PLAYLIST = "playlist";
+  private static final String PLAYLIST_SEPARATOR = "##";
+  private static final String PLAYLIST_ITEM_SEPARATOR = "&&";
   private static final int DEVICE_MAX_VOLUME = 100;
   private static final int DEVICE_NOMINAL_VOLUME = 50;
   private static final int DEVICE_VOLUME_STEP = 5;
-  private static final String PLAYLIST_SEPARATOR = "##";
-  private static final String PLAYLIST_ITEM_SEPARATOR = "&&";
   private static final DeviceInfo DEVICE_INFO_REMOTE =
     new DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(DEVICE_MAX_VOLUME).build();   // Device volume is relative
   private final Commands commands;
@@ -85,7 +92,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   @NonNull
-  private static String addPlaylistItem(@NonNull String playlist, @NonNull String item) {
+  public static String addPlaylistItem(@NonNull String playlist, @NonNull String item) {
     if (playlist.endsWith(item)) {
       return playlist;
     }
@@ -94,23 +101,28 @@ public class RadioPlayer extends SimpleBasePlayer {
     return playlist.isEmpty() ? entry : playlist + PLAYLIST_SEPARATOR + entry;
   }
 
+  @NonNull
+  public static List<Map<String, String>> getPlaylist(@NonNull String playlist) {
+    final List<Map<String, String>> result = new ArrayList<>();
+    for (final String line : playlist.split(PLAYLIST_SEPARATOR)) {
+      final String[] items = line.split(PLAYLIST_ITEM_SEPARATOR);
+      final Map<String, String> map = new HashMap<>();
+      if (items.length == 2) {
+        map.put(DATE, items[0]);
+        map.put(INFORMATION, items[1]);
+        result.add(map);
+      }
+    }
+    return result;
+  }
+
   // Must be called at init
-  public void init(boolean isVolumeControlled, @NonNull Radio radio, @NonNull String playlist) {
+  public void init(@NonNull Radio radio, boolean isVolumeControlled, boolean isCurrentPlaylistToKeep) {
     this.isVolumeControlled = isVolumeControlled;
     remoteSuffix = isVolumeControlled ? " " + remoteLabel : "";
     volume = DEVICE_NOMINAL_VOLUME;
-    buildSessionMetadata(radio, "", playlist);
+    buildSessionMetadata(radio, "", isCurrentPlaylistToKeep ? getCurrentPlaylist() : "");
     setState(SessionDevice.State.BUFFERING);
-  }
-
-  @NonNull
-  public String getCurrentPlaylist() {
-    final MediaItem item = getCurrentMediaItem();
-    if ((item == null) || (item.mediaMetadata.extras == null)) {
-      return "";
-    }
-    final String playlist = item.mediaMetadata.extras.getString(RadioService.PLAYLIST);
-    return (playlist == null) ? "" : playlist;
   }
 
   public void buildSessionMetadata(@NonNull Radio radio, @NonNull String information) {
@@ -125,7 +137,7 @@ public class RadioPlayer extends SimpleBasePlayer {
       case Player.STATE_BUFFERING:
         return SessionDevice.State.BUFFERING;
       default:
-        return (playerError != null) ? SessionDevice.State.ERROR : SessionDevice.State.IDLE;
+        return (playerError == null) ? SessionDevice.State.IDLE : SessionDevice.State.ERROR;
     }
   }
 
@@ -153,10 +165,10 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   // Must be called on main thread
-  public void setState(@NonNull SessionDevice.State internalState) {
+  public void setState(@NonNull SessionDevice.State sessionDeviceState) {
     playWhenReady = false;
     playerError = null;
-    switch (internalState) {
+    switch (sessionDeviceState) {
       case PLAYING:
         playerState = Player.STATE_READY;
         playWhenReady = true;
@@ -205,6 +217,12 @@ public class RadioPlayer extends SimpleBasePlayer {
 
   @NonNull
   @Override
+  protected ListenableFuture<List<MediaItem>> handleAddMediaItems(int index, @NonNull List<MediaItem> mediaItems) {
+    return Futures.immediateFuture(mediaItems);
+  }
+
+  @NonNull
+  @Override
   protected ListenableFuture<?> handleSeek(int mediaItemIndex, long positionMs, @Player.Command int seekCommand) {
     if ((seekCommand == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM) || (seekCommand == Player.COMMAND_SEEK_TO_NEXT)) {
       commands.onSkipToNext();
@@ -244,10 +262,19 @@ public class RadioPlayer extends SimpleBasePlayer {
     return Futures.immediateVoidFuture();
   }
 
+  @NonNull
+  private String getCurrentPlaylist() {
+    final MediaItem item = getCurrentMediaItem();
+    final android.os.Bundle extras = (item == null) ? null : item.mediaMetadata.extras;
+    final String playlist = (extras == null) ? null : extras.getString(PLAYLIST);
+    return (playlist == null) ? "" : playlist;
+  }
+
   private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information, @NonNull String playlist) {
     final Bundle extras = new Bundle();
-    extras.putString(RadioService.PLAYLIST, playlist);
-    setCurrentItem(radio.getId(),
+    extras.putString(PLAYLIST, playlist);
+    setCurrentItem(
+      radio.getId(),
       radio.getMediaMetadataBuilder(remoteSuffix, information)
         .setExtras(extras)
         .build());

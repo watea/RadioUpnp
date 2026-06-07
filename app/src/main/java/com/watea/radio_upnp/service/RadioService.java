@@ -79,12 +79,9 @@ import com.watea.radio_upnp.model.UpnpSessionDevice;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -95,9 +92,6 @@ public class RadioService
   extends MediaLibraryService
   implements SessionDevice.Listener {
   public static final boolean KEY_PCM_MODE_DEFAULT = true;
-  public static final String DATE = "date";
-  public static final String INFORMATION = "information";
-  public static final String PLAYLIST = "playlist";
   public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
   // Media action intent strings (for notification PendingIntents → onStartCommand)
@@ -212,6 +206,14 @@ public class RadioService
   };
   private final RadioPlayer.Listener radioPlayerListener = new RadioPlayer.Listener() {
     @Override
+    public void onStatePlaying() {
+      assert sessionDevice != null;
+      if (!sessionDevice.isRemote()) {
+        sessionDevice.allowRewind();
+      }
+    }
+
+    @Override
     public void onStateError() {
       assert sessionDevice != null;
       if (sessionDevice.consumeRewind()) {
@@ -312,22 +314,6 @@ public class RadioService
   };
 
   @NonNull
-  public static List<Map<String, String>> getPlaylist(@NonNull String playlist) {
-    final List<Map<String, String>> result = new ArrayList<>();
-    for (final String line : playlist.split("##")) {
-      final String[] items = line.split("&&");
-      final Map<String, String> map = new HashMap<>();
-      // Result has 2 parts: date and information
-      if (items.length == 2) {
-        map.put(DATE, items[0]);
-        map.put(INFORMATION, items[1]);
-        result.add(map);
-      }
-    }
-    return result;
-  }
-
-  @NonNull
   public static String getLockKey() {
     return UUID.randomUUID().toString();
   }
@@ -417,14 +403,15 @@ public class RadioService
 
   @Override
   public void onDestroy() {
-    super.onDestroy();
     Log.d(LOG_TAG, "onDestroy");
-    // Radios
-    Radios.getInstance().removeListener(radiosListener);
-    // Stop player to be clean on resources (if not, audio focus is not well handled)
+    // Stop and null sessionDevice before super.onDestroy() so onUpdateNotification sees null and removes the notification
     if (sessionDevice != null) {
       sessionDevice.stop();
+      sessionDevice = null;
     }
+    super.onDestroy();
+    // Radios
+    Radios.getInstance().removeListener(radiosListener);
     // Release HTTP server
     if (upnpStreamServer != null) {
       try {
@@ -480,17 +467,21 @@ public class RadioService
 
   @Override
   public void onUpdateNotification(@NonNull MediaSession session, boolean startInForegroundRequired) {
-    if (startInForegroundRequired && (sessionDevice != null)) {
+    if (startInForegroundRequired) {
+      // startForeground must always be called when required to avoid RemoteServiceException
       final Notification notification = getNotification();
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         startForeground(
           FOREGROUND_NOTIFICATION_ID,
           notification,
-          sessionDevice.isRemote()
+          (sessionDevice != null) && sessionDevice.isRemote()
             ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
             : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
       } else {
         startForeground(FOREGROUND_NOTIFICATION_ID, notification);
+      }
+      if (sessionDevice == null) {
+        stopForeground(STOP_FOREGROUND_REMOVE);
       }
     } else if (sessionDevice == null) {
       stopForeground(STOP_FOREGROUND_REMOVE);
@@ -513,12 +504,9 @@ public class RadioService
   public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onNewInformation: " + information);
-      final Radio radio = (sessionDevice == null) ? null : sessionDevice.getRadio();
-      if ((radio != null) && (radioPlayer.getCurrentMediaItem() != null)) {
-        radioPlayer.buildSessionMetadata(radio, information);
-        // Update notification
-        buildNotification();
-      }
+      assert sessionDevice != null;
+      radioPlayer.buildSessionMetadata(sessionDevice.getRadio(), information);
+      buildNotification();
     });
   }
 
@@ -531,7 +519,6 @@ public class RadioService
       extras.putString(getString(R.string.key_bitrate), bitrateDisplay);
       extras.putString(getString(R.string.key_mime_type), mimeType);
       mediaLibrarySession.setSessionExtras(extras);
-      // Update notification
       buildNotification();
     });
   }
@@ -556,14 +543,16 @@ public class RadioService
       PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }
 
+  // sessionDevice != null
   private void onStateChange(@NonNull State state) {
     Log.d(LOG_TAG, "onStateChange: " + state.name() + " - " + lockKey);
-    final SessionDevice.State sessionDeviceState = radioPlayer.getSessionDeviceState();
+    final SessionDevice.State sessionDeviceState = getPlaybackState();
     if (sessionDeviceState == state) {
       return;
     }
     // Error is not accepted if remote and paused
-    if ((sessionDevice == null) || (sessionDevice.isRemote() && (state == State.ERROR) && (sessionDeviceState == State.PAUSED))) {
+    assert sessionDevice != null;
+    if (sessionDevice.isRemote() && (state == State.ERROR) && (sessionDeviceState == State.PAUSED)) {
       return;
     }
     radioPlayer.setState(state);
@@ -694,7 +683,7 @@ public class RadioService
     final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
     sessionDevice = createSessionDevice(radio, lockKey);
     mediaLibrarySession.setSessionExtras(new Bundle());
-    radioPlayer.init(sessionDevice.isRemote(), radio, (radio == lastRadio) ? radioPlayer.getCurrentPlaylist() : "");
+    radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
     if (sessionDevice.isRemote()) {
       upnpStreamServer.launch(lockKey);
     }
@@ -949,8 +938,8 @@ public class RadioService
       @NonNull MediaSession mediaSession,
       @NonNull MediaSession.ControllerInfo controller,
       @NonNull List<MediaItem> mediaItems) {
-      // Both paths resolve here: phone UI via addMediaItem (COMMAND_CHANGE_MEDIA_ITEMS), AA via playFromMediaId (COMMAND_SET_MEDIA_ITEM → onSetMediaItems default → this)
-      for (final MediaItem item : mediaItems) {
+      if (!mediaItems.isEmpty()) {
+        final MediaItem item = mediaItems.get(mediaItems.size() - 1);
         final String mediaId = item.mediaId;
         if (!mediaId.isEmpty() && !MEDIA_ROOT_ID.equals(mediaId)) {
           handler.post(() -> playFromMediaId(mediaId));

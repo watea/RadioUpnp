@@ -177,9 +177,6 @@ public abstract class SessionDevice {
 
   public void onState(@NonNull State state) {
     Log.d(LOG_TAG, "onState: " + state.name() + "/" + lockKey);
-    if ((state == State.PLAYING) && !isRemote()) {
-      allowRewind();
-    }
     listener.onState(state, lockKey);
   }
 
