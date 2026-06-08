@@ -66,39 +66,27 @@ public class RadioPlayer extends SimpleBasePlayer {
   private static final int DEVICE_VOLUME_STEP = 5;
   private static final DeviceInfo DEVICE_INFO_REMOTE =
     new DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(DEVICE_MAX_VOLUME).build();   // Device volume is relative
+  private static final PlaybackException PLAYBACK_EXCEPTION = new PlaybackException(null, null, PlaybackException.ERROR_CODE_UNSPECIFIED);
+  @NonNull
   private final Commands commands;
   @NonNull
-  private final Listener listener;
   private final String remoteLabel;
-  private int playerState = Player.STATE_IDLE;
-  private boolean playWhenReady = false; // = true means "wants to play" (used by SimpleBasePlayer for isPlaying())
-  @Nullable
-  private PlaybackException playerError = null;
+  @NonNull
+  SessionDevice.State sessionDeviceState = SessionDevice.State.IDLE;
   @Nullable
   private SimpleBasePlayer.MediaItemData currentItem = null;
   private boolean isVolumeControlled = false;
+  @NonNull
   private String remoteSuffix = "";
   private int volume = DEVICE_NOMINAL_VOLUME;
 
   public RadioPlayer(
     @NonNull Looper looper,
     @NonNull Commands commands,
-    @NonNull Listener listener,
     @NonNull String remoteLabel) {
     super(looper);
     this.commands = commands;
-    this.listener = listener;
     this.remoteLabel = remoteLabel;
-  }
-
-  @NonNull
-  public static String addPlaylistItem(@NonNull String playlist, @NonNull String item) {
-    if (playlist.endsWith(item)) {
-      return playlist;
-    }
-    final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-    final String entry = dateFormat.format(Calendar.getInstance().getTime()) + PLAYLIST_ITEM_SEPARATOR + item;
-    return playlist.isEmpty() ? entry : playlist + PLAYLIST_SEPARATOR + entry;
   }
 
   @NonNull
@@ -126,28 +114,27 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   public void buildSessionMetadata(@NonNull Radio radio, @NonNull String information) {
-    buildSessionMetadata(radio, information, addPlaylistItem(getCurrentPlaylist(), information));
+    String playlist = getCurrentPlaylist();
+    if (!playlist.endsWith(information)) {
+      final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+      final String entry = dateFormat.format(Calendar.getInstance().getTime()) + PLAYLIST_ITEM_SEPARATOR + information;
+      playlist = playlist.isEmpty() ? entry : playlist + PLAYLIST_SEPARATOR + entry;
+    }
+    buildSessionMetadata(radio, information, playlist);
   }
 
   @NonNull
   public SessionDevice.State getSessionDeviceState() {
-    switch (playerState) {
-      case Player.STATE_READY:
-        return playWhenReady ? SessionDevice.State.PLAYING : SessionDevice.State.PAUSED;
-      case Player.STATE_BUFFERING:
-        return SessionDevice.State.BUFFERING;
-      default:
-        return (playerError == null) ? SessionDevice.State.IDLE : SessionDevice.State.ERROR;
-    }
+    return sessionDeviceState;
   }
 
   @NonNull
   @Override
   protected SimpleBasePlayer.State getState() {
     final SimpleBasePlayer.State.Builder builder = new SimpleBasePlayer.State.Builder()
-      .setPlaybackState(playerState)
-      .setPlayWhenReady(playWhenReady, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
-      .setPlayerError(playerError)
+      .setPlaybackState(getPlayerState())
+      .setPlayWhenReady(playWhenReady(), Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+      .setPlayerError((sessionDeviceState == SessionDevice.State.ERROR) ? PLAYBACK_EXCEPTION : null)
       .setAvailableCommands(buildAvailableCommands());
     if (currentItem == null) {
       builder.setCurrentMediaItemIndex(C.INDEX_UNSET);
@@ -166,32 +153,7 @@ public class RadioPlayer extends SimpleBasePlayer {
 
   // Must be called on main thread
   public void setState(@NonNull SessionDevice.State sessionDeviceState) {
-    playWhenReady = false;
-    playerError = null;
-    switch (sessionDeviceState) {
-      case PLAYING:
-        playerState = Player.STATE_READY;
-        playWhenReady = true;
-        listener.onStatePlaying();
-        break;
-      case BUFFERING:
-        playerState = Player.STATE_BUFFERING;
-        playWhenReady = true;
-        listener.onStateBuffering();
-        break;
-      case PAUSED:
-        playerState = Player.STATE_READY;
-        listener.onStatePaused();
-        break;
-      case ERROR:
-        playerState = Player.STATE_IDLE;
-        playerError = new PlaybackException(null, null, PlaybackException.ERROR_CODE_UNSPECIFIED);
-        listener.onStateError();
-        break;
-      default:
-        playerState = Player.STATE_IDLE;
-        listener.onStateIdle();
-    }
+    this.sessionDeviceState = sessionDeviceState;
     invalidateState();
   }
 
@@ -199,7 +161,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   @Override
   protected ListenableFuture<?> handleSetPlayWhenReady(boolean playWhenReadyParam) {
     if (playWhenReadyParam) {
-      if (!playWhenReady) {
+      if (!playWhenReady()) {
         commands.onPlay();
       }
     } else {
@@ -260,6 +222,22 @@ public class RadioPlayer extends SimpleBasePlayer {
     invalidateState();
     commands.onAdjustVolume(AudioManager.ADJUST_LOWER);
     return Futures.immediateVoidFuture();
+  }
+
+  protected int getPlayerState() {
+    switch (sessionDeviceState) {
+      case PLAYING:
+      case PAUSED:
+        return Player.STATE_READY;
+      case BUFFERING:
+        return Player.STATE_BUFFERING;
+      default:
+        return Player.STATE_IDLE;
+    }
+  }
+
+  private boolean playWhenReady() {
+    return (sessionDeviceState == SessionDevice.State.PLAYING) || (sessionDeviceState == SessionDevice.State.BUFFERING);
   }
 
   @NonNull
@@ -323,22 +301,5 @@ public class RadioPlayer extends SimpleBasePlayer {
 
     // direction is an AudioManager.ADJUST_* constant
     void onAdjustVolume(int direction);
-  }
-
-  public interface Listener {
-    default void onStatePlaying() {
-    }
-
-    default void onStateBuffering() {
-    }
-
-    default void onStatePaused() {
-    }
-
-    default void onStateIdle() {
-    }
-
-    default void onStateError() {
-    }
   }
 }

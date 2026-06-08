@@ -90,7 +90,7 @@ import java.util.concurrent.TimeUnit;
 @OptIn(markerClass = UnstableApi.class)
 public class RadioService
   extends MediaLibraryService
-  implements SessionDevice.Listener {
+  implements SessionDevice.Listener, RadioPlayer.Commands {
   public static final boolean KEY_PCM_MODE_DEFAULT = true;
   public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
@@ -168,78 +168,6 @@ public class RadioService
   @Nullable
   private LiveData<Integer> carConnectionLiveData = null;
   private CastManager castManager;
-  private final RadioPlayer.Commands radioPlayerCommands = new RadioPlayer.Commands() {
-    @Override
-    public void onPlay() {
-      play();
-    }
-
-    @Override
-    public void onPause() {
-      pause();
-    }
-
-    @Override
-    public void onStop() {
-      stop();
-    }
-
-    @Override
-    public void onSkipToNext() {
-      skipTo(1);
-    }
-
-    @Override
-    public void onSkipToPrevious() {
-      skipTo(-1);
-    }
-
-    @Override
-    public void onAdjustVolume(int direction) {
-      if (sessionDevice == null) {
-        Log.e(LOG_TAG, "onAdjustVolume: sessionDevice is null");
-        return;
-      }
-      sessionDevice.adjustVolume(direction);
-    }
-
-  };
-  private final RadioPlayer.Listener radioPlayerListener = new RadioPlayer.Listener() {
-    @Override
-    public void onStatePlaying() {
-      assert sessionDevice != null;
-      if (!sessionDevice.isRemote()) {
-        sessionDevice.allowRewind();
-      }
-    }
-
-    @Override
-    public void onStateError() {
-      assert sessionDevice != null;
-      if (sessionDevice.consumeRewind()) {
-        sessionDevice.release();
-        playFromMediaId(sessionDevice.getRadio().getId());
-        return;
-      }
-      onStateIdle();
-    }
-
-    @Override
-    public void onStateIdle() {
-      assert sessionDevice != null;
-      sessionDevice.release();
-      sessionDevice = null;
-      onStatePaused();
-      stopForeground(STOP_FOREGROUND_REMOVE);
-    }
-
-    @Override
-    public void onStatePaused() {
-      assert upnpStreamServer != null;
-      upnpStreamServer.release();
-      releaseScheduler();
-    }
-  };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
     public void onCastStarting() {
@@ -262,7 +190,7 @@ public class RadioService
     @Override
     public void onCastStop() {
       Log.d(LOG_TAG, "onCastStop");
-      stop();
+      onStop();
     }
   };
   private final Radios.Listener radiosListener = new Radios.Listener() {
@@ -328,7 +256,7 @@ public class RadioService
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Create RadioPlayer and MediaLibrarySession
-    radioPlayer = new RadioPlayer(Looper.getMainLooper(), radioPlayerCommands, radioPlayerListener, getString(R.string.remote));
+    radioPlayer = new RadioPlayer(Looper.getMainLooper(), this, getString(R.string.remote));
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, new MediaLibraryCallback())
       .setSessionActivity(PendingIntent.getActivity(
         this, REQUEST_CODE,
@@ -443,19 +371,19 @@ public class RadioService
     if ((intent != null) && (intent.getAction() != null)) {
       switch (intent.getAction()) {
         case ACTION_MEDIA_PLAY:
-          play();
+          onPlay();
           break;
         case ACTION_MEDIA_PAUSE:
-          pause();
+          onPause();
           break;
         case ACTION_MEDIA_STOP:
-          stop();
+          onStop();
           break;
         case ACTION_MEDIA_SKIP_NEXT:
-          skipTo(1);
+          onSkipToNext();
           break;
         case ACTION_MEDIA_SKIP_PREVIOUS:
-          skipTo(-1);
+          onSkipToPrevious();
           break;
         case ACTION_SLEEP_CANCEL:
           releaseScheduler();
@@ -535,6 +463,58 @@ public class RadioService
     return radioPlayer.getSessionDeviceState();
   }
 
+  @Override
+  public void onPlay() {
+    Log.d(LOG_TAG, "onPlay");
+    if (sessionDevice == null) {
+      isLastRadioToLaunch = !launchLastRadio();
+    } else {
+      sessionDevice.play();
+    }
+  }
+
+  @Override
+  public void onPause() {
+    Log.d(LOG_TAG, "onPause");
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "onPause: sessionDevice is null");
+      return;
+    }
+    sessionDevice.pause();
+  }
+
+  @Override
+  public void onStop() {
+    Log.d(LOG_TAG, "onStop");
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "onStop: sessionDevice is null");
+      return;
+    }
+    sessionDevice.onState(State.STOPPED);
+    sessionDevice.stop();
+  }
+
+  @Override
+  public void onSkipToNext() {
+    Log.d(LOG_TAG, "onSkipToNext");
+    skipTo(1);
+  }
+
+  @Override
+  public void onSkipToPrevious() {
+    Log.d(LOG_TAG, "onSkipToPrevious");
+    skipTo(-1);
+  }
+
+  @Override
+  public void onAdjustVolume(int direction) {
+    if (sessionDevice == null) {
+      Log.e(LOG_TAG, "onAdjustVolume: sessionDevice is null");
+      return;
+    }
+    sessionDevice.adjustVolume(direction);
+  }
+
   @NonNull
   private PendingIntent buildServicePendingIntent(@NonNull String action) {
     return PendingIntent.getForegroundService(
@@ -546,16 +526,44 @@ public class RadioService
   // sessionDevice != null
   private void onStateChange(@NonNull State state) {
     Log.d(LOG_TAG, "onStateChange: " + state.name() + " - " + lockKey);
+    assert sessionDevice != null;
     final SessionDevice.State sessionDeviceState = getPlaybackState();
     if (sessionDeviceState == state) {
       return;
     }
     // Error is not accepted if remote and paused
-    assert sessionDevice != null;
     if (sessionDevice.isRemote() && (state == State.ERROR) && (sessionDeviceState == State.PAUSED)) {
       return;
     }
     radioPlayer.setState(state);
+    switch (state) {
+      case PLAYING:
+        if (!sessionDevice.isRemote()) {
+          sessionDevice.allowRewind();
+        }
+        break;
+      case BUFFERING:
+        break;
+      case PAUSED:
+        assert upnpStreamServer != null;
+        upnpStreamServer.release();
+        releaseScheduler();
+        break;
+      case ERROR:
+        if (sessionDevice.consumeRewind()) {
+          sessionDevice.release();
+          playFromMediaId(sessionDevice.getRadio().getId());
+          return;
+        }
+        // fall through
+      default:
+        assert upnpStreamServer != null;
+        upnpStreamServer.release();
+        releaseScheduler();
+        sessionDevice.release();
+        sessionDevice = null;
+        stopForeground(STOP_FOREGROUND_REMOVE);
+    }
   }
 
   @NonNull
@@ -718,34 +726,6 @@ public class RadioService
     }
   }
 
-  private void play() {
-    Log.d(LOG_TAG, "play");
-    if (sessionDevice == null) {
-      isLastRadioToLaunch = !launchLastRadio();
-    } else {
-      sessionDevice.play();
-    }
-  }
-
-  private void pause() {
-    Log.d(LOG_TAG, "pause");
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "pause: sessionDevice is null");
-      return;
-    }
-    sessionDevice.pause();
-  }
-
-  private void stop() {
-    Log.d(LOG_TAG, "stop");
-    if (sessionDevice == null) {
-      Log.e(LOG_TAG, "stop: sessionDevice is null");
-      return;
-    }
-    sessionDevice.onState(State.STOPPED);
-    sessionDevice.stop();
-  }
-
   private void skipTo(int direction) {
     if (sessionDevice == null) {
       Log.e(LOG_TAG, "skipTo: sessionDevice is null");
@@ -763,7 +743,7 @@ public class RadioService
     final int minutes = extras.getInt(getString(R.string.key_sleep));
     scheduler = Executors.newScheduledThreadPool(1);
     scheduler.schedule(
-      () -> new Handler(Looper.getMainLooper()).post(this::pause),
+      () -> new Handler(Looper.getMainLooper()).post(this::onPause),
       minutes,
       TimeUnit.MINUTES);
     scheduler.shutdown();
