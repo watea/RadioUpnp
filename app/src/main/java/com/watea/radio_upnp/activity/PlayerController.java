@@ -72,6 +72,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   private static final int TAG_ACTION_PLAY = 0;
   private static final int TAG_ACTION_PAUSE = 1;
   private static final String LOG_TAG = PlayerController.class.getSimpleName();
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   @NonNull
   private final ImageButton playImageButton;
   @NonNull
@@ -99,7 +100,6 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   @NonNull
   private final MainActivity mainActivity;
   private final List<Map<String, String>> playInformations = new ArrayList<>();
-  private final Handler longClickHandler = new Handler(Looper.getMainLooper());
   @Nullable
   private ListenableFuture<MediaController> controllerFuture = null;
   // MediaController once connected
@@ -305,7 +305,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       switch (event.getAction()) {
         case MotionEvent.ACTION_DOWN:
           isLongPress = false;
-          longClickHandler.postDelayed(() -> {
+          HANDLER.postDelayed(() -> {
             isLongPress = true;
             onPlayLongClick();
           }, 500);
@@ -313,7 +313,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
         case MotionEvent.ACTION_UP:
         case MotionEvent.ACTION_CANCEL:
           // No long click
-          longClickHandler.removeCallbacksAndMessages(null);
+          HANDLER.removeCallbacksAndMessages(null);
           break;
       }
       return gestureDetector.onTouchEvent(event);
@@ -357,7 +357,7 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
       } catch (ExecutionException | InterruptedException exception) {
         Log.e(LOG_TAG, "onActivityCreate: controller connection failed", exception);
       }
-    }, new android.os.Handler(android.os.Looper.getMainLooper())::post);
+    }, HANDLER::post);
   }
 
   // Must be called on activity destroy.

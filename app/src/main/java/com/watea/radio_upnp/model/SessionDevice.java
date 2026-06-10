@@ -64,6 +64,7 @@ public abstract class SessionDevice {
   // VLC UA is universally accepted by Icecast/Shoutcast CDNs; the app name alone gets filtered
   public static final String STREAMING_USER_AGENT = "Mozilla/5.0 (compatible; RadioUpnp)";
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int CONNECTION_TIMEOUT_S = 10;
   @NonNull
   protected final Context context;
@@ -148,7 +149,7 @@ public abstract class SessionDevice {
     }
     if (isExoPlayerActive()) {
       // Post ExoPlayer calls to the main thread
-      new Handler(Looper.getMainLooper()).post(this::startExoPlayer);
+      HANDLER.post(this::startExoPlayer);
     } else {
       listener.onNewBitrate(connectionSet.getBitrate(), connectionSet.getContent(), lockKey);
     }

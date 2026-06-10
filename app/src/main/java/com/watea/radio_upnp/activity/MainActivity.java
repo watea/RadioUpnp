@@ -113,6 +113,7 @@ public class MainActivity
   implements NavigationView.OnNavigationItemSelectedListener {
   public static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int SLEEP_MAX = 90;
   private static final int REQUEST_CODE_POST_NOTIFICATIONS = 101;
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
@@ -715,33 +716,36 @@ public class MainActivity
   }
 
   private void sendLogcatMail() {
-    final Handler handler = new Handler(Looper.getMainLooper());
     new Thread(() -> {
       final File logFile = new File(getFilesDir(), "logcat.txt");
       final String[] command = {"logcat", "-d", "-b", "all", "-v", "threadtime", "*:V"};
       try {
-        final Process process = Runtime.getRuntime().exec(command);
-        try (final PrintWriter writer = new PrintWriter(new FileOutputStream(logFile));
-             final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-          // --- Device info ---
-          writer.println("===== DEVICE INFO =====");
-          writer.println("App version : " + BuildConfig.VERSION_NAME);
-          writer.println("Android     : " + Build.VERSION.RELEASE);
-          writer.println("SDK         : " + Build.VERSION.SDK_INT);
-          writer.println("Device      : " + Build.MANUFACTURER + " " + Build.MODEL);
-          writer.println("Brand       : " + Build.BRAND);
-          writer.println("Board       : " + Build.BOARD);
-          writer.println("========================");
-          writer.println();
-          // --- Logcat ---
-          String line;
-          while ((line = reader.readLine()) != null) {
-            writer.println(line);
+        final Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        try {
+          try (final PrintWriter writer = new PrintWriter(new FileOutputStream(logFile));
+               final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            // --- Device info ---
+            writer.println("===== DEVICE INFO =====");
+            writer.println("App version : " + BuildConfig.VERSION_NAME);
+            writer.println("Android     : " + Build.VERSION.RELEASE);
+            writer.println("SDK         : " + Build.VERSION.SDK_INT);
+            writer.println("Device      : " + Build.MANUFACTURER + " " + Build.MODEL);
+            writer.println("Brand       : " + Build.BRAND);
+            writer.println("Board       : " + Build.BOARD);
+            writer.println("========================");
+            writer.println();
+            // --- Logcat ---
+            String line;
+            while ((line = reader.readLine()) != null) {
+              writer.println(line);
+            }
           }
+          process.waitFor();
+        } finally {
+          process.destroy();
         }
-        process.waitFor();
         if (logFile.length() > 0) {
-          handler.post(() -> {
+          HANDLER.post(() -> {
             try {
               startActivity(getNewSendIntent(logFile, getPackageName()));
             } catch (Exception exception) {
@@ -750,11 +754,11 @@ public class MainActivity
             }
           });
         } else {
-          handler.post(this::tellReportError);
+          HANDLER.post(this::tellReportError);
         }
       } catch (Exception exception) {
         Log.e(LOG_TAG, "sendLogcatMail failure", exception);
-        handler.post(this::tellReportError);
+        HANDLER.post(this::tellReportError);
       }
     }).start();
   }

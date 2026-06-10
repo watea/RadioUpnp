@@ -105,7 +105,7 @@ public class RadioService
   private static final String MEDIA_ROOT_ID = "root_id";
   private static final int FOREGROUND_NOTIFICATION_ID = 9;
   private static final int SLEEP_TIMER_NOTIFICATION_ID = 42;
-  private static final Handler handler = new Handler(Looper.getMainLooper());
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private boolean isAndroidAutoConnected = false;
   private final Observer<Integer> carConnectionObserver = type -> {
@@ -222,7 +222,7 @@ public class RadioService
     @Override
     public void onInitEnd() {
       Log.d(LOG_TAG, "onInitEnd");
-      handler.post(() -> {
+      HANDLER.post(() -> {
         mediaLibrarySession.notifyChildrenChanged(MEDIA_ROOT_ID, 0, null);
         if (pendingSearchQuery != null) {
           playFromSearch(pendingSearchQuery);
@@ -649,7 +649,7 @@ public class RadioService
   }
 
   private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
-    handler.post(() -> {
+    HANDLER.post(() -> {
       if ((sessionDevice != null) && lockKey.equals(this.lockKey)) {
         runnable.run();
       }
@@ -743,7 +743,7 @@ public class RadioService
     final int minutes = extras.getInt(getString(R.string.key_sleep));
     scheduler = Executors.newScheduledThreadPool(1);
     scheduler.schedule(
-      () -> new Handler(Looper.getMainLooper()).post(this::onPause),
+      () -> HANDLER.post(this::onPause),
       minutes,
       TimeUnit.MINUTES);
     scheduler.shutdown();
@@ -901,10 +901,10 @@ public class RadioService
       @NonNull Bundle args) {
       switch (customCommand.customAction) {
         case ACTION_SLEEP_SET:
-          handler.post(() -> customAction(args));
+          HANDLER.post(() -> customAction(args));
           break;
         case ACTION_SLEEP_CANCEL:
-          handler.post(RadioService.this::releaseScheduler);
+          HANDLER.post(RadioService.this::releaseScheduler);
           break;
         default:
           Log.e(LOG_TAG, "onCustomCommand: unknown action: " + customCommand.customAction);
@@ -922,10 +922,10 @@ public class RadioService
         final MediaItem item = mediaItems.get(mediaItems.size() - 1);
         final String mediaId = item.mediaId;
         if (!mediaId.isEmpty() && !MEDIA_ROOT_ID.equals(mediaId)) {
-          handler.post(() -> playFromMediaId(mediaId));
+          HANDLER.post(() -> playFromMediaId(mediaId));
         } else if (item.requestMetadata.searchQuery != null) {
           final String query = item.requestMetadata.searchQuery;
-          handler.post(() -> playFromSearch(query));
+          HANDLER.post(() -> playFromSearch(query));
         }
       }
       return Futures.immediateFuture(mediaItems);

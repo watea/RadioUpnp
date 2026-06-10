@@ -68,11 +68,11 @@ public class Radios extends ArrayList<Radio> {
   private static final byte JSON_ARRAY_START = '[';
   private static final byte JSON_ARRAY_END = ']';
   private static final byte[] JSON_ARRAY_COMMA = ",\n".getBytes();
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   @Nullable
   private static Radios radios = null; // Singleton
   private static boolean isPreferred = false;
   private static volatile boolean isInit = false;
-  private final Handler handler = new Handler(Looper.getMainLooper());
   private final List<Listener> listeners = new ArrayList<>();
   @NonNull
   private final String fileName;
@@ -308,7 +308,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   private void putOnUiThread(@NonNull Runnable runnable) {
-    handler.post(runnable);
+    HANDLER.post(runnable);
   }
 
   private boolean readCsv(@NonNull InputStream inputStream) {

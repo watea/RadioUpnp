@@ -49,6 +49,7 @@ import java.util.function.Consumer;
 
 public class CastSessionDevice extends RemoteSessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final double VOLUME_STEP = 0.05; // 5%
   private static final int HEART_BEAT = 60; // s
   @NonNull
@@ -116,7 +117,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   @Override
   public boolean prepare() {
     if (super.prepare()) {
-      new Handler(Looper.getMainLooper()).post(() -> {
+      HANDLER.post(() -> {
         remoteMediaClient = castSession.getRemoteMediaClient();
         if (remoteMediaClient == null) {
           Log.e(LOG_TAG, "Failed to get remote media client");

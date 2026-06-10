@@ -42,7 +42,9 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 
@@ -66,6 +68,7 @@ import java.util.Calendar;
 
 public class AlarmService extends Service {
   private static final String LOG_TAG = AlarmService.class.getSimpleName();
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int NOTIFICATION_ID = 10;
   private static final int DEFAULT_TIME = -1;
   private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
@@ -358,12 +361,14 @@ public class AlarmService extends Service {
     @Override
     public void onAvailable(@NonNull Network network) {
       Log.d(LOG_TAG, "onAvailable");
-      // Launch RadioService, may fail if already called and connection not ended
-      controllerFuture = new MediaController.Builder(AlarmService.this, sessionToken)
-        .setListener(mediaControllerListener)
-        .buildAsync();
-      controllerFuture.addListener(mediaBrowserConnectionCallback, new android.os.Handler(android.os.Looper.getMainLooper())::post);
-      releaseConnectivityManagerCallback();
+      HANDLER.post(() -> {
+        // Build on main thread so MediaController is bound to the main looper
+        controllerFuture = new MediaController.Builder(AlarmService.this, sessionToken)
+          .setListener(mediaControllerListener)
+          .buildAsync();
+        controllerFuture.addListener(mediaBrowserConnectionCallback, HANDLER::post);
+        releaseConnectivityManagerCallback();
+      });
     }
 
     @Override

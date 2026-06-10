@@ -26,6 +26,7 @@ package com.watea.radio_upnp.service;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -221,7 +222,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
 
   private static class Watchdog {
     private static final String LOG_TAG = Watchdog.class.getSimpleName();
-    private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private static final android.os.Handler HANDLER = new android.os.Handler(Looper.getMainLooper());
     @NonNull
     private final Runnable runnable;
     private final int timeoutS;
@@ -241,11 +242,11 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     }
 
     public void cancel() {
-      handler.removeCallbacks(runnable);
+      HANDLER.removeCallbacks(runnable);
     }
 
     private void launch() {
-      handler.postDelayed(runnable, timeoutS * 1000L);
+      HANDLER.postDelayed(runnable, timeoutS * 1000L);
     }
   }
 

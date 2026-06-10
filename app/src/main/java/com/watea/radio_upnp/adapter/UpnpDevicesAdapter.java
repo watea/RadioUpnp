@@ -49,7 +49,7 @@ import java.util.List;
 public class UpnpDevicesAdapter
   extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
   implements AndroidUpnpService.Listener {
-  private static final Handler handler = new Handler(Looper.getMainLooper());
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private final List<Device> devices = new ArrayList<>();
   private final int selectedColor;
   @NonNull
@@ -90,7 +90,7 @@ public class UpnpDevicesAdapter
 
   @Override
   public void onDeviceAdd(@NonNull Device device) {
-    handler.post(() -> {
+    HANDLER.post(() -> {
       devices.add(device);
       devices.sort(Comparator.comparing(Device::getDisplayString));
       notifyItemInserted(devices.indexOf(device));
@@ -100,7 +100,7 @@ public class UpnpDevicesAdapter
 
   @Override
   public void onDeviceRemove(@NonNull Device device) {
-    handler.post(() -> {
+    HANDLER.post(() -> {
       final int position = devices.indexOf(device);
       if (position >= 0) {
         devices.remove(device);

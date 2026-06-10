@@ -56,7 +56,7 @@ public class DonationFragment extends OpenDonationFragment
   implements ConsumeResponseListener, PurchasesUpdatedListener {
   private static final String LOG_TAG = DonationFragment.class.getSimpleName();
   private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L;
-  private static final Handler handler = new Handler(Looper.getMainLooper());
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private final Map<String, ProductDetails> ownProductDetailss = new HashMap<>();
   private BillingClient billingClient;
   private String[] productIds;
@@ -139,7 +139,7 @@ public class DonationFragment extends OpenDonationFragment
         @Override
         public void onBillingServiceDisconnected() {
           Log.w(LOG_TAG, "Billing Service Disconnected, will retry");
-          handler.postDelayed(DonationFragment.this::initGoogleBillingClient, RECONNECT_TIMER_START_MILLISECONDS);
+          HANDLER.postDelayed(DonationFragment.this::initGoogleBillingClient, RECONNECT_TIMER_START_MILLISECONDS);
         }
       });
     } catch (IllegalStateException illegalStateException) {

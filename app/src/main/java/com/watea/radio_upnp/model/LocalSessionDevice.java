@@ -40,6 +40,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 public class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFocusChangeListener {
   private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
+  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
@@ -72,7 +73,7 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
     audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
-      .setOnAudioFocusChangeListener(this, new Handler(Looper.getMainLooper()))
+      .setOnAudioFocusChangeListener(this, HANDLER)
       .build();
   }
 
