@@ -75,7 +75,6 @@ public class AlarmController {
       alarmService = (AlarmService.AlarmServiceBinder) service;
       alarmService.setListener(() -> {
         if (alertDialog.isShowing()) {
-          toggleButton.setOnCheckedChangeListener(null);
           toggleButton.setChecked(false);
         }
       });
@@ -135,16 +134,13 @@ public class AlarmController {
       mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_not_allowed));
       return;
     }
-    // Selected radio
     radio = alarmService.isStarted() ? alarmService.getRadio() : mainActivity.getLastPlayedRadio();
     final boolean isPossible = (radio != null);
     imageView.setImageBitmap(isPossible ? radio.getIcon() : mainActivity.getDefaultIcon());
     textView.setText(isPossible ? radio.getName() : mainActivity.getString(R.string.no_radio_available));
-    // Init toggleButton
     toggleButton.setOnCheckedChangeListener(null);
     toggleButton.setChecked(alarmService.isStarted());
     toggleButton.setEnabled(isPossible);
-    // Init timePicker
     timePicker.setOnTimeChangedListener(null);
     timePicker.setEnabled(isPossible);
     final int hour = alarmService.getHour();
@@ -153,24 +149,21 @@ public class AlarmController {
       timePicker.setHour(hour);
       timePicker.setMinute(minute);
     }
-    // Set listeners and launch
     if (isPossible) {
       timePicker.setOnTimeChangedListener((v, h, m) -> toggleButton.setChecked(false));
       toggleButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
         if (alarmService == null) {
           mainActivity.tell(R.string.alarm_not_available);
-        } else {
-          if (isChecked) {
-            // Notification will be shown
-            if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
-              batteryOptimisationUserHint.show();
-            } else {
-              mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));
-            }
+        } else if (isChecked) {
+          assert radio != null;
+          if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
+            batteryOptimisationUserHint.show();
           } else {
-            alarmService.cancelAlarm();
-            mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_cancelled));
+            mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));
           }
+        } else {
+          alarmService.cancelAlarm();
+          mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_cancelled));
         }
       });
     } else {
