@@ -43,6 +43,7 @@ public class CastOptionsProvider implements OptionsProvider {
   public CastOptions getCastOptions(@NonNull Context context) {
     final CastMediaOptions mediaOptions = new CastMediaOptions.Builder()
       .setExpandedControllerActivityClassName("") // No widget
+      .setNotificationOptions(null) // Managed locally
       .build();
     return new CastOptions.Builder()
       .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID) // Default ID
