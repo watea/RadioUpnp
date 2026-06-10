@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = 'com.watea.radio_upnp'
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 36
-        versionCode = 301003
-        versionName = '3.01.003'
+        versionCode = 302000
+        versionName = '3.02.000'
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -70,7 +70,7 @@ android {
 
 dependencies {
     // AndroidX
-    implementation 'androidx.core:core:1.18.0'
+    implementation 'androidx.core:core:1.19.0'
     implementation 'androidx.media:media:1.8.0'
     implementation 'androidx.gridlayout:gridlayout:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
