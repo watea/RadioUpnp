@@ -164,11 +164,6 @@ public class Radio {
       jSONObject.getBoolean(IS_PREFERRED));
   }
 
-  @NonNull
-  public static String getNextId() {
-    return Integer.toString(++lastId);
-  }
-
   // Backward compatibility: generates an ID if not existing
   @NonNull
   public static String getId(@NonNull JSONObject jsonObject) {
@@ -236,6 +231,11 @@ public class Radio {
   @NonNull
   public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
     return Bitmap.createScaledBitmap(bitmap, size, size, true);
+  }
+
+  @NonNull
+  private static String getNextId() {
+    return Integer.toString(++lastId);
   }
 
   @NonNull

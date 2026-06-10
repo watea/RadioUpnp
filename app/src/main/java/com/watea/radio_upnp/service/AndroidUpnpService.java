@@ -167,10 +167,6 @@ public class AndroidUpnpService extends android.app.Service {
       tellSelectedDeviceIdentity(previousDevice);
     }
 
-    public void tellSelectedDeviceIdentity(@Nullable Device previousDevice) {
-      listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
-    }
-
     // Returns null if no device is persisted or if the persisted identity is no longer known
     @Nullable
     public Device getSelectedDevice() {
@@ -183,6 +179,10 @@ public class AndroidUpnpService extends android.app.Service {
     public Device getActiveSelectedDevice() {
       final Device result = getSelectedDevice();
       return ((result == null) || result.isAlive()) ? result : null;
+    }
+
+    private void tellSelectedDeviceIdentity(@Nullable Device previousDevice) {
+      listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
     }
   }
 

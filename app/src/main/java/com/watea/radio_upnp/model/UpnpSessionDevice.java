@@ -121,11 +121,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     return result + PROTOCOL_INFO_TAIL;
   }
 
-  // Not implemented
-  @Override
-  public void setVolume(float volume) {
-  }
-
   @Override
   public void adjustVolume(int direction) {
     final Request request = getActionGetVolume();
@@ -171,6 +166,11 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   public void release() {
     super.release();
     scheduleActionStop();
+  }
+
+  // Not implemented
+  @Override
+  protected void setVolume(float volume) {
   }
 
   private void scheduleMandatoryAction(@Nullable Action action, @NonNull Function<Action, Request> function) {

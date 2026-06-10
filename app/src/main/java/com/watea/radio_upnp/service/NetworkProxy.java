@@ -88,7 +88,7 @@ public class NetworkProxy {
     return ipv6Fallback;
   }
 
-  public boolean isOnNetworkCapability(int networkCapability) {
+  private boolean isOnNetworkCapability(int networkCapability) {
     final NetworkCapabilities networkCapabilities = getNetworkCapabilities();
     return (networkCapabilities != null) && networkCapabilities.hasTransport(networkCapability);
   }

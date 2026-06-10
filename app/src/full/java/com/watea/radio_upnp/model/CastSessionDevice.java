@@ -75,7 +75,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
           onState(State.BUFFERING);
           break;
         case MediaStatus.PLAYER_STATE_IDLE:
-          if (listener.getPlaybackState() == State.PLAYING) {
+          if (isPlaying()) {
             onState(State.ERROR);
           }
           break;
@@ -97,15 +97,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
     @NonNull Consumer<Radio> onPlayCallback) {
     super(context, Mode.PCM, serverCallback, listener, radio, lockKey, onPlayCallback);
     this.castSession = castSession;
-  }
-
-  @Override
-  public void setVolume(float volume) {
-    try {
-      castSession.setVolume(volume); // 0.0 to 1.0
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "Failed to set volume", iOException);
-    }
   }
 
   @Override
@@ -175,6 +166,15 @@ public class CastSessionDevice extends RemoteSessionDevice {
       remoteMediaClient.unregisterCallback(remoteCallback);
       clearCastUi(remoteMediaClient);
       remoteMediaClient = null;
+    }
+  }
+
+  @Override
+  protected void setVolume(float volume) {
+    try {
+      castSession.setVolume(volume); // 0.0 to 1.0
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "Failed to set volume", iOException);
     }
   }
 

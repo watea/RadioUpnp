@@ -72,7 +72,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   @NonNull
   private final String remoteLabel;
   @NonNull
-  SessionDevice.State sessionDeviceState = SessionDevice.State.IDLE;
+  private SessionDevice.State sessionDeviceState = SessionDevice.State.IDLE;
   @Nullable
   private SimpleBasePlayer.MediaItemData currentItem = null;
   private boolean isVolumeControlled = false;
@@ -224,7 +224,7 @@ public class RadioPlayer extends SimpleBasePlayer {
     return Futures.immediateVoidFuture();
   }
 
-  protected int getPlayerState() {
+  private int getPlayerState() {
     switch (sessionDeviceState) {
       case PLAYING:
       case PAUSED:

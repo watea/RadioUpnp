@@ -31,7 +31,11 @@ public class ColorContrastChecker {
     return (contrastRatio >= 4.5); // Minimum contrast ratio for normal text
   }
 
-  public static double calculateContrastRatio(int color1, int color2) {
+  public static boolean isMoreThanHalfTransparent(int color) {
+    return (Color.alpha(color) < 128);
+  }
+
+  private static double calculateContrastRatio(int color1, int color2) {
     final double luminance1 = calculateRelativeLuminance(color1);
     final double luminance2 = calculateRelativeLuminance(color2);
     final double brighter = Math.max(luminance1, luminance2);
@@ -39,15 +43,11 @@ public class ColorContrastChecker {
     return ((brighter + 0.05) / (darker + 0.05));
   }
 
-  public static double calculateRelativeLuminance(int color) {
+  private static double calculateRelativeLuminance(int color) {
     final double red = getSRGBComponent(color >> 16 & 0xFF);
     final double green = getSRGBComponent(color >> 8 & 0xFF);
     final double blue = getSRGBComponent(color & 0xFF);
     return (0.2126 * red + 0.7152 * green + 0.0722 * blue);
-  }
-
-  public static boolean isMoreThanHalfTransparent(int color) {
-    return (Color.alpha(color) < 128);
   }
 
   private static double getSRGBComponent(int component) {

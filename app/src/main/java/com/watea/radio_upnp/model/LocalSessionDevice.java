@@ -48,8 +48,11 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
     .setUsage(AudioAttributes.USAGE_MEDIA)
     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
     .build();
+  @NonNull
   private final AudioManager audioManager;
+  @NonNull
   private final AudioFocusRequest audioFocusRequest;
+  private boolean audioNoisyReceiverRegistered = false;
   private boolean playOnAudioFocus = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
@@ -59,7 +62,6 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
       }
     }
   };
-  private boolean audioNoisyReceiverRegistered = false;
 
   public LocalSessionDevice(
     @NonNull Context context,
@@ -77,11 +79,6 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
   @Override
   public boolean isRemote() {
     return false;
-  }
-
-  @Override
-  public void setVolume(float volume) {
-    exoPlayer.setVolume(volume);
   }
 
   @Override
@@ -145,6 +142,11 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
         stop();
         break;
     }
+  }
+
+  @Override
+  protected void setVolume(float volume) {
+    exoPlayer.setVolume(volume);
   }
 
   // Runs on main thread — audio focus requested here for thread safety

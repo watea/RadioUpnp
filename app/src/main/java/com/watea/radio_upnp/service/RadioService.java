@@ -144,6 +144,9 @@ public class RadioService
   private NotificationCompat.Action actionPlay;
   private NotificationCompat.Action actionSkipToNext;
   private NotificationCompat.Action actionSkipToPrevious;
+  @Nullable
+  private LiveData<Integer> carConnectionLiveData = null;
+  private CastManager castManager;
   private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
     @Override
     public void onConnected(@NonNull String lockKey) {
@@ -165,9 +168,6 @@ public class RadioService
       runIfLocked(lockKey, () -> onStateChange(State.ERROR));
     }
   };
-  @Nullable
-  private LiveData<Integer> carConnectionLiveData = null;
-  private CastManager castManager;
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
     public void onCastStarting() {
@@ -242,7 +242,7 @@ public class RadioService
   };
 
   @NonNull
-  public static String getLockKey() {
+  private static String getLockKey() {
     return UUID.randomUUID().toString();
   }
 

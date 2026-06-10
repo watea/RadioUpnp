@@ -105,21 +105,11 @@ public abstract class SessionDevice {
 
   public abstract boolean isRemote();
 
-  public abstract void setVolume(float volume);
-
   public abstract void adjustVolume(int direction);
 
   @NonNull
   public Radio getRadio() {
     return radio;
-  }
-
-  public State getState() {
-    return listener.getPlaybackState();
-  }
-
-  public boolean isPlaying() {
-    return (getState() == State.PLAYING);
   }
 
   public void play() {
@@ -184,6 +174,16 @@ public abstract class SessionDevice {
     exoPlayer.removeListener(playerListener);
     exoPlayer.release();
     isReleased = true;
+  }
+
+  protected abstract void setVolume(float volume);
+
+  protected State getState() {
+    return listener.getPlaybackState();
+  }
+
+  protected boolean isPlaying() {
+    return (getState() == State.PLAYING);
   }
 
   // Overrides must not reference subclass instance fields to avoid NPE on initialization

@@ -57,7 +57,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
   }
 
   @NonNull
-  public static DisplayMetrics getDisplayMetrics(@NonNull Context context) {
+  private static DisplayMetrics getDisplayMetrics(@NonNull Context context) {
     final DisplayManager displayManager =
       (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
     final Display defaultDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);

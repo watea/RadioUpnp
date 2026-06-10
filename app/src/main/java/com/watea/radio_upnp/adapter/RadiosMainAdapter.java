@@ -103,6 +103,7 @@ public class RadiosMainAdapter
     private final int backgroundColor;
     private final int windowBackgroundColor;
     private final int textColor;
+    @NonNull
     private final Context context;
 
     protected ViewHolder(@NonNull View itemView) {
