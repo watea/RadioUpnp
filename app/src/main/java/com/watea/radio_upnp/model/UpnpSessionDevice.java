@@ -272,7 +272,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
         @Override
         protected void onSuccess() {
           volumeDirection = AudioManager.ADJUST_SAME;
-          Log.d(LOG_TAG, "Volume set!");
+          Log.d(LOG_TAG, "Volume set");
         }
         // Note: failure is not taken into account
       }

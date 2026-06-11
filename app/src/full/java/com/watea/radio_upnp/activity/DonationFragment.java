@@ -143,7 +143,7 @@ public class DonationFragment extends OpenDonationFragment
         }
       });
     } catch (IllegalStateException illegalStateException) {
-      Log.d(LOG_TAG, "Billing Client creation failed", illegalStateException);
+      Log.e(LOG_TAG, "Billing Client creation failed", illegalStateException);
     }
   }
 

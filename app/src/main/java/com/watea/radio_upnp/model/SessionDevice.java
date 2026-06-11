@@ -199,7 +199,7 @@ public abstract class SessionDevice {
 
   protected void startExoPlayer() {
     if (connectionSet == null) {
-      Log.d(LOG_TAG, "startExoPlayer: internal failure, connectionSet is null!");
+      Log.e(LOG_TAG, "startExoPlayer: internal failure, connectionSet is null");
       return;
     }
     exoPlayer.addListener(playerListener);

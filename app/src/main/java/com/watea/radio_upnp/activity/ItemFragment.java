@@ -343,7 +343,7 @@ public abstract class ItemFragment extends MainActivityFragment {
         streamContent = RadioURL.getStreamContentType(response);
         actualUrl = response.request().url().url().toString();
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "UrlTester: IOException", ioException);
+        Log.w(LOG_TAG, "UrlTester: IOException", ioException);
       }
     }
 

@@ -657,6 +657,7 @@ public class RadioService
   private void releaseScheduler() {
     if (scheduler != null) {
       scheduler.shutdownNow();
+      scheduler = null;
       setSleepOn(false);
       cancelSleepTimerNotification();
     }
@@ -675,11 +676,11 @@ public class RadioService
     }
     Log.d(LOG_TAG, "playFromMediaId with radio: " + radio.getName() + " => " + radio.getUri());
     getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
+    final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
     if (sessionDevice != null) {
       sessionDevice.release();
     }
     releaseScheduler();
-    final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
     sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
@@ -724,10 +725,10 @@ public class RadioService
     }
     final Radio nextRadio = Radios.getInstance().getRadioFrom(sessionDevice.getRadio(), direction);
     if (nextRadio == null) {
-      Log.d(LOG_TAG, "skipTo: next radio is null!");
-    } else {
-      playFromMediaId(nextRadio.getId());
+      Log.e(LOG_TAG, "skipTo: next radio is null");
+      return;
     }
+    playFromMediaId(nextRadio.getId());
   }
 
   private void customAction(@NonNull Bundle extras) {

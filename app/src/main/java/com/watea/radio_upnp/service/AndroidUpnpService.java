@@ -201,7 +201,7 @@ public class AndroidUpnpService extends android.app.Service {
 
     @Override
     public void onFatalError() {
-      Log.d(LOG_TAG, "onFatalError");
+      Log.e(LOG_TAG, "onFatalError");
       listeners.forEach(Listener::onFatalError);
     }
 

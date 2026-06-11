@@ -238,7 +238,7 @@ public abstract class SearchRootFragment extends MainActivityFragment {
         fetchDialogItems();
         isServerAvailable = true;
       } catch (IOException | JSONException exception) {
-        Log.d(LOG_TAG, "handleSearchAlertDialog: radioBrowserServer fetch error", exception);
+        Log.w(LOG_TAG, "handleSearchAlertDialog: radioBrowserServer fetch error", exception);
         isServerAvailable = false;
       }
       protectedRunOnUiThread(() -> {
