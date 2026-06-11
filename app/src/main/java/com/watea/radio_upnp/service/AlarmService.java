@@ -55,7 +55,6 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.lifecycle.Observer;
 import androidx.media3.common.MediaItem;
-import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
@@ -74,11 +73,6 @@ public class AlarmService extends Service {
   private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
   private static final String ALARM_CANCEL = "com.watea.radio_upnp.ALARM_CANCEL";
   private final Binder binder = new AlarmServiceBinder();
-  // Callback from media control
-  private final MediaControllerListener mediaControllerListener = new MediaControllerListener();
-  private final MediaControllerPlayerListener mediaControllerPlayerListener = new MediaControllerPlayerListener();
-  // Callback from connection to RadioService
-  private final MediaBrowserConnectionCallback mediaBrowserConnectionCallback = new MediaBrowserConnectionCallback();
   private final NetworkRequest networkRequest = new NetworkRequest.Builder()
     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     .build();
@@ -244,7 +238,6 @@ public class AlarmService extends Service {
   private void releaseController() {
     // Robustness: force suspended connection
     if (mediaController != null) {
-      mediaController.removeListener(mediaControllerPlayerListener);
       mediaController.release();
       mediaController = null;
     }
@@ -358,6 +351,17 @@ public class AlarmService extends Service {
   }
 
   private class ConnectivityManagerNetworkCallback extends ConnectivityManager.NetworkCallback {
+    // Callback from media control.
+    // This might happen if the RadioService is killed while the Activity is in the
+    // foreground and onStart() has been called (but not onStop()).
+    private final MediaController.Listener mediaControllerListener = new MediaController.Listener() {
+      @Override
+      public void onDisconnected(@NonNull MediaController controller) {
+        Log.d(LOG_TAG, "onDisconnected");
+        mediaController = null;
+      }
+    };
+
     @Override
     public void onAvailable(@NonNull Network network) {
       Log.d(LOG_TAG, "onAvailable");
@@ -366,7 +370,7 @@ public class AlarmService extends Service {
         controllerFuture = new MediaController.Builder(AlarmService.this, sessionToken)
           .setListener(mediaControllerListener)
           .buildAsync();
-        controllerFuture.addListener(mediaBrowserConnectionCallback, HANDLER::post);
+        controllerFuture.addListener(new MediaBrowserConnectionCallback(), HANDLER::post);
         releaseConnectivityManagerCallback();
       });
     }
@@ -377,37 +381,8 @@ public class AlarmService extends Service {
     }
   }
 
-  // This might happen if the RadioService is killed while the Activity is in the
-  // foreground and onStart() has been called (but not onStop())
-  private class MediaControllerListener implements MediaController.Listener {
-    @Override
-    public void onDisconnected(@NonNull MediaController controller) {
-      Log.d(LOG_TAG, "onDisconnected");
-      mediaController = null;
-    }
-  }
-
-  private class MediaControllerPlayerListener implements Player.Listener {
-    @Override
-    public void onPlaybackStateChanged(int playbackState) {
-      Log.d(LOG_TAG, "onPlaybackStateChanged: " + playbackState);
-      // If we are here, RadioService is started
-      if (playbackState != Player.STATE_IDLE) {
-        releaseController();
-      }
-    }
-  }
-
   // Runnable executed when controller future completes
   private class MediaBrowserConnectionCallback implements Runnable {
-    private final Radios.Listener radiosListener = new Radios.Listener() {
-      @Override
-      public void onInitEnd() {
-        launch();
-        Radios.getInstance().removeListener(this);
-      }
-    };
-
     @Override
     public void run() {
       if (controllerFuture == null) {
@@ -416,23 +391,29 @@ public class AlarmService extends Service {
       try {
         // Get a MediaController for the MediaSession
         mediaController = controllerFuture.get();
-        // Link to the callback controller
-        mediaController.addListener(mediaControllerPlayerListener);
         Log.d(LOG_TAG, "onConnected");
         // Launch radio
         if (Radios.isInit()) {
           launch();
         } else {
           // Robustness
-          Radios.getInstance().addListener(radiosListener);
+          Radios.getInstance().addListener(new Radios.Listener() {
+            @Override
+            public void onInitEnd() {
+              launch();
+              Radios.getInstance().removeListener(this);
+            }
+          });
         }
-      } catch (Exception e) {
-        Log.e(LOG_TAG, "MediaController connection failed", e);
+      } catch (Exception exception) {
+        Log.e(LOG_TAG, "MediaController connection failed", exception);
       }
     }
 
     private void launch() {
-      if (!isAndroidAutoConnected) {
+      if (isAndroidAutoConnected) {
+        Log.d(LOG_TAG, "launch: Android Auto is connected => no launch");
+      } else {
         final Radio radio = ((AlarmServiceBinder) binder).getRadio();
         if (radio == null) {
           Log.e(LOG_TAG, "launch: alarm radio is null");
@@ -441,6 +422,7 @@ public class AlarmService extends Service {
         } else {
           Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
           mediaController.addMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
+          releaseController();
           return;
         }
       }
