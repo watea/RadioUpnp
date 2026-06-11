@@ -437,18 +437,13 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     }
   }
 
-  @Nullable
-  private MediaController getAvailableController() {
-    if (mediaController == null) {
-      mainActivity.tell(R.string.radio_connection_waiting);
-      return null;
-    }
-    return mediaController;
+  private void tellNotAvailableController() {
+    mainActivity.tell(R.string.radio_connection_waiting);
   }
 
   private void onPlayClick() {
-    final MediaController mediaController = getAvailableController();
     if (mediaController == null) {
+      tellNotAvailableController();
       return;
     }
     final Integer tag = (Integer) playImageButton.getTag();
@@ -465,15 +460,16 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
   }
 
   private void onPlayLongClick() {
-    final MediaController mediaController = getAvailableController();
-    if (mediaController != null) {
+    if (mediaController == null) {
+      tellNotAvailableController();
+    } else {
       mediaController.stop();
     }
   }
 
   private void onPlayDoubleClick() {
-    final MediaController mediaController = getAvailableController();
     if (mediaController == null) {
+      tellNotAvailableController();
       return;
     }
     final Bundle sessionExtras = mediaController.getSessionExtras();
