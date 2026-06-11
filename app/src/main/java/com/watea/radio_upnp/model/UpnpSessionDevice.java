@@ -79,11 +79,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey,
     @NonNull Device device,
     @NonNull RequestController requestController,
     @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, isPcm ? Mode.PCM : Mode.MUTE, serverCallback, listener, radio, lockKey, onPlayCallback);
+    super(context, isPcm ? Mode.PCM : Mode.MUTE, serverCallback, listener, radio, onPlayCallback);
     this.requestController = requestController;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed

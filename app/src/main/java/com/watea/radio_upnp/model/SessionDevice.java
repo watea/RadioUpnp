@@ -55,6 +55,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -91,22 +92,25 @@ public abstract class SessionDevice {
     @NonNull Context context,
     @NonNull Mode mode,
     @NonNull Listener listener,
-    @NonNull Radio radio,
-    @NonNull String lockKey) {
+    @NonNull Radio radio) {
     this.context = context;
     this.mode = mode;
     this.listener = listener;
     this.radio = radio;
-    this.lockKey = lockKey;
-    this.capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build(), this.lockKey);
-    this.playerListener = getPlayerListener();
-    this.exoPlayer = getExoPlayer();
-    Log.d(LOG_TAG, "mode => " + mode);
+    lockKey = UUID.randomUUID().toString();
+    capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build(), lockKey);
+    playerListener = getPlayerListener();
+    exoPlayer = getExoPlayer();
   }
 
   public abstract boolean isRemote();
 
   public abstract void adjustVolume(int direction);
+
+  @NonNull
+  public String getLockKey() {
+    return lockKey;
+  }
 
   @NonNull
   public Radio getRadio() {

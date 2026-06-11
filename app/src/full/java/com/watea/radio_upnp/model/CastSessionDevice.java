@@ -93,10 +93,9 @@ public class CastSessionDevice extends RemoteSessionDevice {
     @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey,
     @NonNull CastSession castSession,
     @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, Mode.PCM, serverCallback, listener, radio, lockKey, onPlayCallback);
+    super(context, Mode.PCM, serverCallback, listener, radio, onPlayCallback);
     this.castSession = castSession;
   }
 

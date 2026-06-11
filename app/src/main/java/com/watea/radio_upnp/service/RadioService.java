@@ -82,7 +82,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -116,8 +115,6 @@ public class RadioService
   private boolean isLastRadioToLaunch = false;
   @Nullable
   private String pendingSearchQuery = null;
-  @NonNull
-  private volatile String lockKey = getLockKey();
   @Nullable
   private SessionDevice sessionDevice = null;
   @Nullable
@@ -165,7 +162,7 @@ public class RadioService
     @Override
     public void onDisconnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onDisconnected: " + lockKey);
-      runIfLocked(lockKey, () -> onStateChange(State.ERROR));
+      runIfLocked(lockKey, () -> onStateChange(State.ERROR, lockKey));
     }
   };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
@@ -242,11 +239,6 @@ public class RadioService
   };
 
   @NonNull
-  private static String getLockKey() {
-    return UUID.randomUUID().toString();
-  }
-
-  @NonNull
   private static SharedPreferences getAppPreferences(@NonNull Context context) {
     return context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
   }
@@ -256,7 +248,7 @@ public class RadioService
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Create RadioPlayer and MediaLibrarySession
-    radioPlayer = new RadioPlayer(Looper.getMainLooper(), this, getString(R.string.remote));
+    radioPlayer = new RadioPlayer(this, getString(R.string.remote));
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, new MediaLibraryCallback())
       .setSessionActivity(PendingIntent.getActivity(
         this, REQUEST_CODE,
@@ -454,7 +446,7 @@ public class RadioService
   // Only if lockKey still valid
   @Override
   public void onState(@NonNull State state, @NonNull String lockKey) {
-    runIfLocked(lockKey, () -> onStateChange(state));
+    runIfLocked(lockKey, () -> onStateChange(state, lockKey));
   }
 
   @NonNull
@@ -524,7 +516,7 @@ public class RadioService
   }
 
   // sessionDevice != null
-  private void onStateChange(@NonNull State state) {
+  private void onStateChange(@NonNull State state, @NonNull String lockKey) {
     Log.d(LOG_TAG, "onStateChange: " + state.name() + " - " + lockKey);
     assert sessionDevice != null;
     final SessionDevice.State sessionDeviceState = getPlaybackState();
@@ -650,7 +642,7 @@ public class RadioService
 
   private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
     HANDLER.post(() -> {
-      if ((sessionDevice != null) && lockKey.equals(this.lockKey)) {
+      if ((sessionDevice != null) && lockKey.equals(sessionDevice.getLockKey())) {
         runnable.run();
       }
     });
@@ -683,17 +675,16 @@ public class RadioService
     }
     Log.d(LOG_TAG, "playFromMediaId with radio: " + radio.getName() + " => " + radio.getUri());
     getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
-    lockKey = getLockKey();
     if (sessionDevice != null) {
       sessionDevice.release();
     }
     releaseScheduler();
     final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
-    sessionDevice = createSessionDevice(radio, lockKey);
+    sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
     if (sessionDevice.isRemote()) {
-      upnpStreamServer.launch(lockKey);
+      upnpStreamServer.launch(sessionDevice.getLockKey());
     }
     new Thread(sessionDevice::prepare).start();
     startForegroundService(new Intent(this, RadioService.class));
@@ -768,7 +759,7 @@ public class RadioService
   // Cast always in PCM.
   // upnpStreamServer shall be not null.
   @NonNull
-  private SessionDevice createSessionDevice(@NonNull Radio radio, @NonNull String lockKey) {
+  private SessionDevice createSessionDevice(@NonNull Radio radio) {
     assert upnpStreamServer != null;
     final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
     final boolean isRemoteReady = new NetworkProxy(this).isOnWifi();
@@ -780,7 +771,6 @@ public class RadioService
           upnpStreamServer,
           this,
           radio,
-          lockKey,
           r -> playFromMediaId(r.getId()));
       } else if (upnpSelectedDevice != null) {
         result = new UpnpSessionDevice(
@@ -789,7 +779,6 @@ public class RadioService
           upnpStreamServer,
           this,
           radio,
-          lockKey,
           upnpSelectedDevice,
           upnpService.getRequestController(),
           r -> playFromMediaId(r.getId()));
@@ -799,10 +788,9 @@ public class RadioService
       result = new LocalSessionDevice(
         this,
         this,
-        radio,
-        lockKey);
+        radio);
     }
-    Log.d(LOG_TAG, "createSessionDevice: " + result.getClass().getSimpleName() + " - " + lockKey);
+    Log.d(LOG_TAG, "createSessionDevice: " + result.getClass().getSimpleName() + " - " + result.getLockKey());
     return result;
   }
 

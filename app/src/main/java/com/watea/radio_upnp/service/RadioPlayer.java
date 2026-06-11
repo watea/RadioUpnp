@@ -80,11 +80,8 @@ public class RadioPlayer extends SimpleBasePlayer {
   private String remoteSuffix = "";
   private int volume = DEVICE_NOMINAL_VOLUME;
 
-  public RadioPlayer(
-    @NonNull Looper looper,
-    @NonNull Commands commands,
-    @NonNull String remoteLabel) {
-    super(looper);
+  public RadioPlayer(@NonNull Commands commands, @NonNull String remoteLabel) {
+    super(Looper.getMainLooper());
     this.commands = commands;
     this.remoteLabel = remoteLabel;
   }

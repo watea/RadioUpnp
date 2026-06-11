@@ -44,9 +44,8 @@ public abstract class RemoteSessionDevice extends SessionDevice {
     @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey,
     @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, mode, listener, radio, lockKey);
+    super(context, mode, listener, radio);
     this.onPlayCallback = onPlayCallback;
     radioUri = serverCallback.getStreamUri(this.radio, this.lockKey, (this.mode == Mode.PCM));
     logoUri = serverCallback.getLogoUri(this.radio);

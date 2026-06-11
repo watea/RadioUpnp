@@ -67,9 +67,8 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
   public LocalSessionDevice(
     @NonNull Context context,
     @NonNull Listener listener,
-    @NonNull Radio radio,
-    @NonNull String lockKey) {
-    super(context, Mode.LOCAL, listener, radio, lockKey);
+    @NonNull Radio radio) {
+    super(context, Mode.LOCAL, listener, radio);
     audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)

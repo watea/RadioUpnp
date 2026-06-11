@@ -179,9 +179,8 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
     @NonNull RemoteSessionDevice.ServerCallback remoteSessionDeviceServerCallback,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,
-    @NonNull String lockKey,
     @NonNull Consumer<Radio> onPlayCallback) {
     assert castSession != null;
-    return new CastSessionDevice(context, remoteSessionDeviceServerCallback, listener, radio, lockKey, castSession, onPlayCallback);
+    return new CastSessionDevice(context, remoteSessionDeviceServerCallback, listener, radio, castSession, onPlayCallback);
   }
 }
