@@ -164,11 +164,6 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     streamResource = isRelease ? null : new StreamResource(lockKey);
   }
 
-  private boolean hasLockKey(@Nullable String lockKey) {
-    final StreamResource streamResource = this.streamResource;
-    return (streamResource != null) && streamResource.lockKey.equals(lockKey);
-  }
-
   @NonNull
   private Uri.Builder getUriBuilder(@NonNull Radio radio) {
     final String localIp = new NetworkProxy(context).getWifiIpAddress();
@@ -385,11 +380,12 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     }
 
     public boolean hasLockKey(@Nullable String lockKey) {
-      return UpnpStreamServer.this.hasLockKey(lockKey);
+      return this.lockKey.equals(lockKey);
     }
 
     public boolean hasLockKey() {
-      return hasLockKey(lockKey);
+      final StreamResource currentStreamResource = UpnpStreamServer.this.streamResource;
+      return (currentStreamResource != null) && hasLockKey(currentStreamResource.lockKey);
     }
   }
 
