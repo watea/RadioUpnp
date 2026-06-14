@@ -65,7 +65,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   private static final int DEVICE_NOMINAL_VOLUME = 50;
   private static final int DEVICE_VOLUME_STEP = 5;
   private static final DeviceInfo DEVICE_INFO_REMOTE =
-    new DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(DEVICE_MAX_VOLUME).build();   // Device volume is relative
+    new DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(DEVICE_MAX_VOLUME).build(); // Device volume is relative
   private static final PlaybackException PLAYBACK_EXCEPTION = new PlaybackException(null, null, PlaybackException.ERROR_CODE_UNSPECIFIED);
   @NonNull
   private final Commands commands;

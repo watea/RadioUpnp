@@ -155,14 +155,14 @@ public class RadioService
     }
 
     @Override
-    public void onInformation(@NonNull String information, @NonNull String lockKey) {
-      runIfLocked(lockKey, () -> onNewInformation(information, lockKey));
+    public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
+      RadioService.this.onNewInformation(information, lockKey);
     }
 
     @Override
     public void onDisconnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onDisconnected: " + lockKey);
-      runIfLocked(lockKey, () -> onStateChange(State.ERROR, lockKey));
+      onState(State.ERROR, lockKey);
     }
   };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
@@ -443,10 +443,49 @@ public class RadioService
     });
   }
 
-  // Only if lockKey still valid
   @Override
   public void onState(@NonNull State state, @NonNull String lockKey) {
-    runIfLocked(lockKey, () -> onStateChange(state, lockKey));
+    runIfLocked(lockKey, () -> {
+      Log.d(LOG_TAG, "onState: " + state.name());
+      assert sessionDevice != null;
+      final SessionDevice.State sessionDeviceState = getPlaybackState();
+      if (sessionDeviceState == state) {
+        return;
+      }
+      // Error is not accepted if remote and paused
+      if (sessionDevice.isRemote() && (state == State.ERROR) && (sessionDeviceState == State.PAUSED)) {
+        return;
+      }
+      radioPlayer.setState(state);
+      switch (state) {
+        case PLAYING:
+          if (!sessionDevice.isRemote()) {
+            sessionDevice.allowRewind();
+          }
+          break;
+        case BUFFERING:
+          break;
+        case PAUSED:
+          assert upnpStreamServer != null;
+          upnpStreamServer.release();
+          releaseScheduler();
+          break;
+        case ERROR:
+          if (sessionDevice.consumeRewind()) {
+            sessionDevice.release();
+            playFromMediaId(sessionDevice.getRadio().getId());
+            return;
+          }
+          // fall through
+        default:
+          assert upnpStreamServer != null;
+          upnpStreamServer.release();
+          releaseScheduler();
+          sessionDevice.release();
+          sessionDevice = null;
+          stopForeground(STOP_FOREGROUND_REMOVE);
+      }
+    });
   }
 
   @NonNull
@@ -513,49 +552,6 @@ public class RadioService
       this, REQUEST_CODE,
       new Intent(action, null, this, RadioService.class),
       PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-  }
-
-  // sessionDevice != null
-  private void onStateChange(@NonNull State state, @NonNull String lockKey) {
-    Log.d(LOG_TAG, "onStateChange: " + state.name() + " - " + lockKey);
-    assert sessionDevice != null;
-    final SessionDevice.State sessionDeviceState = getPlaybackState();
-    if (sessionDeviceState == state) {
-      return;
-    }
-    // Error is not accepted if remote and paused
-    if (sessionDevice.isRemote() && (state == State.ERROR) && (sessionDeviceState == State.PAUSED)) {
-      return;
-    }
-    radioPlayer.setState(state);
-    switch (state) {
-      case PLAYING:
-        if (!sessionDevice.isRemote()) {
-          sessionDevice.allowRewind();
-        }
-        break;
-      case BUFFERING:
-        break;
-      case PAUSED:
-        assert upnpStreamServer != null;
-        upnpStreamServer.release();
-        releaseScheduler();
-        break;
-      case ERROR:
-        if (sessionDevice.consumeRewind()) {
-          sessionDevice.release();
-          playFromMediaId(sessionDevice.getRadio().getId());
-          return;
-        }
-        // fall through
-      default:
-        assert upnpStreamServer != null;
-        upnpStreamServer.release();
-        releaseScheduler();
-        sessionDevice.release();
-        sessionDevice = null;
-        stopForeground(STOP_FOREGROUND_REMOVE);
-    }
   }
 
   @NonNull

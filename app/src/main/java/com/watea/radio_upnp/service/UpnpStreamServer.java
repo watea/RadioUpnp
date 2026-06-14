@@ -178,7 +178,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
 
     void onConnected(@NonNull String lockKey);
 
-    void onInformation(@NonNull String information, @NonNull String lockKey);
+    void onNewInformation(@NonNull String information, @NonNull String lockKey);
   }
 
   // Serves the radio logo as JPEG
@@ -520,7 +520,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       streamResource.onConnected();
       final String icyMetaIntValue = upstreamResponse.header("Icy-Metaint");
       final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
-        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onInformation(title, streamResource.getLockKey()));
+        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onNewInformation(title, streamResource.getLockKey()));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
       Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + streamResource.getLockKey());
