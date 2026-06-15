@@ -749,10 +749,10 @@ public class RadioService
   // UPnP or Cast not accepted if environment not OK: force local processing
   @NonNull
   private SessionDevice createSessionDevice(@NonNull Radio radio) {
-    final Consumer<Radio> onPlayCallback = currentRadio -> playFromMediaId(currentRadio.getId());
     SessionDevice result = null;
     if (!isAndroidAutoConnected && (streamServer != null) && new NetworkProxy(this).isOnWifi()) {
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
+      final Consumer<Radio> onPlayCallback = currentRadio -> playFromMediaId(currentRadio.getId());
       if (castManager.hasCastSession()) {
         result = castManager.getCastSessionDevice(
           this,
