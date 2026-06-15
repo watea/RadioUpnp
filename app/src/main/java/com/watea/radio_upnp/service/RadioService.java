@@ -663,7 +663,7 @@ public class RadioService
   private void playFromMediaId(@NonNull String mediaId) {
     Log.d(LOG_TAG, "playFromMediaId with mediaId: " + mediaId);
     if (streamServer == null) {
-      Log.e(LOG_TAG, "playFromMediaId: upnpStreamServer is null");
+      Log.e(LOG_TAG, "playFromMediaId: streamServer is null");
       return;
     }
     final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
@@ -752,7 +752,7 @@ public class RadioService
 
   // UPnP or Cast not accepted if environment not OK: force local processing.
   // Cast always in PCM.
-  // upnpStreamServer shall be not null.
+  // streamServer shall be not null.
   @NonNull
   private SessionDevice createSessionDevice(@NonNull Radio radio) {
     assert streamServer != null;
