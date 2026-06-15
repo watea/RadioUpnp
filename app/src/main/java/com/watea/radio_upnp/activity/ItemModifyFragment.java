@@ -52,8 +52,23 @@ public class ItemModifyFragment extends ItemFragment {
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     if (savedInstanceState != null) {
-      // Restore radio
-      radio = Radios.getInstance().get(savedInstanceState.getInt(getString(R.string.key_radio_index)));
+      final String id = savedInstanceState.getString(getString(R.string.key_radio_id));
+      if (id != null) {
+        if (Radios.isInit()) {
+          radio = Radios.getInstance().getRadioFromId(id);
+        } else {
+          Radios.getInstance().addListener(new Radios.Listener() {
+            @Override
+            public void onInitEnd() {
+              radio = Radios.getInstance().getRadioFromId(id);
+              Radios.getInstance().removeListener(this);
+              if (getView() != null) {
+                updateView();
+              }
+            }
+          });
+        }
+      }
     }
   }
 
@@ -62,7 +77,9 @@ public class ItemModifyFragment extends ItemFragment {
     super.onSaveInstanceState(outState);
     // Store radio; may fail
     try {
-      outState.putInt(getString(R.string.key_radio_index), Radios.getInstance().indexOf(radio));
+      if (radio != null) {
+        outState.putString(getString(R.string.key_radio_id), radio.getId());
+      }
     } catch (Exception exception) {
       outState.clear();
       Log.e(LOG_TAG, "onSaveInstanceState: internal failure", exception);
@@ -72,14 +89,19 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     super.onCreateView(view, container);
-    assert radio != null;
-    nameEditText.setText(radio.getName());
-    urlEditText.setText(radio.getURL().toString());
-    final URL webPageURL = radio.getWebPageURL();
-    if (webPageURL != null) {
-      webPageEditText.setText(webPageURL.toString());
+    updateView();
+  }
+
+  private void updateView() {
+    if (radio != null) {
+      nameEditText.setText(radio.getName());
+      urlEditText.setText(radio.getURL().toString());
+      final URL webPageURL = radio.getWebPageURL();
+      if (webPageURL != null) {
+        webPageEditText.setText(webPageURL.toString());
+      }
+      setRadioIcon(radio.getIcon());
     }
-    setRadioIcon(radio.getIcon());
   }
 
   @Override
@@ -90,15 +112,16 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   protected boolean onMenuItemSelected(@NonNull MenuItem item) {
     if (!super.onMenuItemSelected(item)) {
-      assert radio != null;
-      radio.setName(getRadioName());
-      assert urlWatcher.url != null;
-      radio.setURL(urlWatcher.url);
-      radio.setWebPageURL(webPageWatcher.url);
-      assert getIcon() != null;
-      radio.setIcon(getIcon());
-      if (!Radios.getInstance().modify(radio)) {
-        tell(R.string.radio_database_update_failed);
+      if (radio != null) {
+        radio.setName(getRadioName());
+        assert urlWatcher.url != null;
+        radio.setURL(urlWatcher.url);
+        radio.setWebPageURL(webPageWatcher.url);
+        assert getIcon() != null;
+        radio.setIcon(getIcon());
+        if (!Radios.getInstance().modify(radio)) {
+          tell(R.string.radio_database_update_failed);
+        }
       }
       onBackPressed();
     }
