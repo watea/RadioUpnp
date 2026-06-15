@@ -37,6 +37,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
+import com.watea.radio_upnp.activity.PlayerController;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
@@ -47,7 +48,7 @@ public class RadiosMainAdapter
   extends RadiosDisplayAdapter<RadiosMainAdapter.ViewHolder>
   implements Consumer<Radio> {
   @NonNull
-  private final Consumer<Consumer<Radio>> currentRadioSupplier;
+  private final PlayerController playerController;
   @Nullable
   private Radio currentRadio = null;
 
@@ -55,10 +56,10 @@ public class RadiosMainAdapter
     @NonNull Supplier<List<Radio>> radiosSupplier,
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener,
-    @NonNull Consumer<Consumer<Radio>> currentRadioSupplier) {
+    @NonNull PlayerController playerController) {
     super(radiosSupplier, R.layout.row_radio, recyclerView, listener);
-    this.currentRadioSupplier = currentRadioSupplier;
-    this.currentRadioSupplier.accept(this);
+    this.playerController = playerController;
+    this.playerController.setListener(this);
   }
 
   @Override
@@ -78,7 +79,7 @@ public class RadiosMainAdapter
   @Override
   public void onDestroy() {
     super.onDestroy();
-    currentRadioSupplier.accept(null);
+    playerController.setListener(null);
   }
 
   @SuppressLint("NotifyDataSetChanged")

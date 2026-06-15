@@ -130,7 +130,8 @@ public class MainActivity
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
-  private AlertDialog loadingAlertDialog = null; // null when not initialized
+  @Nullable
+  private AlertDialog loadingAlertDialog = null;
   private AlertDialog upnpAlertDialog;
   private AlertDialog settingsAlertDialog;
   private AlertDialog aboutAlertDialog;
@@ -370,7 +371,7 @@ public class MainActivity
   }
 
   @NonNull
-  public Consumer<Consumer<Radio>> getCurrentRadioSupplier() {
+  public PlayerController getPlayerController() {
     assert playerController != null;
     return playerController;
   }

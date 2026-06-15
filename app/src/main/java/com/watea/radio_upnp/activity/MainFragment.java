@@ -84,6 +84,7 @@ public class MainFragment extends MainActivityFragment {
     };
   private MainActivity.UserHint dlnaEnableUserHint;
   private MainActivity.UserHint preferredRadiosUserHint;
+  @Nullable
   private RadiosMainAdapter radiosMainAdapter = null;
   private RecyclerView radiosRecyclerView;
 
@@ -133,7 +134,7 @@ public class MainFragment extends MainActivityFragment {
       Radios.getInstance()::getActuallySelectedRadios,
       radiosRecyclerView,
       radiosMainAdapterListener,
-      getMainActivity().getCurrentRadioSupplier());
+      getMainActivity().getPlayerController());
     // Build alert dialogs
     radioLongPressUserHint = getMainActivity()
       .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);

@@ -67,7 +67,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class PlayerController implements Consumer<Consumer<Radio>> {
+public class PlayerController {
   // Button tag = action to perform on next click
   private static final int TAG_ACTION_PLAY = 0;
   private static final int TAG_ACTION_PAUSE = 1;
@@ -402,12 +402,11 @@ public class PlayerController implements Consumer<Consumer<Radio>> {
     return Radios.getInstance().getRadioFromId(item.mediaId);
   }
 
-  @Override
-  public void accept(Consumer<Radio> radioConsumer) {
-    listener = radioConsumer;
+  public void setListener(@Nullable Consumer<Radio> listener) {
+    this.listener = listener;
     // Init listener
-    if (listener != null) {
-      listener.accept(getCurrentRadio());
+    if (this.listener != null) {
+      this.listener.accept(getCurrentRadio());
     }
   }
 
