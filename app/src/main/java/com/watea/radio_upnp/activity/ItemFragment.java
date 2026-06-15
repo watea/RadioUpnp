@@ -56,6 +56,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Locale;
 
 public abstract class ItemFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemFragment.class.getSimpleName();
@@ -191,7 +192,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
   @NonNull
   protected String getRadioName() {
-    return nameEditText.getText().toString().toUpperCase();
+    return nameEditText.getText().toString().toUpperCase(Locale.ROOT);
   }
 
   @Nullable

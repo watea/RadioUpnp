@@ -43,6 +43,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class URLService {
@@ -69,7 +70,7 @@ public class URLService {
   // Ignore case
   @Nullable
   public String getTag(@NonNull String key) {
-    return tags.get(key.toLowerCase());
+    return tags.get(key.toLowerCase(Locale.ROOT));
   }
 
   public void clearTags() {
@@ -125,7 +126,7 @@ public class URLService {
           break;
         case XmlPullParser.TEXT:
           if (currentTag != null) {
-            tags.put(currentTag.toLowerCase(), xmlPullParser.getText());
+            tags.put(currentTag.toLowerCase(Locale.ROOT), xmlPullParser.getText());
             // Tag processed
             currentTag = null;
           }
