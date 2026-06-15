@@ -662,10 +662,6 @@ public class RadioService
 
   private void playFromMediaId(@NonNull String mediaId) {
     Log.d(LOG_TAG, "playFromMediaId with mediaId: " + mediaId);
-    if (streamServer == null) {
-      Log.e(LOG_TAG, "playFromMediaId: streamServer is null");
-      return;
-    }
     final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
     if (radio == null) {
       Log.e(LOG_TAG, "playFromMediaId: radio not found");
@@ -750,17 +746,13 @@ public class RadioService
     return false;
   }
 
-  // UPnP or Cast not accepted if environment not OK: force local processing.
-  // Cast always in PCM.
-  // streamServer shall be not null.
+  // UPnP or Cast not accepted if environment not OK: force local processing
   @NonNull
   private SessionDevice createSessionDevice(@NonNull Radio radio) {
-    assert streamServer != null;
-    final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-    final boolean isRemoteReady = new NetworkProxy(this).isOnWifi();
     final Consumer<Radio> onPlayCallback = currentRadio -> playFromMediaId(currentRadio.getId());
     SessionDevice result = null;
-    if (!isAndroidAutoConnected && isRemoteReady) {
+    if (!isAndroidAutoConnected && (streamServer != null) && new NetworkProxy(this).isOnWifi()) {
+      final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       if (castManager.hasCastSession()) {
         result = castManager.getCastSessionDevice(
           this,
