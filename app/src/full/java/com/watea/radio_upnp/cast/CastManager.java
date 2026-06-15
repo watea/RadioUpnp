@@ -39,8 +39,8 @@ import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
 import com.watea.radio_upnp.model.CastSessionDevice;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RemoteSessionDevice;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.StreamServer;
 
 import java.util.function.Consumer;
 
@@ -176,11 +176,11 @@ public class CastManager extends OpenCastManager<CastSessionDevice> {
   @NonNull
   public CastSessionDevice getCastSessionDevice(
     @NonNull Context context,
-    @NonNull RemoteSessionDevice.ServerCallback remoteSessionDeviceServerCallback,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,
-    @NonNull Consumer<Radio> onPlayCallback) {
+    @NonNull Consumer<Radio> onPlayCallback,
+    @NonNull StreamServer streamServer) {
     assert castSession != null;
-    return new CastSessionDevice(context, remoteSessionDeviceServerCallback, listener, radio, castSession, onPlayCallback);
+    return new CastSessionDevice(context, listener, radio, onPlayCallback, streamServer, castSession);
   }
 }

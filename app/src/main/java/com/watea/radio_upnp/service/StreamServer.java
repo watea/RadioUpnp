@@ -37,7 +37,6 @@ import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.model.RemoteSessionDevice;
 import com.watea.radio_upnp.model.SessionDevice;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
 
@@ -55,8 +54,8 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.ServerCallback {
-  private static final String LOG_TAG = UpnpStreamServer.class.getSimpleName();
+public class StreamServer extends HttpServer {
+  private static final String LOG_TAG = StreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
   private static final String ID_PARAM = "id";
@@ -85,7 +84,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     @Override
     public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
       Log.d(LOG_TAG, "onFormatChanged");
-      final StreamResource streamResource = UpnpStreamServer.this.streamResource;
+      final StreamResource streamResource = StreamServer.this.streamResource;
       if (streamResource == null) {
         Log.d(LOG_TAG, "No resource to receive format data");
       } else {
@@ -95,7 +94,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
 
     @Override
     public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
-      final StreamResource streamResource = UpnpStreamServer.this.streamResource;
+      final StreamResource streamResource = StreamServer.this.streamResource;
       if (streamResource == null) {
         Log.d(LOG_TAG, "No queue to receive data");
       } else if (streamResource.lockKey.equals(lockKey)) {
@@ -104,7 +103,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     }
   };
 
-  public UpnpStreamServer(@NonNull Context context, @NonNull Callback callback) throws IOException {
+  public StreamServer(@NonNull Context context, @NonNull Callback callback) throws IOException {
     this.context = context;
     this.callback = callback;
     addHandler(new LogoHandler());
@@ -133,13 +132,11 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     launch(null);
   }
 
-  @Override
   @NonNull
   public CapturingAudioSink.Callback getPcmCallback() {
     return capturingAudioSinkCallback;
   }
 
-  @Override
   @NonNull
   public Uri getLogoUri(@NonNull Radio radio) {
     return getUriBuilder(radio)
@@ -147,7 +144,6 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       .build();
   }
 
-  @Override
   @NonNull
   public Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm) {
     return getUriBuilder(radio)
@@ -259,7 +255,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
       final String method = request.getMethod();
       final String className = getClass().getSimpleName();
       Log.d(LOG_TAG, className + ": handle - " + method + " - " + id + " - " + incomingLockKey);
-      final StreamResource streamResource = UpnpStreamServer.this.streamResource;
+      final StreamResource streamResource = StreamServer.this.streamResource;
       if (streamResource == null) {
         Log.d(LOG_TAG, "handle: no resource defined - " + incomingLockKey);
         return;
@@ -384,7 +380,7 @@ public class UpnpStreamServer extends HttpServer implements RemoteSessionDevice.
     }
 
     public boolean hasLockKey() {
-      final StreamResource currentStreamResource = UpnpStreamServer.this.streamResource;
+      final StreamResource currentStreamResource = StreamServer.this.streamResource;
       return (currentStreamResource != null) && hasLockKey(currentStreamResource.lockKey);
     }
   }

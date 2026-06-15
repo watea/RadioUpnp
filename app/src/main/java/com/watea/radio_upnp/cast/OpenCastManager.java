@@ -31,8 +31,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.RemoteSessionDevice;
 import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.StreamServer;
 
 import java.util.function.Consumer;
 
@@ -66,10 +66,10 @@ public class OpenCastManager<T extends SessionDevice> {
   @Nullable
   public T getCastSessionDevice(
     @NonNull Context context,
-    @NonNull RemoteSessionDevice.ServerCallback remoteSessionDeviceServerCallback,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,
-    @NonNull Consumer<Radio> onPlayCallback) {
+    @NonNull Consumer<Radio> onPlayCallback,
+    @NonNull StreamServer streamServer) {
     Log.e(LOG_TAG, "getCastSessionDevice: invalid call");
     return null;
   }

@@ -40,6 +40,7 @@ import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.media.RemoteMediaClient;
 import com.google.android.gms.common.images.WebImage;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.service.StreamServer;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -90,12 +91,12 @@ public class CastSessionDevice extends RemoteSessionDevice {
 
   public CastSessionDevice(
     @NonNull Context context,
-    @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull CastSession castSession,
-    @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, Mode.PCM, serverCallback, listener, radio, onPlayCallback);
+    @NonNull Consumer<Radio> onPlayCallback,
+    @NonNull StreamServer streamServer,
+    @NonNull CastSession castSession) {
+    super(context, Mode.PCM, listener, radio, onPlayCallback, streamServer);
     this.castSession = castSession;
   }
 
@@ -111,32 +112,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "Failed to adjust volume", iOException);
     }
-  }
-
-  @Override
-  public boolean prepare() {
-    if (super.prepare()) {
-      HANDLER.post(() -> {
-        remoteMediaClient = castSession.getRemoteMediaClient();
-        if (remoteMediaClient == null) {
-          Log.e(LOG_TAG, "Failed to get remote media client");
-          onState(State.ERROR);
-        } else {
-          remoteMediaClient.registerCallback(remoteCallback);
-          load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
-          // Heartbeat
-          heartbeat = Executors.newSingleThreadScheduledExecutor();
-          heartbeat.scheduleWithFixedDelay(() -> {
-            final RemoteMediaClient client = remoteMediaClient;
-            if (client != null) {
-              client.requestStatus();
-            }
-          }, HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
-        }
-      });
-      return true;
-    }
-    return false;
   }
 
   @Override
@@ -167,6 +142,32 @@ public class CastSessionDevice extends RemoteSessionDevice {
       clearCastUi(remoteMediaClient);
       remoteMediaClient = null;
     }
+  }
+
+  @Override
+  protected boolean prepare() {
+    if (super.prepare()) {
+      HANDLER.post(() -> {
+        remoteMediaClient = castSession.getRemoteMediaClient();
+        if (remoteMediaClient == null) {
+          Log.e(LOG_TAG, "Failed to get remote media client");
+          onState(State.ERROR);
+        } else {
+          remoteMediaClient.registerCallback(remoteCallback);
+          load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
+          // Heartbeat
+          heartbeat = Executors.newSingleThreadScheduledExecutor();
+          heartbeat.scheduleWithFixedDelay(() -> {
+            final RemoteMediaClient client = remoteMediaClient;
+            if (client != null) {
+              client.requestStatus();
+            }
+          }, HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
+        }
+      });
+      return true;
+    }
+    return false;
   }
 
   @Override

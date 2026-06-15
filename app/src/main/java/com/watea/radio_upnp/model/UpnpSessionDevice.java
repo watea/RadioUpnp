@@ -31,6 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.service.StreamServer;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Request;
@@ -76,13 +77,13 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   public UpnpSessionDevice(
     @NonNull Context context,
     boolean isPcm,
-    @NonNull ServerCallback serverCallback,
     @NonNull Listener listener,
     @NonNull Radio radio,
-    @NonNull Device device,
+    @NonNull Consumer<Radio> onPlayCallback,
+    @NonNull StreamServer streamServer,
     @NonNull RequestController requestController,
-    @NonNull Consumer<Radio> onPlayCallback) {
-    super(context, isPcm ? Mode.PCM : Mode.MUTE, serverCallback, listener, radio, onPlayCallback);
+    @NonNull Device device) {
+    super(context, isPcm ? Mode.PCM : Mode.MUTE, listener, radio, onPlayCallback, streamServer);
     this.requestController = requestController;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
@@ -135,21 +136,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public boolean prepare() {
-    // super.prepare() blocks until the upstream HTTP connection is established.
-    // By the time it returns, the session may have been released (e.g. by a
-    // connect watchdog). Guard against scheduling stale UPnP actions.
-    if (super.prepare() && !isReleased) {
-      scheduleActionGetProtocolInfo();
-      scheduleActionPrepareForConnection();
-      scheduleActionSetAvTransportUri();
-      scheduleActionPlay();
-      return true;
-    }
-    return false;
-  }
-
-  @Override
   public void pause() {
     super.pause();
     scheduleActionStop();
@@ -165,6 +151,21 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   public void release() {
     super.release();
     scheduleActionStop();
+  }
+
+  @Override
+  protected boolean prepare() {
+    // super.prepare() blocks until the upstream HTTP connection is established.
+    // By the time it returns, the session may have been released (e.g. by a
+    // connect watchdog). Guard against scheduling stale UPnP actions.
+    if (super.prepare() && !isReleased) {
+      scheduleActionGetProtocolInfo();
+      scheduleActionPrepareForConnection();
+      scheduleActionSetAvTransportUri();
+      scheduleActionPlay();
+      return true;
+    }
+    return false;
   }
 
   // Not implemented

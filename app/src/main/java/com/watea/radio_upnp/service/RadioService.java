@@ -85,6 +85,7 @@ import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @OptIn(markerClass = UnstableApi.class)
 public class RadioService
@@ -134,7 +135,7 @@ public class RadioService
   private MediaLibrarySession mediaLibrarySession;
   private RadioPlayer radioPlayer;
   @Nullable
-  private UpnpStreamServer upnpStreamServer = null;
+  private StreamServer streamServer = null;
   @Nullable
   private ScheduledExecutorService scheduler = null;
   private NotificationCompat.Action actionPause;
@@ -144,7 +145,7 @@ public class RadioService
   @Nullable
   private LiveData<Integer> carConnectionLiveData = null;
   private CastManager castManager;
-  private final UpnpStreamServer.Callback upnpStreamCallback = new UpnpStreamServer.Callback() {
+  private final StreamServer.Callback upnpStreamCallback = new StreamServer.Callback() {
     @Override
     public void onConnected(@NonNull String lockKey) {
       Log.d(LOG_TAG, "onConnected: " + lockKey);
@@ -296,11 +297,11 @@ public class RadioService
     Radios.getInstance().addListener(radiosListener);
     // Launch HTTP server
     try {
-      upnpStreamServer = new UpnpStreamServer(this, upnpStreamCallback);
-      upnpStreamServer.start();
+      streamServer = new StreamServer(this, upnpStreamCallback);
+      streamServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation failed", iOException);
-      upnpStreamServer = null;
+      streamServer = null;
     }
     // Prepare notification actions using service intents
     actionPause = new NotificationCompat.Action(
@@ -333,9 +334,9 @@ public class RadioService
     // Radios
     Radios.getInstance().removeListener(radiosListener);
     // Release HTTP server
-    if (upnpStreamServer != null) {
+    if (streamServer != null) {
       try {
-        upnpStreamServer.stop();
+        streamServer.stop();
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "onDestroy: unable to stop HTTP server", ioException);
       }
@@ -466,8 +467,8 @@ public class RadioService
         case BUFFERING:
           break;
         case PAUSED:
-          assert upnpStreamServer != null;
-          upnpStreamServer.release();
+          assert streamServer != null;
+          streamServer.release();
           releaseScheduler();
           break;
         case ERROR:
@@ -478,8 +479,8 @@ public class RadioService
           }
           // fall through
         default:
-          assert upnpStreamServer != null;
-          upnpStreamServer.release();
+          assert streamServer != null;
+          streamServer.release();
           releaseScheduler();
           sessionDevice.release();
           sessionDevice = null;
@@ -661,7 +662,7 @@ public class RadioService
 
   private void playFromMediaId(@NonNull String mediaId) {
     Log.d(LOG_TAG, "playFromMediaId with mediaId: " + mediaId);
-    if (upnpStreamServer == null) {
+    if (streamServer == null) {
       Log.e(LOG_TAG, "playFromMediaId: upnpStreamServer is null");
       return;
     }
@@ -680,10 +681,7 @@ public class RadioService
     sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
-    if (sessionDevice.isRemote()) {
-      upnpStreamServer.launch(sessionDevice.getLockKey());
-    }
-    new Thread(sessionDevice::prepare).start();
+    sessionDevice.prepareAsync();
     startForegroundService(new Intent(this, RadioService.class));
   }
 
@@ -757,28 +755,29 @@ public class RadioService
   // upnpStreamServer shall be not null.
   @NonNull
   private SessionDevice createSessionDevice(@NonNull Radio radio) {
-    assert upnpStreamServer != null;
+    assert streamServer != null;
     final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
     final boolean isRemoteReady = new NetworkProxy(this).isOnWifi();
+    final Consumer<Radio> onPlayCallback = currentRadio -> playFromMediaId(currentRadio.getId());
     SessionDevice result = null;
     if (!isAndroidAutoConnected && isRemoteReady) {
       if (castManager.hasCastSession()) {
         result = castManager.getCastSessionDevice(
           this,
-          upnpStreamServer,
           this,
           radio,
-          r -> playFromMediaId(r.getId()));
+          onPlayCallback,
+          streamServer);
       } else if (upnpSelectedDevice != null) {
         result = new UpnpSessionDevice(
           this,
           getAppPreferences(this).getBoolean(getString(R.string.key_pcm_mode), KEY_PCM_MODE_DEFAULT),
-          upnpStreamServer,
           this,
           radio,
-          upnpSelectedDevice,
+          onPlayCallback,
+          streamServer,
           upnpService.getRequestController(),
-          r -> playFromMediaId(r.getId()));
+          upnpSelectedDevice);
       }
     }
     if (result == null) {

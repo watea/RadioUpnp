@@ -135,29 +135,8 @@ public abstract class SessionDevice {
     }
   }
 
-  // Must be called in its own thread.
-  // Fires ERROR if upstream connection failed.
-  public boolean prepare() {
-    connectionSet = radio.getConnectionSet(STREAMING_USER_AGENT);
-    if (connectionSet == null) {
-      if (isExoPlayerActive()) {
-        // Pre-check failed but ExoPlayer may still connect (e.g. server rejects our probe headers)
-        Log.d(LOG_TAG, "prepare: pre-check failed, trying ExoPlayer directly");
-        connectionSet = new Radio.ConnectionSet(radio.getURL(), Radio.DEFAULT_MIME, -1);
-      } else {
-        // connectionSet must be defined at this point, so we fire an error
-        Log.d(LOG_TAG, "prepare: unable to connect");
-        onState(State.ERROR);
-        return false;
-      }
-    }
-    if (isExoPlayerActive()) {
-      // Post ExoPlayer calls to the main thread
-      HANDLER.post(this::startExoPlayer);
-    } else {
-      listener.onNewBitrate(connectionSet.getBitrate(), connectionSet.getContent(), lockKey);
-    }
-    return true;
+  public final void prepareAsync() {
+    new Thread(this::prepare).start();
   }
 
   public void allowRewind() {
@@ -183,6 +162,31 @@ public abstract class SessionDevice {
 
   protected abstract void setVolume(float volume);
 
+  // Fires ERROR if upstream connection failed.
+  protected boolean prepare() {
+    connectionSet = radio.getConnectionSet(STREAMING_USER_AGENT);
+    if (connectionSet == null) {
+      if (isExoPlayerActive()) {
+        // Pre-check failed but ExoPlayer may still connect (e.g. server rejects our probe headers)
+        Log.d(LOG_TAG, "prepare: pre-check failed, trying ExoPlayer directly");
+        connectionSet = new Radio.ConnectionSet(radio.getURL(), Radio.DEFAULT_MIME, -1);
+      } else {
+        // connectionSet must be defined at this point, so we fire an error
+        Log.d(LOG_TAG, "prepare: unable to connect");
+        onState(State.ERROR);
+        return false;
+      }
+    }
+    if (isExoPlayerActive()) {
+      // Post ExoPlayer calls to the main thread
+      HANDLER.post(this::startExoPlayer);
+    } else {
+      listener.onNewBitrate(connectionSet.getBitrate(), connectionSet.getContent(), lockKey);
+    }
+    return true;
+  }
+
+  @NonNull
   protected State getState() {
     return listener.getPlaybackState();
   }
