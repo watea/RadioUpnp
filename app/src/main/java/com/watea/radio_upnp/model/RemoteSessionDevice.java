@@ -28,8 +28,6 @@ import android.net.Uri;
 
 import androidx.annotation.NonNull;
 
-import com.watea.radio_upnp.service.StreamServer;
-
 import java.util.function.Consumer;
 
 public abstract class RemoteSessionDevice extends SessionDevice {
@@ -46,15 +44,15 @@ public abstract class RemoteSessionDevice extends SessionDevice {
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull Consumer<Radio> onPlayCallback,
-    @NonNull StreamServer streamServer) {
+    @NonNull StreamServerCallback streamServerCallback) {
     super(context, mode, listener, radio);
     this.onPlayCallback = onPlayCallback;
-    radioUri = streamServer.getStreamUri(this.radio, lockKey, (this.mode == Mode.PCM));
-    logoUri = streamServer.getLogoUri(this.radio);
+    radioUri = streamServerCallback.getStreamUri(this.radio, lockKey, (this.mode == Mode.PCM));
+    logoUri = streamServerCallback.getLogoUri(this.radio);
     if (this.mode == Mode.PCM) {
-      capturingAudioSink.setCallback(streamServer.getPcmCallback());
+      capturingAudioSink.setCallback(streamServerCallback.getPcmCallback());
     }
-    streamServer.launch(lockKey);
+    streamServerCallback.launch(lockKey);
   }
 
   @Override
@@ -71,5 +69,18 @@ public abstract class RemoteSessionDevice extends SessionDevice {
   public void pause() {
     onState(State.PAUSED);
     super.stop();
+  }
+
+  public interface StreamServerCallback {
+    @NonNull
+    CapturingAudioSink.Callback getPcmCallback();
+
+    @NonNull
+    Uri getLogoUri(@NonNull Radio radio);
+
+    @NonNull
+    Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm);
+
+    void launch(@NonNull String lockKey);
   }
 }

@@ -37,6 +37,7 @@ import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 import com.watea.radio_upnp.model.Radios;
+import com.watea.radio_upnp.model.RemoteSessionDevice;
 import com.watea.radio_upnp.model.SessionDevice;
 import com.watea.radio_upnp.model.UpnpSessionDevice;
 
@@ -54,7 +55,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class StreamServer extends HttpServer {
+public class StreamServer extends HttpServer implements RemoteSessionDevice.StreamServerCallback {
   private static final String LOG_TAG = StreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
@@ -132,11 +133,13 @@ public class StreamServer extends HttpServer {
     launch(null);
   }
 
+  @Override
   @NonNull
   public CapturingAudioSink.Callback getPcmCallback() {
     return capturingAudioSinkCallback;
   }
 
+  @Override
   @NonNull
   public Uri getLogoUri(@NonNull Radio radio) {
     return getUriBuilder(radio)
@@ -144,6 +147,7 @@ public class StreamServer extends HttpServer {
       .build();
   }
 
+  @Override
   @NonNull
   public Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm) {
     return getUriBuilder(radio)
@@ -154,6 +158,7 @@ public class StreamServer extends HttpServer {
 
   // Must be called early before any session is started.
   // lockKey == null for release.
+  @Override
   public void launch(@Nullable String lockKey) {
     final boolean isRelease = (lockKey == null);
     Log.d(LOG_TAG, "launch: " + (isRelease ? "release" : lockKey));

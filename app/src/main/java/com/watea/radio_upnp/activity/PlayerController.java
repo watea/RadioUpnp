@@ -55,6 +55,7 @@ import androidx.media3.session.SessionToken;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioPlayer;
@@ -67,7 +68,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class PlayerController {
+public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
   // Button tag = action to perform on next click
   private static final int TAG_ACTION_PLAY = 0;
   private static final int TAG_ACTION_PAUSE = 1;
@@ -402,6 +403,7 @@ public class PlayerController {
     return Radios.getInstance().getRadioFromId(item.mediaId);
   }
 
+  @Override
   public void setListener(@Nullable Consumer<Radio> listener) {
     this.listener = listener;
     // Init listener
