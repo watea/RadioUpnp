@@ -467,9 +467,7 @@ public class RadioService
         case BUFFERING:
           break;
         case PAUSED:
-          assert streamServer != null;
-          streamServer.release();
-          releaseScheduler();
+          releaseResources();
           break;
         case ERROR:
           if (sessionDevice.consumeRewind()) {
@@ -479,9 +477,7 @@ public class RadioService
           }
           // fall through
         default:
-          assert streamServer != null;
-          streamServer.release();
-          releaseScheduler();
+          releaseResources();
           sessionDevice.release();
           sessionDevice = null;
           stopForeground(STOP_FOREGROUND_REMOVE);
@@ -658,6 +654,13 @@ public class RadioService
       setSleepOn(false);
       cancelSleepTimerNotification();
     }
+  }
+
+  private void releaseResources() {
+    if (streamServer != null) {
+      streamServer.release();
+    }
+    releaseScheduler();
   }
 
   private void playFromMediaId(@NonNull String mediaId) {
