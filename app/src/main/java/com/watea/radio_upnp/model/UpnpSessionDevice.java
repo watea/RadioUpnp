@@ -31,7 +31,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.service.StreamServer;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Request;
@@ -80,10 +79,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull Consumer<Radio> onPlayCallback,
-    @NonNull StreamServer streamServer,
+    @NonNull StreamServerCallback streamServerCallback,
     @NonNull RequestController requestController,
     @NonNull Device device) {
-    super(context, isPcm ? Mode.PCM : Mode.MUTE, listener, radio, onPlayCallback, streamServer);
+    super(context, isPcm ? Mode.PCM : Mode.MUTE, listener, radio, onPlayCallback, streamServerCallback);
     this.requestController = requestController;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed
