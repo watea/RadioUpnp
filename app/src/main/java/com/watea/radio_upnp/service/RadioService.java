@@ -518,7 +518,7 @@ public class RadioService
       Log.e(LOG_TAG, "onStop: sessionDevice is null");
       return;
     }
-    sessionDevice.onState(State.STOPPED);
+    onState(State.STOPPED, sessionDevice.getLockKey());
     sessionDevice.stop();
   }
 

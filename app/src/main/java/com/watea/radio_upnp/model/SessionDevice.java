@@ -149,11 +149,6 @@ public abstract class SessionDevice {
     return result;
   }
 
-  public void onState(@NonNull State state) {
-    Log.d(LOG_TAG, "onState: " + state.name() + "/" + lockKey);
-    listener.onState(state, lockKey);
-  }
-
   public void release() {
     exoPlayer.removeListener(playerListener);
     exoPlayer.release();
@@ -161,6 +156,11 @@ public abstract class SessionDevice {
   }
 
   protected abstract void setVolume(float volume);
+
+  protected void onState(@NonNull State state) {
+    Log.d(LOG_TAG, "onState: " + state.name() + "/" + lockKey);
+    listener.onState(state, lockKey);
+  }
 
   // Fires ERROR if upstream connection failed.
   protected boolean prepare() {
