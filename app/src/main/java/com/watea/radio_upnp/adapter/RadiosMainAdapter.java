@@ -145,6 +145,7 @@ public class RadiosMainAdapter
       radioTextView.getLayoutParams().height = isTile ? tileSize : context.getResources().getDimensionPixelSize(R.dimen.row_height);
     }
 
+    @NonNull
     private MainActivity.Layout getLayout() {
       return ((MainActivity) context).getLayout();
     }
