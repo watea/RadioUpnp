@@ -78,7 +78,7 @@ public abstract class RemoteSessionDevice extends SessionDevice {
 
       @Override
       public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-        listener.onNewInformation(information, lockKey);
+        RemoteSessionDevice.this.listener.onNewInformation(information, lockKey);
       }
     });
   }
