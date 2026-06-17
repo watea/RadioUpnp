@@ -317,16 +317,15 @@ public class Radio {
   }
 
   @NonNull
-  public MediaMetadata.Builder getMediaMetadataBuilder(
-    @NonNull String postfix,
-    @NonNull String information) {
+  public MediaMetadata.Builder getMediaMetadataBuilder(@NonNull String postfix, @NonNull String information) {
     information = name.equals(information) ? "" : information;
     final String postfixName = name + postfix;
     return new MediaMetadata.Builder()
       .setArtworkData(iconToBytes(), MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+      .setTitle(postfixName)
       .setSubtitle(postfixName)
       .setAlbumTitle(information.isEmpty() ? "" : postfixName)
-      .setTitle(information.isEmpty() ? postfixName : information)
+      .setArtist(information)
       .setDisplayTitle(information)
       .setUserRating(new StarRating(5, isPreferred ? 5 : 0));
   }
