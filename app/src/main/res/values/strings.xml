@@ -4,7 +4,7 @@
     <string name="radio_service_description">Streams radio for RadioUpnp app</string>
     <string name="upnp_service_description">Handles UPnP/DLNA devices for RadioUpnp app</string>
     <string name="alarm_service_description">Handles alarms for RadioUpnp app</string>
-    <string name="copyright" translatable="false">Copyright &#169; 2018 Stephane Treuchot</string>
+    <string name="copyright" translatable="false">Copyright &#169; 2018-2026 Stephane Treuchot</string>
     <string name="credit">Credit:</string>
     <string name="credit_0" translatable="false">- Icon by shareicon.net</string>
     <string name="credit_1" translatable="false">- ExoPlayer [Apache License 2.0]</string>
@@ -13,7 +13,7 @@
     <string name="credit_4" translatable="false">- OkHttp [Apache License 2.0]</string>
     <string name="credit_5" translatable="false">- German translation by Ronny Steiner</string>
     <string name="license" translatable="false">License MIT: &lt;https://opensource.org/licenses/MIT&gt;</string>
-    <string name="free_software">This is a free software; see sources for copying conditions.</string>
+    <string name="free_software">This is free software; see sources for copying conditions.</string>
     <string name="version">Version: </string>
     <string name="void_string" translatable="false"> </string>
     <string name="no_web_page">No web page for this radio!</string>
@@ -25,7 +25,7 @@
     <string name="radio_no_playlist">No playlist available!</string>
     <string name="radio_search_1">Search with online radio database (max. 200 results):</string>
     <string name="radio_search_2" translatable="false">https://www.radio-browser.info/</string>
-    <string name="radio_search_3">Please consider that <b>RadioUpnp</b> is not responsible of contents; it may be outdated or invalid.</string>
+    <string name="radio_search_3">Please consider that <b>RadioUpnp</b> is not responsible for the contents; they may be outdated or invalid.</string>
     <string name="dlna_selection">UPnP/DLNA device selection:\n</string>
     <string name="no_dlna_selection">No UPnP/DLNA device selected.</string>
     <string name="radio_name">RADIO NAME</string>

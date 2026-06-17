@@ -58,8 +58,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
 
   @NonNull
   private static DisplayMetrics getDisplayMetrics(@NonNull Context context) {
-    final DisplayManager displayManager =
-      (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+    final DisplayManager displayManager = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
     final Display defaultDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
     return context.createDisplayContext(defaultDisplay).getResources().getDisplayMetrics();
   }
@@ -76,8 +75,8 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
 
     protected ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_modify_radio_text_view);
-      (preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button))
-        .setOnClickListener(v -> ((Radios) getRadios()).setPreferred(radio, !radio.isPreferred()));
+      preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
+      preferredImageButton.setOnClickListener(v -> ((Radios) getRadios()).setPreferred(radio, !radio.isPreferred()));
     }
 
     @Override
@@ -93,9 +92,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     private static final int IDLE_FLAGS = ItemTouchHelper.START | ItemTouchHelper.END;
 
     @Override
-    public void clearView(
-      @NonNull RecyclerView recyclerView,
-      @NonNull RecyclerView.ViewHolder viewHolder) {
+    public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
       super.clearView(recyclerView, viewHolder);
       // Write once, after drag gesture is fully complete
       ((Radios) getRadios()).write();
