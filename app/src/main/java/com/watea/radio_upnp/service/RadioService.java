@@ -70,12 +70,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.cast.CastManager;
-import com.watea.radio_upnp.model.LocalSessionDevice;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.model.SessionDevice;
-import com.watea.radio_upnp.model.SessionDevice.State;
-import com.watea.radio_upnp.model.UpnpSessionDevice;
+import com.watea.radio_upnp.service.SessionDevice.State;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.io.IOException;
@@ -145,27 +142,6 @@ public class RadioService
   @Nullable
   private LiveData<Integer> carConnectionLiveData = null;
   private CastManager castManager;
-  private final StreamServer.Callback upnpStreamCallback = new StreamServer.Callback() {
-    @Override
-    public void onConnected(@NonNull String lockKey) {
-      Log.d(LOG_TAG, "onConnected: " + lockKey);
-      runIfLocked(lockKey, () -> {
-        assert sessionDevice != null;
-        sessionDevice.allowRewind();
-      });
-    }
-
-    @Override
-    public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-      RadioService.this.onNewInformation(information, lockKey);
-    }
-
-    @Override
-    public void onDisconnected(@NonNull String lockKey) {
-      Log.d(LOG_TAG, "onDisconnected: " + lockKey);
-      onState(State.ERROR, lockKey);
-    }
-  };
   private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
     @Override
     public void onCastStarting() {
@@ -297,7 +273,7 @@ public class RadioService
     Radios.getInstance().addListener(radiosListener);
     // Launch HTTP server
     try {
-      streamServer = new StreamServer(this, upnpStreamCallback);
+      streamServer = new StreamServer(this);
       streamServer.start();
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "HTTP server creation failed", iOException);
@@ -460,10 +436,6 @@ public class RadioService
       radioPlayer.setState(state);
       switch (state) {
         case PLAYING:
-          if (!sessionDevice.isRemote()) {
-            sessionDevice.allowRewind();
-          }
-          break;
         case BUFFERING:
           break;
         case PAUSED:
@@ -680,7 +652,7 @@ public class RadioService
     sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
-    sessionDevice.prepareAsync();
+    sessionDevice.launch();
     startForegroundService(new Intent(this, RadioService.class));
   }
 

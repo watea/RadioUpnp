@@ -31,7 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.SessionDevice;
 import com.watea.radio_upnp.service.StreamServer;
 
 import java.util.function.Consumer;

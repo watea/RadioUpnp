@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.model;
+package com.watea.radio_upnp.service;
 
 import android.content.Context;
 import android.os.Handler;
@@ -49,6 +49,9 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.metadata.MetadataRenderer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
+
+import com.watea.radio_upnp.model.EasyX509TrustManager;
+import com.watea.radio_upnp.model.Radio;
 
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -86,7 +89,7 @@ public abstract class SessionDevice {
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
   protected volatile boolean isReleased = false;
-  private boolean isAllowedToRewind = false;
+  private volatile boolean isAllowedToRewind = false;
 
   protected SessionDevice(
     @NonNull Context context,
@@ -135,12 +138,8 @@ public abstract class SessionDevice {
     }
   }
 
-  public final void prepareAsync() {
+  public void launch() {
     new Thread(this::prepare).start();
-  }
-
-  public void allowRewind() {
-    isAllowedToRewind = true;
   }
 
   public boolean consumeRewind() {
@@ -156,6 +155,10 @@ public abstract class SessionDevice {
   }
 
   protected abstract void setVolume(float volume);
+
+  protected void allowRewind() {
+    isAllowedToRewind = true;
+  }
 
   protected void onState(@NonNull State state) {
     Log.d(LOG_TAG, "onState: " + state.name() + "/" + lockKey);

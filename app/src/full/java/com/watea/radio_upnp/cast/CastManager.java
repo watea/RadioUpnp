@@ -37,9 +37,9 @@ import com.google.android.gms.cast.framework.CastContext;
 import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
-import com.watea.radio_upnp.model.CastSessionDevice;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.SessionDevice;
+import com.watea.radio_upnp.service.CastSessionDevice;
+import com.watea.radio_upnp.service.SessionDevice;
 import com.watea.radio_upnp.service.StreamServer;
 
 import java.util.function.Consumer;

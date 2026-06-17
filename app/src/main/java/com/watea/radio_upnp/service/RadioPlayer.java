@@ -43,7 +43,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.watea.radio_upnp.model.Radio;
-import com.watea.radio_upnp.model.SessionDevice;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;

@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.model;
+package com.watea.radio_upnp.service;
 
 import android.util.Log;
 

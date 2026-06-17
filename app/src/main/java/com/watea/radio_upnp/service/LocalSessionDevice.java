@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.model;
+package com.watea.radio_upnp.service;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -37,6 +37,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
+
+import com.watea.radio_upnp.model.Radio;
 
 public class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFocusChangeListener {
   private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
@@ -158,6 +160,14 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
     } else {
       onState(State.ERROR);
     }
+  }
+
+  @Override
+  protected void onState(@NonNull State state) {
+    if (state == State.PLAYING) {
+      allowRewind();
+    }
+    super.onState(state);
   }
 
   @NonNull

@@ -33,13 +33,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.candidhttpserver.HttpServer;
-import com.watea.radio_upnp.model.CapturingAudioSink;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.model.RemoteSessionDevice;
-import com.watea.radio_upnp.model.SessionDevice;
-import com.watea.radio_upnp.model.UpnpSessionDevice;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -55,7 +51,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class StreamServer extends HttpServer implements RemoteSessionDevice.StreamServerCallback {
+public class StreamServer extends HttpServer {
   private static final String LOG_TAG = StreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
@@ -75,9 +71,10 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
   private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
   private static final Pattern PARAM_PATTERN = Pattern.compile("[?&](?:amp;)*([^=]+)=([^&]*)");
   @NonNull
-  private final Callback callback;
-  @NonNull
   private final Context context;
+  @NonNull
+  private Listener listener = new Listener() {
+  };
   @Nullable
   private volatile StreamResource streamResource = null;
   private final CapturingAudioSink.Callback capturingAudioSinkCallback = new CapturingAudioSink.Callback() {
@@ -104,9 +101,8 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
     }
   };
 
-  public StreamServer(@NonNull Context context, @NonNull Callback callback) throws IOException {
+  public StreamServer(@NonNull Context context) throws IOException {
     this.context = context;
-    this.callback = callback;
     addHandler(new LogoHandler());
     addHandler(new PcmStreamHandler());
     addHandler(new RelayStreamHandler());
@@ -129,17 +125,19 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
     return null;
   }
 
+  public void setListener(@NonNull Listener listener) {
+    this.listener = listener;
+  }
+
   public void release() {
     launch(null);
   }
 
-  @Override
   @NonNull
   public CapturingAudioSink.Callback getPcmCallback() {
     return capturingAudioSinkCallback;
   }
 
-  @Override
   @NonNull
   public Uri getLogoUri(@NonNull Radio radio) {
     return getUriBuilder(radio)
@@ -147,7 +145,6 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
       .build();
   }
 
-  @Override
   @NonNull
   public Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm) {
     return getUriBuilder(radio)
@@ -158,7 +155,6 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
 
   // Must be called early before any session is started.
   // lockKey == null for release.
-  @Override
   public void launch(@Nullable String lockKey) {
     final boolean isRelease = (lockKey == null);
     Log.d(LOG_TAG, "launch: " + (isRelease ? "release" : lockKey));
@@ -174,12 +170,15 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
       .appendQueryParameter(ID_PARAM, radio.getId());
   }
 
-  public interface Callback {
-    void onDisconnected(@NonNull String lockKey);
+  public interface Listener {
+    default void onDisconnected(@NonNull String lockKey) {
+    }
 
-    void onConnected(@NonNull String lockKey);
+    default void onConnected(@NonNull String lockKey) {
+    }
 
-    void onNewInformation(@NonNull String information, @NonNull String lockKey);
+    default void onNewInformation(@NonNull String information, @NonNull String lockKey) {
+    }
   }
 
   // Serves the radio logo as JPEG
@@ -224,11 +223,11 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
     private final int timeoutS;
 
     public Watchdog(@NonNull Consumer<String> consumer, @NonNull String lockKey, int timeoutS) {
-      this.runnable = () -> {
+      this.timeoutS = timeoutS;
+      runnable = () -> {
         Log.d(LOG_TAG, "Watchdog fired for " + lockKey);
         consumer.accept(lockKey);
       };
-      this.timeoutS = timeoutS;
       launch();
     }
 
@@ -298,7 +297,7 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
         responseStream.flush();
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "sendDlnaResponse: IOException - " + lockKey + "; " + ioException.getMessage());
-        callback.onDisconnected(lockKey);
+        listener.onDisconnected(lockKey);
         throw ioException;
       }
     }
@@ -316,7 +315,7 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
 
     public StreamResource(@NonNull String lockKey) {
       this.lockKey = lockKey;
-      watchdog = new Watchdog(callback::onDisconnected, this.lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
+      watchdog = new Watchdog(listener::onDisconnected, this.lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
     }
 
     public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
@@ -364,9 +363,9 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
     }
 
     public void onConnected() {
-      callback.onConnected(lockKey);
+      listener.onConnected(lockKey);
       watchdog.cancel();
-      watchdog = new Watchdog(callback::onDisconnected, this.lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
+      watchdog = new Watchdog(listener::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
     }
 
     @NonNull
@@ -385,8 +384,7 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
     }
 
     public boolean hasLockKey() {
-      final StreamResource currentStreamResource = StreamServer.this.streamResource;
-      return (currentStreamResource != null) && hasLockKey(currentStreamResource.lockKey);
+      return (this == streamResource);
     }
   }
 
@@ -418,7 +416,7 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
         while (streamResource.getSampleRate() == DEFAULT) {
           if (System.currentTimeMillis() > deadline) {
             Log.e(LOG_TAG, "PcmStreamHandler: timeout waiting for audio format - " + streamResource.getLockKey());
-            callback.onDisconnected(streamResource.getLockKey());
+            listener.onDisconnected(streamResource.getLockKey());
             return;
           }
           try {
@@ -426,7 +424,7 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
             Thread.sleep(50);
           } catch (InterruptedException interruptedException) {
             Thread.currentThread().interrupt();
-            callback.onDisconnected(streamResource.getLockKey());
+            listener.onDisconnected(streamResource.getLockKey());
             return;
           }
         }
@@ -498,7 +496,7 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
       final Radio.ConnectionSet connectionSet = radio.getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
       if (connectionSet == null) {
         Log.d(LOG_TAG, "RelayStreamHandler: upstream is not defined");
-        callback.onDisconnected(streamResource.getLockKey());
+        listener.onDisconnected(streamResource.getLockKey());
         return;
       }
       // Send HTTP headers immediately — the renderer must not wait on a cold socket
@@ -514,14 +512,14 @@ public class StreamServer extends HttpServer implements RemoteSessionDevice.Stre
           java.util.Collections.singletonMap("Icy-Metadata", "1"));
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "RelayStreamHandler: unable to connect", ioException);
-        callback.onDisconnected(streamResource.getLockKey());
+        listener.onDisconnected(streamResource.getLockKey());
         throw ioException;
       }
       // We signal actual connection and start stream
       streamResource.onConnected();
       final String icyMetaIntValue = upstreamResponse.header("Icy-Metaint");
       final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
-        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> callback.onNewInformation(title, streamResource.getLockKey()));
+        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> listener.onNewInformation(title, streamResource.getLockKey()));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
       Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + streamResource.getLockKey());

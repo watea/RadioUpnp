@@ -21,7 +21,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.watea.radio_upnp.model;
+package com.watea.radio_upnp.service;
 
 import android.content.Context;
 import android.media.AudioManager;
@@ -31,6 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.upnp.Action;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Request;
@@ -79,10 +80,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     @NonNull Listener listener,
     @NonNull Radio radio,
     @NonNull Consumer<Radio> onPlayCallback,
-    @NonNull StreamServerCallback streamServerCallback,
+    @NonNull StreamServer streamServer,
     @NonNull RequestController requestController,
     @NonNull Device device) {
-    super(context, isPcm ? Mode.PCM : Mode.MUTE, listener, radio, onPlayCallback, streamServerCallback);
+    super(context, isPcm ? Mode.PCM : Mode.MUTE, listener, radio, onPlayCallback, streamServer);
     this.requestController = requestController;
     information = this.context.getString(R.string.app_name);
     // Only devices with AVTransport are processed

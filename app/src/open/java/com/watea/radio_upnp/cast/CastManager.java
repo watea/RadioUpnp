@@ -25,7 +25,7 @@ package com.watea.radio_upnp.cast;
 
 import androidx.annotation.NonNull;
 
-import com.watea.radio_upnp.model.LocalSessionDevice;
+import com.watea.radio_upnp.service.LocalSessionDevice;
 
 public class CastManager extends OpenCastManager<LocalSessionDevice> { // Uses LocalSessionDevice as dummy type
   @NonNull
