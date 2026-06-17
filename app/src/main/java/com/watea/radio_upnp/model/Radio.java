@@ -195,8 +195,10 @@ public class Radio {
 
   // Store bitmap as filename.png
   @NonNull
-  public static File storeToFile(@NonNull Context context, @NonNull Bitmap bitmap, @NonNull String fileName)
-    throws IOException {
+  public static File storeToFile(
+    @NonNull Context context,
+    @NonNull Bitmap bitmap,
+    @NonNull String fileName) throws IOException {
     fileName = fileName + ".png";
     try (final FileOutputStream fileOutputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE)) {
       if (!bitmap.compress(Bitmap.CompressFormat.PNG, 0, fileOutputStream)) {

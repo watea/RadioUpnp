@@ -781,9 +781,7 @@ public class RadioService
   private class MediaLibraryCallback implements MediaLibraryService.MediaLibrarySession.Callback {
     @NonNull
     @Override
-    public MediaSession.ConnectionResult onConnect(
-      @NonNull MediaSession session,
-      @NonNull MediaSession.ControllerInfo controller) {
+    public MediaSession.ConnectionResult onConnect(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
       final SessionCommands sessionCommands = new SessionCommands.Builder()
         .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_LIBRARY_ROOT)
         .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_CHILDREN)
@@ -795,9 +793,7 @@ public class RadioService
         .add(new SessionCommand(ACTION_SLEEP_SET, Bundle.EMPTY))
         .add(new SessionCommand(ACTION_SLEEP_CANCEL, Bundle.EMPTY))
         .build();
-      return MediaSession.ConnectionResult.accept(
-        sessionCommands,
-        new Player.Commands.Builder().addAllCommands().build());
+      return MediaSession.ConnectionResult.accept(sessionCommands, new Player.Commands.Builder().addAllCommands().build());
     }
 
     @NonNull

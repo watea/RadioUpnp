@@ -168,9 +168,7 @@ public class AlarmService extends Service {
     } else if (ALARM_TRIGGERED.equals(intent.getAction())) {
       // Wake lock
       final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-      final PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
-        PowerManager.PARTIAL_WAKE_LOCK,
-        LOG_TAG);
+      final PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, LOG_TAG);
       wakeLock.acquire(10 * 60 * 1000L); // 10 min.
       // Register network callback
       connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
@@ -211,9 +209,7 @@ public class AlarmService extends Service {
     }
     // Set
     final PendingIntent pendingIntent = getPendingIntent();
-    final AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(
-      calendar.getTimeInMillis(),
-      pendingIntent);
+    final AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(calendar.getTimeInMillis(), pendingIntent);
     try {
       alarmManager.setAlarmClock(alarmClockInfo, pendingIntent);
     } catch (SecurityException securityException) {

@@ -103,7 +103,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   // Must be called at init
   public void init(@NonNull Radio radio, boolean isVolumeControlled, boolean isCurrentPlaylistToKeep) {
     this.isVolumeControlled = isVolumeControlled;
-    remoteSuffix = isVolumeControlled ? " " + remoteLabel : "";
+    remoteSuffix = this.isVolumeControlled ? " " + remoteLabel : "";
     volume = DEVICE_NOMINAL_VOLUME;
     buildSessionMetadata(radio, "", isCurrentPlaylistToKeep ? getCurrentPlaylist() : "");
     setState(SessionDevice.State.BUFFERING);
@@ -247,11 +247,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   private void buildSessionMetadata(@NonNull Radio radio, @NonNull String information, @NonNull String playlist) {
     final Bundle extras = new Bundle();
     extras.putString(PLAYLIST, playlist);
-    setCurrentItem(
-      radio.getId(),
-      radio.getMediaMetadataBuilder(remoteSuffix, information)
-        .setExtras(extras)
-        .build());
+    setCurrentItem(radio.getId(), radio.getMediaMetadataBuilder(remoteSuffix, information).setExtras(extras).build());
   }
 
   private void setCurrentItem(@NonNull String mediaId, @NonNull MediaMetadata metadata) {

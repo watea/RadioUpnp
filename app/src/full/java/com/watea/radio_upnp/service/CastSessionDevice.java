@@ -57,7 +57,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   private final CastSession castSession;
   @Nullable
   private RemoteMediaClient remoteMediaClient = null;
-  private final RemoteMediaClient.Callback remoteCallback = new RemoteMediaClient.Callback() {
+  private final RemoteMediaClient.Callback remoteMediaClientCallback = new RemoteMediaClient.Callback() {
     @Override
     public void onStatusUpdated() {
       if ((remoteMediaClient == null) || (remoteMediaClient.getMediaStatus() == null)) {
@@ -138,7 +138,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
       heartbeat = null;
     }
     if (remoteMediaClient != null) {
-      remoteMediaClient.unregisterCallback(remoteCallback);
+      remoteMediaClient.unregisterCallback(remoteMediaClientCallback);
       clearCastUi(remoteMediaClient);
       remoteMediaClient = null;
     }
@@ -153,7 +153,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
           Log.e(LOG_TAG, "Failed to get remote media client");
           onState(State.ERROR);
         } else {
-          remoteMediaClient.registerCallback(remoteCallback);
+          remoteMediaClient.registerCallback(remoteMediaClientCallback);
           load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
           // Heartbeat
           heartbeat = Executors.newSingleThreadScheduledExecutor();

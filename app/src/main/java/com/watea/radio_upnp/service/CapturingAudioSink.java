@@ -73,8 +73,10 @@ public class CapturingAudioSink implements AudioSink {
 
   // Called before handleBuffer
   @Override
-  public void configure(@NonNull Format inputFormat, int specifiedBufferSize, @Nullable int[] outputChannels)
-    throws ConfigurationException {
+  public void configure(
+    @NonNull Format inputFormat,
+    int specifiedBufferSize,
+    @Nullable int[] outputChannels) throws ConfigurationException {
     if (callback != null) {
       final int sampleRate = inputFormat.sampleRate;
       final int channelCount = inputFormat.channelCount;

@@ -140,8 +140,10 @@ public class Radios extends ArrayList<Radio> {
   }
 
   // Private snapshot-based write (safe to call from background thread)
-  public static void write(@NonNull List<Radio> snapshot, @NonNull OutputStream outputStream, @NonNull String type)
-    throws JSONException, IOException {
+  public static void write(
+    @NonNull List<Radio> snapshot,
+    @NonNull OutputStream outputStream,
+    @NonNull String type) throws JSONException, IOException {
     switch (type) {
       case MIME_CSV:
         outputStream.write((Radio.EXPORT_HEAD + CR).getBytes());

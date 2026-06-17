@@ -333,8 +333,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   // Must be called on activity create
   public void onActivityCreate() {
     // Create MediaController
-    final SessionToken token = new SessionToken(
-      mainActivity, new ComponentName(mainActivity, RadioService.class));
+    final SessionToken token = new SessionToken(mainActivity, new ComponentName(mainActivity, RadioService.class));
     controllerFuture = new MediaController.Builder(mainActivity, token)
       .setListener(mediaControllerListener)
       .buildAsync();

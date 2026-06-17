@@ -208,7 +208,10 @@ public class SearchFragment extends SearchRootFragment {
     }
   }
 
-  private void fetchList(@NonNull List<String> list, @NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder, @NonNull String select) throws IOException, JSONException {
+  private void fetchList(
+    @NonNull List<String> list,
+    @NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder,
+    @NonNull String select) throws IOException, JSONException {
     final JSONArray array = getJSONArray(baseUrlBuilder);
     for (int i = 0; i < array.length(); i++) {
       final String name = array.getJSONObject(i).optString("name", "");

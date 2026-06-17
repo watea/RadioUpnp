@@ -152,8 +152,7 @@ public class DefaultRadios {
       throws MalformedURLException {
       return new Radio(
         name,
-        Radio.createScaledBitmap(
-          BitmapFactory.decodeResource(context.getResources(), drawable), iconSize),
+        Radio.createScaledBitmap(BitmapFactory.decodeResource(context.getResources(), drawable), iconSize),
         new URL(uRL),
         new URL(webPageURL));
     }
