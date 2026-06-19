@@ -125,12 +125,8 @@ public class StreamServer extends HttpServer {
     return null;
   }
 
-  public void setListener(@NonNull Listener listener) {
-    this.listener = listener;
-  }
-
   public void release() {
-    launch(null);
+    launch(null, null);
   }
 
   @NonNull
@@ -155,9 +151,12 @@ public class StreamServer extends HttpServer {
 
   // Must be called early before any session is started.
   // lockKey == null for release.
-  public void launch(@Nullable String lockKey) {
+  public void launch(@Nullable String lockKey, @Nullable Listener listener) {
     final boolean isRelease = (lockKey == null);
     Log.d(LOG_TAG, "launch: " + (isRelease ? "release" : lockKey));
+    // Order matters: listener shall be set before streamResource
+    this.listener = (listener == null) ? new Listener() {
+    } : listener;
     streamResource = isRelease ? null : new StreamResource(lockKey);
   }
 

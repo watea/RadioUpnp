@@ -59,7 +59,11 @@ public abstract class RemoteSessionDevice extends SessionDevice {
     if (this.mode == Mode.PCM) {
       capturingAudioSink.setCallback(this.streamServer.getPcmCallback());
     }
-    this.streamServer.setListener(new StreamServer.Listener() {
+  }
+
+  @Override
+  public void launch() {
+    final StreamServer.Listener streamServerListener = new StreamServer.Listener() {
       @Override
       public void onDisconnected(@NonNull String lockKey) {
         Log.d(LOG_TAG, "onDisconnected: " + lockKey);
@@ -78,14 +82,10 @@ public abstract class RemoteSessionDevice extends SessionDevice {
 
       @Override
       public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-        RemoteSessionDevice.this.listener.onNewInformation(information, lockKey);
+        listener.onNewInformation(information, lockKey);
       }
-    });
-  }
-
-  @Override
-  public void launch() {
-    streamServer.launch(lockKey);
+    };
+    streamServer.launch(lockKey, streamServerListener);
     super.launch();
   }
 
