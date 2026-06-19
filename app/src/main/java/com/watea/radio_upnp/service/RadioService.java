@@ -87,7 +87,12 @@ import java.util.function.Consumer;
 @OptIn(markerClass = UnstableApi.class)
 public class RadioService
   extends MediaLibraryService
-  implements SessionDevice.Listener, RadioPlayer.Commands {
+  implements
+  SessionDevice.Listener,
+  CastManager.Callback,
+  RadioPlayer.Commands,
+  MediaNotification.Provider,
+  MediaLibraryService.MediaLibrarySession.Callback {
   public static final boolean KEY_PCM_MODE_DEFAULT = true;
   public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
@@ -142,31 +147,6 @@ public class RadioService
   @Nullable
   private LiveData<Integer> carConnectionLiveData = null;
   private CastManager castManager;
-  private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
-    @Override
-    public void onCastStarting() {
-      Log.d(LOG_TAG, "onCastStarting");
-      // UPnP no longer possible
-      if (upnpService != null) {
-        upnpService.setSelectedDeviceIdentity(null);
-      }
-    }
-
-    @Override
-    public void onCastStarted() {
-      final State state = getPlaybackState();
-      Log.d(LOG_TAG, "onCastStarted with state: " + state);
-      if ((sessionDevice != null) && ((state == State.BUFFERING) || (state == State.PAUSED) || (state == State.PLAYING))) {
-        playFromMediaId(sessionDevice.getRadio().getId());
-      }
-    }
-
-    @Override
-    public void onCastStop() {
-      Log.d(LOG_TAG, "onCastStop");
-      onStop();
-    }
-  };
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onPreferredChange() {
@@ -226,13 +206,13 @@ public class RadioService
     Log.d(LOG_TAG, "onCreate");
     // Create RadioPlayer and MediaLibrarySession
     radioPlayer = new RadioPlayer(this, getString(R.string.remote));
-    mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, new MediaLibraryCallback())
+    mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, this)
       .setSessionActivity(PendingIntent.getActivity(
         this, REQUEST_CODE,
         new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
       .build();
-    setMediaNotificationProvider(new RadioMediaNotificationProvider());
+    setMediaNotificationProvider(this);
     // Notification
     CHANNEL_ID = getResources().getString(R.string.app_name) + "." + LOG_TAG;
     notificationManager = NotificationManagerCompat.from(this);
@@ -267,7 +247,7 @@ public class RadioService
     carConnectionLiveData.observeForever(carConnectionObserver);
     // Cast
     castManager = CastManager.getInstance();
-    castManager.setContext(this, castManagerCallback);
+    castManager.setContext(this, this);
     // Create radios if needed
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
@@ -398,6 +378,30 @@ public class RadioService
   }
 
   @Override
+  public void onCastStarting() {
+    Log.d(LOG_TAG, "onCastStarting");
+    // UPnP no longer possible
+    if (upnpService != null) {
+      upnpService.setSelectedDeviceIdentity(null);
+    }
+  }
+
+  @Override
+  public void onCastStarted() {
+    final State state = getPlaybackState();
+    Log.d(LOG_TAG, "onCastStarted with state: " + state);
+    if ((sessionDevice != null) && ((state == State.BUFFERING) || (state == State.PAUSED) || (state == State.PLAYING))) {
+      playFromMediaId(sessionDevice.getRadio().getId());
+    }
+  }
+
+  @Override
+  public void onCastStop() {
+    Log.d(LOG_TAG, "onCastStop");
+    onStop();
+  }
+
+  @Override
   public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onNewInformation: " + information);
@@ -513,6 +517,123 @@ public class RadioService
       return;
     }
     sessionDevice.adjustVolume(direction);
+  }
+
+  @NonNull
+  @Override
+  public MediaNotification createNotification(
+    @NonNull MediaSession mediaSession,
+    @NonNull ImmutableList<CommandButton> mediaButtonPreferences,
+    @NonNull MediaNotification.ActionFactory actionFactory,
+    @NonNull MediaNotification.Provider.Callback onNotificationChangedCallback) {
+    return new MediaNotification(FOREGROUND_NOTIFICATION_ID, getNotification());
+  }
+
+  @Override
+  public boolean handleCustomCommand(
+    @NonNull MediaSession session,
+    @NonNull String action,
+    @NonNull Bundle extras) {
+    return false;
+  }
+
+  @NonNull
+  @Override
+  public MediaSession.ConnectionResult onConnect(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
+    final SessionCommands sessionCommands = new SessionCommands.Builder()
+      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_LIBRARY_ROOT)
+      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_CHILDREN)
+      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_ITEM)
+      .add(SessionCommand.COMMAND_CODE_LIBRARY_SUBSCRIBE)
+      .add(SessionCommand.COMMAND_CODE_LIBRARY_UNSUBSCRIBE)
+      .add(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
+      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
+      .add(new SessionCommand(ACTION_SLEEP_SET, Bundle.EMPTY))
+      .add(new SessionCommand(ACTION_SLEEP_CANCEL, Bundle.EMPTY))
+      .build();
+    return MediaSession.ConnectionResult.accept(sessionCommands, new Player.Commands.Builder().addAllCommands().build());
+  }
+
+  @NonNull
+  @Override
+  public ListenableFuture<LibraryResult<MediaItem>> onGetLibraryRoot(
+    @NonNull MediaLibrarySession session,
+    @NonNull MediaSession.ControllerInfo browser,
+    @Nullable MediaLibraryService.LibraryParams params) {
+    Log.d(LOG_TAG, "onGetLibraryRoot");
+    return Futures.immediateFuture(LibraryResult.ofItem(
+      new MediaItem.Builder()
+        .setMediaId(MEDIA_ROOT_ID)
+        .setMediaMetadata(new MediaMetadata.Builder()
+          .setIsBrowsable(true)
+          .setIsPlayable(false)
+          .build())
+        .build(), params));
+  }
+
+  @NonNull
+  @Override
+  public ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> onGetChildren(
+    @NonNull MediaLibrarySession session,
+    @NonNull MediaSession.ControllerInfo browser,
+    @NonNull String parentId,
+    int page,
+    int pageSize,
+    @Nullable MediaLibraryService.LibraryParams params) {
+    Log.d(LOG_TAG, "onGetChildren: " + parentId);
+    if (!MEDIA_ROOT_ID.equals(parentId) || !Radios.isInit()) {
+      return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(), params));
+    }
+    final ImmutableList.Builder<MediaItem> items = new ImmutableList.Builder<>();
+    for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
+      items.add(new MediaItem.Builder()
+        .setMediaId(radio.getId())
+        .setMediaMetadata(radio.getMediaMetadataBuilder("", "")
+          .setIsPlayable(true)
+          .setIsBrowsable(false)
+          .build())
+        .build());
+    }
+    return Futures.immediateFuture(LibraryResult.ofItemList(items.build(), params));
+  }
+
+  @NonNull
+  @Override
+  public ListenableFuture<SessionResult> onCustomCommand(
+    @NonNull MediaSession session,
+    @NonNull MediaSession.ControllerInfo controller,
+    @NonNull SessionCommand customCommand,
+    @NonNull Bundle args) {
+    switch (customCommand.customAction) {
+      case ACTION_SLEEP_SET:
+        HANDLER.post(() -> customAction(args));
+        break;
+      case ACTION_SLEEP_CANCEL:
+        HANDLER.post(this::releaseScheduler);
+        break;
+      default:
+        Log.e(LOG_TAG, "onCustomCommand: unknown action: " + customCommand.customAction);
+    }
+    return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_SUCCESS));
+  }
+
+  @NonNull
+  @Override
+  public ListenableFuture<List<MediaItem>> onAddMediaItems(
+    @NonNull MediaSession mediaSession,
+    @NonNull MediaSession.ControllerInfo controller,
+    @NonNull List<MediaItem> mediaItems) {
+    if (!mediaItems.isEmpty()) {
+      final MediaItem item = mediaItems.get(mediaItems.size() - 1);
+      final String mediaId = item.mediaId;
+      if (!mediaId.isEmpty() && !MEDIA_ROOT_ID.equals(mediaId)) {
+        HANDLER.post(() -> playFromMediaId(mediaId));
+      } else if (item.requestMetadata.searchQuery != null) {
+        final String query = item.requestMetadata.searchQuery;
+        HANDLER.post(() -> playFromSearch(query));
+      }
+    }
+    return Futures.immediateFuture(mediaItems);
   }
 
   @NonNull
@@ -755,127 +876,5 @@ public class RadioService
     }
     Log.d(LOG_TAG, "createSessionDevice: " + result.getClass().getSimpleName() + " - " + result.getLockKey());
     return result;
-  }
-
-  private class RadioMediaNotificationProvider implements MediaNotification.Provider {
-    @NonNull
-    @Override
-    public MediaNotification createNotification(
-      @NonNull MediaSession mediaSession,
-      @NonNull ImmutableList<CommandButton> mediaButtonPreferences,
-      @NonNull MediaNotification.ActionFactory actionFactory,
-      @NonNull MediaNotification.Provider.Callback onNotificationChangedCallback) {
-      return new MediaNotification(FOREGROUND_NOTIFICATION_ID, getNotification());
-    }
-
-    @Override
-    public boolean handleCustomCommand(
-      @NonNull MediaSession session,
-      @NonNull String action,
-      @NonNull Bundle extras) {
-      return false;
-    }
-  }
-
-  // MediaLibrarySession callback — handles browsing and custom commands
-  private class MediaLibraryCallback implements MediaLibraryService.MediaLibrarySession.Callback {
-    @NonNull
-    @Override
-    public MediaSession.ConnectionResult onConnect(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
-      final SessionCommands sessionCommands = new SessionCommands.Builder()
-        .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_LIBRARY_ROOT)
-        .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_CHILDREN)
-        .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_ITEM)
-        .add(SessionCommand.COMMAND_CODE_LIBRARY_SUBSCRIBE)
-        .add(SessionCommand.COMMAND_CODE_LIBRARY_UNSUBSCRIBE)
-        .add(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
-        .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
-        .add(new SessionCommand(ACTION_SLEEP_SET, Bundle.EMPTY))
-        .add(new SessionCommand(ACTION_SLEEP_CANCEL, Bundle.EMPTY))
-        .build();
-      return MediaSession.ConnectionResult.accept(sessionCommands, new Player.Commands.Builder().addAllCommands().build());
-    }
-
-    @NonNull
-    @Override
-    public ListenableFuture<LibraryResult<MediaItem>> onGetLibraryRoot(
-      @NonNull MediaLibrarySession session,
-      @NonNull MediaSession.ControllerInfo browser,
-      @Nullable MediaLibraryService.LibraryParams params) {
-      Log.d(LOG_TAG, "onGetLibraryRoot");
-      return Futures.immediateFuture(LibraryResult.ofItem(
-        new MediaItem.Builder()
-          .setMediaId(MEDIA_ROOT_ID)
-          .setMediaMetadata(new MediaMetadata.Builder()
-            .setIsBrowsable(true)
-            .setIsPlayable(false)
-            .build())
-          .build(), params));
-    }
-
-    @NonNull
-    @Override
-    public ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> onGetChildren(
-      @NonNull MediaLibrarySession session,
-      @NonNull MediaSession.ControllerInfo browser,
-      @NonNull String parentId,
-      int page,
-      int pageSize,
-      @Nullable MediaLibraryService.LibraryParams params) {
-      Log.d(LOG_TAG, "onGetChildren: " + parentId);
-      if (!MEDIA_ROOT_ID.equals(parentId) || !Radios.isInit()) {
-        return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(), params));
-      }
-      final ImmutableList.Builder<MediaItem> items = new ImmutableList.Builder<>();
-      for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
-        items.add(new MediaItem.Builder()
-          .setMediaId(radio.getId())
-          .setMediaMetadata(radio.getMediaMetadataBuilder("", "")
-            .setIsPlayable(true)
-            .setIsBrowsable(false)
-            .build())
-          .build());
-      }
-      return Futures.immediateFuture(LibraryResult.ofItemList(items.build(), params));
-    }
-
-    @NonNull
-    @Override
-    public ListenableFuture<SessionResult> onCustomCommand(
-      @NonNull MediaSession session,
-      @NonNull MediaSession.ControllerInfo controller,
-      @NonNull SessionCommand customCommand,
-      @NonNull Bundle args) {
-      switch (customCommand.customAction) {
-        case ACTION_SLEEP_SET:
-          HANDLER.post(() -> customAction(args));
-          break;
-        case ACTION_SLEEP_CANCEL:
-          HANDLER.post(RadioService.this::releaseScheduler);
-          break;
-        default:
-          Log.e(LOG_TAG, "onCustomCommand: unknown action: " + customCommand.customAction);
-      }
-      return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_SUCCESS));
-    }
-
-    @NonNull
-    @Override
-    public ListenableFuture<List<MediaItem>> onAddMediaItems(
-      @NonNull MediaSession mediaSession,
-      @NonNull MediaSession.ControllerInfo controller,
-      @NonNull List<MediaItem> mediaItems) {
-      if (!mediaItems.isEmpty()) {
-        final MediaItem item = mediaItems.get(mediaItems.size() - 1);
-        final String mediaId = item.mediaId;
-        if (!mediaId.isEmpty() && !MEDIA_ROOT_ID.equals(mediaId)) {
-          HANDLER.post(() -> playFromMediaId(mediaId));
-        } else if (item.requestMetadata.searchQuery != null) {
-          final String query = item.requestMetadata.searchQuery;
-          HANDLER.post(() -> playFromSearch(query));
-        }
-      }
-      return Futures.immediateFuture(mediaItems);
-    }
   }
 }
