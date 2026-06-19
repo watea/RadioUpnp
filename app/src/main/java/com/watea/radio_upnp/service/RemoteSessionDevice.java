@@ -33,7 +33,7 @@ import com.watea.radio_upnp.model.Radio;
 
 import java.util.function.Consumer;
 
-public abstract class RemoteSessionDevice extends SessionDevice {
+public abstract class RemoteSessionDevice extends SessionDevice implements StreamServer.Listener {
   private static final String LOG_TAG = RemoteSessionDevice.class.getSimpleName();
   @NonNull
   protected final Uri radioUri;
@@ -57,35 +57,34 @@ public abstract class RemoteSessionDevice extends SessionDevice {
     radioUri = this.streamServer.getStreamUri(this.radio, lockKey, (this.mode == Mode.PCM));
     logoUri = this.streamServer.getLogoUri(this.radio);
     if (this.mode == Mode.PCM) {
-      capturingAudioSink.setCallback(this.streamServer.getPcmCallback());
+      capturingAudioSink.setCallback(this.streamServer);
     }
   }
 
   @Override
+  public void onDisconnected(@NonNull String lockKey) {
+    Log.d(LOG_TAG, "onDisconnected: " + lockKey);
+    if (lockKey.equals(this.lockKey)) {
+      onState(State.ERROR);
+    }
+  }
+
+  @Override
+  public void onConnected(@NonNull String lockKey) {
+    Log.d(LOG_TAG, "onConnected: " + lockKey);
+    if (lockKey.equals(this.lockKey)) {
+      allowRewind();
+    }
+  }
+
+  @Override
+  public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
+    listener.onNewInformation(information, lockKey);
+  }
+
+  @Override
   public void launch() {
-    final StreamServer.Listener streamServerListener = new StreamServer.Listener() {
-      @Override
-      public void onDisconnected(@NonNull String lockKey) {
-        Log.d(LOG_TAG, "onDisconnected: " + lockKey);
-        if (lockKey.equals(RemoteSessionDevice.this.lockKey)) {
-          onState(State.ERROR);
-        }
-      }
-
-      @Override
-      public void onConnected(@NonNull String lockKey) {
-        Log.d(LOG_TAG, "onConnected: " + lockKey);
-        if (lockKey.equals(RemoteSessionDevice.this.lockKey)) {
-          allowRewind();
-        }
-      }
-
-      @Override
-      public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-        listener.onNewInformation(information, lockKey);
-      }
-    };
-    streamServer.launch(lockKey, streamServerListener);
+    streamServer.launch(lockKey, this);
     super.launch();
   }
 

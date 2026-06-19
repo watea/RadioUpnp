@@ -51,7 +51,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class StreamServer extends HttpServer {
+public class StreamServer extends HttpServer implements CapturingAudioSink.Callback {
   private static final String LOG_TAG = StreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
@@ -77,29 +77,6 @@ public class StreamServer extends HttpServer {
   };
   @Nullable
   private volatile StreamResource streamResource = null;
-  private final CapturingAudioSink.Callback capturingAudioSinkCallback = new CapturingAudioSink.Callback() {
-    // Must be called before any PCM streaming is started
-    @Override
-    public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
-      Log.d(LOG_TAG, "onFormatChanged");
-      final StreamResource streamResource = StreamServer.this.streamResource;
-      if (streamResource == null) {
-        Log.d(LOG_TAG, "No resource to receive format data");
-      } else {
-        streamResource.onFormatChanged(sampleRate, channelCount, bitsPerSample);
-      }
-    }
-
-    @Override
-    public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
-      final StreamResource streamResource = StreamServer.this.streamResource;
-      if (streamResource == null) {
-        Log.d(LOG_TAG, "No queue to receive data");
-      } else if (streamResource.lockKey.equals(lockKey)) {
-        streamResource.onPcmData(pcmData);
-      }
-    }
-  };
 
   public StreamServer(@NonNull Context context) throws IOException {
     this.context = context;
@@ -125,13 +102,32 @@ public class StreamServer extends HttpServer {
     return null;
   }
 
-  public void release() {
-    launch(null, null);
+  // Must be called before any PCM streaming is started
+  @Override
+  public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
+    Log.d(LOG_TAG, "onFormatChanged");
+    final StreamResource streamResource = this.streamResource;
+    if (streamResource == null) {
+      Log.d(LOG_TAG, "No resource to receive format data");
+    } else {
+      streamResource.onFormatChanged(sampleRate, channelCount, bitsPerSample);
+    }
   }
 
-  @NonNull
-  public CapturingAudioSink.Callback getPcmCallback() {
-    return capturingAudioSinkCallback;
+  @Override
+  public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
+    final StreamResource streamResource = this.streamResource;
+    if (streamResource == null) {
+      Log.d(LOG_TAG, "No queue to receive data");
+    } else if (streamResource.lockKey.equals(lockKey)) {
+      streamResource.onPcmData(pcmData);
+    }
+  }
+
+  public void release() {
+    Log.d(LOG_TAG, "release");
+    setConfiguration(null, new Listener() {
+    });
   }
 
   @NonNull
@@ -150,14 +146,15 @@ public class StreamServer extends HttpServer {
   }
 
   // Must be called early before any session is started.
-  // lockKey == null for release.
-  public void launch(@Nullable String lockKey, @Nullable Listener listener) {
-    final boolean isRelease = (lockKey == null);
-    Log.d(LOG_TAG, "launch: " + (isRelease ? "release" : lockKey));
+  public void launch(@NonNull String lockKey, @NonNull Listener listener) {
+    Log.d(LOG_TAG, "launch: " + lockKey);
+    setConfiguration(lockKey, listener);
+  }
+
+  private void setConfiguration(@Nullable String lockKey, @NonNull Listener listener) {
     // Order matters: listener shall be set before streamResource
-    this.listener = (listener == null) ? new Listener() {
-    } : listener;
-    streamResource = isRelease ? null : new StreamResource(lockKey);
+    this.listener = listener;
+    streamResource = (lockKey == null) ? null : new StreamResource(lockKey);
   }
 
   @NonNull
