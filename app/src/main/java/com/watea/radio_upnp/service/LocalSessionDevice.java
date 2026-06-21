@@ -35,7 +35,6 @@ import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.Radio;
@@ -147,6 +146,32 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
   }
 
   @Override
+  public void onPlaybackStateChanged(int playbackState) {
+    Log.d(LOG_TAG, "onPlaybackStateChanged: state = " + playbackState);
+    switch (playbackState) {
+      case ExoPlayer.STATE_BUFFERING:
+        onState(State.BUFFERING);
+        break;
+      case ExoPlayer.STATE_READY:
+        break;
+      case ExoPlayer.STATE_IDLE:
+      case ExoPlayer.STATE_ENDED:
+        onState(State.ERROR);
+        break;
+      default:
+        Log.e(LOG_TAG, "onPlaybackStateChanged: bad state = " + playbackState);
+        onState(State.ERROR);
+    }
+  }
+
+  @Override
+  public void onIsPlayingChanged(boolean isPlaying) {
+    if (exoPlayer.getPlaybackState() == ExoPlayer.STATE_READY) {
+      onState(isPlaying ? State.PLAYING : State.PAUSED);
+    }
+  }
+
+  @Override
   protected void setVolume(float volume) {
     exoPlayer.setVolume(volume);
   }
@@ -168,38 +193,6 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
       allowRewind();
     }
     super.onState(state);
-  }
-
-  @NonNull
-  @Override
-  protected Player.Listener getPlayerListener() {
-    return new PlayerListener() {
-      @Override
-      public void onPlaybackStateChanged(int playbackState) {
-        Log.d(LOG_TAG, "onPlaybackStateChanged: state = " + playbackState);
-        switch (playbackState) {
-          case ExoPlayer.STATE_BUFFERING:
-            onState(State.BUFFERING);
-            break;
-          case ExoPlayer.STATE_READY:
-            break;
-          case ExoPlayer.STATE_IDLE:
-          case ExoPlayer.STATE_ENDED:
-            onState(State.ERROR);
-            break;
-          default:
-            Log.e(LOG_TAG, "onPlaybackStateChanged: bad state = " + playbackState);
-            onState(State.ERROR);
-        }
-      }
-
-      @Override
-      public void onIsPlayingChanged(boolean isPlaying) {
-        if (exoPlayer.getPlaybackState() == ExoPlayer.STATE_READY) {
-          onState(isPlaying ? State.PLAYING : State.PAUSED);
-        }
-      }
-    };
   }
 
   private boolean requestAudioFocus() {

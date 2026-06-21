@@ -64,7 +64,7 @@ import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
 
 @OptIn(markerClass = UnstableApi.class)
-public abstract class SessionDevice {
+public abstract class SessionDevice implements Player.Listener {
   // VLC UA is universally accepted by Icecast/Shoutcast CDNs; the app name alone gets filtered
   public static final String STREAMING_USER_AGENT = "Mozilla/5.0 (compatible; RadioUpnp)";
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
@@ -84,8 +84,6 @@ public abstract class SessionDevice {
   protected final Mode mode;
   @NonNull
   protected final CapturingAudioSink capturingAudioSink;
-  @NonNull
-  private final Player.Listener playerListener;
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
   protected volatile boolean isReleased = false;
@@ -102,7 +100,6 @@ public abstract class SessionDevice {
     this.radio = radio;
     lockKey = UUID.randomUUID().toString();
     capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build(), lockKey);
-    playerListener = getPlayerListener();
     exoPlayer = getExoPlayer();
   }
 
@@ -149,9 +146,43 @@ public abstract class SessionDevice {
   }
 
   public void release() {
-    exoPlayer.removeListener(playerListener);
+    exoPlayer.removeListener(this);
     exoPlayer.release();
     isReleased = true;
+  }
+
+  @Override
+  public void onMetadata(@NonNull Metadata metadata) {
+    String title = null;
+    for (int i = 0; i < metadata.length(); i++) {
+      final Metadata.Entry entry = metadata.get(i);
+      if (entry instanceof IcyInfo) {
+        final IcyInfo icyInfo = (IcyInfo) entry;
+        title = icyInfo.title;
+        break;
+      }
+    }
+    listener.onNewInformation((title == null) ? "" : title, lockKey);
+  }
+
+  @Override
+  public void onTracksChanged(@NonNull Tracks tracks) {
+    for (final Tracks.Group group : tracks.getGroups()) {
+      for (int i = 0; i < group.length; i++) {
+        final Format format = group.getTrackFormat(i);
+        final int bitrate = format.bitrate;
+        final String mimeType = format.sampleMimeType;
+        if (bitrate != Format.NO_VALUE) {
+          listener.onNewBitrate(bitrate / 1000, (mimeType == null) ? "" : mimeType, lockKey);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void onPlayerError(@NonNull PlaybackException error) {
+    Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
+    onState(State.ERROR);
   }
 
   protected abstract void setVolume(float volume);
@@ -198,25 +229,19 @@ public abstract class SessionDevice {
     return (getState() == State.PLAYING);
   }
 
-  // Overrides must not reference subclass instance fields to avoid NPE on initialization
-  @NonNull
-  protected Player.Listener getPlayerListener() {
-    return new PlayerListener();
-  }
-
   protected void startExoPlayer() {
     if (connectionSet == null) {
       Log.e(LOG_TAG, "startExoPlayer: internal failure, connectionSet is null");
       return;
     }
-    exoPlayer.addListener(playerListener);
+    exoPlayer.addListener(this);
     exoPlayer.setMediaItem(MediaItem.fromUri(connectionSet.getUrl().toString()));
     exoPlayer.prepare();
     exoPlayer.setPlayWhenReady(true);
   }
 
   protected void restartExoPlayer() {
-    exoPlayer.removeListener(playerListener);
+    exoPlayer.removeListener(this);
     exoPlayer.stop();
     exoPlayer.clearMediaItems();
     startExoPlayer();
@@ -278,41 +303,5 @@ public abstract class SessionDevice {
 
     @NonNull
     State getPlaybackState();
-  }
-
-  protected class PlayerListener implements Player.Listener {
-    @Override
-    public void onMetadata(@NonNull Metadata metadata) {
-      String title = null;
-      for (int i = 0; i < metadata.length(); i++) {
-        final Metadata.Entry entry = metadata.get(i);
-        if (entry instanceof IcyInfo) {
-          final IcyInfo icyInfo = (IcyInfo) entry;
-          title = icyInfo.title;
-          break;
-        }
-      }
-      listener.onNewInformation((title == null) ? "" : title, lockKey);
-    }
-
-    @Override
-    public void onTracksChanged(@NonNull Tracks tracks) {
-      for (final Tracks.Group group : tracks.getGroups()) {
-        for (int i = 0; i < group.length; i++) {
-          final Format format = group.getTrackFormat(i);
-          final int bitrate = format.bitrate;
-          final String mimeType = format.sampleMimeType;
-          if (bitrate != Format.NO_VALUE) {
-            listener.onNewBitrate(bitrate / 1000, (mimeType == null) ? "" : mimeType, lockKey);
-          }
-        }
-      }
-    }
-
-    @Override
-    public void onPlayerError(@NonNull PlaybackException error) {
-      Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
-      onState(State.ERROR);
-    }
   }
 }
