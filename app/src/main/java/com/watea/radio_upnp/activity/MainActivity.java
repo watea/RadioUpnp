@@ -81,7 +81,6 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.adapter.RadiosMainAdapter;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
@@ -372,7 +371,7 @@ public class MainActivity
   }
 
   @NonNull
-  public RadiosMainAdapter.CurrentRadioListenerSetter getPlayerController() {
+  public PlayerController getPlayerController() {
     assert playerController != null;
     return playerController;
   }
