@@ -103,4 +103,12 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
     onState(State.PAUSED);
     super.stop();
   }
+
+  @Override
+  protected void onState(@NonNull State state) {
+    // Error is not accepted if paused
+    if ((state != State.ERROR) || (getState() != State.PAUSED)) {
+      super.onState(state);
+    }
+  }
 }

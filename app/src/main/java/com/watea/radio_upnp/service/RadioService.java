@@ -428,13 +428,7 @@ public class RadioService
   public void onState(@NonNull State state, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onState: " + state.name());
-      assert sessionDevice != null;
-      final SessionDevice.State sessionDeviceState = getPlaybackState();
-      if (sessionDeviceState == state) {
-        return;
-      }
-      // Error is not accepted if remote and paused
-      if (sessionDevice.isRemote() && (state == State.ERROR) && (sessionDeviceState == State.PAUSED)) {
+      if ((sessionDevice == null) || (getPlaybackState() == state)) {
         return;
       }
       radioPlayer.setState(state);
