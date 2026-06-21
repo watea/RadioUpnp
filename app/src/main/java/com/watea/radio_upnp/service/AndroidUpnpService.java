@@ -57,7 +57,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class AndroidUpnpService extends android.app.Service {
+public class AndroidUpnpService extends android.app.Service implements SsdpClient.Listener {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
   private static final String DEVICE_VERSION = "1";
@@ -78,8 +78,7 @@ public class AndroidUpnpService extends android.app.Service {
   // add/remove can happen from binder threads concurrently
   private final Set<Listener> listeners = new CopyOnWriteArraySet<>();
   private final ExecutorService deviceExecutor = Executors.newCachedThreadPool(); // Bounded executor for device HTTP fetches — prevents unbounded raw thread creation
-  private final SsdpClient.Listener ssdpClientListener = new SsdpClientListener();
-  private final SsdpClient ssdpClient = new SsdpClient(DEVICE + DEVICE_VERSION, ssdpClientListener);
+  private final SsdpClient ssdpClient = new SsdpClient(DEVICE + DEVICE_VERSION, this);
   private final ConnectivityManager.NetworkCallback networkCallback = new NetworkCallback();
   private ConnectivityManager connectivityManager;
   private NetworkProxy networkProxy;
@@ -112,6 +111,35 @@ public class AndroidUpnpService extends android.app.Service {
   @Override
   public IBinder onBind(Intent intent) {
     return binder;
+  }
+
+  @Override
+  public void onServiceDiscovered(@NonNull SsdpService service) {
+    Log.d(LOG_TAG, "Found SsdpService: " + service);
+    devices.process(service);
+  }
+
+  @Override
+  public void onServiceAnnouncement(@NonNull SsdpService service) {
+    Log.d(LOG_TAG, "Announce SsdpService: " + service);
+    devices.process(service);
+  }
+
+  @Override
+  public void onFatalError() {
+    Log.e(LOG_TAG, "onFatalError");
+    listeners.forEach(Listener::onFatalError);
+  }
+
+  @Override
+  public void onStop() {
+    Log.d(LOG_TAG, "onStop");
+    devices.forEach(this::tellRemoveListeners);
+    devices.clear();
+    // If we missed the onAvailable() because the client was still started
+    if (!isDestroyed && networkProxy.isOnWifi()) {
+      ssdpClient.start();
+    }
   }
 
   private void tellRemoveListeners(@NonNull Device device) {
@@ -183,37 +211,6 @@ public class AndroidUpnpService extends android.app.Service {
 
     private void tellSelectedDeviceIdentity(@Nullable Device previousDevice) {
       listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
-    }
-  }
-
-  private class SsdpClientListener implements SsdpClient.Listener {
-    @Override
-    public void onServiceDiscovered(@NonNull SsdpService service) {
-      Log.d(LOG_TAG, "Found SsdpService: " + service);
-      devices.process(service);
-    }
-
-    @Override
-    public void onServiceAnnouncement(@NonNull SsdpService service) {
-      Log.d(LOG_TAG, "Announce SsdpService: " + service);
-      devices.process(service);
-    }
-
-    @Override
-    public void onFatalError() {
-      Log.e(LOG_TAG, "onFatalError");
-      listeners.forEach(Listener::onFatalError);
-    }
-
-    @Override
-    public void onStop() {
-      Log.d(LOG_TAG, "onStop");
-      devices.forEach(AndroidUpnpService.this::tellRemoveListeners);
-      devices.clear();
-      // If we missed the onAvailable() because the client was still started
-      if (!isDestroyed && networkProxy.isOnWifi()) {
-        ssdpClient.start();
-      }
     }
   }
 
