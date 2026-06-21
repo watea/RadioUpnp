@@ -11,8 +11,8 @@ android {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 36
-        versionCode = 302007
-        versionName = '3.02.007'
+        versionCode = 302008
+        versionName = '3.02.008'
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -99,5 +99,5 @@ dependencies {
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.4.0'
     // Billing
-    fullImplementation 'com.android.billingclient:billing:9.0.0'
+    fullImplementation 'com.android.billingclient:billing:9.1.0'
 }
