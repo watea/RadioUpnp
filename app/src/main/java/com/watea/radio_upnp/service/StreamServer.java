@@ -56,8 +56,6 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
   private static final String ID_PARAM = "id";
-  private static final String HEAD = "HEAD";
-  private static final String GET = "GET";
   private static final String SCHEME = "http";
   private static final int DEFAULT = -1;
   private static final int GET_TIMEOUT = 10000; // ms
@@ -82,7 +80,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     this.context = context;
     addHandler(new LogoHandler());
     addHandler(new PcmStreamHandler());
-    addHandler(new RelayStreamHandler());
+    addHandler(new PassthroughStreamHandler());
   }
 
   // Fallback for renderers sending HTML-encoded separators such as
@@ -260,9 +258,10 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
         Log.d(LOG_TAG, "handle: no resource defined - " + incomingLockKey);
         return;
       }
-      if ((radio != null) && streamResource.hasLockKey(incomingLockKey) && (method.equals(HEAD) || method.equals(GET)) && accept(request.getPath())) {
-        final boolean isHead = method.equals(HEAD);
-        Log.d(LOG_TAG, className + ": handleStream - " + (isHead ? HEAD : GET) + " - " + incomingLockKey);
+      final boolean isHead = "HEAD".equals(method);
+      final boolean isGet = "GET".equals(method);
+      if ((radio != null) && streamResource.hasLockKey(incomingLockKey) && (isHead || isGet) && accept(request.getPath())) {
+        Log.d(LOG_TAG, className + ": handleStream - " + method + " - " + incomingLockKey);
         handleStream(response, responseStream, isHead, radio, streamResource);
       }
       Log.d(LOG_TAG, className + ": handle exit - " + method + " - " + incomingLockKey);
@@ -279,7 +278,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       @NonNull Radio radio,
       @NonNull StreamResource streamResource) throws IOException;
 
-    // Adds DLNA streaming headers common to both PCM and relay responses
+    // Adds DLNA streaming headers common to both PCM and passthrough responses
     protected void sendDlnaResponse(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
@@ -474,8 +473,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     }
   }
 
-  // Serves the audio stream in relay (passthrough) mode
-  private class RelayStreamHandler extends StreamHandler {
+  // Serves the audio stream in passthrough mode
+  private class PassthroughStreamHandler extends StreamHandler {
     @Override
     protected boolean accept(@NonNull String path) {
       return !path.endsWith(STREAM_SUFFIX_PCM);
@@ -491,7 +490,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       // Upstream
       final Radio.ConnectionSet connectionSet = radio.getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
       if (connectionSet == null) {
-        Log.d(LOG_TAG, "RelayStreamHandler: upstream is not defined");
+        Log.d(LOG_TAG, "PassthroughStreamHandler: upstream is not defined");
         listener.onDisconnected(streamResource.getLockKey());
         return;
       }
@@ -507,7 +506,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
           SessionDevice.STREAMING_USER_AGENT,
           java.util.Collections.singletonMap("Icy-Metadata", "1"));
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "RelayStreamHandler: unable to connect", ioException);
+        Log.d(LOG_TAG, "PassthroughStreamHandler: unable to connect", ioException);
         listener.onDisconnected(streamResource.getLockKey());
         throw ioException;
       }
@@ -518,7 +517,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
         new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> listener.onNewInformation(title, streamResource.getLockKey()));
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
-      Log.d(LOG_TAG, "RelayStreamHandler: start streaming - " + streamResource.getLockKey());
+      Log.d(LOG_TAG, "PassthroughStreamHandler: start streaming - " + streamResource.getLockKey());
       try (final InputStream inputStream = upstreamResponse.body().byteStream()) {
         while (streamResource.hasLockKey() && ((n = inputStream.read(buf)) >= 0)) {
           streamResource.relaunchWatchdog();
@@ -529,7 +528,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
           }
         }
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "RelayStreamHandler: IOException - " + streamResource.getLockKey() + "; " + ioException.getMessage());
+        Log.d(LOG_TAG, "PassthroughStreamHandler: IOException - " + streamResource.getLockKey() + "; " + ioException.getMessage());
         throw ioException;
       } finally {
         upstreamResponse.close();
