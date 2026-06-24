@@ -36,7 +36,6 @@ import com.watea.candidhttpserver.HttpServer;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -342,8 +341,6 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   // Serves the radio logo as JPEG
   private class LogoHandler extends BaseStreamHandler {
-    private static final int REMOTE_LOGO_SIZE = 300;
-
     @Override
     protected boolean accept(@NonNull String path) {
       return path.equals(LOGO_PATH);
@@ -360,10 +357,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
         return;
       }
       Log.d(LOG_TAG, "Serving logo");
-      final Bitmap bitmap = Bitmap.createScaledBitmap(streamResource.getRadio().getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
-      final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-      bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
-      final byte[] logoBytes = byteArrayOutputStream.toByteArray();
+      final byte[] logoBytes = streamResource.getRadio().iconToBytes(Bitmap.CompressFormat.JPEG, 90);
       if (logoBytes.length == 0) {
         Log.e(LOG_TAG, "No logo available");
         return;

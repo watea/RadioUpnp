@@ -94,7 +94,7 @@ public class Radios extends ArrayList<Radio> {
       radios = new Radios(context);
       final SharedPreferences sharedPreferences = context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
       if (sharedPreferences.getBoolean(context.getString(R.string.key_first_start), true)) {
-        if (radios.addAll(DefaultRadios.get(context, Radio.RADIO_ICON_SIZE))) {
+        if (radios.addAll(DefaultRadios.get(context))) {
           // Robustness: store immediately to avoid bad user experience in case of app crash
           sharedPreferences
             .edit()

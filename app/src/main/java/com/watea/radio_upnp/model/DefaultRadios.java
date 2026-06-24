@@ -113,11 +113,11 @@ public class DefaultRadios {
       "https://www.radiofrance.fr/fip/radio-rock"));
 
   @NonNull
-  public static List<Radio> get(@NonNull Context context, int iconSize) {
+  public static List<Radio> get(@NonNull Context context) {
     return DEFAULT_RADIOS.stream()
       .map(defaultRadio -> {
         try {
-          return defaultRadio.getRadioFrom(context, iconSize);
+          return defaultRadio.getRadioFrom(context);
         } catch (MalformedURLException malformedURLException) {
           Log.e(LOG_TAG, "get: MalformedURLException fired on: " + defaultRadio.name);
           return null;
@@ -148,11 +148,10 @@ public class DefaultRadios {
     }
 
     @NonNull
-    private Radio getRadioFrom(@NonNull Context context, int iconSize)
-      throws MalformedURLException {
+    private Radio getRadioFrom(@NonNull Context context) throws MalformedURLException {
       return new Radio(
         name,
-        Radio.createScaledBitmap(BitmapFactory.decodeResource(context.getResources(), drawable), iconSize),
+        BitmapFactory.decodeResource(context.getResources(), drawable),
         new URL(uRL),
         new URL(webPageURL));
     }

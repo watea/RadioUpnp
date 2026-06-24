@@ -51,7 +51,7 @@ public class Radio {
   public static final String DEFAULT_MIME = "audio/mpeg";
   @NonNull
   public static final Radio DUMMY_RADIO;
-  public static final int RADIO_ICON_SIZE = 300;
+  private static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = Radio.class.getSimpleName();
   private static final String SPACER = ";";
   public static final String EXPORT_HEAD =
@@ -116,7 +116,7 @@ public class Radio {
     this.id = id;
     this.name = name;
     assert (icon == null) != (base64Icon == null);
-    this.icon = crop((icon == null) ? getBitmapFrom(base64Icon) : icon);
+    this.icon = normalize((icon == null) ? getBitmapFrom(base64Icon) : icon);
     this.base64Icon = (base64Icon == null) ? iconToBase64String() : base64Icon;
     this.url = url;
     this.webPageUrl = webPageUrl;
@@ -180,17 +180,13 @@ public class Radio {
   }
 
   @NonNull
-  public static Bitmap iconResize(@NonNull Bitmap bitmap) {
-    return createScaledBitmap(bitmap, RADIO_ICON_SIZE);
-  }
-
-  // Crop bitmap as a square
-  @NonNull
-  public static Bitmap crop(@NonNull Bitmap icon) {
-    final int height = icon.getHeight();
-    final int width = icon.getWidth();
+  public static Bitmap normalize(@NonNull Bitmap bitmap) {
+    final int height = bitmap.getHeight();
+    final int width = bitmap.getWidth();
     final int min = Math.min(height, width);
-    return (height == width) ? icon : Bitmap.createBitmap(icon, (width - min) / 2, (height - min) / 2, min, min, null, false);
+    return createScaledBitmap(
+      (height == width) ? bitmap : Bitmap.createBitmap(bitmap, (width - min) / 2, (height - min) / 2, min, min, null, false),
+      RADIO_ICON_SIZE);
   }
 
   // Store bitmap as filename.png
@@ -233,6 +229,13 @@ public class Radio {
   @NonNull
   public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
     return Bitmap.createScaledBitmap(bitmap, size, size, true);
+  }
+
+  @NonNull
+  private static byte[] iconToBytes(@NonNull Bitmap bitmap, @NonNull Bitmap.CompressFormat format, int quality) {
+    final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    bitmap.compress(format, quality, byteArrayOutputStream);
+    return byteArrayOutputStream.toByteArray();
   }
 
   @NonNull
@@ -294,14 +297,13 @@ public class Radio {
     return (webPageUrl == null) ? null : Uri.parse(webPageUrl.toString());
   }
 
-  // Note: no defined size for icon
   @NonNull
   public Bitmap getIcon() {
     return icon;
   }
 
   public void setIcon(@NonNull Bitmap icon) {
-    this.icon = iconResize(crop(icon));
+    this.icon = normalize(icon);
     base64Icon = iconToBase64String();
   }
 
@@ -386,11 +388,13 @@ public class Radio {
     return connectionSet;
   }
 
+  public byte[] iconToBytes(@NonNull Bitmap.CompressFormat format, int quality) {
+    return iconToBytes(icon, format, quality);
+  }
+
   @NonNull
   private byte[] iconToBytes() {
-    final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    icon.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-    return byteArrayOutputStream.toByteArray();
+    return iconToBytes(Bitmap.CompressFormat.PNG, 100);
   }
 
   @NonNull
