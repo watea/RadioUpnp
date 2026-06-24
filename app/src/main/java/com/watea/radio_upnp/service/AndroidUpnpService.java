@@ -78,10 +78,10 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
   // add/remove can happen from binder threads concurrently
   private final Set<Listener> listeners = new CopyOnWriteArraySet<>();
   private final ExecutorService deviceExecutor = Executors.newCachedThreadPool(); // Bounded executor for device HTTP fetches — prevents unbounded raw thread creation
-  private final SsdpClient ssdpClient = new SsdpClient(DEVICE + DEVICE_VERSION, this);
   private final ConnectivityManager.NetworkCallback networkCallback = new NetworkCallback();
   private ConnectivityManager connectivityManager;
   private NetworkProxy networkProxy;
+  private SsdpClient ssdpClient;
   private volatile boolean isDestroyed = false;
 
   @Override
@@ -89,6 +89,7 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
     super.onCreate();
     // Order matters
     networkProxy = new NetworkProxy(AndroidUpnpService.this);
+    ssdpClient = new SsdpClient(this, DEVICE + DEVICE_VERSION, this);
     connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
     connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
   }
