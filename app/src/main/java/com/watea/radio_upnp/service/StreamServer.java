@@ -56,15 +56,9 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   private static final String LOCKKEY_PARAM = "lockkey";
   private static final String SCHEME = "http";
   private static final int DEFAULT = -1;
-  private static final int GET_TIMEOUT = 10000; // ms
   private static final int QUEUE_SIZE = 300; // ~10s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
-  private static final int PACER_POLL_TIMEOUT = 500; // ms
-  private static final int REMOTE_LOGO_SIZE = 300;
   private static final String LOGO_PATH = "/logo.jpg";
   private static final String STREAM_SUFFIX_PCM = ".wav";
-  private static final int PIPE_BUFFER_SIZE = 8192; // Matches default Java I/O buffer size
-  private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
-  private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
   private static final Pattern PARAM_PATTERN = Pattern.compile("[?&](?:amp;)*([^=]+)=([^&]*)");
   @NonNull
   private final Context context;
@@ -252,6 +246,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   }
 
   private class StreamResource {
+    private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
+    private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
     @NonNull
     private final Radio radio;
     @NonNull
@@ -346,6 +342,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   // Serves the radio logo as JPEG
   private class LogoHandler extends BaseStreamHandler {
+    private static final int REMOTE_LOGO_SIZE = 300;
+
     @Override
     protected boolean accept(@NonNull String path) {
       return path.equals(LOGO_PATH);
@@ -379,6 +377,9 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   // Serves the audio stream in PCM/WAV mode
   private class PcmStreamHandler extends BaseStreamHandler {
+    private static final int GET_TIMEOUT = 10000; // ms
+    private static final int PACER_POLL_TIMEOUT = 500; // ms
+
     @Override
     protected boolean accept(@NonNull String path) {
       return path.endsWith(STREAM_SUFFIX_PCM);
@@ -468,6 +469,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   // Serves the audio stream in passthrough mode
   private class PassthroughStreamHandler extends BaseStreamHandler {
+    private static final int PIPE_BUFFER_SIZE = 8192; // Matches default Java I/O buffer size
+
     @Override
     protected boolean accept(@NonNull String path) {
       return !path.endsWith(STREAM_SUFFIX_PCM);

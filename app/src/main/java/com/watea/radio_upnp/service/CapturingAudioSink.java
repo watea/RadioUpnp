@@ -43,12 +43,8 @@ import java.util.concurrent.TimeUnit;
 @OptIn(markerClass = UnstableApi.class)
 public class CapturingAudioSink implements AudioSink {
   private static final String LOG_TAG = CapturingAudioSink.class.getSimpleName();
-  private static final int PACER_TIMEOUT = 2; // s
   private static final long LONG_DEFAULT = -1L;
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
-  private static final int PCM_BUFFER_LOW_THRESHOLD = 10; // ~0.25s
-  private static final long ONE_SECOND_US = 1_000_000L;
-  private static final long PACER_SLEEP_MIN_US = 1_000L;
   @NonNull
   private final String lockKey;
   @NonNull
@@ -254,6 +250,10 @@ public class CapturingAudioSink implements AudioSink {
   }
 
   private class Pacer extends Thread {
+    private static final int PACER_TIMEOUT = 2; // s
+    private static final int PCM_BUFFER_LOW_THRESHOLD = 10; // ~0.25s
+    private static final long ONE_SECOND_US = 1_000_000L;
+    private static final long PACER_SLEEP_MIN_US = 1_000L;
     private long bytesConsumed = 0L;
 
     private Pacer() {
