@@ -35,7 +35,6 @@ import androidx.annotation.Nullable;
 import com.watea.candidhttpserver.HttpServer;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
-import com.watea.radio_upnp.model.Radios;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -55,7 +54,6 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   private static final String LOG_TAG = StreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
-  private static final String ID_PARAM = "id";
   private static final String SCHEME = "http";
   private static final int DEFAULT = -1;
   private static final int GET_TIMEOUT = 10000; // ms
@@ -86,14 +84,14 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   // Fallback for renderers sending HTML-encoded separators such as
   // '&amp;amp;' instead of '&', which confuses request.getParam()
   @Nullable
-  private static String getParam(@NonNull HttpServer.Request request, @NonNull String name) {
-    final String value = request.getParam(name);
+  private static String getParam(@NonNull HttpServer.Request request) {
+    final String value = request.getParam(LOCKKEY_PARAM);
     if (value != null) {
       return value;
     }
     final Matcher matcher = PARAM_PATTERN.matcher(request.getRawPath());
     while (matcher.find()) {
-      if (name.equals(matcher.group(1))) {
+      if (LOCKKEY_PARAM.equals(matcher.group(1))) {
         return matcher.group(2);
       }
     }
@@ -122,46 +120,39 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     }
   }
 
+  @NonNull
+  public Uri getLogoUri(@NonNull String lockKey) {
+    return getUriBuilder(lockKey).path(LOGO_PATH).build();
+  }
+
+  @NonNull
+  public Uri getStreamUri(@NonNull String lockKey, boolean isPcm) {
+    return getUriBuilder(lockKey).path(STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : "")).build();
+  }
+
   public void release() {
     Log.d(LOG_TAG, "release");
-    setConfiguration(null, new Listener() {
-    });
-  }
-
-  @NonNull
-  public Uri getLogoUri(@NonNull Radio radio) {
-    return getUriBuilder(radio)
-      .path(LOGO_PATH)
-      .build();
-  }
-
-  @NonNull
-  public Uri getStreamUri(@NonNull Radio radio, @NonNull String lockKey, boolean isPcm) {
-    return getUriBuilder(radio)
-      .path(STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : ""))
-      .appendQueryParameter(LOCKKEY_PARAM, lockKey)
-      .build();
+    // Order matters: listener shall be set before streamResource
+    listener = new Listener() {
+    };
+    streamResource = null;
   }
 
   // Must be called early before any session is started.
-  public void launch(@NonNull String lockKey, @NonNull Listener listener) {
-    Log.d(LOG_TAG, "launch: " + lockKey);
-    setConfiguration(lockKey, listener);
-  }
-
-  private void setConfiguration(@Nullable String lockKey, @NonNull Listener listener) {
+  public void launch(@NonNull RemoteSessionDevice remoteSessionDevice) {
+    Log.d(LOG_TAG, "launch: " + remoteSessionDevice.getLockKey());
     // Order matters: listener shall be set before streamResource
-    this.listener = listener;
-    streamResource = (lockKey == null) ? null : new StreamResource(lockKey);
+    listener = remoteSessionDevice;
+    streamResource = new StreamResource(remoteSessionDevice.getRadio(), remoteSessionDevice.getLockKey());
   }
 
   @NonNull
-  private Uri.Builder getUriBuilder(@NonNull Radio radio) {
+  private Uri.Builder getUriBuilder(@NonNull String lockKey) {
     final String localIp = new NetworkProxy(context).getWifiIpAddress();
     return new Uri.Builder()
       .scheme(SCHEME)
       .encodedAuthority(((localIp == null) ? "0.0.0.0" : localIp) + ":" + getListeningPort())
-      .appendQueryParameter(ID_PARAM, radio.getId());
+      .appendQueryParameter(LOCKKEY_PARAM, lockKey);
   }
 
   public interface Listener {
@@ -172,40 +163,6 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     }
 
     default void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-    }
-  }
-
-  // Serves the radio logo as JPEG
-  private static class LogoHandler implements HttpServer.Handler {
-    private static final String LOG_TAG = LogoHandler.class.getSimpleName();
-
-    @Override
-    public void handle(
-      @NonNull HttpServer.Request request,
-      @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream) throws IOException {
-      if (!request.getPath().equals(LOGO_PATH)) {
-        return; // Not our path
-      }
-      final String id = getParam(request, ID_PARAM);
-      final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
-      if (radio == null) {
-        Log.e(LOG_TAG, "handle: no radio available");
-        return;
-      }
-      Log.d(LOG_TAG, "handle: serving logo");
-      final Bitmap bitmap = Bitmap.createScaledBitmap(radio.getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
-      final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-      bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
-      final byte[] logoBytes = byteArrayOutputStream.toByteArray();
-      if (logoBytes.length == 0) {
-        Log.e(LOG_TAG, "handle: no logo available");
-        return;
-      }
-      response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
-      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
-      response.send();
-      responseStream.write(logoBytes);
     }
   }
 
@@ -241,28 +198,26 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   // Base handler for audio stream requests — validates method and lockKey,
   // dispatches to the concrete subclass only when the path matches
-  private abstract class StreamHandler implements HttpServer.Handler {
+  private abstract class BaseStreamHandler implements HttpServer.Handler {
     @Override
     public final void handle(
       @NonNull HttpServer.Request request,
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream) throws IOException {
-      final String incomingLockKey = getParam(request, LOCKKEY_PARAM);
-      final String id = getParam(request, ID_PARAM);
-      final Radio radio = (id == null) ? null : Radios.getInstance().getRadioFromId(id);
-      final String method = request.getMethod();
       final String className = getClass().getSimpleName();
-      Log.d(LOG_TAG, className + ": handle - " + method + " - " + id + " - " + incomingLockKey);
+      final String incomingLockKey = getParam(request);
+      final String method = request.getMethod();
+      Log.d(LOG_TAG, className + ": handle - " + method + " - " + incomingLockKey);
       final StreamResource streamResource = StreamServer.this.streamResource;
       if (streamResource == null) {
-        Log.d(LOG_TAG, "handle: no resource defined - " + incomingLockKey);
+        Log.d(LOG_TAG, className + ": handle => no resource defined - " + incomingLockKey);
         return;
       }
       final boolean isHead = "HEAD".equals(method);
       final boolean isGet = "GET".equals(method);
-      if ((radio != null) && streamResource.hasLockKey(incomingLockKey) && (isHead || isGet) && accept(request.getPath())) {
-        Log.d(LOG_TAG, className + ": handleStream - " + method + " - " + incomingLockKey);
-        handleStream(response, responseStream, isHead, radio, streamResource);
+      if (streamResource.hasLockKey(incomingLockKey) && (isHead || isGet) && accept(request.getPath())) {
+        Log.d(LOG_TAG, className + ": handle valid");
+        handleStream(response, responseStream, isHead, streamResource);
       }
       Log.d(LOG_TAG, className + ": handle exit - " + method + " - " + incomingLockKey);
     }
@@ -270,15 +225,13 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     // Returns true if this handler is responsible for the given path
     protected abstract boolean accept(@NonNull String path);
 
-    // Performs the actual streaming for a validated GET/HEAD request
     protected abstract void handleStream(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
-      @NonNull Radio radio,
       @NonNull StreamResource streamResource) throws IOException;
 
-    // Adds DLNA streaming headers common to both PCM and passthrough responses
+    // Send HTTP headers immediately — the renderer must not wait on a cold socket
     protected void sendDlnaResponse(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
@@ -300,6 +253,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   private class StreamResource {
     @NonNull
+    private final Radio radio;
+    @NonNull
     private final String lockKey;
     private final Set<ArrayBlockingQueue<byte[]>> queues = new CopyOnWriteArraySet<>();
     private volatile Watchdog watchdog;
@@ -308,9 +263,15 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     private volatile int channelCount = DEFAULT;
     private volatile int bitsPerSample = DEFAULT;
 
-    public StreamResource(@NonNull String lockKey) {
+    public StreamResource(@NonNull Radio radio, @NonNull String lockKey) {
+      this.radio = radio;
       this.lockKey = lockKey;
       watchdog = new Watchdog(listener::onDisconnected, this.lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
+    }
+
+    @NonNull
+    public Radio getRadio() {
+      return radio;
     }
 
     public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
@@ -383,8 +344,41 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     }
   }
 
+  // Serves the radio logo as JPEG
+  private class LogoHandler extends BaseStreamHandler {
+    @Override
+    protected boolean accept(@NonNull String path) {
+      return path.equals(LOGO_PATH);
+    }
+
+    @Override
+    protected void handleStream(
+      @NonNull HttpServer.Response response,
+      @NonNull OutputStream responseStream,
+      boolean isHead,
+      @NonNull StreamResource streamResource) throws IOException {
+      // Should not happen
+      if (isHead) {
+        return;
+      }
+      Log.d(LOG_TAG, "Serving logo");
+      final Bitmap bitmap = Bitmap.createScaledBitmap(streamResource.getRadio().getIcon(), REMOTE_LOGO_SIZE, REMOTE_LOGO_SIZE, true);
+      final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+      bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream);
+      final byte[] logoBytes = byteArrayOutputStream.toByteArray();
+      if (logoBytes.length == 0) {
+        Log.e(LOG_TAG, "No logo available");
+        return;
+      }
+      response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
+      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
+      response.send();
+      responseStream.write(logoBytes);
+    }
+  }
+
   // Serves the audio stream in PCM/WAV mode
-  private class PcmStreamHandler extends StreamHandler {
+  private class PcmStreamHandler extends BaseStreamHandler {
     @Override
     protected boolean accept(@NonNull String path) {
       return path.endsWith(STREAM_SUFFIX_PCM);
@@ -395,9 +389,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
-      @NonNull Radio radio,
       @NonNull StreamResource streamResource) throws IOException {
-      // Send HTTP headers immediately — the renderer must not wait on a cold socket
+      // HEAD
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
       sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, streamResource.getLockKey());
       if (isHead) {
@@ -474,7 +467,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   }
 
   // Serves the audio stream in passthrough mode
-  private class PassthroughStreamHandler extends StreamHandler {
+  private class PassthroughStreamHandler extends BaseStreamHandler {
     @Override
     protected boolean accept(@NonNull String path) {
       return !path.endsWith(STREAM_SUFFIX_PCM);
@@ -485,16 +478,14 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
-      @NonNull Radio radio,
       @NonNull StreamResource streamResource) throws IOException {
-      // Upstream
-      final Radio.ConnectionSet connectionSet = radio.getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
+      // HEAD
+      final Radio.ConnectionSet connectionSet = streamResource.getRadio().getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
       if (connectionSet == null) {
         Log.d(LOG_TAG, "PassthroughStreamHandler: upstream is not defined");
         listener.onDisconnected(streamResource.getLockKey());
         return;
       }
-      // Send HTTP headers immediately — the renderer must not wait on a cold socket
       sendDlnaResponse(response, responseStream, connectionSet.getContent(), streamResource.getLockKey());
       if (isHead) {
         return;
