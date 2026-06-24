@@ -106,9 +106,9 @@ public class RadioService
   private static final int REQUEST_CODE = 501;
   private static final String MEDIA_ROOT_ID = "root_id";
   private static final int FOREGROUND_NOTIFICATION_ID = 9;
-  private static final int SLEEP_TIMER_NOTIFICATION_ID = 42;
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
+  private final SleepController sleepController = new SleepController();
   private boolean isAndroidAutoConnected = false;
   private final Observer<Integer> carConnectionObserver = type -> {
     final boolean connected = (type != null) && (type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
@@ -138,8 +138,6 @@ public class RadioService
   private RadioPlayer radioPlayer;
   @Nullable
   private StreamServer streamServer = null;
-  @Nullable
-  private ScheduledExecutorService scheduler = null;
   private NotificationCompat.Action actionPause;
   private NotificationCompat.Action actionPlay;
   private NotificationCompat.Action actionSkipToNext;
@@ -335,7 +333,7 @@ public class RadioService
           onSkipToPrevious();
           break;
         case ACTION_SLEEP_CANCEL:
-          releaseScheduler();
+          sleepController.release();
           break;
       }
     }
@@ -600,10 +598,10 @@ public class RadioService
     @NonNull Bundle args) {
     switch (customCommand.customAction) {
       case ACTION_SLEEP_SET:
-        HANDLER.post(() -> customAction(args));
+        HANDLER.post(() -> sleepController.set(args.getInt(getString(R.string.key_sleep))));
         break;
       case ACTION_SLEEP_CANCEL:
-        HANDLER.post(this::releaseScheduler);
+        HANDLER.post(sleepController::release);
         break;
       default:
         Log.e(LOG_TAG, "onCustomCommand: unknown action: " + customCommand.customAction);
@@ -689,29 +687,6 @@ public class RadioService
     return builder.setStyle(mediaStyle).build();
   }
 
-  private void showSleepTimerNotification(int minutes) {
-    try {
-      final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_mic_white_24dp)
-        .setContentTitle(getString(R.string.sleep_timer_title))
-        .setContentText(getString(R.string.sleep_timer_set_for, minutes))
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-        .setOngoing(true)
-        .setOnlyAlertOnce(true)
-        .addAction(new NotificationCompat.Action(
-          R.drawable.ic_stop_white_24dp,
-          getString(R.string.cancel_sleep_timer),
-          buildServicePendingIntent(ACTION_SLEEP_CANCEL)));
-      notificationManager.notify(SLEEP_TIMER_NOTIFICATION_ID, builder.build());
-    } catch (SecurityException securityException) {
-      Log.e(LOG_TAG, "Permission denied to post sleep timer notification", securityException);
-    }
-  }
-
-  private void cancelSleepTimerNotification() {
-    notificationManager.cancel(SLEEP_TIMER_NOTIFICATION_ID);
-  }
-
   private void buildNotification() {
     try {
       notificationManager.notify(FOREGROUND_NOTIFICATION_ID, getNotification());
@@ -728,26 +703,11 @@ public class RadioService
     });
   }
 
-  private void setSleepOn(boolean isSleepOn) {
-    final Bundle extras = new Bundle(mediaLibrarySession.getSessionExtras());
-    extras.putBoolean(getString(R.string.key_sleep_set), isSleepOn);
-    mediaLibrarySession.setSessionExtras(extras);
-  }
-
-  private void releaseScheduler() {
-    if (scheduler != null) {
-      scheduler.shutdownNow();
-      scheduler = null;
-      setSleepOn(false);
-      cancelSleepTimerNotification();
-    }
-  }
-
   private void releaseResources() {
     if (streamServer != null) {
       streamServer.release();
     }
-    releaseScheduler();
+    sleepController.release();
   }
 
   private void playFromMediaId(@NonNull String mediaId) {
@@ -763,7 +723,7 @@ public class RadioService
     if (sessionDevice != null) {
       sessionDevice.release();
     }
-    releaseScheduler();
+    sleepController.release();
     sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
@@ -809,18 +769,6 @@ public class RadioService
       return;
     }
     playFromMediaId(nextRadio.getId());
-  }
-
-  private void customAction(@NonNull Bundle extras) {
-    final int minutes = extras.getInt(getString(R.string.key_sleep));
-    scheduler = Executors.newScheduledThreadPool(1);
-    scheduler.schedule(
-      () -> HANDLER.post(this::onPause),
-      minutes,
-      TimeUnit.MINUTES);
-    scheduler.shutdown();
-    setSleepOn(true);
-    showSleepTimerNotification(minutes);
   }
 
   // true if work done
@@ -870,5 +818,49 @@ public class RadioService
     }
     Log.d(LOG_TAG, "createSessionDevice: " + result.getClass().getSimpleName() + " - " + result.getLockKey());
     return result;
+  }
+
+  private class SleepController {
+    private static final int NOTIFICATION_ID = 42;
+    @Nullable
+    private ScheduledExecutorService scheduler = null;
+
+    public void set(int minutes) {
+      scheduler = Executors.newScheduledThreadPool(1);
+      scheduler.schedule(() -> HANDLER.post(RadioService.this::onPause), minutes, TimeUnit.MINUTES);
+      scheduler.shutdown();
+      setSleepOn(true);
+      try {
+        notificationManager.notify(NOTIFICATION_ID, new NotificationCompat.Builder(RadioService.this, CHANNEL_ID)
+          .setSmallIcon(R.drawable.ic_mic_white_24dp)
+          .setContentTitle(getString(R.string.sleep_timer_title))
+          .setContentText(getString(R.string.sleep_timer_set_for, minutes))
+          .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+          .setOngoing(true)
+          .setOnlyAlertOnce(true)
+          .addAction(new NotificationCompat.Action(
+            R.drawable.ic_stop_white_24dp,
+            getString(R.string.cancel_sleep_timer),
+            buildServicePendingIntent(ACTION_SLEEP_CANCEL)))
+          .build());
+      } catch (SecurityException securityException) {
+        Log.e(LOG_TAG, "Permission denied to post sleep timer notification", securityException);
+      }
+    }
+
+    public void release() {
+      if (scheduler != null) {
+        scheduler.shutdownNow();
+        scheduler = null;
+        setSleepOn(false);
+        notificationManager.cancel(NOTIFICATION_ID);
+      }
+    }
+
+    private void setSleepOn(boolean isSleepOn) {
+      final Bundle extras = new Bundle(mediaLibrarySession.getSessionExtras());
+      extras.putBoolean(getString(R.string.key_sleep_set), isSleepOn);
+      mediaLibrarySession.setSessionExtras(extras);
+    }
   }
 }
