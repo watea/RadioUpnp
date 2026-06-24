@@ -59,11 +59,12 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   private static final String LOGO_PATH = "/logo.jpg";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final Pattern PARAM_PATTERN = Pattern.compile("[?&](?:amp;)*([^=]+)=([^&]*)");
+  private static final Listener DEFAULT_LISTENER = new Listener() {
+  };
   @NonNull
   private final Context context;
   @NonNull
-  private Listener listener = new Listener() {
-  };
+  private Listener listener = DEFAULT_LISTENER;
   @Nullable
   private volatile StreamResource streamResource = null;
 
@@ -125,18 +126,19 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   public void release() {
     Log.d(LOG_TAG, "release");
-    // Order matters: listener shall be set before streamResource
-    listener = new Listener() {
-    };
-    streamResource = null;
+    setLaunchConfiguration(null, DEFAULT_LISTENER);
   }
 
   // Must be called early before any session is started.
   public void launch(@NonNull RemoteSessionDevice remoteSessionDevice) {
     Log.d(LOG_TAG, "launch: " + remoteSessionDevice.getLockKey());
-    // Order matters: listener shall be set before streamResource
-    listener = remoteSessionDevice;
-    streamResource = new StreamResource(remoteSessionDevice.getRadio(), remoteSessionDevice.getLockKey());
+    setLaunchConfiguration(new StreamResource(remoteSessionDevice.getRadio(), remoteSessionDevice.getLockKey()), remoteSessionDevice);
+  }
+
+  // Order matters: listener shall be set before streamResource
+  private void setLaunchConfiguration(@Nullable StreamResource streamResource, @NonNull Listener listener) {
+    this.listener = listener;
+    this.streamResource = streamResource;
   }
 
   @NonNull
