@@ -65,7 +65,7 @@ import com.watea.radio_upnp.model.Radios;
 
 import java.util.Calendar;
 
-public class AlarmService extends Service {
+public class AlarmService extends Service implements MediaController.Listener {
   private static final String LOG_TAG = AlarmService.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int NOTIFICATION_ID = 10;
@@ -192,6 +192,12 @@ public class AlarmService extends Service {
       }
       return START_STICKY;
     }
+  }
+
+  @Override
+  public void onDisconnected(@NonNull MediaController controller) {
+    Log.d(LOG_TAG, "onDisconnected");
+    mediaController = null;
   }
 
   private boolean setAlarmManagerAlarm(int hour, int minute, boolean isRelaunch) {
@@ -347,24 +353,13 @@ public class AlarmService extends Service {
   }
 
   private class ConnectivityManagerNetworkCallback extends ConnectivityManager.NetworkCallback {
-    // Callback from media control.
-    // This might happen if the RadioService is killed while the Activity is in the
-    // foreground and onStart() has been called (but not onStop()).
-    private final MediaController.Listener mediaControllerListener = new MediaController.Listener() {
-      @Override
-      public void onDisconnected(@NonNull MediaController controller) {
-        Log.d(LOG_TAG, "onDisconnected");
-        mediaController = null;
-      }
-    };
-
     @Override
     public void onAvailable(@NonNull Network network) {
       Log.d(LOG_TAG, "onAvailable");
       HANDLER.post(() -> {
         // Build on main thread so MediaController is bound to the main looper
         controllerFuture = new MediaController.Builder(AlarmService.this, sessionToken)
-          .setListener(mediaControllerListener)
+          .setListener(AlarmService.this)
           .buildAsync();
         controllerFuture.addListener(new MediaBrowserConnectionCallback(), HANDLER::post);
         releaseConnectivityManagerCallback();
