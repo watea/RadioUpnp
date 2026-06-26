@@ -108,8 +108,8 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
     deviceExecutor.shutdownNow();
   }
 
-  @Nullable
   @Override
+  @Nullable
   public IBinder onBind(Intent intent) {
     return binder;
   }

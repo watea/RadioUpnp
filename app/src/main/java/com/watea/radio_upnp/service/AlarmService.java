@@ -150,8 +150,8 @@ public class AlarmService extends Service {
     isStarted = false;
   }
 
-  @Nullable
   @Override
+  @Nullable
   public IBinder onBind(Intent intent) {
     return binder;
   }

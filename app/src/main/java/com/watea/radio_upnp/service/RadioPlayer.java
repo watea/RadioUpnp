@@ -124,8 +124,8 @@ public class RadioPlayer extends SimpleBasePlayer {
     return sessionDeviceState;
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected SimpleBasePlayer.State getState() {
     final SimpleBasePlayer.State.Builder builder = new SimpleBasePlayer.State.Builder()
       .setPlaybackState(getPlayerState())
@@ -153,8 +153,8 @@ public class RadioPlayer extends SimpleBasePlayer {
     invalidateState();
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected ListenableFuture<?> handleSetPlayWhenReady(boolean playWhenReadyParam) {
     if (playWhenReadyParam) {
       if (!playWhenReady()) {
@@ -166,21 +166,21 @@ public class RadioPlayer extends SimpleBasePlayer {
     return Futures.immediateVoidFuture();
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected ListenableFuture<?> handleStop() {
     commands.onStop();
     return Futures.immediateVoidFuture();
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected ListenableFuture<List<MediaItem>> handleAddMediaItems(int index, @NonNull List<MediaItem> mediaItems) {
     return Futures.immediateFuture(mediaItems);
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected ListenableFuture<?> handleSeek(int mediaItemIndex, long positionMs, @Player.Command int seekCommand) {
     if ((seekCommand == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM) || (seekCommand == Player.COMMAND_SEEK_TO_NEXT)) {
       commands.onSkipToNext();
@@ -190,8 +190,8 @@ public class RadioPlayer extends SimpleBasePlayer {
     return Futures.immediateVoidFuture();
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected ListenableFuture<?> handleSetDeviceVolume(int newDeviceVolume, @C.VolumeFlags int flags) {
     final int direction = Integer.compare(newDeviceVolume, volume);
     volume = Math.max(0, Math.min(DEVICE_MAX_VOLUME, newDeviceVolume));
@@ -202,8 +202,8 @@ public class RadioPlayer extends SimpleBasePlayer {
     return Futures.immediateVoidFuture();
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected ListenableFuture<?> handleIncreaseDeviceVolume(@C.VolumeFlags int flags) {
     volume = Math.min(DEVICE_MAX_VOLUME, volume + DEVICE_VOLUME_STEP);
     invalidateState();
@@ -211,8 +211,8 @@ public class RadioPlayer extends SimpleBasePlayer {
     return Futures.immediateVoidFuture();
   }
 
-  @NonNull
   @Override
+  @NonNull
   protected ListenableFuture<?> handleDecreaseDeviceVolume(@C.VolumeFlags int flags) {
     volume = Math.max(0, volume - DEVICE_VOLUME_STEP);
     invalidateState();

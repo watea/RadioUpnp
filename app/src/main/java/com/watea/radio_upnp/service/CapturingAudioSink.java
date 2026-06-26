@@ -175,8 +175,8 @@ public class CapturingAudioSink implements AudioSink {
     delegate.setSkipSilenceEnabled(skipSilenceEnabled);
   }
 
-  @Nullable
   @Override
+  @Nullable
   public AudioAttributes getAudioAttributes() {
     return delegate.getAudioAttributes();
   }

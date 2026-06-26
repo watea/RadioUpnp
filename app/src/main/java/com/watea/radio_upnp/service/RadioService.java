@@ -307,8 +307,8 @@ public class RadioService
     mediaLibrarySession.release();
   }
 
-  @Nullable
   @Override
+  @Nullable
   public MediaLibrarySession onGetSession(@NonNull MediaSession.ControllerInfo controllerInfo) {
     return mediaLibrarySession;
   }
@@ -453,8 +453,8 @@ public class RadioService
     });
   }
 
-  @NonNull
   @Override
+  @NonNull
   public State getPlaybackState() {
     return radioPlayer.getSessionDeviceState();
   }
@@ -511,8 +511,8 @@ public class RadioService
     sessionDevice.adjustVolume(direction);
   }
 
-  @NonNull
   @Override
+  @NonNull
   public MediaNotification createNotification(
     @NonNull MediaSession mediaSession,
     @NonNull ImmutableList<CommandButton> mediaButtonPreferences,
@@ -529,8 +529,8 @@ public class RadioService
     return false;
   }
 
-  @NonNull
   @Override
+  @NonNull
   public MediaSession.ConnectionResult onConnect(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
     final SessionCommands sessionCommands = new SessionCommands.Builder()
       .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_LIBRARY_ROOT)
@@ -546,8 +546,8 @@ public class RadioService
     return MediaSession.ConnectionResult.accept(sessionCommands, new Player.Commands.Builder().addAllCommands().build());
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ListenableFuture<LibraryResult<MediaItem>> onGetLibraryRoot(
     @NonNull MediaLibrarySession session,
     @NonNull MediaSession.ControllerInfo browser,
@@ -563,8 +563,8 @@ public class RadioService
         .build(), params));
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> onGetChildren(
     @NonNull MediaLibrarySession session,
     @NonNull MediaSession.ControllerInfo browser,
@@ -589,8 +589,8 @@ public class RadioService
     return Futures.immediateFuture(LibraryResult.ofItemList(items.build(), params));
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ListenableFuture<SessionResult> onCustomCommand(
     @NonNull MediaSession session,
     @NonNull MediaSession.ControllerInfo controller,
@@ -609,8 +609,8 @@ public class RadioService
     return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_SUCCESS));
   }
 
-  @NonNull
   @Override
+  @NonNull
   public ListenableFuture<List<MediaItem>> onAddMediaItems(
     @NonNull MediaSession mediaSession,
     @NonNull MediaSession.ControllerInfo controller,

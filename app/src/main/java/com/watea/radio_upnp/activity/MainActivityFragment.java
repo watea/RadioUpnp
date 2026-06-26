@@ -62,8 +62,8 @@ public abstract class MainActivityFragment extends Fragment {
 
   public abstract int getTitle();
 
-  @Nullable
   @Override
+  @Nullable
   public View onCreateView(
     @NonNull LayoutInflater inflater,
     @Nullable ViewGroup container,
