@@ -331,8 +331,6 @@ public class PlayerController
     playedRadioRateTextView.setText(text);
   }
 
-  // This might happen if the RadioService is killed while the Activity is in the
-  // foreground and onStart() has been called (but not onStop())
   @Override
   public void onDisconnected(@NonNull MediaController controller) {
     Log.d(LOG_TAG, "onDisconnected");
