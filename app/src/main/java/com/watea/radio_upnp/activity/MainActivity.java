@@ -110,7 +110,7 @@ import java.util.function.Consumer;
 
 public class MainActivity
   extends AppCompatActivity
-  implements NavigationView.OnNavigationItemSelectedListener {
+  implements NavigationView.OnNavigationItemSelectedListener, AndroidUpnpService.Listener {
   public static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
@@ -149,62 +149,14 @@ public class MainActivity
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
-  private NetworkProxy networkProxy;
-  private ActivityResultLauncher<Intent> importExportLauncher;
-  @Nullable
-  private ImportExportAction importExportAction = null;
-  @Nullable
-  private Consumer<Bitmap> upnpIconConsumer = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
-    private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
-      @Override
-      public void onFatalError() {
-        runOnUiThread(() -> tell(R.string.upnp_error));
-      }
-
-      @Override
-      public void onDeviceAdd(@NonNull Device device) {
-        if (upnpService.getSelectedDevice() == device) {
-          consumeIcon(device);
-        }
-      }
-
-      @Override
-      public void onDeviceRemove(@NonNull Device device) {
-        if (upnpService.getSelectedDevice() == device) {
-          consumeIcon(null);
-        }
-      }
-
-      @Override
-      public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
-        consumeIcon(device);
-        if (upnpAlertDialog.isShowing()) {
-          if (device == null) {
-            tell(R.string.no_dlna_selection);
-          } else {
-            tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
-            final Radio radio = playerController.getCurrentRadio();
-            if (radio != null) {
-              startReading(radio);
-            }
-          }
-          upnpAlertDialog.dismiss();
-        }
-      }
-
-      private void consumeIcon(@Nullable Device device) {
-        runOnUiThread(() -> MainActivity.this.consumeIcon(device));
-      }
-    };
-
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
       upnpService = (AndroidUpnpService.UpnpService) service;
       if (upnpService != null) {
         // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
-        upnpService.addListener(upnpListener);
+        upnpService.addListener(MainActivity.this);
       }
     }
 
@@ -219,6 +171,12 @@ public class MainActivity
       upnpDevicesAdapter.setUpnpService(null);
     }
   };
+  private NetworkProxy networkProxy;
+  private ActivityResultLauncher<Intent> importExportLauncher;
+  @Nullable
+  private ImportExportAction importExportAction = null;
+  @Nullable
+  private Consumer<Bitmap> upnpIconConsumer = null;
 
   public static int getThemeAttributeColor(@NonNull Context context, int attr) {
     final int[] attrs = {attr};
@@ -366,7 +324,7 @@ public class MainActivity
     this.upnpIconConsumer = upnpIconConsumer;
     // Update icon if needed
     if (upnpService != null) {
-      consumeIcon(upnpService.getSelectedDevice());
+      onNewSelectedDevice(upnpService.getSelectedDevice());
     }
   }
 
@@ -418,6 +376,42 @@ public class MainActivity
         .setView(R.layout.view_loading)
         .create() :
       loadingAlertDialog;
+  }
+
+  @Override
+  public void onFatalError() {
+    runSafelyOnUiThread(() -> tell(R.string.upnp_error));
+  }
+
+  @Override
+  public void onDeviceAdd(@NonNull Device device) {
+    if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
+      onNewSelectedDevice(device);
+    }
+  }
+
+  @Override
+  public void onDeviceRemove(@NonNull Device device) {
+    if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
+      onNewSelectedDevice(null);
+    }
+  }
+
+  @Override
+  public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
+    onNewSelectedDevice(device);
+    if (upnpAlertDialog.isShowing()) {
+      if (device == null) {
+        tell(R.string.no_dlna_selection);
+      } else {
+        tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+        final Radio radio = playerController.getCurrentRadio();
+        if (radio != null) {
+          startReading(radio);
+        }
+      }
+      upnpAlertDialog.dismiss();
+    }
   }
 
   // Is called also when coming back after a "Back" exit
@@ -693,15 +687,17 @@ public class MainActivity
     }
   }
 
-  private void consumeIcon(@Nullable Device device) {
-    if (upnpIconConsumer != null) {
-      if (device == null) {
-        upnpIconConsumer.accept(null);
-      } else {
-        final Bitmap icon = device.getIcon();
-        upnpIconConsumer.accept((icon == null) ? getDefaultIcon(R.drawable.ic_cast_warm) : icon);
+  private void onNewSelectedDevice(@Nullable Device device) {
+    runSafelyOnUiThread(() -> {
+      if (upnpIconConsumer != null) {
+        if (device == null) {
+          upnpIconConsumer.accept(null);
+        } else {
+          final Bitmap icon = device.getIcon();
+          upnpIconConsumer.accept((icon == null) ? getDefaultIcon(R.drawable.ic_cast_warm) : icon);
+        }
       }
-    }
+    });
   }
 
   private int getCurrentTheme() {
