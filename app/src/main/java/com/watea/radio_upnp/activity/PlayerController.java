@@ -68,7 +68,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
+public class PlayerController
+  implements RadiosMainAdapter.CurrentRadioListenerSetter, Player.Listener, MediaController.Listener {
   // Button tag = action to perform on next click
   private static final int TAG_ACTION_PLAY = 0;
   private static final int TAG_ACTION_PAUSE = 1;
@@ -106,28 +107,6 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   // MediaController once connected
   @Nullable
   private MediaController mediaController = null;
-  // Callback from media session events
-  private final MediaController.Listener mediaControllerListener = new MediaController.Listener() {
-    @Override
-    public void onExtrasChanged(@NonNull MediaController controller, @NonNull Bundle extras) {
-      String rate = extras.getString(mainActivity.getString(R.string.key_bitrate));
-      rate = ((rate == null) || rate.isEmpty()) ? "" : rate + mainActivity.getString(R.string.kbps);
-      String mimeType = extras.getString(mainActivity.getString(R.string.key_mime_type));
-      mimeType = ((mimeType == null) || mimeType.isEmpty()) ? "" : mimeType;
-      final String text = rate + (rate.isEmpty() ? "" : " - ") + mimeType;
-      playedRadioRateTextView.setText(text);
-    }
-
-    // This might happen if the RadioService is killed while the Activity is in the
-    // foreground and onStart() has been called (but not onStop())
-    @Override
-    public void onDisconnected(@NonNull MediaController controller) {
-      Log.d(LOG_TAG, "onDisconnected");
-      mediaController = null;
-      setDefaultPlayImageButton();
-      setPlayImageButtonVisibility(false, false);
-    }
-  };
   @Nullable
   private String pendingRadioName = null;
   private boolean pendingAutoPlay = false;
@@ -146,76 +125,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   };
   @Nullable
   private Consumer<Radio> listener = null;
-  // Callback from player state changes
-  private final Player.Listener playerListener = new Player.Listener() {
-    private int previousPlaybackState = Player.STATE_IDLE;
-
-    @Override
-    public void onPlaybackStateChanged(int playbackState) {
-      updatePlayButton();
-    }
-
-    @Override
-    public void onIsPlayingChanged(boolean isPlaying) {
-      updatePlayButton();
-    }
-
-    @Override
-    public void onPlayerErrorChanged(@Nullable PlaybackException error) {
-      updatePlayButton();
-    }
-
-    // Manage dynamic data
-    @Override
-    public void onMediaMetadataChanged(@NonNull MediaMetadata mediaMetadata) {
-      // Use display title metadata (ICY info only, not radio name)
-      final CharSequence displayTitle = mediaMetadata.displayTitle;
-      playedRadioInformationTextView.setText((displayTitle == null) ? "" : displayTitle);
-      if ((displayTitle != null) && !displayTitle.toString().isEmpty()) {
-        // User help for first valid information after a few time
-        informationPressUserHint.show();
-      }
-    }
-
-    private void updatePlayButton() {
-      assert mediaController != null;
-      final int playbackState = mediaController.getPlaybackState();
-      final boolean isPlaying = mediaController.isPlaying();
-      final boolean hasError = (mediaController.getPlayerError() != null);
-      setDefaultPlayImageButton();
-      switch (playbackState) {
-        case Player.STATE_READY:
-          if (isPlaying) {
-            playImageButton.setImageResource(R.drawable.ic_pause_white_24dp);
-            playImageButton.setTag(TAG_ACTION_PAUSE);
-          }
-          setPlayImageButtonVisibility(true, false);
-          break;
-        case Player.STATE_BUFFERING: {
-          final boolean isVisible = onNewCurrentRadio();
-          setPlayImageButtonVisibility(isVisible, true);
-          break;
-        }
-        default:
-          if (hasError) {
-            if (getCurrentRadio() == null) {
-              setPlayImageButtonVisibility(false, false);
-            } else {
-              playImageButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
-              playImageButton.setTag(TAG_ACTION_PLAY);
-              setPlayImageButtonVisibility(true, false);
-            }
-            mainActivity.tell(R.string.radio_connection_error);
-          } else {
-            if (previousPlaybackState != Player.STATE_IDLE) {
-              mainActivity.tell(R.string.media_session_stopped);
-            }
-            setPlayImageButtonVisibility(onNewCurrentRadio(), false);
-          }
-      }
-      previousPlaybackState = playbackState;
-    }
-  };
+  private int previousPlaybackState = Player.STATE_IDLE;
   private boolean isLongPress = false;
 
   @SuppressLint("ClickableViewAccessibility")
@@ -335,13 +245,13 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     // Create MediaController
     final SessionToken token = new SessionToken(mainActivity, new ComponentName(mainActivity, RadioService.class));
     controllerFuture = new MediaController.Builder(mainActivity, token)
-      .setListener(mediaControllerListener)
+      .setListener(this)
       .buildAsync();
     controllerFuture.addListener(() -> {
       try {
         // Get a MediaController for the MediaSession
         mediaController = controllerFuture.get();
-        mediaController.addListener(playerListener);
+        mediaController.addListener(this);
         // Connect radios to other components
         Radios.getInstance().addListener(radiosListener);
         // Launch any radio?
@@ -350,10 +260,10 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
         onNewCurrentRadio();
         // Sync existing MediaSession state with UI.
         // Order matters here for display coherence.
-        playerListener.onPlaybackStateChanged(mediaController.getPlaybackState());
+        onPlaybackStateChanged(mediaController.getPlaybackState());
         final MediaMetadata metadata = mediaController.getMediaMetadata();
-        playerListener.onMediaMetadataChanged(metadata);
-        mediaControllerListener.onExtrasChanged(mediaController, mediaController.getSessionExtras());
+        onMediaMetadataChanged(metadata);
+        onExtrasChanged(mediaController, mediaController.getSessionExtras());
       } catch (ExecutionException | InterruptedException exception) {
         Log.e(LOG_TAG, "onActivityCreate: controller connection failed", exception);
       }
@@ -367,7 +277,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     Radios.getInstance().removeListener(radiosListener);
     // Disconnect controller
     if (mediaController != null) {
-      mediaController.removeListener(playerListener);
+      mediaController.removeListener(this);
       mediaController.release();
       mediaController = null;
     }
@@ -408,6 +318,58 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     // Init listener
     if (this.listener != null) {
       this.listener.accept(getCurrentRadio());
+    }
+  }
+
+  @Override
+  public void onExtrasChanged(@NonNull MediaController controller, @NonNull Bundle extras) {
+    String rate = extras.getString(mainActivity.getString(R.string.key_bitrate));
+    rate = ((rate == null) || rate.isEmpty()) ? "" : rate + mainActivity.getString(R.string.kbps);
+    String mimeType = extras.getString(mainActivity.getString(R.string.key_mime_type));
+    mimeType = ((mimeType == null) || mimeType.isEmpty()) ? "" : mimeType;
+    final String text = rate + (rate.isEmpty() ? "" : " - ") + mimeType;
+    playedRadioRateTextView.setText(text);
+  }
+
+  // This might happen if the RadioService is killed while the Activity is in the
+  // foreground and onStart() has been called (but not onStop())
+  @Override
+  public void onDisconnected(@NonNull MediaController controller) {
+    Log.d(LOG_TAG, "onDisconnected");
+    mediaController = null;
+    setDefaultPlayImageButton();
+    setPlayImageButtonVisibility(false, false);
+  }
+
+  @Override
+  public void onPlaybackStateChanged(int playbackState) {
+    updatePlayButton();
+  }
+
+  @Override
+  public void onIsPlayingChanged(boolean isPlaying) {
+    updatePlayButton();
+  }
+
+  @Override
+  public void onPlayerErrorChanged(@Nullable PlaybackException error) {
+    updatePlayButton();
+  }
+
+  @Override
+  public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+    onNewCurrentRadio();
+  }
+
+  // Manage dynamic data
+  @Override
+  public void onMediaMetadataChanged(@NonNull MediaMetadata mediaMetadata) {
+    // Use display title metadata (ICY info only, not radio name)
+    final CharSequence displayTitle = mediaMetadata.displayTitle;
+    playedRadioInformationTextView.setText((displayTitle == null) ? "" : displayTitle);
+    if ((displayTitle != null) && !displayTitle.toString().isEmpty()) {
+      // User help for first valid information after a few time
+      informationPressUserHint.show();
     }
   }
 
@@ -488,6 +450,45 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
         mainActivity.tell(mainActivity.getString(R.string.sleep_set, sleep));
       }
     }
+  }
+
+  private void updatePlayButton() {
+    assert mediaController != null;
+    final int playbackState = mediaController.getPlaybackState();
+    final boolean isPlaying = mediaController.isPlaying();
+    final boolean hasError = (mediaController.getPlayerError() != null);
+    setDefaultPlayImageButton();
+    switch (playbackState) {
+      case Player.STATE_READY:
+        if (isPlaying) {
+          playImageButton.setImageResource(R.drawable.ic_pause_white_24dp);
+          playImageButton.setTag(TAG_ACTION_PAUSE);
+        }
+        setPlayImageButtonVisibility(true, false);
+        break;
+      case Player.STATE_BUFFERING: {
+        final boolean isVisible = onNewCurrentRadio();
+        setPlayImageButtonVisibility(isVisible, true);
+        break;
+      }
+      default:
+        if (hasError) {
+          if (getCurrentRadio() == null) {
+            setPlayImageButtonVisibility(false, false);
+          } else {
+            playImageButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
+            playImageButton.setTag(TAG_ACTION_PLAY);
+            setPlayImageButtonVisibility(true, false);
+          }
+          mainActivity.tell(R.string.radio_connection_error);
+        } else {
+          if (previousPlaybackState != Player.STATE_IDLE) {
+            mainActivity.tell(R.string.media_session_stopped);
+          }
+          setPlayImageButtonVisibility(onNewCurrentRadio(), false);
+        }
+    }
+    previousPlaybackState = playbackState;
   }
 
   // true if valid radio, false otherwise
