@@ -129,10 +129,10 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     setLaunchConfiguration(null, DEFAULT_LISTENER);
   }
 
-  // Must be called early before any session is started.
-  public void launch(@NonNull RemoteSessionDevice remoteSessionDevice) {
-    Log.d(LOG_TAG, "launch: " + remoteSessionDevice.getLockKey());
-    setLaunchConfiguration(new StreamResource(remoteSessionDevice.getRadio(), remoteSessionDevice.getLockKey()), remoteSessionDevice);
+  // Must be called early before any session is started
+  public void launch(@NonNull Radio radio, @NonNull String lockKey, @NonNull Listener listener) {
+    Log.d(LOG_TAG, "launch: " + lockKey);
+    setLaunchConfiguration(new StreamResource(radio, lockKey), listener);
   }
 
   // Order matters: listener shall be set before streamResource

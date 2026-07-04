@@ -84,7 +84,7 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
 
   @Override
   public void launch() {
-    streamServer.launch(this);
+    streamServer.launch(radio, lockKey, this);
     super.launch();
   }
 
