@@ -759,11 +759,18 @@ public class RadioService
   }
 
   private void skipTo(int direction) {
+    final Radio currentRadio;
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "skipTo: sessionDevice is null");
+      final String lastId = getAppPreferences(this).getString(getString(R.string.key_last_played_radio), null);
+      currentRadio = (lastId == null) ? null : Radios.getInstance().getRadioFromId(lastId);
+    } else {
+      currentRadio = sessionDevice.getRadio();
+    }
+    if (currentRadio == null) {
+      Log.e(LOG_TAG, "skipTo: no current radio");
       return;
     }
-    final Radio nextRadio = Radios.getInstance().getRadioFrom(sessionDevice.getRadio(), direction);
+    final Radio nextRadio = Radios.getInstance().getRadioFrom(currentRadio, direction);
     if (nextRadio == null) {
       Log.e(LOG_TAG, "skipTo: next radio is null");
       return;
