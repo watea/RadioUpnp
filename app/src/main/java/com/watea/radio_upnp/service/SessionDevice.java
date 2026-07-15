@@ -41,13 +41,16 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.okhttp.OkHttpDataSource;
+import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.LoadControl;
 import androidx.media3.exoplayer.Renderer;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer;
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.metadata.MetadataRenderer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
 
 import com.watea.radio_upnp.model.EasyX509TrustManager;
@@ -70,6 +73,13 @@ public abstract class SessionDevice implements Player.Listener {
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int CONNECTION_TIMEOUT_S = 10;
+  // Tolerance for flaky/mobile networks: retry loads further and buffer deeper ahead
+  // before surfacing a playback error, at the cost of a longer initial/rebuffer delay
+  private static final int MIN_LOADABLE_RETRY_COUNT = 10;
+  private static final int MIN_BUFFER_MS = 30_000;
+  private static final int MAX_BUFFER_MS = 60_000;
+  private static final int BUFFER_FOR_PLAYBACK_MS = 5_000;
+  private static final int BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 10_000;
   @NonNull
   protected final Context context;
   @NonNull
@@ -267,8 +277,14 @@ public abstract class SessionDevice implements Player.Listener {
       Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
       httpDataSourceFactory = new DefaultHttpDataSource.Factory().setDefaultRequestProperties(userAgentProperty);
     }
+    final DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(httpDataSourceFactory)
+      .setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy(MIN_LOADABLE_RETRY_COUNT));
+    final LoadControl loadControl = new DefaultLoadControl.Builder()
+      .setBufferDurationsMs(MIN_BUFFER_MS, MAX_BUFFER_MS, BUFFER_FOR_PLAYBACK_MS, BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS)
+      .build();
     return new ExoPlayer.Builder(context)
-      .setMediaSourceFactory(new DefaultMediaSourceFactory(httpDataSourceFactory))
+      .setMediaSourceFactory(mediaSourceFactory)
+      .setLoadControl(loadControl)
       .setRenderersFactory(
         (handler,
          videoListener,
