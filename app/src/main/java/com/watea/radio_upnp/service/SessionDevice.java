@@ -76,10 +76,10 @@ public abstract class SessionDevice implements Player.Listener {
   // Tolerance for flaky/mobile networks: retry loads further and buffer deeper ahead
   // before surfacing a playback error, at the cost of a longer initial/rebuffer delay
   private static final int MIN_LOADABLE_RETRY_COUNT = 10;
-  private static final int MIN_BUFFER_MS = 30_000;
-  private static final int MAX_BUFFER_MS = 60_000;
+  private static final int MIN_BUFFER_MS = 60_000;
+  private static final int MAX_BUFFER_MS = 120_000;
   private static final int BUFFER_FOR_PLAYBACK_MS = 5_000;
-  private static final int BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 10_000;
+  private static final int BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 20_000;
   @NonNull
   protected final Context context;
   @NonNull
