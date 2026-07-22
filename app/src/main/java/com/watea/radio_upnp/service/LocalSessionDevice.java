@@ -105,16 +105,19 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
 
   @Override
   public void stop() {
-    releaseAudioFocus();
-    unregisterAudioNoisyReceiver();
+    releaseAudioAndListeners();
     super.stop();
   }
 
   @Override
   public void release() {
-    releaseAudioFocus();
-    unregisterAudioNoisyReceiver();
+    releaseAudioAndListeners();
     super.release();
+  }
+
+  @Override
+  public void onAndroidAutoDisconnected() {
+    pause();
   }
 
   @Override
@@ -180,7 +183,10 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
   @Override
   protected void startExoPlayer() {
     if (requestAudioFocus()) {
-      registerAudioNoisyReceiver();
+      if (!audioNoisyReceiverRegistered) {
+        context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER);
+        audioNoisyReceiverRegistered = true;
+      }
       super.startExoPlayer();
     } else {
       onState(State.ERROR);
@@ -201,19 +207,8 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
     return granted;
   }
 
-  private void releaseAudioFocus() {
-    Log.d(LOG_TAG, "Audio focus released");
-    audioManager.abandonAudioFocusRequest(audioFocusRequest);
-  }
-
-  private void registerAudioNoisyReceiver() {
-    if (!audioNoisyReceiverRegistered) {
-      context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER);
-      audioNoisyReceiverRegistered = true;
-    }
-  }
-
-  private void unregisterAudioNoisyReceiver() {
+  private void releaseAudioAndListeners() {
+    releaseAudioFocus();
     if (audioNoisyReceiverRegistered) {
       try {
         context.unregisterReceiver(audioNoisyReceiver);
@@ -221,5 +216,10 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
       }
       audioNoisyReceiverRegistered = false;
     }
+  }
+
+  private void releaseAudioFocus() {
+    Log.d(LOG_TAG, "Audio focus released");
+    audioManager.abandonAudioFocusRequest(audioFocusRequest);
   }
 }

@@ -110,16 +110,19 @@ public class RadioService
   private static String CHANNEL_ID;
   private final SleepController sleepController = new SleepController();
   private boolean isAndroidAutoConnected = false;
+  @Nullable
+  private SessionDevice sessionDevice = null;
   private final Observer<Integer> carConnectionObserver = type -> {
     final boolean connected = (type != null) && (type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
+    if (isAndroidAutoConnected && !connected && (sessionDevice != null)) {
+      sessionDevice.onAndroidAutoDisconnected();
+    }
     isAndroidAutoConnected = connected;
-    Log.d(LOG_TAG, "Android Auto: " + (connected ? "CONNECTED" : "DISCONNECTED"));
+    Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
   };
   private boolean isLastRadioToLaunch = false;
   @Nullable
   private String pendingSearchQuery = null;
-  @Nullable
-  private SessionDevice sessionDevice = null;
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {

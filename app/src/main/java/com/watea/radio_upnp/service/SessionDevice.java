@@ -175,6 +175,9 @@ public abstract class SessionDevice implements Player.Listener {
     listener.onNewInformation((title == null) ? "" : title, lockKey);
   }
 
+  public void onAndroidAutoDisconnected() {
+  }
+
   @Override
   public void onTracksChanged(@NonNull Tracks tracks) {
     for (final Tracks.Group group : tracks.getGroups()) {
