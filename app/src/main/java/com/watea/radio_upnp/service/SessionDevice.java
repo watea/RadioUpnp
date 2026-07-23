@@ -143,6 +143,8 @@ public abstract class SessionDevice implements Player.Listener {
     if (isExoPlayerActive()) {
       exoPlayer.stop();
     }
+    // A voluntary stop is never a recoverable stream drop
+    isAllowedToRewind = false;
   }
 
   public void launch() {
