@@ -82,7 +82,6 @@ import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 @OptIn(markerClass = UnstableApi.class)
 public class RadioService
@@ -392,7 +391,7 @@ public class RadioService
     final State state = getPlaybackState();
     Log.d(LOG_TAG, "onCastStarted with state: " + state);
     if ((sessionDevice != null) && ((state == State.BUFFERING) || (state == State.PAUSED) || (state == State.PLAYING))) {
-      playFromMediaId(sessionDevice.getRadio().getId());
+      play(sessionDevice.getRadio());
     }
   }
 
@@ -434,19 +433,16 @@ public class RadioService
       }
       radioPlayer.setState(state);
       switch (state) {
+        case PAUSED:
+          releaseResources();
         case PLAYING:
         case BUFFERING:
           break;
-        case PAUSED:
-          releaseResources();
-          break;
         case ERROR:
           if (sessionDevice.consumeRewind()) {
-            sessionDevice.release();
-            playFromMediaId(sessionDevice.getRadio().getId());
-            return;
+            play(sessionDevice.getRadio());
+            break;
           }
-          // fall through
         default:
           releaseResources();
           sessionDevice.release();
@@ -713,14 +709,8 @@ public class RadioService
     sleepController.release();
   }
 
-  private void playFromMediaId(@NonNull String mediaId) {
-    Log.d(LOG_TAG, "playFromMediaId with mediaId: " + mediaId);
-    final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
-    if (radio == null) {
-      Log.e(LOG_TAG, "playFromMediaId: radio not found");
-      return;
-    }
-    Log.d(LOG_TAG, "playFromMediaId with radio: " + radio.getName() + " => " + radio.getUri());
+  private void play(@NonNull Radio radio) {
+    Log.d(LOG_TAG, "play: " + radio.getName() + " => " + radio.getUri());
     getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
     final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
     if (sessionDevice != null) {
@@ -732,6 +722,16 @@ public class RadioService
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
     sessionDevice.launch();
     startForegroundService(new Intent(this, RadioService.class));
+  }
+
+  private void playFromMediaId(@NonNull String mediaId) {
+    Log.d(LOG_TAG, "playFromMediaId: " + mediaId);
+    final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
+    if (radio == null) {
+      Log.e(LOG_TAG, "playFromMediaId: radio not found");
+    } else {
+      play(radio);
+    }
   }
 
   private void playFromSearch(@Nullable String query) {
@@ -757,7 +757,7 @@ public class RadioService
       Log.w(LOG_TAG, "playFromSearch: no match found for query = " + query);
     } else {
       Log.d(LOG_TAG, "playFromSearch: matched radio = " + match.getName());
-      playFromMediaId(match.getId());
+      play(match);
     }
   }
 
@@ -765,15 +765,16 @@ public class RadioService
     final String lastId = getAppPreferences(this).getString(getString(R.string.key_last_played_radio), null);
     final Radio currentRadio = (lastId == null) ? null : Radios.getInstance().getRadioFromId(lastId);
     if (currentRadio == null) {
-      Log.e(LOG_TAG, "skipTo: no current radio");
+      Log.d(LOG_TAG, "skipTo: no current radio");
       return;
     }
     final Radio nextRadio = Radios.getInstance().getRadioFrom(currentRadio, direction);
     if (nextRadio == null) {
+      // Shall not happen
       Log.e(LOG_TAG, "skipTo: next radio is null");
-      return;
+    } else {
+      play(nextRadio);
     }
-    playFromMediaId(nextRadio.getId());
   }
 
   // true if work done
@@ -795,13 +796,12 @@ public class RadioService
     SessionDevice result = null;
     if (!isAndroidAutoConnected && (streamServer != null) && new NetworkProxy(this).isOnWifi()) {
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
-      final Consumer<Radio> onPlayCallback = currentRadio -> playFromMediaId(currentRadio.getId());
       if (castManager.hasCastSession()) {
         result = castManager.getCastSessionDevice(
           this,
           this,
           radio,
-          onPlayCallback,
+          this::play,
           streamServer);
       } else if (upnpSelectedDevice != null) {
         result = new UpnpSessionDevice(
@@ -809,7 +809,7 @@ public class RadioService
           getAppPreferences(this).getBoolean(getString(R.string.key_pcm_mode), KEY_PCM_MODE_DEFAULT),
           this,
           radio,
-          onPlayCallback,
+          this::play,
           streamServer,
           upnpService.getRequestController(),
           upnpSelectedDevice);
