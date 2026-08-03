@@ -13,7 +13,7 @@
     <capability android:name="actions.intent.PLAY_MEDIA">
 
         <intent
-            android:action="android.intent.action.MEDIA_PLAY_FROM_SEARCH"
+            android:action="android.media.action.MEDIA_PLAY_FROM_SEARCH"
             android:targetClass="com.watea.radio_upnp.activity.MainActivity"
             android:targetPackage="com.watea.radio_upnp">
 
