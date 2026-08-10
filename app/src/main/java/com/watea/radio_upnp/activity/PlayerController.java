@@ -248,6 +248,10 @@ public class PlayerController
       .setListener(this)
       .buildAsync();
     controllerFuture.addListener(() -> {
+      // Activity may have been destroyed before connection completed
+      if (controllerFuture == null) {
+        return;
+      }
       try {
         // Get a MediaController for the MediaSession
         mediaController = controllerFuture.get();
