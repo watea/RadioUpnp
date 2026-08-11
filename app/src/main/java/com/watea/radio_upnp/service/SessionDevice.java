@@ -96,7 +96,7 @@ public abstract class SessionDevice implements Player.Listener {
   protected final CapturingAudioSink capturingAudioSink;
   @Nullable
   protected Radio.ConnectionSet connectionSet = null;
-  protected volatile boolean isReleased = false;
+  private volatile boolean isReleased = false;
   private volatile boolean isAllowedToRewind = false;
 
   protected SessionDevice(
@@ -211,8 +211,19 @@ public abstract class SessionDevice implements Player.Listener {
     listener.onState(state, lockKey);
   }
 
+  protected void postIfNotReleased(@NonNull Runnable runnable) {
+    HANDLER.post(() -> {
+      if (!isReleased) {
+        runnable.run();
+      }
+    });
+  }
+
   // Fires ERROR if upstream connection failed.
   protected boolean prepare() {
+    if (isReleased) {
+      return false;
+    }
     connectionSet = radio.getConnectionSet(STREAMING_USER_AGENT);
     if (connectionSet == null) {
       if (isExoPlayerActive()) {
@@ -226,9 +237,12 @@ public abstract class SessionDevice implements Player.Listener {
         return false;
       }
     }
+    if (isReleased) {
+      return false;
+    }
     if (isExoPlayerActive()) {
       // Post ExoPlayer calls to the main thread
-      HANDLER.post(this::startExoPlayer);
+      postIfNotReleased(this::startExoPlayer);
     } else {
       listener.onNewBitrate(connectionSet.getBitrate(), connectionSet.getContent(), lockKey);
     }

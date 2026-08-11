@@ -156,9 +156,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   @Override
   protected boolean prepare() {
     // super.prepare() blocks until the upstream HTTP connection is established.
-    // By the time it returns, the session may have been released (e.g. by a
-    // connect watchdog). Guard against scheduling stale UPnP actions.
-    if (super.prepare() && !isReleased) {
+    if (super.prepare()) {
       scheduleActionGetProtocolInfo();
       scheduleActionPrepareForConnection();
       scheduleActionSetAvTransportUri();
