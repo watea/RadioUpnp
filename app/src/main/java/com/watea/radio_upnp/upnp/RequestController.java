@@ -34,29 +34,30 @@ public class RequestController {
     requests.removeIf(request -> request.hasDevice(device));
   }
 
-  public void runNextRequest() {
-    final Request next;
-    synchronized (this) {
-      if (requests.isEmpty()) {
-        return;
-      }
-      requests.poll();
-      next = requests.peekFirst();
-    }
-    if (next != null) {
-      next.execute();
-    }
-  }
-
   public void schedule(@NonNull Request request) {
     final boolean isFirst;
     synchronized (this) {
       requests.add(request);
       isFirst = (requests.size() == 1);
     }
-    // First action? => Start new thread
+    // First request? => Start new thread draining the whole queue
     if (isFirst) {
-      request.ownThreadExecute();
+      new Thread(this::drainQueue).start();
+    }
+  }
+
+  // Runs on its own thread; executes requests in order until the queue is empty
+  private void drainQueue() {
+    Request request;
+    synchronized (this) {
+      request = requests.peekFirst();
+    }
+    while (request != null) {
+      request.execute();
+      synchronized (this) {
+        requests.poll();
+        request = requests.peekFirst();
+      }
     }
   }
 }

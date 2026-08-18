@@ -62,19 +62,16 @@ public abstract class Request {
 
   @NonNull
   private final Action action;
-  @NonNull
-  private final RequestController requestController;
   // List as parameter must follow an order
   private final List<Argument> arguments = new ArrayList<>();
   private final Map<String, String> responses = new HashMap<>();
 
-  public Request(@NonNull Action action, @NonNull RequestController requestController) {
+  public Request(@NonNull Action action) {
     this.action = action;
-    this.requestController = requestController;
   }
 
-  public Request(@NonNull Action action, @NonNull RequestController requestController, @NonNull String instanceId) {
-    this(action, requestController);
+  public Request(@NonNull Action action, @NonNull String instanceId) {
+    this(action);
     addArgument("InstanceID", instanceId);
   }
 
@@ -212,10 +209,6 @@ public abstract class Request {
     new Thread(this::execute).start();
   }
 
-  public void schedule() {
-    requestController.schedule(this);
-  }
-
   public boolean hasDevice(@NonNull Device device) {
     return action.getDevice().equals(device);
   }
@@ -225,14 +218,12 @@ public abstract class Request {
     return responses.get(name);
   }
 
-  // Runs next by default
+  // Override to react to a successful call
   protected void onSuccess() {
-    requestController.runNextRequest();
   }
 
-  // Runs next by default
+  // Override to react to a failed call
   protected void onFailure() {
-    requestController.runNextRequest();
   }
 
   @NonNull
