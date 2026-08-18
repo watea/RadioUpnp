@@ -86,8 +86,8 @@
     <string name="radio_tag">[Please select tag]</string>
     <string name="bitrate">[Please select bitrate]</string>
     <string name="no_radio_found">No radio found!</string>
-    <string name="alarm_title">"Alarm"</string>
-    <string name="alarm_set_for">"%1$02d:%2$02d"</string>
+    <string name="alarm_title">Alarm</string>
+    <string name="alarm_set_for">%1$02d:%2$02d</string>
     <string name="alarm_cancelled">Alarm cancelled!</string>
     <string name="alarm_not_available">Alarm not available, please try later&#8230;</string>
     <string name="no_radio_available">No selected radio available, please play a radio!</string>
@@ -102,7 +102,7 @@
     <string name="minutes">minutes</string>
     <string name="remote">(REMOTE)</string>
     <string name="sleep_timer_title">Sleep</string>
-    <string name="sleep_timer_set_for">"Sleep timer set for: %d minutes"</string>
+    <string name="sleep_timer_set_for">Sleep timer set for: %d minutes</string>
     <string name="cancel_sleep_timer">Cancel sleep</string>
     <string name="search_done">Search done!</string>
     <string name="Layout">Layout</string>

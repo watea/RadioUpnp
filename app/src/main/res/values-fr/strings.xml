@@ -71,8 +71,8 @@
     <string name="radio_tag">[Veuillez sélectionner un tag]</string>
     <string name="bitrate">[Veuillez sélectionner un débit]</string>
     <string name="no_radio_found">Aucune radio trouvée!</string>
-    <string name="alarm_title">"Alarme"</string>
-    <string name="alarm_set_for">"%1$02d:%2$02d"</string>
+    <string name="alarm_title">Alarme</string>
+    <string name="alarm_set_for">%1$02d:%2$02d</string>
     <string name="alarm_cancelled">Alarme annulée!</string>
     <string name="alarm_not_available">Alarme non disponible, veuillez réessayer plus tard&#8230;</string>
     <string name="no_radio_available">Aucune radio sélectionnée disponible, veuillez lancer une radio!</string>
@@ -87,7 +87,7 @@
     <string name="minutes">minutes</string>
     <string name="remote">(DISTANT)</string>
     <string name="sleep_timer_title">Veille</string>
-    <string name="sleep_timer_set_for">"Minuterie de veille réglée pour: %d minutes"</string>
+    <string name="sleep_timer_set_for">Minuterie de veille réglée pour: %d minutes</string>
     <string name="cancel_sleep_timer">Annuler la veille</string>
     <string name="search_done">Recherche terminée!</string>
     <string name="Layout">Disposition</string>

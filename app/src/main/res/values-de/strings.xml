@@ -71,8 +71,8 @@
     <string name="radio_tag">[Bitte Tag auswählen]</string>
     <string name="bitrate">[Bitte Bitrate auswählen]</string>
     <string name="no_radio_found">Kein Sender gefunden!</string>
-    <string name="alarm_title">"Wecker"</string>
-    <string name="alarm_set_for">"%1$02d:%2$02d"</string>
+    <string name="alarm_title">Wecker</string>
+    <string name="alarm_set_for">%1$02d:%2$02d</string>
     <string name="alarm_cancelled">Wecker abgebrochen!</string>
     <string name="alarm_not_available">Wecker nicht verfügbar, bitte später probieren&#8230;</string>
     <string name="no_radio_available">Kein ausgewählter Sender vorhanden, bitte spiele einen Sender!</string>
@@ -87,7 +87,7 @@
     <string name="minutes">Minuten</string>
     <string name="remote">(REMOTE)</string>
     <string name="sleep_timer_title">Einschlafen</string>
-    <string name="sleep_timer_set_for">"Einschlaf-Timer eingestellt auf: %d Minuten"</string>
+    <string name="sleep_timer_set_for">Einschlaf-Timer eingestellt auf: %d Minuten</string>
     <string name="cancel_sleep_timer">Timer abbrechen</string>
     <string name="search_done">Suche beendet!</string>
     <string name="Layout">Layout</string>
