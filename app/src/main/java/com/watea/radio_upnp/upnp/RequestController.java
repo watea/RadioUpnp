@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.upnp;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import java.util.ArrayDeque;
 
@@ -45,15 +44,18 @@ public class RequestController {
     if (isFirst) {
       new Thread(() -> {
         Request nextRequest;
-        while ((nextRequest = pollNext()) != null) {
+        synchronized (this) {
+          nextRequest = requests.peekFirst();
+        }
+        while (nextRequest != null) {
+          // Kept in the queue during execution, so schedule() can detect a drain is ongoing
           nextRequest.execute();
+          synchronized (this) {
+            requests.poll();
+            nextRequest = requests.peekFirst();
+          }
         }
       }).start();
     }
-  }
-
-  @Nullable
-  private synchronized Request pollNext() {
-    return requests.poll();
   }
 }
