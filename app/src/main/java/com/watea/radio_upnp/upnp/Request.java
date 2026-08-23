@@ -205,10 +205,6 @@ public abstract class Request {
     }
   }
 
-  public void ownThreadExecute() {
-    new Thread(this::execute).start();
-  }
-
   public boolean hasDevice(@NonNull Device device) {
     return action.getDevice().equals(device);
   }

@@ -59,6 +59,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private static final String INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
+  private static final int VOLUME_UNKNOWN = -1;
   @NonNull
   private final RequestController requestController;
   @Nullable
@@ -69,9 +70,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private final Service renderingControl;
   @NonNull
   private final String information; // Not final in further use
-  private int currentVolume;
-  // Written by the calling thread (adjustVolume) and by the thread spawned by ownThreadExecute()
-  private volatile int volumeDirection = AudioManager.ADJUST_SAME;
+  private int currentVolume = VOLUME_UNKNOWN;
   @NonNull
   private String instanceId = "0";
 
@@ -123,17 +122,13 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public void adjustVolume(int direction) {
-    final Request request = getActionGetVolume();
-    if (request == null) {
-      Log.e(LOG_TAG, "adjustVolume: request is null");
+  public synchronized void adjustVolume(int direction) {
+    // Fetch volume if unknown
+    if (currentVolume == VOLUME_UNKNOWN) {
+      scheduleActionGetVolume(direction);
       return;
     }
-    // Do only if nothing done currently
-    if (volumeDirection == AudioManager.ADJUST_SAME) {
-      volumeDirection = direction;
-      request.ownThreadExecute();
-    }
+    scheduleActionSetVolume(direction);
   }
 
   @Override
@@ -172,25 +167,34 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   protected void setVolume(float volume) {
   }
 
-  private void scheduleMandatoryAction(@Nullable Action action, @NonNull Function<Action, Request> function) {
+  private void scheduleMandatoryAction(@Nullable Service service, @NonNull String name, @NonNull Function<Action, Request> function) {
+    scheduleAction(service, name, function, true);
+  }
+
+  private void scheduleOptionalAction(@Nullable Service service, @NonNull String name, @NonNull Function<Action, Request> function) {
+    scheduleAction(service, name, function, false);
+  }
+
+  private void scheduleAction(
+    @Nullable Service service,
+    @NonNull String name,
+    @NonNull Function<Action, Request> function,
+    boolean isMandatory) {
+    final Action action = (service == null) ? null : service.getAction(name);
     if (action == null) {
-      // Shall not happen
-      Log.e(LOG_TAG, "scheduleMandatoryAction: mandatory UPnP action not found");
-      onState(State.ERROR);
+      if (isMandatory) {
+        // Shall not happen
+        Log.e(LOG_TAG, "scheduleAction: mandatory UPnP action not found");
+        onState(State.ERROR);
+      }
       return;
     }
     requestController.schedule(function.apply(action));
   }
 
-  private void scheduleOptionalAction(@Nullable Action action, @NonNull Function<Action, Request> function) {
-    if (action != null) {
-      requestController.schedule(function.apply(action));
-    }
-  }
-
   private void scheduleActionGetProtocolInfo() {
     scheduleOptionalAction(
-      (connectionManager == null) ? null : connectionManager.getAction(ACTION_GET_PROTOCOL_INFO),
+      connectionManager, ACTION_GET_PROTOCOL_INFO,
       action -> new Request(action) {
         @Override
         protected void onSuccess() {
@@ -209,7 +213,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   private void scheduleActionPlay() {
     scheduleMandatoryAction(
-      (avTransportService == null) ? null : avTransportService.getAction(ACTION_PLAY),
+      avTransportService, ACTION_PLAY,
       action -> new Request(action, instanceId) {
         @Override
         protected void onSuccess() {
@@ -227,7 +231,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   private void scheduleActionStop() {
     scheduleMandatoryAction(
-      (avTransportService == null) ? null : avTransportService.getAction(ACTION_STOP),
+      avTransportService, ACTION_STOP,
       action -> new Request(action, instanceId) {
         @Override
         protected void onFailure() {
@@ -239,7 +243,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   private void scheduleActionPrepareForConnection() {
     scheduleOptionalAction(
-      (connectionManager == null) ? null : connectionManager.getAction(ACTION_PREPARE_FOR_CONNECTION),
+      connectionManager, ACTION_PREPARE_FOR_CONNECTION,
       action -> new Request(action) {
         @Override
         protected void onSuccess() {
@@ -258,71 +262,64 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
         .addArgument("Direction", "Input"));
   }
 
-  // On calling thread
-  private void executeActionSetVolume() {
-    final Action action = (renderingControl == null) ? null : renderingControl.getAction(ACTION_SET_VOLUME);
-    if (action != null) {
-      Log.d(LOG_TAG, "Volume required: " + currentVolume);
-      new Request(action, instanceId) {
-        @Override
-        protected void onSuccess() {
-          volumeDirection = AudioManager.ADJUST_SAME;
-          Log.d(LOG_TAG, "Volume set");
-        }
-
-        @Override
-        protected void onFailure() {
-          volumeDirection = AudioManager.ADJUST_SAME;
-          Log.d(LOG_TAG, "Volume set failed");
-        }
-      }
-        .addArgument(INPUT_CHANNEL, INPUT_MASTER)
-        .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume))
-        .execute();
-    }
-  }
-
-  @Nullable
-  private Request getActionGetVolume() {
-    final Action action = (renderingControl == null) ? null : renderingControl.getAction(ACTION_GET_VOLUME);
-    return (action == null) ? null :
-      new Request(action, instanceId) {
+  private void scheduleActionGetVolume(int direction) {
+    scheduleMandatoryAction(
+      renderingControl, ACTION_GET_VOLUME,
+      action -> new Request(action, instanceId) {
         @Override
         protected void onSuccess() {
           final String response = getResponse("CurrentVolume");
           if (response != null) {
             try {
-              currentVolume = Integer.parseInt(response);
-              switch (volumeDirection) {
-                case AudioManager.ADJUST_LOWER:
-                  currentVolume = Math.max(0, --currentVolume);
-                  executeActionSetVolume();
-                  break;
-                case AudioManager.ADJUST_RAISE:
-                  currentVolume++;
-                  executeActionSetVolume();
-                  break;
-                default:
-                  // Nothing to do
+              final int volume = Integer.parseInt(response);
+              synchronized (UpnpSessionDevice.this) {
+                currentVolume = volume;
+                scheduleActionSetVolume(direction);
               }
             } catch (Exception exception) {
               Log.e(LOG_TAG, "Unable to set volume", exception);
             }
           }
         }
+        // Note: failure is not taken into account
+      }
+        .addArgument(INPUT_CHANNEL, INPUT_MASTER));
+  }
+
+  // Caller must hold the monitor (see call sites) since this is a compound read-modify-write
+  private void scheduleActionSetVolume(int direction) {
+    switch (direction) {
+      case AudioManager.ADJUST_LOWER:
+        currentVolume = Math.max(0, currentVolume - 1);
+        break;
+      case AudioManager.ADJUST_RAISE:
+        currentVolume++;
+        break;
+      default:
+        // Nothing to do
+        return;
+    }
+    Log.d(LOG_TAG, "Volume required: " + currentVolume);
+    scheduleMandatoryAction(
+      renderingControl, ACTION_SET_VOLUME,
+      action -> new Request(action, instanceId) {
+        @Override
+        protected void onSuccess() {
+          Log.d(LOG_TAG, "Volume set");
+        }
 
         @Override
         protected void onFailure() {
-          // No more action
-          volumeDirection = AudioManager.ADJUST_SAME;
+          Log.d(LOG_TAG, "Volume set failed");
         }
       }
-        .addArgument(INPUT_CHANNEL, INPUT_MASTER);
+        .addArgument(INPUT_CHANNEL, INPUT_MASTER)
+        .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume)));
   }
 
   private void scheduleActionSetAvTransportUri() {
     scheduleMandatoryAction(
-      (avTransportService == null) ? null : avTransportService.getAction(ACTION_SET_AV_TRANSPORT_URI),
+      avTransportService, ACTION_SET_AV_TRANSPORT_URI,
       action -> new Request(action, instanceId) {
         @Override
         protected void onSuccess() {
