@@ -70,7 +70,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   @NonNull
   private final String information; // Not final in further use
   private int currentVolume;
-  private int volumeDirection = AudioManager.ADJUST_SAME;
+  // Written by the calling thread (adjustVolume) and by the thread spawned by ownThreadExecute()
+  private volatile int volumeDirection = AudioManager.ADJUST_SAME;
   @NonNull
   private String instanceId = "0";
 
@@ -125,7 +126,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   public void adjustVolume(int direction) {
     final Request request = getActionGetVolume();
     if (request == null) {
-      Log.e(LOG_TAG, "adjustVolume: scheduleActionGetVolume() is null");
+      Log.e(LOG_TAG, "adjustVolume: request is null");
       return;
     }
     // Do only if nothing done currently
@@ -268,7 +269,12 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
           volumeDirection = AudioManager.ADJUST_SAME;
           Log.d(LOG_TAG, "Volume set");
         }
-        // Note: failure is not taken into account
+
+        @Override
+        protected void onFailure() {
+          volumeDirection = AudioManager.ADJUST_SAME;
+          Log.d(LOG_TAG, "Volume set failed");
+        }
       }
         .addArgument(INPUT_CHANNEL, INPUT_MASTER)
         .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume))
