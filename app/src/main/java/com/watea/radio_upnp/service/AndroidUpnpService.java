@@ -106,6 +106,7 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
     ssdpClient.stop();
     // Shut down the device fetch executor
     deviceExecutor.shutdownNow();
+    requestController.shutdown();
   }
 
   @Override

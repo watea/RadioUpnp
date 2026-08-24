@@ -49,7 +49,7 @@ import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-public abstract class Request {
+public abstract class Request implements Runnable {
   private static final String LOG_TAG = Request.class.getSimpleName();
   private static final int TIMEOUT = 6000; // ms, for request connection and read
   private static final String SOAP_ENVELOPE_NS = "http://schemas.xmlsoap.org/soap/envelope/";
@@ -109,7 +109,8 @@ public abstract class Request {
     return this;
   }
 
-  public void execute() {
+  @Override
+  public void run() {
     Log.d(LOG_TAG, "execute: " + action.getName() + " on: " + action.getDevice().getDisplayString());
     final Service service = action.getService();
     final String name = action.getName();

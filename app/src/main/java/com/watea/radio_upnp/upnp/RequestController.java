@@ -25,37 +25,25 @@ package com.watea.radio_upnp.upnp;
 
 import androidx.annotation.NonNull;
 
-import java.util.ArrayDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+// Runs requests strictly one at a time, in submission order.
+// A plain ThreadPoolExecutor (not Executors.newSingleThreadExecutor()) is used so that
+// release() can reach into the pending queue via getQueue().
 public class RequestController {
-  private final ArrayDeque<Request> requests = new ArrayDeque<>();
+  private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
 
-  public synchronized void release(@NonNull Device device) {
-    requests.removeIf(request -> request.hasDevice(device));
+  public void release(@NonNull Device device) {
+    executor.getQueue().removeIf(task -> ((Request) task).hasDevice(device));
   }
 
   public void schedule(@NonNull Request request) {
-    final boolean isFirst;
-    synchronized (this) {
-      requests.add(request);
-      isFirst = (requests.size() == 1);
-    }
-    // First request? => Start new thread draining the whole queue
-    if (isFirst) {
-      new Thread(() -> {
-        Request nextRequest;
-        synchronized (this) {
-          nextRequest = requests.peekFirst();
-        }
-        while (nextRequest != null) {
-          // Kept in the queue during execution, so schedule() can detect a drain is ongoing
-          nextRequest.execute();
-          synchronized (this) {
-            requests.poll();
-            nextRequest = requests.peekFirst();
-          }
-        }
-      }).start();
-    }
+    executor.execute(request);
+  }
+
+  public void shutdown() {
+    executor.shutdownNow();
   }
 }
