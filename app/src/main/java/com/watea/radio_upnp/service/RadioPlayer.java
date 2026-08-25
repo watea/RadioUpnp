@@ -205,18 +205,20 @@ public class RadioPlayer extends SimpleBasePlayer {
   @Override
   @NonNull
   protected ListenableFuture<?> handleIncreaseDeviceVolume(@C.VolumeFlags int flags) {
-    volume = Math.min(DEVICE_MAX_VOLUME, volume + DEVICE_VOLUME_STEP);
-    invalidateState();
-    commands.onAdjustVolume(AudioManager.ADJUST_RAISE);
-    return Futures.immediateVoidFuture();
+    return handleDeviceVolume(true);
   }
 
   @Override
   @NonNull
   protected ListenableFuture<?> handleDecreaseDeviceVolume(@C.VolumeFlags int flags) {
-    volume = Math.max(0, volume - DEVICE_VOLUME_STEP);
+    return handleDeviceVolume(false);
+  }
+
+  @NonNull
+  private ListenableFuture<?> handleDeviceVolume(boolean isIncrease) {
+    volume = isIncrease ? Math.min(DEVICE_MAX_VOLUME, volume + DEVICE_VOLUME_STEP) : Math.max(0, volume - DEVICE_VOLUME_STEP);
     invalidateState();
-    commands.onAdjustVolume(AudioManager.ADJUST_LOWER);
+    commands.onAdjustVolume(isIncrease ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER);
     return Futures.immediateVoidFuture();
   }
 
