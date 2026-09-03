@@ -530,6 +530,12 @@ public class RadioService
 
   @Override
   @NonNull
+  public MediaNotification.Provider.NotificationChannelInfo getNotificationChannelInfo() {
+    return new MediaNotification.Provider.NotificationChannelInfo(CHANNEL_ID, getString(R.string.radio_service_notification_name));
+  }
+
+  @Override
+  @NonNull
   public MediaSession.ConnectionResult onConnect(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
     final SessionCommands sessionCommands = new SessionCommands.Builder()
       .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_LIBRARY_ROOT)
