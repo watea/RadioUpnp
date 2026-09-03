@@ -400,18 +400,6 @@ public class MainActivity
   @Override
   public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
     onNewSelectedDevice(device);
-    if (upnpAlertDialog.isShowing()) {
-      if (device == null) {
-        tell(R.string.no_dlna_selection);
-      } else {
-        tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
-        final Radio radio = playerController.getCurrentRadio();
-        if (radio != null) {
-          startReading(radio);
-        }
-      }
-      upnpAlertDialog.dismiss();
-    }
   }
 
   // Is called also when coming back after a "Back" exit
@@ -518,7 +506,19 @@ public class MainActivity
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
       getThemeAttributeColor(this, android.R.attr.textColorHighlight),
-      upnpView.findViewById(R.id.devices_default_linear_layout));
+      upnpView.findViewById(R.id.devices_default_linear_layout),
+      device -> {
+        if (device == null) {
+          tell(R.string.no_dlna_selection);
+        } else {
+          tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
+          final Radio radio = playerController.getCurrentRadio();
+          if (radio != null) {
+            startReading(radio);
+          }
+        }
+        upnpAlertDialog.dismiss();
+      });
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
     upnpAlertDialog = upnpAlertDialogBuilder
       .setView(upnpView)

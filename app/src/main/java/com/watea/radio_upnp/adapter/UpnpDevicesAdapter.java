@@ -54,12 +54,15 @@ public class UpnpDevicesAdapter
   private final int selectedColor;
   @NonNull
   private final View defaultView;
+  @NonNull
+  private final Listener listener;
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
 
-  public UpnpDevicesAdapter(int selectedColor, @NonNull View defaultView) {
+  public UpnpDevicesAdapter(int selectedColor, @NonNull View defaultView, @NonNull Listener listener) {
     this.selectedColor = selectedColor;
     this.defaultView = defaultView;
+    this.listener = listener;
   }
 
   public void setUpnpService(@Nullable AndroidUpnpService.UpnpService upnpService) {
@@ -134,6 +137,11 @@ public class UpnpDevicesAdapter
     }
   }
 
+  public interface Listener {
+    // Called when the user picks (or unpicks) a device row in the dialog, not on every selection change
+    void onDeviceChosen(@Nullable Device device);
+  }
+
   public class ViewHolder extends RecyclerView.ViewHolder {
     private static final int ICON_SIZE = 100;
     @NonNull
@@ -150,7 +158,9 @@ public class UpnpDevicesAdapter
       textView.setOnClickListener(v -> {
         assert device != null;
         assert upnpService != null;
-        upnpService.setSelectedDeviceIdentity(isSelected() ? null : device.getUUID());
+        final Device chosenDevice = isSelected() ? null : device;
+        upnpService.setSelectedDeviceIdentity((chosenDevice == null) ? null : chosenDevice.getUUID());
+        listener.onDeviceChosen(chosenDevice);
       });
       defaultColor = textView.getCurrentTextColor();
       castIcon = BitmapFactory.decodeResource(textView.getResources(), R.drawable.ic_cast_warm);
