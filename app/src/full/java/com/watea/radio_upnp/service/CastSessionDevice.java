@@ -30,6 +30,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.gms.cast.Cast;
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaLoadRequestData;
 import com.google.android.gms.cast.MediaMetadata;
@@ -85,6 +86,19 @@ public class CastSessionDevice extends RemoteSessionDevice {
   };
   @Nullable
   private ScheduledExecutorService heartbeat = null;
+  private double currentVolume = -1; // Unknown
+  private final Cast.Listener castListener = new Cast.Listener() {
+    @Override
+    public void onVolumeChanged() {
+      synchronized (CastSessionDevice.this) {
+        try {
+          currentVolume = castSession.getVolume();
+        } catch (IllegalStateException illegalStateException) {
+          Log.e(LOG_TAG, "Failed to read volume", illegalStateException);
+        }
+      }
+    }
+  };
 
   public CastSessionDevice(
     @NonNull Context context,
@@ -95,19 +109,25 @@ public class CastSessionDevice extends RemoteSessionDevice {
     @NonNull CastSession castSession) {
     super(context, Mode.PCM, listener, radio, onPlayCallback, streamServer);
     this.castSession = castSession;
+    castSession.addCastListener(castListener);
   }
 
   @Override
-  public void adjustVolume(int direction) {
+  public synchronized void adjustVolume(int direction) {
+    if (currentVolume < 0) {
+      currentVolume = castSession.getVolume();
+    }
+    final double previousVolume = currentVolume;
+    if (direction > 0) {
+      currentVolume = Math.min(1.0, currentVolume + VOLUME_STEP);
+    } else if (direction < 0) {
+      currentVolume = Math.max(0.0, currentVolume - VOLUME_STEP);
+    }
     try {
-      final double current = castSession.getVolume();
-      if (direction > 0) {
-        castSession.setVolume(Math.min(1.0, current + VOLUME_STEP));
-      } else if (direction < 0) {
-        castSession.setVolume(Math.max(0.0, current - VOLUME_STEP));
-      }
+      castSession.setVolume(currentVolume);
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "Failed to adjust volume", iOException);
+      currentVolume = previousVolume;
     }
   }
 
@@ -130,6 +150,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   @Override
   public void release() {
     super.release();
+    castSession.removeCastListener(castListener);
     if (heartbeat != null) {
       heartbeat.shutdownNow();
       heartbeat = null;
@@ -171,6 +192,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   protected void setVolume(float volume) {
     try {
       castSession.setVolume(volume); // 0.0 to 1.0
+      currentVolume = volume;
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "Failed to set volume", iOException);
     }
