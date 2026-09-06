@@ -59,7 +59,6 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private static final String INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
-  private static final int VOLUME_UNKNOWN = -1;
   @NonNull
   private final RequestController requestController;
   @Nullable
@@ -70,7 +69,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private final Service renderingControl;
   @NonNull
   private final String information; // Not final in further use
-  private int currentVolume = VOLUME_UNKNOWN;
+  private int currentVolume;
   @NonNull
   private String instanceId = "0";
 
@@ -123,12 +122,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   @Override
   public synchronized void adjustVolume(int direction) {
-    // Fetch volume if unknown
-    if (currentVolume == VOLUME_UNKNOWN) {
-      scheduleActionGetVolume(direction);
-      return;
-    }
-    scheduleActionSetVolume(direction);
+    // Always resync: no UPnP eventing available, volume may have changed externally (e.g. remote control)
+    scheduleActionGetVolume(direction);
   }
 
   @Override
