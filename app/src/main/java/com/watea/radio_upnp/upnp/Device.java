@@ -43,47 +43,219 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @SuppressWarnings("unused")
+//<?xml version="1.0" encoding="utf-8" ?>
+//<root xmlns="urn:schemas-upnp-org:device-1-0">
+//  <specVersion>
+//    <major>1</major>
+//    <minor>0</minor>
+//  </specVersion>
 //  <device>
-//    <deviceType>urn:schemas-upnp-org:device:deviceType:v</deviceType>
-//    <friendlyName>short user-friendly title</friendlyName>
-//    <manufacturer>manufacturer name</manufacturer>
-//    <manufacturerURL>URL to manufacturer site</manufacturerURL>
-//    <modelDescription>long user-friendly title</modelDescription>
-//    <modelName>model name</modelName>
-//    <modelNumber>model number</modelNumber>
-//    <modelURL>URL to model site</modelURL>
-//    <serialNumber>manufacturer's serial number</serialNumber>
-//          <UDN>uuid:UUID</UDN>
-//    <UPC>Universal Product Code</UPC>
+//    <deviceType>urn:schemas-upnp-org:device:ZonePlayer:1</deviceType>
+//    <friendlyName>172.16.0.10 - Sonos One - RINCON_48A6B88C948E01400</friendlyName>
+//    <manufacturer>Sonos, Inc.</manufacturer>
+//    <manufacturerURL>http://www.sonos.com</manufacturerURL>
+//    <modelNumber>S18</modelNumber>
+//<modelDescription>Sonos One</modelDescription>
+//<modelName>Sonos One</modelName>
+//    <modelURL>http://www.sonos.com/products/zoneplayers/S18</modelURL>
+//    <softwareVersion>92.0-71170</softwareVersion>
+//    <swGen>2</swGen>
+//    <hardwareVersion>1.26.1.7-1.2</hardwareVersion>
+//    <serialNum>removed for privacy</serialNum>
+//    <MACAddress>removed for privacy</MACAddress>
+//    <UDN>uuid:RINCON_48A6B88C948E01400</UDN>
 //    <iconList>
 //      <icon>
-//        <mimetype>image/format</mimetype>
-//        <width>horizontal pixels</width>
-//        <height>vertical pixels</height>
-//        <depth>color depth</depth>
-//        <url>URL to icon</url>
+//        <id>0</id>
+//        <mimetype>image/png</mimetype>
+//        <width>48</width>
+//        <height>48</height>
+//        <depth>24</depth>
+//        <url>/img/icon-S18.png</url>
 //      </icon>
-//    <!-- XML to declare other icons, if any, go here -->
 //    </iconList>
+//    <minCompatibleVersion>91.0-00000</minCompatibleVersion>
+//    <legacyCompatibleVersion>58.0-00000</legacyCompatibleVersion>
+//    <apiVersion>1.49.1</apiVersion>
+//    <minApiVersion>1.1.0</minApiVersion>
+//    <displayVersion>17.7</displayVersion>
+//    <extraVersion></extraVersion>
+//    <nsVersion>42</nsVersion>
+//    <versions>
+//      <audioTxProtocol><version>3</version></audioTxProtocol>
+//      <htAudioTxProtocol><version>7</version></htAudioTxProtocol>
+//      <controlAPI><version>3.2.0</version><version>1.49.1</version></controlAPI>
+//      <trueplaySDK><version>6</version></trueplaySDK>
+//    </versions>
+//    <roomName>Sonos</roomName>
+//    <displayName>One</displayName>
+//    <zoneType>20</zoneType>
+//    <feature1>0x00000000</feature1>
+//    <feature2>0x05c18332</feature2>
+//    <feature3>0x0541580e</feature3>
+//    <feature4>0x00000000</feature4>
+//    <seriesid>A201</seriesid>
+//    <variant>2</variant>
+//    <internalSpeakerSize>5</internalSpeakerSize>
+//    <memory>1024</memory>
+//    <flash>1024</flash>
+//    <ampOnTime>20</ampOnTime>
+//    <retailMode>0</retailMode>
+//    <SSLPort>1443</SSLPort>
+//    <securehhSSLPort>1843</securehhSSLPort>
 //    <serviceList>
 //      <service>
-//        <serviceType>urn:schemas-upnp-org:service:serviceType:v</serviceType>
-//        <serviceId>urn:upnp-org:serviceId:serviceID</serviceId>
-//        <SCPDURL>URL to service description</SCPDURL>
-//        <controlURL>URL for control</controlURL>
-//        <eventSubURL>URL for eventing</eventSubURL>
+//        <serviceType>urn:schemas-upnp-org:service:AlarmClock:1</serviceType>
+//        <serviceId>urn:upnp-org:serviceId:AlarmClock</serviceId>
+//        <controlURL>/AlarmClock/Control</controlURL>
+//        <eventSubURL>/AlarmClock/Event</eventSubURL>
+//        <SCPDURL>/xml/AlarmClock1.xml</SCPDURL>
 //      </service>
-//      <!-- Declarations for other services defined by a UPnP Forum working committee
-//            (if any) go here -->
-//      <!-- Declarations for other services added by UPnP vendor (if any) go here -->
+//      <service>
+//        <serviceType>urn:schemas-upnp-org:service:MusicServices:1</serviceType>
+//        <serviceId>urn:upnp-org:serviceId:MusicServices</serviceId>
+//        <controlURL>/MusicServices/Control</controlURL>
+//        <eventSubURL>/MusicServices/Event</eventSubURL>
+//        <SCPDURL>/xml/MusicServices1.xml</SCPDURL>
+//      </service>
+//      <service>
+//        <serviceType>urn:schemas-upnp-org:service:DeviceProperties:1</serviceType>
+//        <serviceId>urn:upnp-org:serviceId:DeviceProperties</serviceId>
+//        <controlURL>/DeviceProperties/Control</controlURL>
+//        <eventSubURL>/DeviceProperties/Event</eventSubURL>
+//        <SCPDURL>/xml/DeviceProperties1.xml</SCPDURL>
+//      </service>
+//      <service>
+//        <serviceType>urn:schemas-upnp-org:service:SystemProperties:1</serviceType>
+//        <serviceId>urn:upnp-org:serviceId:SystemProperties</serviceId>
+//        <controlURL>/SystemProperties/Control</controlURL>
+//        <eventSubURL>/SystemProperties/Event</eventSubURL>
+//        <SCPDURL>/xml/SystemProperties1.xml</SCPDURL>
+//      </service>
+//      <service>
+//        <serviceType>urn:schemas-upnp-org:service:ZoneGroupTopology:1</serviceType>
+//        <serviceId>urn:upnp-org:serviceId:ZoneGroupTopology</serviceId>
+//        <controlURL>/ZoneGroupTopology/Control</controlURL>
+//        <eventSubURL>/ZoneGroupTopology/Event</eventSubURL>
+//        <SCPDURL>/xml/ZoneGroupTopology1.xml</SCPDURL>
+//      </service>
+//      <service>
+//        <serviceType>urn:schemas-upnp-org:service:GroupManagement:1</serviceType>
+//        <serviceId>urn:upnp-org:serviceId:GroupManagement</serviceId>
+//        <controlURL>/GroupManagement/Control</controlURL>
+//        <eventSubURL>/GroupManagement/Event</eventSubURL>
+//        <SCPDURL>/xml/GroupManagement1.xml</SCPDURL>
+//      </service>
+//      <service>
+//        <serviceType>urn:schemas-tencent-com:service:QPlay:1</serviceType>
+//        <serviceId>urn:tencent-com:serviceId:QPlay</serviceId>
+//        <controlURL>/QPlay/Control</controlURL>
+//        <eventSubURL>/QPlay/Event</eventSubURL>
+//        <SCPDURL>/xml/QPlay1.xml</SCPDURL>
+//      </service>
 //    </serviceList>
 //    <deviceList>
-//      <!-- Description of embedded devices defined by a UPnP Forum working committee
-//          (if any) go here -->
-//      <!-- Description of embedded devices added by UPnP vendor (if any) go here -->
+//      <device>
+//  <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
+//  <friendlyName>172.16.0.10 - Sonos One Media Server - RINCON_48A6B88C948E01400</friendlyName>
+//  <manufacturer>Sonos, Inc.</manufacturer>
+//  <manufacturerURL>http://www.sonos.com</manufacturerURL>
+//  <modelNumber>S18</modelNumber>
+//<modelDescription>Sonos One Media Server</modelDescription>
+//<modelName>Sonos One</modelName>
+//  <modelURL>http://www.sonos.com/products/zoneplayers/S18</modelURL>
+//  <UDN>uuid:RINCON_48A6B88C948E01400_MS</UDN>
+//  <serviceList>
+//    <service>
+//      <serviceType>urn:schemas-upnp-org:service:ContentDirectory:1</serviceType>
+//      <serviceId>urn:upnp-org:serviceId:ContentDirectory</serviceId>
+//      <controlURL>/MediaServer/ContentDirectory/Control</controlURL>
+//      <eventSubURL>/MediaServer/ContentDirectory/Event</eventSubURL>
+//      <SCPDURL>/xml/ContentDirectory1.xml</SCPDURL>
+//    </service>
+//    <service>
+//      <serviceType>urn:schemas-upnp-org:service:ConnectionManager:1</serviceType>
+//	    <serviceId>urn:upnp-org:serviceId:ConnectionManager</serviceId>
+//	    <controlURL>/MediaServer/ConnectionManager/Control</controlURL>
+//	    <eventSubURL>/MediaServer/ConnectionManager/Event</eventSubURL>
+//	    <SCPDURL>/xml/ConnectionManager1.xml</SCPDURL>
+//	  </service>
+//	</serviceList>
+//      </device>
+//      <device>
+//	<deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
+//  <friendlyName>Sonos - Sonos One Media Renderer - RINCON_48A6B88C948E01400</friendlyName>
+//  <manufacturer>Sonos, Inc.</manufacturer>
+//  <manufacturerURL>http://www.sonos.com</manufacturerURL>
+//  <modelNumber>S18</modelNumber>
+//<modelDescription>Sonos One Media Renderer</modelDescription>
+//<modelName>Sonos One</modelName>
+//  <modelURL>http://www.sonos.com/products/zoneplayers/S18</modelURL>
+//	<UDN>uuid:RINCON_48A6B88C948E01400_MR</UDN>
+//	<serviceList>
+//	  <service>
+//	    <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+//	    <serviceId>urn:upnp-org:serviceId:RenderingControl</serviceId>
+//	    <controlURL>/MediaRenderer/RenderingControl/Control</controlURL>
+//	    <eventSubURL>/MediaRenderer/RenderingControl/Event</eventSubURL>
+//	    <SCPDURL>/xml/RenderingControl1.xml</SCPDURL>
+//	  </service>
+//	  <service>
+//	    <serviceType>urn:schemas-upnp-org:service:ConnectionManager:1</serviceType>
+//	    <serviceId>urn:upnp-org:serviceId:ConnectionManager</serviceId>
+//	    <controlURL>/MediaRenderer/ConnectionManager/Control</controlURL>
+//	    <eventSubURL>/MediaRenderer/ConnectionManager/Event</eventSubURL>
+//	    <SCPDURL>/xml/ConnectionManager1.xml</SCPDURL>
+//	  </service>
+//	  <service>
+//	    <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
+//	    <serviceId>urn:upnp-org:serviceId:AVTransport</serviceId>
+//	    <controlURL>/MediaRenderer/AVTransport/Control</controlURL>
+//	    <eventSubURL>/MediaRenderer/AVTransport/Event</eventSubURL>
+//	    <SCPDURL>/xml/AVTransport1.xml</SCPDURL>
+//	  </service>
+//	  <service>
+//	    <serviceType>urn:schemas-sonos-com:service:Queue:1</serviceType>
+//	    <serviceId>urn:sonos-com:serviceId:Queue</serviceId>
+//	    <controlURL>/MediaRenderer/Queue/Control</controlURL>
+//	    <eventSubURL>/MediaRenderer/Queue/Event</eventSubURL>
+//	    <SCPDURL>/xml/Queue1.xml</SCPDURL>
+//	  </service>
+//      <service>
+//        <serviceType>urn:schemas-upnp-org:service:GroupRenderingControl:1</serviceType>
+//        <serviceId>urn:upnp-org:serviceId:GroupRenderingControl</serviceId>
+//        <controlURL>/MediaRenderer/GroupRenderingControl/Control</controlURL>
+//        <eventSubURL>/MediaRenderer/GroupRenderingControl/Event</eventSubURL>
+//        <SCPDURL>/xml/GroupRenderingControl1.xml</SCPDURL>
+//      </service>
+//      <service>
+//          <serviceType>urn:schemas-upnp-org:service:VirtualLineIn:1</serviceType>
+//          <serviceId>urn:upnp-org:serviceId:VirtualLineIn</serviceId>
+//          <controlURL>/MediaRenderer/VirtualLineIn/Control</controlURL>
+//          <eventSubURL>/MediaRenderer/VirtualLineIn/Event</eventSubURL>
+//          <SCPDURL>/xml/VirtualLineIn1.xml</SCPDURL>
+//      </service>
+//	</serviceList>
+//        <X_Rhapsody-Extension xmlns="http://www.real.com/rhapsody/xmlns/upnp-1-0">
+//  <deviceID>urn:rhapsody-real-com:device-id-1-0:sonos_1:RINCON_48A6B88C948E01400</deviceID>
+//            <deviceCapabilities>
+//              <interactionPattern type="real-rhapsody-upnp-1-0"/>
+//            </deviceCapabilities>
+//        </X_Rhapsody-Extension>
+//        <qq:X_QPlay_SoftwareCapability xmlns:qq="http://www.tencent.com">QPlay:2</qq:X_QPlay_SoftwareCapability>
+//        <iconList>
+//          <icon>
+//            <mimetype>image/png</mimetype>
+//            <width>48</width>
+//            <height>48</height>
+//            <depth>24</depth>
+//            <url>/img/icon-S18.png</url>
+//          </icon>
+//        </iconList>
+//      </device>
 //    </deviceList>
-//    <presentationURL>URL for presentation</presentationURL>
 //  </device>
+//</root>
 public class Device extends Asset {
   private static final String LOG_TAG = Device.class.getSimpleName();
   private static final String XML_TAG = "device";
@@ -284,19 +456,19 @@ public class Device extends Asset {
         final String stringWidth = urlService.getTag(WIDTH);
         final String stringHeight = urlService.getTag(HEIGHT);
         final String stringUrl = urlService.getTag(URL);
-        if ((stringWidth != null) && (stringHeight != null) && (stringUrl != null)) {
+        if ((device != null) && (stringWidth != null) && (stringHeight != null) && (stringUrl != null)) {
           try {
             final URI uRI = new URI(stringUrl);
             final int width = Integer.parseInt(stringWidth);
             final int height = Integer.parseInt(stringHeight);
-            final boolean isDefined = (icon != null);
-            final boolean isIconSmaller = isDefined && (icon.getWidth() <= width) && (icon.getHeight() <= height);
+            final boolean isDefined = (device.icon != null);
+            final boolean isIconSmaller = isDefined && (device.icon.getWidth() <= width) && (device.icon.getHeight() <= height);
             final boolean isPngUrlSignature = new URLService(location, uRI).isPngUrlSignature();
-            if (!isDefined || isIconSmaller && (isPngUrlSignature || !isPngIcon)) {
+            if (!isDefined || isIconSmaller && (isPngUrlSignature || !device.isPngIcon)) {
               final Bitmap newIcon = new URLService(location, uRI).getBitmap();
               if (newIcon != null) {
-                icon = newIcon;
-                isPngIcon = isPngUrlSignature;
+                device.icon = newIcon;
+                device.isPngIcon = isPngUrlSignature;
               }
             }
           } catch (IOException | URISyntaxException exception) {
@@ -306,9 +478,13 @@ public class Device extends Asset {
         }
         break;
       case XML_TAG:
-        // Embedded device?
-        if ((device != null) && isEmbeddedDevices) {
-          embeddedDevices.add(device);
+        if (device != null) {
+          // Embedded device?
+          if (isEmbeddedDevices) {
+            embeddedDevices.add(device);
+          }
+          // Avoid stale currentDevice leaking into tags following this closing </device>
+          currentDevice = null;
         }
         break;
       default:
