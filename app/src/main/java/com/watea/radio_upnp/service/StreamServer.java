@@ -235,6 +235,11 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       response.addHeader("transferMode.dlna.org", "Streaming");
       response.addHeader("contentFeatures.dlna.org", UpnpSessionDevice.getDlnaTail(mime));
       response.addHeader(Response.CONTENT_TYPE, mime);
+      // Body length is unbounded and unknown upfront; the socket is closed when the
+      // stream ends, so make that explicit instead of leaving HTTP/1.1 framing ambiguous
+      // (no Content-Length can correctly describe a live stream, and there is no chunked
+      // transfer-encoding support in HttpServer).
+      response.addHeader("Connection", "close");
       try {
         response.send();
         responseStream.flush();
