@@ -336,11 +336,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   @NonNull
   private String getDidlDlnaTail() {
     // Default is PCM
-    String content = PCM_MIME;
     String mime = PCM_MIME;
     if (mode != Mode.PCM) {
       // Relay
-      content = (connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent();
+      final String content = (connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent();
       switch (content) {
         case "audio/aac":
         case "audio/x-aac":
@@ -368,7 +367,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
           mime = content;
       }
     }
-    return mime + ":" + getDlnaTail(content);
+    return mime + ":" + getDlnaTail(mime);
   }
 
   // Creates DIDL-Lite metadata
