@@ -444,15 +444,16 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     }
 
     // Builds a standard 44-byte WAV header.
-    // Size fields are set to 0xFFFFFFFF to indicate an unbounded stream,
-    // which is the common practice for HTTP audio streaming.
+    // Size fields are set to 0x7FFFFFFF (max signed 32-bit value) to indicate an
+    // unbounded stream — 0xFFFFFFFF is the bit pattern for -1 as a signed int and
+    // can be rejected by strict parsers that read these fields as signed.
     @NonNull
     private byte[] buildWavHeader(int sampleRate, int channelCount, int bitsPerSample) {
       final int byteRate = sampleRate * channelCount * (bitsPerSample / 8);
       final int blockAlign = channelCount * (bitsPerSample / 8);
       final ByteBuffer buf = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
       buf.put(new byte[]{'R', 'I', 'F', 'F'});
-      buf.putInt(0xFFFFFFFF); // Unknown file size — streaming
+      buf.putInt(0x7FFFFFFF); // Unknown file size — streaming
       buf.put(new byte[]{'W', 'A', 'V', 'E'});
       buf.put(new byte[]{'f', 'm', 't', ' '});
       buf.putInt(16); // fmt chunk size
@@ -463,7 +464,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       buf.putShort((short) blockAlign);
       buf.putShort((short) bitsPerSample);
       buf.put(new byte[]{'d', 'a', 't', 'a'});
-      buf.putInt(0xFFFFFFFF); // Unknown data size — streaming
+      buf.putInt(0x7FFFFFFF); // Unknown data size — streaming
       return buf.array();
     }
   }
