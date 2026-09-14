@@ -57,12 +57,12 @@ public class NetworkProxy {
 
   @Nullable
   public String getWifiIpAddress() {
-    final NetworkCapabilities capabilities = getNetworkCapabilities();
-    if ((capabilities == null) || !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+    final Network wifiNetwork = findNetwork(NetworkCapabilities.TRANSPORT_WIFI);
+    if (wifiNetwork == null) {
       return null;
     }
     assert connectivityManager != null;
-    final LinkProperties linkProperties = connectivityManager.getLinkProperties(getActiveNetwork());
+    final LinkProperties linkProperties = connectivityManager.getLinkProperties(wifiNetwork);
     if (linkProperties == null) {
       return null;
     }
@@ -89,26 +89,25 @@ public class NetworkProxy {
   }
 
   private boolean isOnNetworkCapability(int networkCapability) {
-    final NetworkCapabilities networkCapabilities = getNetworkCapabilities();
-    return (networkCapabilities != null) && networkCapabilities.hasTransport(networkCapability);
+    return findNetwork(networkCapability) != null;
   }
 
+  // Looks up every known network (not just the active/default one), so a VPN taking over
+  // the default route does not hide an underlying Wi-Fi/Cellular network that is still up
   @Nullable
-  private Network getActiveNetwork() {
+  private Network findNetwork(int networkCapability) {
     if (connectivityManager == null) {
       return null;
     }
-    return connectivityManager.getActiveNetwork();
-  }
-
-  @Nullable
-  private NetworkCapabilities getNetworkCapabilities() {
-    final Network activeNetwork = getActiveNetwork();
-    if (activeNetwork == null) {
-      return null;
+    for (final Network network : connectivityManager.getAllNetworks()) {
+      final NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
+      if ((capabilities != null) &&
+        capabilities.hasTransport(networkCapability) &&
+        !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+        return network;
+      }
     }
-    assert connectivityManager != null;
-    return connectivityManager.getNetworkCapabilities(activeNetwork);
+    return null;
   }
 
   @NonNull
