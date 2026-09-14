@@ -11,8 +11,8 @@ android {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 36
-        versionCode = 302019
-        versionName = '3.02.019'
+        versionCode = 302020
+        versionName = '3.02.020'
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -76,11 +76,11 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'com.google.android.material:material:1.14.0'
     implementation 'androidx.activity:activity:1.13.0'
-    implementation 'androidx.media3:media3-exoplayer:1.11.0'
-    implementation 'androidx.media3:media3-exoplayer-hls:1.11.0' // Exoplayer codec
-    implementation 'androidx.media3:media3-exoplayer-dash:1.11.0' // Exoplayer codec
-    implementation 'androidx.media3:media3-datasource-okhttp:1.11.0' // Exoplayer OkHttp data source
-    implementation 'androidx.media3:media3-session:1.11.0' // Media3 session
+    implementation 'androidx.media3:media3-exoplayer:1.11.1'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.11.1' // Exoplayer codec
+    implementation 'androidx.media3:media3-exoplayer-dash:1.11.1' // Exoplayer codec
+    implementation 'androidx.media3:media3-datasource-okhttp:1.11.1' // Exoplayer OkHttp data source
+    implementation 'androidx.media3:media3-session:1.11.1' // Media3 session
     implementation 'androidx.mediarouter:mediarouter:1.8.1'
     implementation 'androidx.car.app:app:1.7.0' // Car App Library
     // Cast
