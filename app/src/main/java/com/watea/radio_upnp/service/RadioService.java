@@ -425,6 +425,14 @@ public class RadioService
   }
 
   @Override
+  public void onVolumeChanged(int volume, @NonNull String lockKey) {
+    runIfLocked(lockKey, () -> {
+      Log.d(LOG_TAG, "onVolumeChanged: " + volume);
+      radioPlayer.setRemoteVolume(volume);
+    });
+  }
+
+  @Override
   public void onState(@NonNull State state, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onState: " + state.name());
@@ -725,7 +733,7 @@ public class RadioService
     sleepController.release();
     sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
-    radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
+    radioPlayer.init(radio, sessionDevice.isRemote(), RemoteSessionDevice.DEVICE_MAX_VOLUME / 2, (radio == lastRadio));
     sessionDevice.launch();
     startForegroundService(new Intent(this, RadioService.class));
   }

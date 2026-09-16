@@ -34,6 +34,10 @@ import com.watea.radio_upnp.model.Radio;
 import java.util.function.Consumer;
 
 public abstract class RemoteSessionDevice extends SessionDevice implements StreamServer.Listener {
+  public static final int DEVICE_MAX_VOLUME = 100;
+  public static final int DEVICE_VOLUME_STEP = 4;
+  // Fraction of a device's own volume range moved per adjustment, regardless of that device's native scale
+  public static final double VOLUME_STEP_RATIO = DEVICE_VOLUME_STEP / (double) DEVICE_MAX_VOLUME;
   private static final String LOG_TAG = RemoteSessionDevice.class.getSimpleName();
   @NonNull
   protected final Uri radioUri;

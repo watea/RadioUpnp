@@ -72,8 +72,11 @@ public class Service extends Asset {
   @NonNull
   private final URI descriptionURL;
   private final Set<Action> actions = new HashSet<>();
+  private final Set<StateVariable> stateVariables = new HashSet<>();
   @Nullable
   private volatile Action currentAction = null;
+  @Nullable
+  private volatile StateVariable currentStateVariable = null;
 
   // Service does not call setOnError(); isOnError() is always false
   public Service(
@@ -96,9 +99,15 @@ public class Service extends Asset {
 
   @Override
   public void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
-    // Process Action, if any
-    if (currentTag.equals(Action.XML_NAME)) {
-      currentAction = new Action(this);
+    switch (currentTag) {
+      case Action.XML_NAME:
+        currentAction = new Action(this);
+        break;
+      case StateVariable.XML_NAME:
+        currentStateVariable = new StateVariable();
+        break;
+      default:
+        // Nothing to do
     }
     final Action action = currentAction;
     if (action != null) {
@@ -111,7 +120,6 @@ public class Service extends Asset {
     // Process Action, if any
     final Action action = currentAction;
     if (action != null) {
-      // Process Action, if any
       action.endAccept(urlService, currentTag);
       // Action complete?
       if (currentTag.equals(Action.XML_NAME)) {
@@ -122,6 +130,18 @@ public class Service extends Asset {
           actions.add(action);
         }
         currentAction = null;
+      }
+      return;
+    }
+    // Process StateVariable, if any
+    final StateVariable stateVariable = currentStateVariable;
+    if (stateVariable != null) {
+      stateVariable.endAccept(urlService, currentTag);
+      // StateVariable complete?
+      if (currentTag.equals(StateVariable.XML_NAME)) {
+        // Incomplete allowedValueRange is tolerated: not every state variable declares one
+        stateVariables.add(stateVariable);
+        currentStateVariable = null;
       }
     }
   }
@@ -169,5 +189,13 @@ public class Service extends Asset {
   @Nullable
   public Action getAction(@NonNull String actionName) {
     return actions.stream().filter(action -> action.hasName(actionName)).findFirst().orElse(null);
+  }
+
+  @Nullable
+  public StateVariable getStateVariable(@NonNull String stateVariableName) {
+    return stateVariables.stream()
+      .filter(stateVariable -> stateVariableName.equals(stateVariable.getName()))
+      .findFirst()
+      .orElse(null);
   }
 }

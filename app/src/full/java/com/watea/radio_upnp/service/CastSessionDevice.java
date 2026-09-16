@@ -49,7 +49,7 @@ import java.util.function.Consumer;
 
 public class CastSessionDevice extends RemoteSessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
-  private static final double VOLUME_STEP = 0.05; // 5%
+  private static final double VOLUME_STEP = VOLUME_STEP_RATIO;
   private static final int HEART_BEAT = 60; // s
   @NonNull
   private final CastSession castSession;
@@ -90,13 +90,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   private final Cast.Listener castListener = new Cast.Listener() {
     @Override
     public void onVolumeChanged() {
-      synchronized (CastSessionDevice.this) {
-        try {
-          currentVolume = castSession.getVolume();
-        } catch (IllegalStateException illegalStateException) {
-          Log.e(LOG_TAG, "Failed to read volume", illegalStateException);
-        }
-      }
+      reportCurrentVolume();
     }
   };
 
@@ -166,6 +160,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   protected boolean prepare() {
     if (super.prepare()) {
       postIfNotReleased(() -> {
+        reportCurrentVolume();
         remoteMediaClient = castSession.getRemoteMediaClient();
         if (remoteMediaClient == null) {
           Log.e(LOG_TAG, "Failed to get remote media client");
@@ -195,6 +190,15 @@ public class CastSessionDevice extends RemoteSessionDevice {
       currentVolume = volume;
     } catch (IOException iOException) {
       Log.e(LOG_TAG, "Failed to set volume", iOException);
+    }
+  }
+
+  private synchronized void reportCurrentVolume() {
+    try {
+      currentVolume = castSession.getVolume();
+      listener.onVolumeChanged((int) Math.round(currentVolume * DEVICE_MAX_VOLUME), lockKey);
+    } catch (IllegalStateException illegalStateException) {
+      Log.e(LOG_TAG, "Failed to read volume", illegalStateException);
     }
   }
 

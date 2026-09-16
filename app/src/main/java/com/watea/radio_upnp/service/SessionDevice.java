@@ -336,6 +336,8 @@ public abstract class SessionDevice implements Player.Listener {
 
     void onNewBitrate(int bitrate, @NonNull String mimeType, @NonNull String lockKey);
 
+    void onVolumeChanged(int volume, @NonNull String lockKey);
+
     @NonNull
     State getPlaybackState();
   }

@@ -37,6 +37,7 @@ import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.Request;
 import com.watea.radio_upnp.upnp.RequestController;
 import com.watea.radio_upnp.upnp.Service;
+import com.watea.radio_upnp.upnp.StateVariable;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -59,6 +60,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private static final String INPUT_DESIRED_VOLUME = "DesiredVolume";
   private static final String INPUT_CHANNEL = "Channel";
   private static final String INPUT_MASTER = "Master";
+  private static final String STATE_VARIABLE_VOLUME = "Volume";
   @NonNull
   private final RequestController requestController;
   @Nullable
@@ -69,7 +71,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private final Service renderingControl;
   @NonNull
   private final String information; // Not final in further use
-  private int currentVolume;
+  // Renderer's own Volume range (RenderingControl SCPD allowedValueRange), not assumed to be 0-100
+  private final int volumeMinimum;
+  private final int volumeMaximum;
+  private final int volumeStep;
   @NonNull
   private String instanceId = "0";
 
@@ -90,6 +95,11 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     // Those services are mandatory in UPnP standard
     connectionManager = device.getShortService(CONNECTION_MANAGER_ID);
     renderingControl = device.getShortService(RENDERING_CONTROL_ID);
+    final StateVariable volumeRange = (renderingControl == null) ? null : renderingControl.getStateVariable(STATE_VARIABLE_VOLUME);
+    final boolean hasVolumeRange = (volumeRange != null) && volumeRange.hasRange();
+    volumeMinimum = hasVolumeRange ? volumeRange.getMinimum() : 0;
+    volumeMaximum = hasVolumeRange ? volumeRange.getMaximum() : DEVICE_MAX_VOLUME;
+    volumeStep = Math.max(1, (int) Math.round((volumeMaximum - volumeMinimum) * VOLUME_STEP_RATIO));
   }
 
   @NonNull
@@ -121,7 +131,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public synchronized void adjustVolume(int direction) {
+  public void adjustVolume(int direction) {
     // Always resync: no UPnP eventing available, volume may have changed externally (e.g. remote control)
     scheduleActionGetVolume(direction);
   }
@@ -152,6 +162,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       scheduleActionPrepareForConnection();
       scheduleActionSetAvTransportUri();
       scheduleActionPlay();
+      scheduleActionGetVolume(AudioManager.ADJUST_SAME);
       return true;
     }
     return false;
@@ -266,11 +277,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
           final String response = getResponse("CurrentVolume");
           if (response != null) {
             try {
-              final int volume = Integer.parseInt(response);
-              synchronized (UpnpSessionDevice.this) {
-                currentVolume = volume;
-                scheduleActionSetVolume(direction);
-              }
+              scheduleActionSetVolume(Integer.parseInt(response), direction);
             } catch (Exception exception) {
               Log.e(LOG_TAG, "Unable to set volume", exception);
             }
@@ -281,26 +288,27 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
         .addArgument(INPUT_CHANNEL, INPUT_MASTER));
   }
 
-  // Caller must hold the monitor (see call sites) since this is a compound read-modify-write
-  private void scheduleActionSetVolume(int direction) {
+  private void scheduleActionSetVolume(int currentVolume, int direction) {
+    final int desiredVolume;
     switch (direction) {
       case AudioManager.ADJUST_LOWER:
-        currentVolume = Math.max(0, currentVolume - 1);
+        desiredVolume = Math.max(volumeMinimum, currentVolume - volumeStep);
         break;
       case AudioManager.ADJUST_RAISE:
-        currentVolume++;
+        desiredVolume = Math.min(volumeMaximum, currentVolume + volumeStep);
         break;
       default:
-        // Nothing to do
+        listener.onVolumeChanged(normalizeVolume(currentVolume), lockKey);
         return;
     }
-    Log.d(LOG_TAG, "Volume required: " + currentVolume);
+    Log.d(LOG_TAG, "Volume required: " + desiredVolume);
     scheduleMandatoryAction(
       renderingControl, ACTION_SET_VOLUME,
       action -> new Request(action, instanceId) {
         @Override
         protected void onSuccess() {
           Log.d(LOG_TAG, "Volume set");
+          listener.onVolumeChanged(normalizeVolume(desiredVolume), lockKey);
         }
 
         @Override
@@ -309,7 +317,13 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
         }
       }
         .addArgument(INPUT_CHANNEL, INPUT_MASTER)
-        .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(currentVolume)));
+        .addArgument(INPUT_DESIRED_VOLUME, Integer.toString(desiredVolume)));
+  }
+
+  // Renderer's native Volume range may not be 0-100 (e.g. some devices express it in dB);
+  // the system-facing device volume is always reported on the common RemoteSessionDevice scale
+  private int normalizeVolume(int nativeVolume) {
+    return (int) Math.round((nativeVolume - volumeMinimum) * DEVICE_MAX_VOLUME / (double) (volumeMaximum - volumeMinimum));
   }
 
   private void scheduleActionSetAvTransportUri() {

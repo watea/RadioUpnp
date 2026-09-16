@@ -60,11 +60,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   public static final String PLAYLIST = "playlist";
   private static final String PLAYLIST_SEPARATOR = "##";
   private static final String PLAYLIST_ITEM_SEPARATOR = "&&";
-  private static final int DEVICE_MAX_VOLUME = 100;
-  private static final int DEVICE_NOMINAL_VOLUME = 50;
-  private static final int DEVICE_VOLUME_STEP = 5;
-  private static final DeviceInfo DEVICE_INFO_REMOTE =
-    new DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(DEVICE_MAX_VOLUME).build(); // Device volume is relative
+  private static final DeviceInfo REMOTE_DEVICE_INFO = new DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(RemoteSessionDevice.DEVICE_MAX_VOLUME).build(); // Device volume is relative
   private static final PlaybackException PLAYBACK_EXCEPTION = new PlaybackException(null, null, PlaybackException.ERROR_CODE_UNSPECIFIED);
   @NonNull
   private final Commands commands;
@@ -77,7 +73,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   private boolean isVolumeControlled = false;
   @NonNull
   private String remoteSuffix = "";
-  private int volume = DEVICE_NOMINAL_VOLUME;
+  private int remoteVolume;
 
   public RadioPlayer(@NonNull Commands commands, @NonNull String remoteLabel) {
     super(Looper.getMainLooper());
@@ -101,10 +97,14 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   // Must be called at init
-  public void init(@NonNull Radio radio, boolean isVolumeControlled, boolean isCurrentPlaylistToKeep) {
+  public void init(
+    @NonNull Radio radio,
+    boolean isVolumeControlled,
+    int volumeNominalValue,
+    boolean isCurrentPlaylistToKeep) {
     this.isVolumeControlled = isVolumeControlled;
     remoteSuffix = this.isVolumeControlled ? " " + remoteLabel : "";
-    volume = DEVICE_NOMINAL_VOLUME;
+    remoteVolume = volumeNominalValue;
     buildSessionMetadata(radio, "", isCurrentPlaylistToKeep ? getCurrentPlaylist() : "");
     setState(SessionDevice.State.BUFFERING);
   }
@@ -124,6 +124,12 @@ public class RadioPlayer extends SimpleBasePlayer {
     return sessionDeviceState;
   }
 
+  // Must be called on main thread
+  public void setRemoteVolume(int remoteVolume) {
+    this.remoteVolume = Math.max(0, Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, remoteVolume));
+    invalidateState();
+  }
+
   @Override
   @NonNull
   protected SimpleBasePlayer.State getState() {
@@ -141,8 +147,8 @@ public class RadioPlayer extends SimpleBasePlayer {
     }
     if (isVolumeControlled) {
       builder
-        .setDeviceInfo(DEVICE_INFO_REMOTE)
-        .setDeviceVolume(volume);
+        .setDeviceInfo(REMOTE_DEVICE_INFO)
+        .setDeviceVolume(remoteVolume);
     }
     return builder.build();
   }
@@ -193,8 +199,8 @@ public class RadioPlayer extends SimpleBasePlayer {
   @Override
   @NonNull
   protected ListenableFuture<?> handleSetDeviceVolume(int newDeviceVolume, @C.VolumeFlags int flags) {
-    final int direction = Integer.compare(newDeviceVolume, volume);
-    volume = Math.max(0, Math.min(DEVICE_MAX_VOLUME, newDeviceVolume));
+    final int direction = Integer.compare(newDeviceVolume, remoteVolume);
+    remoteVolume = Math.max(0, Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, newDeviceVolume));
     invalidateState();
     if (direction != 0) {
       commands.onAdjustVolume((direction > 0) ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER);
@@ -216,7 +222,9 @@ public class RadioPlayer extends SimpleBasePlayer {
 
   @NonNull
   private ListenableFuture<?> handleDeviceVolume(boolean isIncrease) {
-    volume = isIncrease ? Math.min(DEVICE_MAX_VOLUME, volume + DEVICE_VOLUME_STEP) : Math.max(0, volume - DEVICE_VOLUME_STEP);
+    remoteVolume = isIncrease ?
+      Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, remoteVolume + RemoteSessionDevice.DEVICE_VOLUME_STEP) :
+      Math.max(0, remoteVolume - RemoteSessionDevice.DEVICE_VOLUME_STEP);
     invalidateState();
     commands.onAdjustVolume(isIncrease ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER);
     return Futures.immediateVoidFuture();
