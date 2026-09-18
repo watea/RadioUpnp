@@ -80,6 +80,10 @@ public abstract class SessionDevice implements Player.Listener {
   private static final int MAX_BUFFER_MS = 120_000;
   private static final int BUFFER_FOR_PLAYBACK_MS = 5_000;
   private static final int BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5_000; // ExoPlayer default
+  // Building the SSL trust manager reads system CA certificates from disk; cached so this
+  // happens once per process instead of on every SessionDevice construction (main thread included)
+  @Nullable
+  private static DataSource.Factory httpDataSourceFactory = null;
   @NonNull
   protected final Context context;
   @NonNull
@@ -111,6 +115,26 @@ public abstract class SessionDevice implements Player.Listener {
     lockKey = UUID.randomUUID().toString();
     capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build(), lockKey);
     exoPlayer = getExoPlayer();
+  }
+
+  // Call once, off the main thread, as early as possible (e.g. Service.onCreate) to avoid
+  // building it lazily on the main thread the first time a SessionDevice is constructed
+  static synchronized void warmUpHttpDataSourceFactory() {
+    if (httpDataSourceFactory == null) {
+      final Map<String, String> userAgentProperty = Collections.singletonMap("User-Agent", STREAMING_USER_AGENT);
+      try {
+        final EasyX509TrustManager easyX509TrustManager = new EasyX509TrustManager();
+        httpDataSourceFactory = new OkHttpDataSource.Factory(new OkHttpClient.Builder()
+          .sslSocketFactory(EasyX509TrustManager.getSSLSocketFactory(easyX509TrustManager), easyX509TrustManager)
+          .connectTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
+          .readTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
+          .build())
+          .setDefaultRequestProperties(userAgentProperty);
+      } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
+        Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
+        httpDataSourceFactory = new DefaultHttpDataSource.Factory().setDefaultRequestProperties(userAgentProperty);
+      }
+    }
   }
 
   public abstract boolean isRemote();
@@ -282,20 +306,8 @@ public abstract class SessionDevice implements Player.Listener {
 
   @NonNull
   private ExoPlayer getExoPlayer() {
-    final Map<String, String> userAgentProperty = Collections.singletonMap("User-Agent", STREAMING_USER_AGENT);
-    DataSource.Factory httpDataSourceFactory;
-    try {
-      final EasyX509TrustManager easyX509TrustManager = new EasyX509TrustManager();
-      httpDataSourceFactory = new OkHttpDataSource.Factory(new OkHttpClient.Builder()
-        .sslSocketFactory(EasyX509TrustManager.getSSLSocketFactory(easyX509TrustManager), easyX509TrustManager)
-        .connectTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
-        .readTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
-        .build())
-        .setDefaultRequestProperties(userAgentProperty);
-    } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
-      Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
-      httpDataSourceFactory = new DefaultHttpDataSource.Factory().setDefaultRequestProperties(userAgentProperty);
-    }
+    warmUpHttpDataSourceFactory();
+    assert httpDataSourceFactory != null;
     final DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(httpDataSourceFactory)
       .setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy(MIN_LOADABLE_RETRY_COUNT));
     final LoadControl loadControl = new DefaultLoadControl.Builder()

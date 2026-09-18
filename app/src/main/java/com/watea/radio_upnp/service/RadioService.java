@@ -204,6 +204,8 @@ public class RadioService
   public void onCreate() {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
+    // Off the main thread: reads system CA certificates from disk
+    new Thread(SessionDevice::warmUpHttpDataSourceFactory).start();
     // Create RadioPlayer and MediaLibrarySession
     radioPlayer = new RadioPlayer(this, getString(R.string.remote));
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, this)
