@@ -162,6 +162,17 @@ public class AlarmService extends Service implements MediaController.Listener {
     if (intent == null) {
       return super.onStartCommand(null, flags, startId);
     }
+    if (!isStarted) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        startForeground(
+          NOTIFICATION_ID,
+          getNotification(),
+          ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+      } else {
+        startForeground(NOTIFICATION_ID, getNotification());
+      }
+      isStarted = true;
+    }
     if (ALARM_CANCEL.equals(intent.getAction())) {
       ((AlarmServiceBinder) binder).cancelAlarm();
       return super.onStartCommand(intent, flags, startId);
@@ -179,17 +190,6 @@ public class AlarmService extends Service implements MediaController.Listener {
       }
       return super.onStartCommand(intent, flags, startId);
     } else {
-      if (!isStarted) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-          startForeground(
-            NOTIFICATION_ID,
-            getNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        } else {
-          startForeground(NOTIFICATION_ID, getNotification());
-        }
-        isStarted = true;
-      }
       return START_STICKY;
     }
   }
