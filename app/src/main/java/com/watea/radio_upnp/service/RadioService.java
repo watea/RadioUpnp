@@ -737,7 +737,13 @@ public class RadioService
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), RemoteSessionDevice.DEVICE_MAX_VOLUME / 2, (radio == lastRadio));
     sessionDevice.launch();
-    startForegroundService(new Intent(this, RadioService.class));
+    try {
+      startForegroundService(new Intent(this, RadioService.class));
+    } catch (IllegalStateException illegalStateException) {
+      // May be denied when triggered from the background (e.g. auto-retry after a stream drop);
+      // ForegroundServiceStartNotAllowedException (API 31+) also extends IllegalStateException
+      Log.e(LOG_TAG, "play: unable to (re)start foreground service", illegalStateException);
+    }
   }
 
   private void playFromMediaId(@NonNull String mediaId) {
