@@ -54,7 +54,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   @NonNull
   private final CastSession castSession;
   @Nullable
-  private RemoteMediaClient remoteMediaClient = null;
+  private final RemoteMediaClient remoteMediaClient;
   private final RemoteMediaClient.Callback remoteMediaClientCallback = new RemoteMediaClient.Callback() {
     @Override
     public void onStatusUpdated() {
@@ -103,7 +103,8 @@ public class CastSessionDevice extends RemoteSessionDevice {
     @NonNull CastSession castSession) {
     super(context, Mode.PCM, listener, radio, onPlayCallback, streamServer);
     this.castSession = castSession;
-    castSession.addCastListener(castListener);
+    this.castSession.addCastListener(castListener);
+    remoteMediaClient = castSession.getRemoteMediaClient();
   }
 
   @Override
@@ -152,7 +153,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
     if (remoteMediaClient != null) {
       remoteMediaClient.unregisterCallback(remoteMediaClientCallback);
       clearCastUi(remoteMediaClient);
-      remoteMediaClient = null;
     }
   }
 
@@ -161,21 +161,16 @@ public class CastSessionDevice extends RemoteSessionDevice {
     if (super.prepare()) {
       postIfNotReleased(() -> {
         reportCurrentVolume();
-        remoteMediaClient = castSession.getRemoteMediaClient();
         if (remoteMediaClient == null) {
           Log.e(LOG_TAG, "Failed to get remote media client");
           onState(State.ERROR);
         } else {
           remoteMediaClient.registerCallback(remoteMediaClientCallback);
+          Log.d(LOG_TAG, "load: " + radioUri);
           load(remoteMediaClient, radio.getName(), context.getString(R.string.app_name), radioUri.toString(), logoUri);
           // Heartbeat
           heartbeat = Executors.newSingleThreadScheduledExecutor();
-          heartbeat.scheduleWithFixedDelay(() -> {
-            final RemoteMediaClient client = remoteMediaClient;
-            if (client != null) {
-              client.requestStatus();
-            }
-          }, HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
+          heartbeat.scheduleWithFixedDelay(remoteMediaClient::requestStatus, HEART_BEAT, HEART_BEAT, TimeUnit.SECONDS);
         }
       });
       return true;
