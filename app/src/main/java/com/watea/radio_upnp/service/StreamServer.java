@@ -59,14 +59,10 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   private static final String LOGO_PATH = "/logo.jpg";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final Pattern PARAM_PATTERN = Pattern.compile("[?&](?:amp;)*([^=]+)=([^&]*)");
-  private static final Listener DEFAULT_LISTENER = new Listener() {
-  };
   @NonNull
   private final Context context;
-  @NonNull
-  private Listener listener = DEFAULT_LISTENER;
   @Nullable
-  private volatile StreamResource streamResource = null;
+  private volatile StreamContext streamContext = null;
 
   public StreamServer(@NonNull Context context) throws IOException {
     this.context = context;
@@ -96,21 +92,21 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   @Override
   public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
     Log.d(LOG_TAG, "onFormatChanged");
-    final StreamResource streamResource = this.streamResource;
-    if (streamResource == null) {
+    final StreamContext streamContext = this.streamContext;
+    if (streamContext == null) {
       Log.d(LOG_TAG, "No resource to receive format data");
     } else {
-      streamResource.onFormatChanged(sampleRate, channelCount, bitsPerSample);
+      streamContext.onFormatChanged(sampleRate, channelCount, bitsPerSample);
     }
   }
 
   @Override
   public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
-    final StreamResource streamResource = this.streamResource;
-    if (streamResource == null) {
+    final StreamContext streamContext = this.streamContext;
+    if (streamContext == null) {
       Log.d(LOG_TAG, "No queue to receive data");
-    } else if (streamResource.lockKey.equals(lockKey)) {
-      streamResource.onPcmData(pcmData);
+    } else if (streamContext.lockKey.equals(lockKey)) {
+      streamContext.onPcmData(pcmData);
     }
   }
 
@@ -126,19 +122,13 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
   public void release() {
     Log.d(LOG_TAG, "release");
-    setLaunchConfiguration(null, DEFAULT_LISTENER);
+    streamContext = null;
   }
 
   // Must be called early before any session is started
-  public void launch(@NonNull Radio radio, @NonNull String lockKey, @NonNull Listener listener) {
+  public void launch(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
     Log.d(LOG_TAG, "launch: " + lockKey);
-    setLaunchConfiguration(new StreamResource(radio, lockKey), listener);
-  }
-
-  // Order matters: listener shall be set before streamResource
-  private void setLaunchConfiguration(@Nullable StreamResource streamResource, @NonNull Listener listener) {
-    this.listener = listener;
-    this.streamResource = streamResource;
+    streamContext = new StreamContext(radio, listener, lockKey);
   }
 
   @NonNull
@@ -203,16 +193,16 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       final String incomingLockKey = getParam(request);
       final String method = request.getMethod();
       Log.d(LOG_TAG, className + ": handle - " + method + " - " + incomingLockKey);
-      final StreamResource streamResource = StreamServer.this.streamResource;
-      if (streamResource == null) {
+      final StreamContext streamContext = StreamServer.this.streamContext;
+      if (streamContext == null) {
         Log.d(LOG_TAG, className + ": handle => no resource defined - " + incomingLockKey);
         return;
       }
       final boolean isHead = "HEAD".equals(method);
       final boolean isGet = "GET".equals(method);
-      if (streamResource.hasLockKey(incomingLockKey) && (isHead || isGet) && accept(request.getPath())) {
+      if (streamContext.hasLockKey(incomingLockKey) && (isHead || isGet) && accept(request.getPath())) {
         Log.d(LOG_TAG, className + ": handle valid");
-        handleStream(response, responseStream, isHead, streamResource);
+        handleStream(response, responseStream, isHead, streamContext);
       }
       Log.d(LOG_TAG, className + ": handle exit - " + method + " - " + incomingLockKey);
     }
@@ -224,14 +214,14 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
-      @NonNull StreamResource streamResource) throws IOException;
+      @NonNull StreamContext streamContext) throws IOException;
 
     // Send HTTP headers immediately — the renderer must not wait on a cold socket
     protected void sendDlnaResponse(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       @NonNull String mime,
-      @NonNull String lockKey) throws IOException {
+      @NonNull StreamContext streamContext) throws IOException {
       response.addHeader("transferMode.dlna.org", "Streaming");
       response.addHeader("contentFeatures.dlna.org", UpnpSessionDevice.getDlnaTail(mime));
       response.addHeader(Response.CONTENT_TYPE, mime);
@@ -244,18 +234,20 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
         response.send();
         responseStream.flush();
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "sendDlnaResponse: IOException - " + lockKey + "; " + ioException.getMessage());
-        listener.onDisconnected(lockKey);
+        Log.d(LOG_TAG, "sendDlnaResponse: IOException - " + streamContext.getLockKey() + "; " + ioException.getMessage());
+        streamContext.onDisconnected();
         throw ioException;
       }
     }
   }
 
-  private class StreamResource {
+  private class StreamContext {
     private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
     private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
     @NonNull
     private final Radio radio;
+    @NonNull
+    private final Listener listener;
     @NonNull
     private final String lockKey;
     private final Set<ArrayBlockingQueue<byte[]>> queues = new CopyOnWriteArraySet<>();
@@ -265,8 +257,9 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     private volatile int channelCount = DEFAULT;
     private volatile int bitsPerSample = DEFAULT;
 
-    public StreamResource(@NonNull Radio radio, @NonNull String lockKey) {
+    public StreamContext(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
       this.radio = radio;
+      this.listener = listener;
       this.lockKey = lockKey;
       watchdog = new Watchdog(listener::onDisconnected, this.lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
     }
@@ -326,6 +319,14 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       watchdog = new Watchdog(listener::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
     }
 
+    public void onDisconnected() {
+      listener.onDisconnected(lockKey);
+    }
+
+    public void onNewInformation(@NonNull String information) {
+      listener.onNewInformation(information, lockKey);
+    }
+
     @NonNull
     public ArrayBlockingQueue<byte[]> addQueue() {
       final ArrayBlockingQueue<byte[]> result = new ArrayBlockingQueue<>(QUEUE_SIZE);
@@ -342,7 +343,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     }
 
     public boolean hasLockKey() {
-      return (this == streamResource);
+      return (this == streamContext);
     }
   }
 
@@ -358,13 +359,13 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
-      @NonNull StreamResource streamResource) throws IOException {
+      @NonNull StreamContext streamContext) throws IOException {
       // Should not happen
       if (isHead) {
         return;
       }
       Log.d(LOG_TAG, "Serving logo");
-      final byte[] logoBytes = streamResource.getRadio().iconToBytes(Bitmap.CompressFormat.JPEG, 90);
+      final byte[] logoBytes = streamContext.getRadio().iconToBytes(Bitmap.CompressFormat.JPEG, 90);
       if (logoBytes.length == 0) {
         Log.e(LOG_TAG, "No logo available");
         return;
@@ -391,22 +392,22 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
-      @NonNull StreamResource streamResource) throws IOException {
+      @NonNull StreamContext streamContext) throws IOException {
       // HEAD
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
-      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, streamResource.getLockKey());
+      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, streamContext);
       if (isHead) {
         return;
       }
       // Create queue
-      final ArrayBlockingQueue<byte[]> queue = streamResource.addQueue();
+      final ArrayBlockingQueue<byte[]> queue = streamContext.addQueue();
       // Wait for onFormatChanged()
       final long deadline = System.currentTimeMillis() + GET_TIMEOUT;
       try {
-        while (streamResource.getSampleRate() == DEFAULT) {
+        while (streamContext.getSampleRate() == DEFAULT) {
           if (System.currentTimeMillis() > deadline) {
-            Log.e(LOG_TAG, "PcmStreamHandler: timeout waiting for audio format - " + streamResource.getLockKey());
-            listener.onDisconnected(streamResource.getLockKey());
+            Log.e(LOG_TAG, "PcmStreamHandler: timeout waiting for audio format - " + streamContext.getLockKey());
+            streamContext.onDisconnected();
             return;
           }
           try {
@@ -414,21 +415,21 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
             Thread.sleep(50);
           } catch (InterruptedException interruptedException) {
             Thread.currentThread().interrupt();
-            listener.onDisconnected(streamResource.getLockKey());
+            streamContext.onDisconnected();
             return;
           }
         }
         // We signal actual connection and start stream
-        streamResource.onConnected();
-        responseStream.write(buildWavHeader(streamResource.getSampleRate(), streamResource.getChannelCount(), streamResource.getBitsPerSample()));
-        Log.d(LOG_TAG, "PcmStreamHandler: start streaming - " + streamResource.getLockKey());
+        streamContext.onConnected();
+        responseStream.write(buildWavHeader(streamContext.getSampleRate(), streamContext.getChannelCount(), streamContext.getBitsPerSample()));
+        Log.d(LOG_TAG, "PcmStreamHandler: start streaming - " + streamContext.getLockKey());
         try {
-          while (streamResource.hasLockKey()) {
+          while (streamContext.hasLockKey()) {
             final byte[] pcmData = queue.poll(PACER_POLL_TIMEOUT, TimeUnit.MILLISECONDS);
             if (pcmData == null) {
               Log.d(LOG_TAG, "PcmStreamHandler: pcmData is null");
             } else {
-              streamResource.relaunchWatchdog();
+              streamContext.relaunchWatchdog();
               responseStream.write(pcmData);
             }
           }
@@ -436,10 +437,10 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
           Thread.currentThread().interrupt();
         }
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "PcmStreamHandler: IOException - " + streamResource.getLockKey() + "; " + ioException.getMessage());
+        Log.d(LOG_TAG, "PcmStreamHandler: IOException - " + streamContext.getLockKey() + "; " + ioException.getMessage());
         throw ioException;
       } finally {
-        streamResource.removeQueue(queue);
+        streamContext.removeQueue(queue);
       }
     }
 
@@ -483,15 +484,15 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
-      @NonNull StreamResource streamResource) throws IOException {
+      @NonNull StreamContext streamContext) throws IOException {
       // HEAD
-      final Radio.ConnectionSet connectionSet = streamResource.getRadio().getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
+      final Radio.ConnectionSet connectionSet = streamContext.getRadio().getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
       if (connectionSet == null) {
         Log.d(LOG_TAG, "PassthroughStreamHandler: upstream is not defined");
-        listener.onDisconnected(streamResource.getLockKey());
+        streamContext.onDisconnected();
         return;
       }
-      sendDlnaResponse(response, responseStream, connectionSet.getContent(), streamResource.getLockKey());
+      sendDlnaResponse(response, responseStream, connectionSet.getContent(), streamContext);
       if (isHead) {
         return;
       }
@@ -503,20 +504,20 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
           java.util.Collections.singletonMap("Icy-Metadata", "1"));
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "PassthroughStreamHandler: unable to connect", ioException);
-        listener.onDisconnected(streamResource.getLockKey());
+        streamContext.onDisconnected();
         throw ioException;
       }
       // We signal actual connection and start stream
-      streamResource.onConnected();
+      streamContext.onConnected();
       final String icyMetaIntValue = upstreamResponse.header("Icy-Metaint");
       final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
-        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), title -> listener.onNewInformation(title, streamResource.getLockKey()));
+        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), streamContext::onNewInformation);
       final byte[] buf = new byte[PIPE_BUFFER_SIZE];
       int n;
-      Log.d(LOG_TAG, "PassthroughStreamHandler: start streaming - " + streamResource.getLockKey());
+      Log.d(LOG_TAG, "PassthroughStreamHandler: start streaming - " + streamContext.getLockKey());
       try (final InputStream inputStream = upstreamResponse.body().byteStream()) {
-        while (streamResource.hasLockKey() && ((n = inputStream.read(buf)) >= 0)) {
-          streamResource.relaunchWatchdog();
+        while (streamContext.hasLockKey() && ((n = inputStream.read(buf)) >= 0)) {
+          streamContext.relaunchWatchdog();
           if (parser == null) {
             responseStream.write(buf, 0, n);
           } else {
@@ -524,7 +525,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
           }
         }
       } catch (IOException ioException) {
-        Log.d(LOG_TAG, "PassthroughStreamHandler: IOException - " + streamResource.getLockKey() + "; " + ioException.getMessage());
+        Log.d(LOG_TAG, "PassthroughStreamHandler: IOException - " + streamContext.getLockKey() + "; " + ioException.getMessage());
         throw ioException;
       } finally {
         upstreamResponse.close();
