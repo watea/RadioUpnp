@@ -95,8 +95,8 @@
     <string name="row_radio_button">列表</string>
     <string name="upnp_stream_mode">UPnP 流模式</string>
     <string name="pcm_radio_button_hint">确保与所有电台兼容</string>
-    <string name="relay_radio_button">直通</string>
-    <string name="relay_radio_button_hint">流原样转发；渲染器必须支持该编解码器</string>
+    <string name="passthrough_radio_button">直通</string>
+    <string name="passthrough_radio_button_hint">流原样转发；渲染器必须支持该编解码器</string>
     <string name="radio_information">电台信息</string>
     <string name="system_radio_button">跟随系统</string>
     <string name="dark_radio_button">深色</string>

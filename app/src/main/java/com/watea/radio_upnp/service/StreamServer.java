@@ -104,9 +104,16 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
     final StreamContext streamContext = this.streamContext;
     if (streamContext == null) {
-      Log.d(LOG_TAG, "No queue to receive data");
-    } else if (streamContext.lockKey.equals(lockKey)) {
-      streamContext.onPcmData(pcmData);
+      Log.d(LOG_TAG, "No resource to receive PCM data");
+    } else {
+      streamContext.onPcmData(pcmData, lockKey);
+    }
+  }
+
+  public void onPcmMime(@NonNull String mime, @NonNull String lockKey) {
+    final StreamContext streamContext = this.streamContext;
+    if (streamContext != null) {
+      streamContext.onPcmMime(mime, lockKey);
     }
   }
 
@@ -146,6 +153,10 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     void onConnected(@NonNull String lockKey);
 
     void onNewInformation(@NonNull String information, @NonNull String lockKey);
+
+    // Fired exactly once per session
+    default void onPcmFormat(int sampleRate, int channelCount) {
+    }
   }
 
   private static class Watchdog {
@@ -248,11 +259,15 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     @NonNull
     private final String lockKey;
     private final Set<ArrayBlockingQueue<byte[]>> queues = new CopyOnWriteArraySet<>();
+    @NonNull
     private volatile Watchdog watchdog;
     // Audio format — set by onFormatChanged() on ExoPlayer thread, read on HTTP server thread.
     private volatile int sampleRate = DEFAULT;
     private volatile int channelCount = DEFAULT;
     private volatile int bitsPerSample = DEFAULT;
+    @NonNull
+    private volatile String pcmMime = UpnpSessionDevice.PCM_MIME;
+    private volatile boolean pcmFormatNotified = false;
 
     public StreamContext(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
       this.radio = radio;
@@ -270,6 +285,10 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       this.sampleRate = sampleRate;
       this.channelCount = channelCount;
       this.bitsPerSample = bitsPerSample;
+      if (!pcmFormatNotified) {
+        pcmFormatNotified = true;
+        listener.onPcmFormat(sampleRate, channelCount);
+      }
     }
 
     public int getBitsPerSample() {
@@ -284,7 +303,21 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       return sampleRate;
     }
 
-    public void onPcmData(@NonNull byte[] pcmData) {
+    public void onPcmMime(@NonNull String pcmMime, @NonNull String lockKey) {
+      if (hasLockKey(lockKey)) {
+        this.pcmMime = pcmMime;
+      }
+    }
+
+    @NonNull
+    public String getPcmMime() {
+      return pcmMime;
+    }
+
+    public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
+      if (!hasLockKey(lockKey)) {
+        return;
+      }
       if (queues.isEmpty()) {
         Log.d(LOG_TAG, "No queue to receive data");
         return;
@@ -391,8 +424,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       boolean isHead,
       @NonNull StreamContext streamContext) throws IOException {
       // HEAD
-      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming WAV
-      sendDlnaResponse(response, responseStream, UpnpSessionDevice.PCM_MIME, streamContext);
+      response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming PCM
+      sendDlnaResponse(response, responseStream, streamContext.getPcmMime(), streamContext);
       if (isHead) {
         return;
       }
@@ -418,7 +451,10 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
         }
         // We signal actual connection and start stream
         streamContext.onConnected();
-        responseStream.write(buildWavHeader(streamContext.getSampleRate(), streamContext.getChannelCount(), streamContext.getBitsPerSample()));
+        final boolean isRawPcm = UpnpSessionDevice.isRawPcm(streamContext.getPcmMime());
+        if (!isRawPcm) {
+          responseStream.write(buildWavHeader(streamContext.getSampleRate(), streamContext.getChannelCount(), streamContext.getBitsPerSample()));
+        }
         Log.d(LOG_TAG, "PcmStreamHandler: start streaming - " + streamContext.getLockKey());
         try {
           while (streamContext.hasLockKey()) {
@@ -427,7 +463,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
               Log.d(LOG_TAG, "PcmStreamHandler: pcmData is null");
             } else {
               streamContext.relaunchWatchdog();
-              responseStream.write(pcmData);
+              responseStream.write(isRawPcm ? toBigEndian16(pcmData) : pcmData);
             }
           }
         } catch (InterruptedException interruptedException) {
@@ -465,6 +501,17 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       buf.putInt(0x7FFFFFFF); // Unknown data size — streaming
       return buf.array();
     }
+
+    // DLNA/UPnP raw audio/L16 mandates big-endian samples; Android's PCM_16BIT output is little-endian
+    @NonNull
+    private byte[] toBigEndian16(@NonNull byte[] littleEndianPcm) {
+      final byte[] result = new byte[littleEndianPcm.length];
+      for (int i = 0; i + 1 < littleEndianPcm.length; i += 2) {
+        result[i] = littleEndianPcm[i + 1];
+        result[i + 1] = littleEndianPcm[i];
+      }
+      return result;
+    }
   }
 
   // Serves the audio stream in passthrough mode
@@ -489,7 +536,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
         streamContext.onDisconnected();
         return;
       }
-      sendDlnaResponse(response, responseStream, connectionSet.getContent(), streamContext);
+      sendDlnaResponse(response, responseStream, UpnpSessionDevice.normalize(connectionSet.getContent()), streamContext);
       if (isHead) {
         return;
       }

@@ -110,11 +110,11 @@
             android:textStyle="italic" />
 
         <RadioButton
-            android:id="@+id/relay_radio_button"
+            android:id="@+id/passthrough_radio_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:padding="@dimen/app_margin"
-            android:text="@string/relay_radio_button" />
+            android:text="@string/passthrough_radio_button" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -122,7 +122,7 @@
             android:paddingStart="@dimen/app_margin"
             android:paddingEnd="@dimen/app_margin"
             android:paddingBottom="@dimen/app_margin"
-            android:text="@string/relay_radio_button_hint"
+            android:text="@string/passthrough_radio_button_hint"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:textStyle="italic" />
 

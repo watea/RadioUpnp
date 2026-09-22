@@ -146,7 +146,7 @@ public class RadioURL {
   }
 
   // OkHttpClient follows redirects automatically (RFC 7231 compliant).
-  // Icy-Metadata is not added here; pass it via requestProperties only when streaming (relay mode).
+  // Icy-Metadata is not added here; pass it via requestProperties only when streaming (Passthrough mode).
   @NonNull
   public Response getActualOkHttpResponse(@NonNull String userAgent, @NonNull Map<String, String> requestProperties) throws IOException {
     if (uRL == null) {

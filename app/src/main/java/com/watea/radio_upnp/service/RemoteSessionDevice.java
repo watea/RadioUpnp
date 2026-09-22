@@ -108,6 +108,13 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
     super.stop();
   }
 
+  // Convenient return value for setPcmMime()
+  @NonNull
+  protected String onPcmMime(@NonNull String mime) {
+    streamServer.onPcmMime(mime, lockKey);
+    return mime;
+  }
+
   @Override
   protected void onState(@NonNull State state) {
     // Error is not accepted if paused

@@ -95,8 +95,8 @@
     <string name="row_radio_button">Lignes</string>
     <string name="upnp_stream_mode">Mode de diffusion UPnP</string>
     <string name="pcm_radio_button_hint">Garantit la compatibilité avec toutes les radios</string>
-    <string name="relay_radio_button">Relais</string>
-    <string name="relay_radio_button_hint">Flux transmis tel quel; le renderer doit prendre en charge le codec</string>
+    <string name="passthrough_radio_button">Relais</string>
+    <string name="passthrough_radio_button_hint">Flux transmis tel quel; le renderer doit prendre en charge le codec</string>
     <string name="radio_information">Informations radio</string>
     <string name="system_radio_button">Système</string>
     <string name="dark_radio_button">Sombre</string>

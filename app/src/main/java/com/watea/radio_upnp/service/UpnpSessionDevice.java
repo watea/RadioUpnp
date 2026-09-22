@@ -39,11 +39,15 @@ import com.watea.radio_upnp.upnp.RequestController;
 import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.StateVariable;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class UpnpSessionDevice extends RemoteSessionDevice {
   public static final String PCM_MIME = "audio/wav";
+  private static final String L16_MIME = "audio/L16";
+  private static final int PCM_FORMAT_UNKNOWN = -1;
   private static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
   private static final String AV_TRANSPORT_SERVICE_ID = "AVTransport";
@@ -76,6 +80,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private final int volumeMaximum;
   private final int volumeStep;
   @NonNull
+  private final Set<String> sinkProtocolInfos = new HashSet<>();
+  @NonNull
   private String instanceId = "0";
 
   public UpnpSessionDevice(
@@ -105,29 +111,63 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   @NonNull
   public static String getDlnaTail(@NonNull String mime) {
     String result;
+    if (mime.startsWith(L16_MIME)) {
+      result = "DLNA.ORG_PN=LPCM;";
+    } else {
+      switch (mime) {
+        case "audio/mpeg":
+          result = "DLNA.ORG_PN=MP3;";
+          break;
+        case "audio/aac":
+        case "audio/x-aac":
+        case "audio/aacp":
+          result = "DLNA.ORG_PN=AAC_ADTS;";
+          break;
+        case "audio/mp4":
+        case "audio/x-m4a":
+          result = "DLNA.ORG_PN=AAC_ISO;";
+          break;
+        case PCM_MIME:
+          // audio/wav (RIFF, little-endian) has no DLNA profile — LPCM mandates raw audio/L16 big-endian
+        case "audio/flac":
+        case "audio/x-flac":
+          // No standard DLNA profile for FLAC
+        default:
+          // OGG, unknown — no DLNA profile
+          result = "";
+      }
+    }
+    return result + PROTOCOL_INFO_TAIL;
+  }
+
+  public static boolean isRawPcm(@NonNull String mime) {
+    return !PCM_MIME.equals(mime);
+  }
+
+  @NonNull
+  public static String normalize(@NonNull String mime) {
     switch (mime) {
-      case "audio/mpeg":
-        result = "DLNA.ORG_PN=MP3;";
-        break;
       case "audio/aac":
       case "audio/x-aac":
       case "audio/aacp":
-        result = "DLNA.ORG_PN=AAC_ADTS;";
-        break;
-      case "audio/mp4":
+        // Renderers list audio/mp4, not raw AAC MIME types
+        return "audio/mp4";
+      case "audio/x-mpeg":
+      case "audio/mp2":
+      case "audio/mpeg3":
+      case "audio/x-mp3":
+        // Normalize all MP3 variants
+        return Radio.DEFAULT_MIME;
       case "audio/x-m4a":
-        result = "DLNA.ORG_PN=AAC_ISO;";
-        break;
-      case PCM_MIME:
-        // audio/wav (RIFF, little-endian) has no DLNA profile — LPCM mandates raw audio/L16 big-endian
-      case "audio/flac":
-      case "audio/x-flac":
-        // No standard DLNA profile for FLAC
+        return "audio/mp4";
+      case "audio/ogg":
+      case "audio/vorbis":
+      case "application/ogg":
+        // OGG: no standard DLNA MIME, best effort
+        return "audio/ogg";
       default:
-        // OGG, unknown — no DLNA profile
-        result = "";
+        return mime;
     }
-    return result + PROTOCOL_INFO_TAIL;
   }
 
   @Override
@@ -155,14 +195,19 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
+  public void onPcmFormat(int sampleRate, int channelCount) {
+    launchPlay(sampleRate, channelCount);
+  }
+
+  @Override
   protected boolean prepare() {
-    // super.prepare() blocks until the upstream HTTP connection is established.
+    // super.prepare() blocks until the upstream HTTP connection is established
     if (super.prepare()) {
       scheduleActionGetProtocolInfo();
       scheduleActionPrepareForConnection();
-      scheduleActionSetAvTransportUri();
-      scheduleActionPlay();
-      scheduleActionGetVolume(AudioManager.ADJUST_SAME);
+      if (mode != Mode.PCM) {
+        launchPlay(PCM_FORMAT_UNKNOWN, PCM_FORMAT_UNKNOWN);
+      }
       return true;
     }
     return false;
@@ -171,6 +216,12 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   // Not implemented
   @Override
   protected void setVolume(float volume) {
+  }
+
+  private void launchPlay(int sampleRate, int channelCount) {
+    scheduleActionSetAvTransportUri(sampleRate, channelCount);
+    scheduleActionPlay();
+    scheduleActionGetVolume(AudioManager.ADJUST_SAME);
   }
 
   private void scheduleMandatoryAction(@Nullable Service service, @NonNull String name, @NonNull Function<Action, Request> function) {
@@ -208,8 +259,13 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
           if (sink == null) {
             Log.i(LOG_TAG, "ProtocolInfo: null");
           } else {
+            // "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM" => "audio/L16;rate=44100;channels=2"
             for (final String entry : sink.split(",")) {
               Log.i(LOG_TAG, "ProtocolInfo: " + entry);
+              final String[] fields = entry.split(":", 4);
+              if (fields.length >= 3) {
+                sinkProtocolInfos.add(fields[2].trim());
+              }
             }
           }
         }
@@ -326,10 +382,25 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     return (int) Math.round((nativeVolume - volumeMinimum) * DEVICE_MAX_VOLUME / (double) (volumeMaximum - volumeMinimum));
   }
 
-  private void scheduleActionSetAvTransportUri() {
+  private void scheduleActionSetAvTransportUri(int sampleRate, int channelCount) {
     scheduleMandatoryAction(
       avTransportService, ACTION_SET_AV_TRANSPORT_URI,
       action -> new Request(action, instanceId) {
+        @Override
+        public void run() {
+          final String mime = (mode == Mode.PCM) ?
+            resolvePcmFormat(sampleRate, channelCount) :
+            normalize((connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent());
+          if (mime == null) {
+            Log.d(LOG_TAG, "scheduleActionSetAvTransportUri: no format compatible with this renderer");
+            onFailure();
+            return;
+          }
+          addArgument("CurrentURI", radioUri.toString());
+          addArgument("CurrentURIMetaData", getMetaData(mime));
+          super.run();
+        }
+
         @Override
         protected void onSuccess() {
           onState(State.BUFFERING);
@@ -342,51 +413,29 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
           // Release other UPnP actions on this device
           requestController.release(action.getDevice());
         }
-      }
-        .addArgument("CurrentURI", radioUri.toString())
-        .addArgument("CurrentURIMetaData", getMetaData()));
+      });
   }
 
-  @NonNull
-  private String getDidlDlnaTail() {
-    // Default is PCM
-    String mime = PCM_MIME;
-    if (mode != Mode.PCM) {
-      // Relay
-      final String content = (connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent();
-      switch (content) {
-        case "audio/aac":
-        case "audio/x-aac":
-        case "audio/aacp":
-          // Renderers list audio/mp4, not raw AAC MIME types
-          mime = "audio/mp4";
-          break;
-        case "audio/x-mpeg":
-        case "audio/mp2":
-        case "audio/mpeg3":
-        case "audio/x-mp3":
-          // Normalize all MP3 variants
-          mime = "audio/mpeg";
-          break;
-        case "audio/x-m4a":
-          mime = "audio/mp4";
-          break;
-        case "audio/ogg":
-        case "audio/vorbis":
-        case "application/ogg":
-          // OGG: no standard DLNA MIME, best effort
-          mime = "audio/ogg";
-          break;
-        default:
-          mime = content;
-      }
+  @Nullable
+  private String resolvePcmFormat(int sampleRate, int channelCount) {
+    if (sinkProtocolInfos.isEmpty() || sinkProtocolInfos.contains(PCM_MIME)) {
+      return onPcmMime(PCM_MIME);
     }
-    return mime + ":" + getDlnaTail(mime);
+    if ((sampleRate == PCM_FORMAT_UNKNOWN) || (channelCount == PCM_FORMAT_UNKNOWN)) {
+      // Shall not happen
+      Log.e(LOG_TAG, "resolvePcmFormat: PCM format unexpectedly unknown");
+      return null;
+    }
+    final String l16Mime = L16_MIME + ";rate=" + sampleRate + ";channels=" + channelCount;
+    if (!sinkProtocolInfos.contains(l16Mime)) {
+      return null;
+    }
+    return onPcmMime(l16Mime);
   }
 
   // Creates DIDL-Lite metadata
   @NonNull
-  private String getMetaData() {
+  private String getMetaData(@NonNull String mime) {
     return "<DIDL-Lite " +
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +
       "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
@@ -397,7 +446,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       "<upnp:artist>" + Request.escapeXml(information) + "</upnp:artist>" +
       "<upnp:album>" + context.getString(R.string.live_streaming) + "</upnp:album>" +
       "<upnp:albumArtURI>" + Request.escapeXml(logoUri.toString()) + "</upnp:albumArtURI>" +
-      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + getDidlDlnaTail() + "\">" + Request.escapeXml(radioUri.toString()) + "</res>" +
+      "<res duration=\"0:00:00\" protocolInfo=\"" + PROTOCOL_INFO_HEADER + mime + ":" + getDlnaTail(mime) + "\">" + Request.escapeXml(radioUri.toString()) + "</res>" +
       "</item>" +
       "</DIDL-Lite>";
   }

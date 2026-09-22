@@ -569,7 +569,7 @@ public class MainActivity
     final RadioGroup pcmRadioGroup = settingsView.findViewById(R.id.pcm_radio_group);
     pcmRadioGroup.setOnCheckedChangeListener((group, checkedId) ->
       sharedPreferences.edit().putBoolean(getString(R.string.key_pcm_mode), (group.getCheckedRadioButtonId() == id.pcm_radio_button)).commit());
-    final int pcmRadioButtonId = isPcm ? R.id.pcm_radio_button : id.relay_radio_button;
+    final int pcmRadioButtonId = isPcm ? R.id.pcm_radio_button : id.passthrough_radio_button;
     ((RadioButton) settingsView.findViewById(pcmRadioButtonId)).setChecked(true);
     settingsAlertDialog = settingsAlertDialogBuilder
       .setTitle(string.title_settings)
