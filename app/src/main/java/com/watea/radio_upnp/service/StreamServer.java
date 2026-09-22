@@ -141,14 +141,11 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
   }
 
   public interface Listener {
-    default void onDisconnected(@NonNull String lockKey) {
-    }
+    void onDisconnected(@NonNull String lockKey);
 
-    default void onConnected(@NonNull String lockKey) {
-    }
+    void onConnected(@NonNull String lockKey);
 
-    default void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-    }
+    void onNewInformation(@NonNull String information, @NonNull String lockKey);
   }
 
   private static class Watchdog {
