@@ -46,6 +46,7 @@ import java.util.function.Function;
 
 public class UpnpSessionDevice extends RemoteSessionDevice {
   public static final String PCM_MIME = "audio/wav";
+  private static final String PCM_MIME_ALIAS = "audio/x-wav"; // Historical alias for audio/wav, still advertised by some renderers (e.g. Samsung TVs)
   private static final String L16_MIME = "audio/L16";
   private static final int PCM_FORMAT_UNKNOWN = -1;
   private static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
@@ -423,7 +424,9 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   @Nullable
   private String resolvePcmFormat(int sampleRate, int channelCount) {
-    if (sinkProtocolInfos.isEmpty() || sinkProtocolInfos.contains(PCM_MIME)) {
+    if (sinkProtocolInfos.isEmpty()
+      || sinkProtocolInfos.contains(PCM_MIME)
+      || sinkProtocolInfos.contains(PCM_MIME_ALIAS)) {
       return onPcmMime(PCM_MIME);
     }
     if ((sampleRate == PCM_FORMAT_UNKNOWN) || (channelCount == PCM_FORMAT_UNKNOWN)) {
@@ -432,7 +435,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       return null;
     }
     final String l16Mime = L16_MIME + ";rate=" + sampleRate + ";channels=" + channelCount;
-    if (!sinkProtocolInfos.contains(l16Mime)) {
+    // A bare/wildcard audio/L16 entry (no rate/channels) means "any DLNA-standard PCM rate" —
+    // still declare and serve the exact decoded rate/channels, just relax the match itself
+    if (!sinkProtocolInfos.contains(L16_MIME) && !sinkProtocolInfos.contains(l16Mime)) {
+      Log.d(LOG_TAG, "resolvePcmFormat: no format compatible with this renderer's Sink");
       return null;
     }
     return onPcmMime(l16Mime);
