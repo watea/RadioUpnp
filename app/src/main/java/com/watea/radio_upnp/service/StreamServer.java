@@ -49,7 +49,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class StreamServer extends HttpServer implements CapturingAudioSink.Callback {
+public class StreamServer extends HttpServer {
   private static final String LOG_TAG = StreamServer.class.getSimpleName();
   private static final String STREAM_PATH = "/stream";
   private static final String LOCKKEY_PARAM = "lockkey";
@@ -88,28 +88,6 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     return null;
   }
 
-  // Must be called before any PCM streaming is started
-  @Override
-  public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
-    Log.d(LOG_TAG, "onFormatChanged");
-    final StreamContext streamContext = this.streamContext;
-    if (streamContext == null) {
-      Log.d(LOG_TAG, "No resource to receive format data");
-    } else {
-      streamContext.onFormatChanged(sampleRate, channelCount, bitsPerSample);
-    }
-  }
-
-  @Override
-  public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
-    final StreamContext streamContext = this.streamContext;
-    if (streamContext == null) {
-      Log.d(LOG_TAG, "No resource to receive PCM data");
-    } else {
-      streamContext.onPcmData(pcmData, lockKey);
-    }
-  }
-
   public void onPcmMime(@NonNull String mime, @NonNull String lockKey) {
     final StreamContext streamContext = this.streamContext;
     if (streamContext != null) {
@@ -132,10 +110,15 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     streamContext = null;
   }
 
-  // Must be called early before any session is started
-  public void launch(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
+  // Must be called early before any session is started.
+  // Returns the CapturingAudioSink.Callback to wire directly to that session's own
+  // CapturingAudioSink — each session's sink talks only to its own StreamContext.
+  @NonNull
+  public CapturingAudioSink.Callback launch(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
     Log.d(LOG_TAG, "launch: " + lockKey);
-    streamContext = new StreamContext(radio, listener, lockKey);
+    final StreamContext newStreamContext = new StreamContext(radio, listener, lockKey);
+    streamContext = newStreamContext;
+    return newStreamContext;
   }
 
   @NonNull
@@ -154,7 +137,6 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
 
     void onNewInformation(@NonNull String information, @NonNull String lockKey);
 
-    // Fired exactly once per session
     default void onPcmFormat(int sampleRate, int channelCount) {
     }
   }
@@ -249,7 +231,7 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     }
   }
 
-  private class StreamContext {
+  private class StreamContext implements CapturingAudioSink.Callback {
     private static final int CONNECT_WATCHDOG_TIMEOUT_S = 20;
     private static final int LIVELINESS_WATCHDOG_TIMEOUT_S = 10;
     @NonNull
@@ -267,7 +249,6 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
     private volatile int bitsPerSample = DEFAULT;
     @NonNull
     private volatile String pcmMime = UpnpSessionDevice.PCM_MIME;
-    private volatile boolean pcmFormatNotified = false;
 
     public StreamContext(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
       this.radio = radio;
@@ -281,14 +262,12 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       return radio;
     }
 
+    @Override
     public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
       this.sampleRate = sampleRate;
       this.channelCount = channelCount;
       this.bitsPerSample = bitsPerSample;
-      if (!pcmFormatNotified) {
-        pcmFormatNotified = true;
-        listener.onPcmFormat(sampleRate, channelCount);
-      }
+      listener.onPcmFormat(sampleRate, channelCount);
     }
 
     public int getBitsPerSample() {
@@ -314,10 +293,8 @@ public class StreamServer extends HttpServer implements CapturingAudioSink.Callb
       return pcmMime;
     }
 
-    public void onPcmData(@NonNull byte[] pcmData, @NonNull String lockKey) {
-      if (!hasLockKey(lockKey)) {
-        return;
-      }
+    @Override
+    public void onPcmData(@NonNull byte[] pcmData) {
       if (queues.isEmpty()) {
         Log.d(LOG_TAG, "No queue to receive data");
         return;

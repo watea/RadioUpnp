@@ -83,6 +83,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private final Set<String> sinkProtocolInfos = new HashSet<>();
   @NonNull
   private String instanceId = "0";
+  private boolean isLaunched = false;
 
   public UpnpSessionDevice(
     @NonNull Context context,
@@ -219,6 +220,10 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   private void launchPlay(int sampleRate, int channelCount) {
+    if (isLaunched) {
+      return;
+    }
+    isLaunched = true;
     scheduleActionSetAvTransportUri(sampleRate, channelCount);
     scheduleActionPlay();
     scheduleActionGetVolume(AudioManager.ADJUST_SAME);

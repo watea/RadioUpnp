@@ -60,9 +60,6 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
     this.streamServer = streamServer;
     radioUri = this.streamServer.getStreamUri(lockKey, (this.mode == Mode.PCM));
     logoUri = this.streamServer.getLogoUri(lockKey);
-    if (this.mode == Mode.PCM) {
-      capturingAudioSink.setCallback(this.streamServer);
-    }
   }
 
   @Override
@@ -88,7 +85,10 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
 
   @Override
   public void launch() {
-    streamServer.launch(radio, this, lockKey);
+    final CapturingAudioSink.Callback callback = streamServer.launch(radio, this, lockKey);
+    if (mode == Mode.PCM) {
+      capturingAudioSink.setCallback(callback);
+    }
     super.launch();
   }
 

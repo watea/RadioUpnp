@@ -113,7 +113,7 @@ public abstract class SessionDevice implements Player.Listener {
     this.listener = listener;
     this.radio = radio;
     lockKey = UUID.randomUUID().toString();
-    capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build(), lockKey);
+    capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build());
     exoPlayer = getExoPlayer();
   }
 

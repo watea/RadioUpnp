@@ -46,8 +46,6 @@ public class CapturingAudioSink implements AudioSink {
   private static final long LONG_DEFAULT = -1L;
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
   @NonNull
-  private final String lockKey;
-  @NonNull
   private final AudioSink delegate;
   private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);
   @Nullable
@@ -57,9 +55,8 @@ public class CapturingAudioSink implements AudioSink {
   private volatile long byteRate = LONG_DEFAULT;
   private volatile long lastPresentationTimeUs = 0; // Presentation time microseconds
 
-  public CapturingAudioSink(@NonNull AudioSink delegate, @NonNull String lockKey) {
+  public CapturingAudioSink(@NonNull AudioSink delegate) {
     this.delegate = delegate;
-    this.lockKey = lockKey;
   }
 
   public void setCallback(@NonNull Callback callback) {
@@ -69,11 +66,9 @@ public class CapturingAudioSink implements AudioSink {
 
   // Called before handleBuffer
   @Override
-  public void configure(
-    @NonNull Format inputFormat,
-    int specifiedBufferSize,
-    @Nullable int[] outputChannels) throws ConfigurationException {
+  public void configure(@NonNull AudioSinkConfig audioSinkConfig) throws ConfigurationException {
     if (callback != null) {
+      final Format inputFormat = audioSinkConfig.format;
       final int sampleRate = inputFormat.sampleRate;
       final int channelCount = inputFormat.channelCount;
       final int bytesPerSample = Util.getPcmFrameSize(inputFormat.pcmEncoding, 1);
@@ -81,7 +76,7 @@ public class CapturingAudioSink implements AudioSink {
       byteRate = (long) sampleRate * channelCount * bytesPerSample;
       callback.onFormatChanged(sampleRate, channelCount, bytesPerSample * 8);
     }
-    delegate.configure(inputFormat, specifiedBufferSize, outputChannels);
+    delegate.configure(audioSinkConfig);
   }
 
   // presentationTimeUs: microseconds, it is the timestamp in microseconds at which this audio frame must be presented (played) to the user, within the media timeline
@@ -246,7 +241,7 @@ public class CapturingAudioSink implements AudioSink {
   public interface Callback {
     void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample);
 
-    void onPcmData(@NonNull byte[] data, @NonNull String lockKey);
+    void onPcmData(@NonNull byte[] data);
   }
 
   private class Pacer extends Thread {
@@ -297,7 +292,7 @@ public class CapturingAudioSink implements AudioSink {
             }
           }
           bytesConsumed += pcmData.length;
-          callback.onPcmData(pcmData, lockKey);
+          callback.onPcmData(pcmData);
         } catch (InterruptedException interruptedException) {
           Thread.currentThread().interrupt();
         }
