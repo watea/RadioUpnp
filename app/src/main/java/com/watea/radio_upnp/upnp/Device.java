@@ -281,7 +281,7 @@ public class Device extends Asset {
   @NonNull
   private final URL location;
   @Nullable
-  private volatile Device currentDevice = null;
+  private Device currentDevice = null;
   @Nullable
   private String deviceType = null;
   @Nullable

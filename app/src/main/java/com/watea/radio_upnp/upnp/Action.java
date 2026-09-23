@@ -39,7 +39,7 @@ public class Action extends Asset {
   private final Service service;
   private final Set<Argument> arguments = new HashSet<>();
   @Nullable
-  private volatile Argument currentArgument = null;
+  private Argument currentArgument = null;
   @Nullable
   private String name = null;
 
