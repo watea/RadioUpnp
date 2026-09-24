@@ -55,7 +55,7 @@ public class StreamServer extends HttpServer {
   private static final String LOCKKEY_PARAM = "lockkey";
   private static final String SCHEME = "http";
   private static final int DEFAULT = -1;
-  private static final int QUEUE_SIZE = 300; // ~10s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
+  private static final int QUEUE_SIZE = 300; // ~7s buffer at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private static final String LOGO_PATH = "/logo.jpg";
   private static final String STREAM_SUFFIX_PCM = ".wav";
   private static final Pattern PARAM_PATTERN = Pattern.compile("[?&](?:amp;)*([^=]+)=([^&]*)");
@@ -218,7 +218,7 @@ public class StreamServer extends HttpServer {
       // Body length is unbounded and unknown upfront; the socket is closed when the
       // stream ends, so make that explicit instead of leaving HTTP/1.1 framing ambiguous
       // (no Content-Length can correctly describe a live stream, and there is no chunked
-      // transfer-encoding support in HttpServer).
+      // transfer-encoding support in HttpServer)
       response.addHeader("Connection", "close");
       try {
         response.send();
@@ -308,13 +308,13 @@ public class StreamServer extends HttpServer {
       }
       queues.forEach(queue -> {
         final int remaining = queue.remainingCapacity();
-        if (remaining < QUEUE_SIZE * 0.2F) {
+        if (remaining == 0) {
+          Log.e(LOG_TAG, "QUEUE FULL => oldest chunk dropped");
+          queue.poll(); // Latency stays bounded; dead clients are caught by the watchdog
+        } else if (remaining < QUEUE_SIZE * 0.2F) {
           Log.w(LOG_TAG, "Queue fill: " + (QUEUE_SIZE - remaining) + "/" + QUEUE_SIZE);
         }
-        if (!queue.offer(pcmData)) {
-          Log.e(LOG_TAG, "QUEUE FULL => DROP (" + pcmData.length + " bytes)");
-          queues.remove(queue);
-        }
+        queue.offer(pcmData);
       });
     }
 
