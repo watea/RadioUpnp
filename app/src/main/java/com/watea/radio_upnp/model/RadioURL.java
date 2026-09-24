@@ -41,6 +41,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -132,7 +133,8 @@ public class RadioURL {
   public static String getStreamContentType(@NonNull Response response) {
     String contentType = response.header("Content-Type");
     if (contentType != null) {
-      contentType = contentType.split(";")[0];
+      // MIME types are case-insensitive (RFC 2045): normalized once for all downstream switch matches
+      contentType = contentType.split(";")[0].trim().toLowerCase(Locale.ROOT);
     }
     Log.d(LOG_TAG, "Connection status/ContentType: " +
       response.code() + "/" +

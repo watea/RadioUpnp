@@ -137,7 +137,7 @@ public class StreamServer extends HttpServer {
 
     void onNewInformation(@NonNull String information, @NonNull String lockKey);
 
-    default void onPcmFormat(int sampleRate, int channelCount) {
+    default void onPcmFormat(int sampleRate, int channelCount, int bitsPerSample) {
     }
   }
 
@@ -264,10 +264,17 @@ public class StreamServer extends HttpServer {
 
     @Override
     public void onFormatChanged(int sampleRate, int channelCount, int bitsPerSample) {
+      // WAV header / L16 MIME are sent once: the renderer keeps decoding with the initial format
+      if ((this.sampleRate != DEFAULT) &&
+        ((this.sampleRate != sampleRate) || (this.channelCount != channelCount) || (this.bitsPerSample != bitsPerSample))) {
+        Log.w(LOG_TAG, "onFormatChanged: PCM format changed mid-stream from " +
+          this.sampleRate + "/" + this.channelCount + "/" + this.bitsPerSample + " to " +
+          sampleRate + "/" + channelCount + "/" + bitsPerSample);
+      }
       this.sampleRate = sampleRate;
       this.channelCount = channelCount;
       this.bitsPerSample = bitsPerSample;
-      listener.onPcmFormat(sampleRate, channelCount);
+      listener.onPcmFormat(sampleRate, channelCount, bitsPerSample);
     }
 
     public int getBitsPerSample() {

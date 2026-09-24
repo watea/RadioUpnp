@@ -40,14 +40,15 @@ import com.watea.radio_upnp.upnp.Service;
 import com.watea.radio_upnp.upnp.StateVariable;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class UpnpSessionDevice extends RemoteSessionDevice {
   public static final String PCM_MIME = "audio/wav";
-  private static final String PCM_MIME_ALIAS = "audio/x-wav"; // Historical alias for audio/wav, still advertised by some renderers (e.g. Samsung TVs)
   private static final String L16_MIME = "audio/L16";
+  private static final int L16_BITS_PER_SAMPLE = 16;
   private static final int PCM_FORMAT_UNKNOWN = -1;
   private static final String PROTOCOL_INFO_TAIL = "DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
   private static final String LOG_TAG = UpnpSessionDevice.class.getSimpleName();
@@ -143,7 +144,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   public static boolean isRawPcm(@NonNull String mime) {
-    return !PCM_MIME.equals(mime);
+    return mime.startsWith(L16_MIME);
   }
 
   @NonNull
@@ -197,8 +198,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public void onPcmFormat(int sampleRate, int channelCount) {
-    launchPlay(sampleRate, channelCount);
+  public void onPcmFormat(int sampleRate, int channelCount, int bitsPerSample) {
+    launchPlay(sampleRate, channelCount, bitsPerSample);
   }
 
   @Override
@@ -208,7 +209,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       scheduleActionGetProtocolInfo();
       scheduleActionPrepareForConnection();
       if (mode != Mode.PCM) {
-        launchPlay(PCM_FORMAT_UNKNOWN, PCM_FORMAT_UNKNOWN);
+        launchPlay(PCM_FORMAT_UNKNOWN, PCM_FORMAT_UNKNOWN, PCM_FORMAT_UNKNOWN);
       }
       return true;
     }
@@ -220,12 +221,12 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   protected void setVolume(float volume) {
   }
 
-  private void launchPlay(int sampleRate, int channelCount) {
+  private void launchPlay(int sampleRate, int channelCount, int bitsPerSample) {
     if (isLaunched) {
       return;
     }
     isLaunched = true;
-    scheduleActionSetAvTransportUri(sampleRate, channelCount);
+    scheduleActionSetAvTransportUri(sampleRate, channelCount, bitsPerSample);
     scheduleActionPlay();
     scheduleActionGetVolume(AudioManager.ADJUST_SAME);
   }
@@ -270,7 +271,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
               Log.i(LOG_TAG, "ProtocolInfo: " + entry);
               final String[] fields = entry.split(":", 4);
               if (fields.length >= 3) {
-                sinkProtocolInfos.add(fields[2].trim());
+                sinkProtocolInfos.add(fields[2].replace(" ", ""));
               }
             }
           }
@@ -388,14 +389,14 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     return (int) Math.round((nativeVolume - volumeMinimum) * DEVICE_MAX_VOLUME / (double) (volumeMaximum - volumeMinimum));
   }
 
-  private void scheduleActionSetAvTransportUri(int sampleRate, int channelCount) {
+  private void scheduleActionSetAvTransportUri(int sampleRate, int channelCount, int bitsPerSample) {
     scheduleMandatoryAction(
       avTransportService, ACTION_SET_AV_TRANSPORT_URI,
       action -> new Request(action, instanceId) {
         @Override
         public void run() {
           final String mime = (mode == Mode.PCM) ?
-            resolvePcmFormat(sampleRate, channelCount) :
+            resolvePcmFormat(sampleRate, channelCount, bitsPerSample) :
             normalize((connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent());
           if (mime == null) {
             Log.d(LOG_TAG, "scheduleActionSetAvTransportUri: no format compatible with this renderer");
@@ -423,10 +424,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Nullable
-  private String resolvePcmFormat(int sampleRate, int channelCount) {
-    if (sinkProtocolInfos.isEmpty()
-      || sinkProtocolInfos.contains(PCM_MIME)
-      || sinkProtocolInfos.contains(PCM_MIME_ALIAS)) {
+  private String resolvePcmFormat(int sampleRate, int channelCount, int bitsPerSample) {
+    if (sinkProtocolInfos.isEmpty()) {
       return onPcmMime(PCM_MIME);
     }
     if ((sampleRate == PCM_FORMAT_UNKNOWN) || (channelCount == PCM_FORMAT_UNKNOWN)) {
@@ -434,14 +433,38 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
       Log.e(LOG_TAG, "resolvePcmFormat: PCM format unexpectedly unknown");
       return null;
     }
-    final String l16Mime = L16_MIME + ";rate=" + sampleRate + ";channels=" + channelCount;
-    // A bare/wildcard audio/L16 entry (no rate/channels) means "any DLNA-standard PCM rate" —
-    // still declare and serve the exact decoded rate/channels, just relax the match itself
-    if (!sinkProtocolInfos.contains(L16_MIME) && !sinkProtocolInfos.contains(l16Mime)) {
-      Log.d(LOG_TAG, "resolvePcmFormat: no format compatible with this renderer's Sink");
-      return null;
+    boolean isL16Declared = false;
+    for (final String sinkMime : sinkProtocolInfos) {
+      final String[] parts = sinkMime.split(";");
+      // MIME types are case-insensitive (RFC 2045)
+      switch (parts[0].toLowerCase(Locale.ROOT)) {
+        case "*":
+        case "audio/*":
+          return onPcmMime(PCM_MIME);
+        case "audio/wav":
+        case "audio/x-wav":
+        case "audio/wave":
+        case "audio/vnd.wave":
+          // Declare the renderer's own spelling: strict renderers match protocolInfo literally
+          return onPcmMime(parts[0]);
+        case "audio/l16":
+          // Declared rates/channels not enforced: serving the actual decoded format beats a WAV the Sink doesn't declare
+          isL16Declared = true;
+          break;
+        default:
+          // Nothing to do
+      }
     }
-    return onPcmMime(l16Mime);
+    if (!isL16Declared) {
+      Log.d(LOG_TAG, "resolvePcmFormat: no PCM format declared in Sink, WAV as best effort");
+      return onPcmMime(PCM_MIME);
+    }
+    // audio/L16 is 16-bit by definition; toBigEndian16() also assumes it
+    if (bitsPerSample != L16_BITS_PER_SAMPLE) {
+      Log.d(LOG_TAG, "resolvePcmFormat: audio/L16 not possible with " + bitsPerSample + "-bit PCM, WAV as best effort");
+      return onPcmMime(PCM_MIME);
+    }
+    return onPcmMime(L16_MIME + ";rate=" + sampleRate + ";channels=" + channelCount);
   }
 
   // Creates DIDL-Lite metadata
