@@ -645,6 +645,8 @@ public class MainActivity
   @Override
   protected void onStart() {
     super.onStart();
+    // Finalize donations whose payment completed while app was not listening
+    DonationFragment.consumePendingPurchases(this);
     // Bind to UPnP service
     if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");

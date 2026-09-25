@@ -23,9 +23,8 @@
 
 package com.watea.radio_upnp.activity;
 
+import android.content.Context;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Spinner;
@@ -44,6 +43,7 @@ import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryPurchasesParams;
 import com.google.common.collect.ImmutableList;
 import com.watea.radio_upnp.R;
 
@@ -51,15 +51,88 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DonationFragment extends OpenDonationFragment
   implements ConsumeResponseListener, PurchasesUpdatedListener {
   private static final String LOG_TAG = DonationFragment.class.getSimpleName();
-  private static final long RECONNECT_TIMER_START_MILLISECONDS = 1000L;
-  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private final Map<String, ProductDetails> ownProductDetailss = new HashMap<>();
   private BillingClient billingClient;
   private String[] productIds;
+
+  // Recovers purchases left unconsumed at each app start, e.g. slow payments completed after the
+  // donation screen was left; otherwise Google refunds them after 3 days
+  public static void consumePendingPurchases(@NonNull Context context) {
+    final BillingClient client = BillingClient.newBuilder(context.getApplicationContext())
+      .setListener((billingResult, purchases) -> {
+      })
+      .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+      .build();
+    client.startConnection(new BillingClientStateListener() {
+      @Override
+      public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+        if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+          Log.e(LOG_TAG, "consumePendingPurchases: setup failed: " + billingResult.getDebugMessage());
+          client.endConnection();
+          return;
+        }
+        client.queryPurchasesAsync(
+          QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build(),
+          (queryResult, purchases) -> {
+            if (queryResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+              Log.e(LOG_TAG, "consumePendingPurchases: query failed: " + queryResult.getDebugMessage());
+              client.endConnection();
+              return;
+            }
+            // Connection is released once every consumption has answered
+            final AtomicInteger remaining = new AtomicInteger(1);
+            final ConsumeResponseListener listener = (consumeResult, purchaseToken) -> {
+              logConsumeResponse(consumeResult);
+              if (remaining.decrementAndGet() == 0) {
+                client.endConnection();
+              }
+            };
+            for (final Purchase purchase : purchases) {
+              if (isPurchased(purchase)) {
+                remaining.incrementAndGet();
+                consume(client, purchase, listener);
+              }
+            }
+            if (remaining.decrementAndGet() == 0) {
+              client.endConnection();
+            }
+          });
+      }
+
+      @Override
+      public void onBillingServiceDisconnected() {
+        // Nothing to do: next app start retries
+      }
+    });
+  }
+
+  private static boolean isPurchased(@NonNull Purchase purchase) {
+    final boolean result = (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED);
+    if (!result) {
+      Log.i(LOG_TAG, "Purchase not completed, state: " + purchase.getPurchaseState());
+    }
+    return result;
+  }
+
+  private static void consume(
+    @NonNull BillingClient client,
+    @NonNull Purchase purchase,
+    @NonNull ConsumeResponseListener listener) {
+    client.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build(), listener);
+  }
+
+  private static void logConsumeResponse(@NonNull BillingResult billingResult) {
+    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+      Log.i(LOG_TAG, "Donation consumed, thank you!");
+    } else {
+      Log.e(LOG_TAG, "Consumption failed: " + billingResult.getDebugMessage());
+    }
+  }
 
   @Override
   public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -97,11 +170,22 @@ public class DonationFragment extends OpenDonationFragment
   }
 
   @Override
+  public void onDestroyView() {
+    super.onDestroyView();
+    // A new client is created on each onViewCreated()
+    if (billingClient != null) {
+      billingClient.endConnection();
+    }
+  }
+
+  @Override
   public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
     if ((billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) && (purchases != null)) {
       for (final Purchase purchase : purchases) {
-        final ConsumeParams consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build();
-        billingClient.consumeAsync(consumeParams, this);
+        // Pending ones are consumed at a later app start
+        if (isPurchased(purchase)) {
+          consume(billingClient, purchase, this);
+        }
       }
     } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
       Log.i(LOG_TAG, "Purchase canceled by user");
@@ -112,11 +196,7 @@ public class DonationFragment extends OpenDonationFragment
 
   @Override
   public void onConsumeResponse(@NonNull BillingResult billingResult, @NonNull String purchaseToken) {
-    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-      Log.i(LOG_TAG, "Donation consumed, thank you!");
-    } else {
-      Log.e(LOG_TAG, "Consumption failed: " + billingResult.getDebugMessage());
-    }
+    logConsumeResponse(billingResult);
   }
 
   private void initGoogleBillingClient() {
@@ -124,6 +204,7 @@ public class DonationFragment extends OpenDonationFragment
       billingClient = BillingClient.newBuilder(requireContext())
         .setListener(this)
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+        .enableAutoServiceReconnection()
         .build();
       billingClient.startConnection(new BillingClientStateListener() {
         @Override
@@ -138,8 +219,8 @@ public class DonationFragment extends OpenDonationFragment
 
         @Override
         public void onBillingServiceDisconnected() {
-          Log.w(LOG_TAG, "Billing Service Disconnected, will retry");
-          HANDLER.postDelayed(DonationFragment.this::initGoogleBillingClient, RECONNECT_TIMER_START_MILLISECONDS);
+          // Reconnection is automatic on next request
+          Log.w(LOG_TAG, "Billing Service Disconnected");
         }
       });
     } catch (IllegalStateException illegalStateException) {
