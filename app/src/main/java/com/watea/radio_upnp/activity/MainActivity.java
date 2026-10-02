@@ -884,6 +884,7 @@ public class MainActivity
         } else {
           Radios.getInstance().importFrom(
             (importExportAction == ImportExportAction.JSON_IMPORT),
+            false,
             inputStream,
             () -> true,
             result -> runSafelyOnUiThread(() -> tell(result ? R.string.import_successful : string.import_failed)));

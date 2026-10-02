@@ -155,7 +155,7 @@ public class AlarmController implements ServiceConnection {
           mainActivity.tell(R.string.alarm_not_available);
         } else if (isChecked) {
           assert radio != null;
-          if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getURL().toString())) {
+          if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getId())) {
             batteryOptimisationUserHint.show();
           } else {
             mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));

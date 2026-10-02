@@ -301,10 +301,10 @@ public class AlarmService extends Service implements MediaController.Listener {
       this.listener = listener;
     }
 
-    public boolean setAlarm(int hour, int minute, @NonNull String radioURL) {
+    public boolean setAlarm(int hour, int minute, @NonNull String radioId) {
       getSharedPreferences()
         .edit()
-        .putString(getString(R.string.key_alarm_radio), radioURL)
+        .putString(getString(R.string.key_alarm_radio), radioId)
         .putInt(getString(R.string.key_alarm_hour), hour)
         .putInt(getString(R.string.key_alarm_minute), minute)
         .apply();
@@ -339,7 +339,11 @@ public class AlarmService extends Service implements MediaController.Listener {
 
     @Nullable
     public Radio getRadio() {
-      return Radios.getInstance().getRadioFromURL(getSharedPreferences().getString(getString(R.string.key_alarm_radio), ""));
+      final Radios radios = Radios.getInstance();
+      final Radio radio = radios.getRadioFromId(getSharedPreferences().getString(getString(R.string.key_alarm_radio), ""));
+      return (radio == null) ?
+        radios.getRadioFromId(Radios.getAppPreferences(AlarmService.this).getString(getString(R.string.key_last_played_radio), "")) :
+        radio;
     }
 
     public boolean isStarted() {

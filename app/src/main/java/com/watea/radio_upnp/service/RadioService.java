@@ -28,10 +28,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -194,11 +192,6 @@ public class RadioService
       }
     }
   };
-
-  @NonNull
-  private static SharedPreferences getAppPreferences(@NonNull Context context) {
-    return context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
-  }
 
   @Override
   public void onCreate() {
@@ -727,7 +720,7 @@ public class RadioService
 
   private void play(@NonNull Radio radio) {
     Log.d(LOG_TAG, "play: " + radio.getName() + " => " + radio.getUri());
-    getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
+    Radios.getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
     final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
     if (sessionDevice != null) {
       sessionDevice.release();
@@ -784,7 +777,7 @@ public class RadioService
   }
 
   private void skipTo(int direction) {
-    final String lastId = getAppPreferences(this).getString(getString(R.string.key_last_played_radio), null);
+    final String lastId = Radios.getAppPreferences(this).getString(getString(R.string.key_last_played_radio), null);
     final Radio currentRadio = (lastId == null) ? null : Radios.getInstance().getRadioFromId(lastId);
     if (currentRadio == null) {
       Log.d(LOG_TAG, "skipTo: no current radio");
@@ -805,7 +798,7 @@ public class RadioService
     if (Radios.isInit()) {
       final Radios radios = Radios.getInstance();
       if (!radios.isEmpty()) {
-        playFromMediaId(getAppPreferences(this).getString(getString(R.string.key_last_played_radio), radios.get(0).getId()));
+        playFromMediaId(Radios.getAppPreferences(this).getString(getString(R.string.key_last_played_radio), radios.get(0).getId()));
       }
       return true;
     }
@@ -828,7 +821,7 @@ public class RadioService
       } else if (upnpSelectedDevice != null) {
         result = new UpnpSessionDevice(
           this,
-          getAppPreferences(this).getBoolean(getString(R.string.key_pcm_mode), KEY_PCM_MODE_DEFAULT),
+          Radios.getAppPreferences(this).getBoolean(getString(R.string.key_pcm_mode), KEY_PCM_MODE_DEFAULT),
           this,
           radio,
           this::play,

@@ -151,9 +151,9 @@ public class Radio {
     this(name, icon, null, url, webPageUrl);
   }
 
-  public Radio(@NonNull JSONObject jSONObject) throws JSONException, MalformedURLException {
+  public Radio(@NonNull JSONObject jSONObject, boolean isInit) throws JSONException, MalformedURLException {
     this(
-      getId(jSONObject),
+      getId(jSONObject, isInit),
       jSONObject.getString(NAME),
       null,
       jSONObject.getString(ICON),
@@ -164,15 +164,17 @@ public class Radio {
       jSONObject.getBoolean(IS_PREFERRED));
   }
 
-  // Backward compatibility: generates an ID if not existing
+  // Backward compatibility: generates an ID if not existing or not isInit
   @NonNull
-  public static String getId(@NonNull JSONObject jsonObject) {
-    try {
-      return jsonObject.getString(ID);
-    } catch (JSONException jSONException) {
-      isBackwardCompatible = true;
-      return getNextId();
+  public static String getId(@NonNull JSONObject jsonObject, boolean isInit) {
+    if (isInit) {
+      try {
+        return jsonObject.getString(ID);
+      } catch (JSONException jSONException) {
+        isBackwardCompatible = true;
+      }
     }
+    return getNextId();
   }
 
   public static boolean isBackwardCompatible() {

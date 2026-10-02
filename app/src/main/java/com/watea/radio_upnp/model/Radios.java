@@ -88,11 +88,17 @@ public class Radios extends ArrayList<Radio> {
     return radios;
   }
 
+  // Same file as MainActivity.getPreferences()
+  @NonNull
+  public static SharedPreferences getAppPreferences(@NonNull Context context) {
+    return context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
+  }
+
   // Must be called before getInstance
   public static void setInstance(@NonNull Context context, @Nullable AlertDialog loadingAlertDialog) {
     if (radios == null) {
       radios = new Radios(context);
-      final SharedPreferences sharedPreferences = context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
+      final SharedPreferences sharedPreferences = getAppPreferences(context);
       if (sharedPreferences.getBoolean(context.getString(R.string.key_first_start), true)) {
         if (radios.addAll(DefaultRadios.get(context))) {
           // Robustness: store immediately to avoid bad user experience in case of app crash
@@ -113,6 +119,7 @@ public class Radios extends ArrayList<Radio> {
           try (final FileInputStream fileInputStream = new FileInputStream(radios.fileName)) {
             // If IDs have been generated for backward compatibility, we shall store result
             radios.importFrom(
+              true,
               true,
               fileInputStream,
               Radio::isBackwardCompatible,
@@ -261,11 +268,6 @@ public class Radios extends ArrayList<Radio> {
   }
 
   @Nullable
-  public Radio getRadioFromURL(@NonNull String uRL) {
-    return stream().filter(radio -> uRL.equals(radio.getURL().toString())).findFirst().orElse(null);
-  }
-
-  @Nullable
   public Radio getRadioFromName(@NonNull String name) {
     final String normalized = name.trim().toLowerCase(Locale.getDefault());
     Radio result = stream()
@@ -283,10 +285,11 @@ public class Radios extends ArrayList<Radio> {
   // Intended to be called in own thread.
   public void importFrom(
     boolean isJSON,
+    boolean isInit,
     @NonNull InputStream inputStream,
     @NonNull Supplier<Boolean> isToWrite,
     @NonNull Consumer<Boolean> callback) {
-    final boolean result = isJSON ? read(inputStream) : readCsv(inputStream);
+    final boolean result = isJSON ? read(inputStream, isInit) : readCsv(inputStream);
     putOnUiThread(() -> {
       callback.accept(result);
       if (isToWrite.get()) {
@@ -332,7 +335,7 @@ public class Radios extends ArrayList<Radio> {
   }
 
   // Only JSON can be read
-  private boolean read(@NonNull InputStream inputStream) {
+  private boolean read(@NonNull InputStream inputStream, boolean isInit) {
     try {
       final Gson gson = new Gson();
       // Define the type for the parsing
@@ -343,7 +346,7 @@ public class Radios extends ArrayList<Radio> {
         final List<Map<String, Object>> jSONObjects = gson.fromJson(reader, listType);
         for (final Map<String, Object> jSONObject : jSONObjects) {
           try {
-            final Radio radio = new Radio(new JSONObject(jSONObject));
+            final Radio radio = new Radio(new JSONObject(jSONObject), isInit);
             // Avoid duplicate radio
             putOnUiThread(() -> {
               if (stream()
