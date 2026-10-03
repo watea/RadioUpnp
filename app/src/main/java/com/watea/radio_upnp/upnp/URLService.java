@@ -29,7 +29,6 @@ import android.graphics.BitmapFactory;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.apache.commons.io.IOUtils;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -42,6 +41,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
@@ -91,6 +92,25 @@ public class URLService {
     return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
   }
 
+  // Charset from Content-Type parameter (e.g. text/xml; charset="utf-8"), UTF-8 by default.
+  // Note: Content-Encoding is a transfer compression (gzip...), not a charset.
+  @NonNull
+  private static Charset getCharset(@Nullable String contentType) {
+    if (contentType != null) {
+      for (final String parameter : contentType.split(";")) {
+        final String[] keyValue = parameter.trim().split("=", 2);
+        if ((keyValue.length == 2) && keyValue[0].trim().equalsIgnoreCase("charset")) {
+          try {
+            return Charset.forName(keyValue[1].trim().replace("\"", ""));
+          } catch (IllegalArgumentException illegalArgumentException) {
+            break; // Unknown charset
+          }
+        }
+      }
+    }
+    return StandardCharsets.UTF_8;
+  }
+
   @NonNull
   public byte[] fetchBytes() throws IOException {
     try (final InputStream inputStream = getInputStream()) {
@@ -106,12 +126,9 @@ public class URLService {
 
   @NonNull
   public URLService fetchContent() throws IOException {
-    try (final InputStream inputStream = getInputStream()) {
-      String encoding = uRLConnection.getContentEncoding();
-      encoding = (encoding == null) ? "UTF-8" : encoding;
-      content = IOUtils.toString(inputStream, encoding);
-      return this;
-    }
+    final byte[] bytes = fetchBytes(); // Connects, so headers are available below
+    content = new String(bytes, getCharset(uRLConnection.getContentType()));
+    return this;
   }
 
   // Calls consumer on START_TAG, END_TAG.
