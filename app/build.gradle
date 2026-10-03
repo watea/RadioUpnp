@@ -85,8 +85,6 @@ dependencies {
     implementation 'androidx.car.app:app:1.7.0' // Car App Library
     // Cast
     fullImplementation 'com.google.android.gms:play-services-cast-framework:22.3.1'
-    // GSON
-    implementation 'com.google.code.gson:gson:2.14.0'
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.23.2'
     // apache

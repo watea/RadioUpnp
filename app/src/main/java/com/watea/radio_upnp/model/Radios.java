@@ -33,12 +33,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.watea.radio_upnp.R;
 
+import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -47,13 +45,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.lang.reflect.Type;
+import java.io.UncheckedIOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -332,35 +329,28 @@ public class Radios extends ArrayList<Radio> {
 
   // Only JSON can be read
   private boolean read(@NonNull InputStream inputStream, boolean isInit) {
-    try {
-      final Gson gson = new Gson();
-      // Define the type for the parsing
-      final Type listType = new TypeToken<List<Map<String, Object>>>() {
-      }.getType();
-      // Parse JSON file
-      try (final InputStreamReader reader = new InputStreamReader(inputStream)) {
-        final List<Map<String, Object>> jSONObjects = gson.fromJson(reader, listType);
-        for (final Map<String, Object> jSONObject : jSONObjects) {
-          try {
-            final Radio radio = new Radio(new JSONObject(jSONObject), isInit);
-            // Avoid duplicate radio
-            putOnUiThread(() -> {
-              if (stream()
-                .map(Radio::getURL)
-                .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {
-                add(radio, false);
-              }
-            });
-          } catch (JSONException jSONException) {
-            Log.e(LOG_TAG, "read: internal JSON failure", jSONException);
-          } catch (MalformedURLException malformedURLException) {
-            Log.e(LOG_TAG, "read: internal failure creating radio", malformedURLException);
-          }
+    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+      final JSONArray jSONArray = new JSONArray(reader.lines().collect(Collectors.joining(CR)));
+      for (int i = 0; i < jSONArray.length(); i++) {
+        try {
+          final Radio radio = new Radio(jSONArray.getJSONObject(i), isInit);
+          // Avoid duplicate radio
+          putOnUiThread(() -> {
+            if (stream()
+              .map(Radio::getURL)
+              .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {
+              add(radio, false);
+            }
+          });
+        } catch (JSONException jSONException) {
+          Log.e(LOG_TAG, "read: internal JSON failure", jSONException);
+        } catch (MalformedURLException malformedURLException) {
+          Log.e(LOG_TAG, "read: internal failure creating radio", malformedURLException);
         }
       }
       return true;
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "read: internal failure creating radio", iOException);
+    } catch (IOException | UncheckedIOException | JSONException exception) {
+      Log.e(LOG_TAG, "read: internal failure reading radios", exception);
       return false;
     }
   }

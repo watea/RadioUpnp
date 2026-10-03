@@ -1,10 +1,6 @@
 # Disable obfuscation (keep readable names); R8 still shrinks dead code
 -dontobfuscate
 
-# Gson: keep TypeToken subclasses (used in Radios.java for JSON parsing)
--keep class com.google.gson.reflect.TypeToken { *; }
--keep class * extends com.google.gson.reflect.TypeToken
-
 # Missing classes flagged by R8
 -dontwarn com.google.re2j.Matcher
 -dontwarn com.google.re2j.Pattern
