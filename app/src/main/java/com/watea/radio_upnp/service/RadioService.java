@@ -132,6 +132,7 @@ public class RadioService
   };
   private NotificationManagerCompat notificationManager;
   private MediaLibrarySession mediaLibrarySession;
+  private PendingIntent mainActivityPendingIntent;
   private RadioPlayer radioPlayer;
   @Nullable
   private StreamServer streamServer = null;
@@ -198,11 +199,13 @@ public class RadioService
     new Thread(SessionDevice::warmUpHttpDataSourceFactory).start();
     // Create RadioPlayer and MediaLibrarySession
     radioPlayer = new RadioPlayer(this, getString(R.string.remote));
+    // Built once: FLAG_CANCEL_CURRENT would cancel the instance held by the session
+    mainActivityPendingIntent = PendingIntent.getActivity(
+      this, REQUEST_CODE,
+      new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+      PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, this)
-      .setSessionActivity(PendingIntent.getActivity(
-        this, REQUEST_CODE,
-        new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
+      .setSessionActivity(mainActivityPendingIntent)
       .build();
     setMediaNotificationProvider(this);
     // Notification
@@ -336,11 +339,7 @@ public class RadioService
     } else if (sessionDevice == null) {
       stopForeground(STOP_FOREGROUND_REMOVE);
     } else {
-      try {
-        notificationManager.notify(FOREGROUND_NOTIFICATION_ID, getNotification());
-      } catch (SecurityException securityException) {
-        Log.e(LOG_TAG, "Internal failure; notification not allowed");
-      }
+      buildNotification();
     }
   }
 
@@ -628,10 +627,7 @@ public class RadioService
     final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
       // Pending intent that is fired when user clicks on notification
-      .setContentIntent(PendingIntent.getActivity(
-        this, REQUEST_CODE,
-        new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE))
+      .setContentIntent(mainActivityPendingIntent)
       // When notification is deleted (when playback is paused and notification can be
       // deleted), fire intent with ACTION_STOP
       .setDeleteIntent(buildServicePendingIntent(ACTION_MEDIA_STOP))

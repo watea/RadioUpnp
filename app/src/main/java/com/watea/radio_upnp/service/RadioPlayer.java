@@ -96,6 +96,10 @@ public class RadioPlayer extends SimpleBasePlayer {
     return result;
   }
 
+  private static int clampVolume(int volume) {
+    return Math.max(0, Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, volume));
+  }
+
   // Must be called at init
   public void init(
     @NonNull Radio radio,
@@ -126,7 +130,7 @@ public class RadioPlayer extends SimpleBasePlayer {
 
   // Must be called on main thread
   public void setRemoteVolume(int remoteVolume) {
-    this.remoteVolume = Math.max(0, Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, remoteVolume));
+    this.remoteVolume = clampVolume(remoteVolume);
     invalidateState();
   }
 
@@ -199,8 +203,9 @@ public class RadioPlayer extends SimpleBasePlayer {
   @Override
   @NonNull
   protected ListenableFuture<?> handleSetDeviceVolume(int newDeviceVolume, @C.VolumeFlags int flags) {
+    // Direction computed before clamping: adjust is sent even at bounds, which resyncs the device
     final int direction = Integer.compare(newDeviceVolume, remoteVolume);
-    remoteVolume = Math.max(0, Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, newDeviceVolume));
+    remoteVolume = clampVolume(newDeviceVolume);
     invalidateState();
     if (direction != 0) {
       commands.onAdjustVolume((direction > 0) ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER);
@@ -211,23 +216,13 @@ public class RadioPlayer extends SimpleBasePlayer {
   @Override
   @NonNull
   protected ListenableFuture<?> handleIncreaseDeviceVolume(@C.VolumeFlags int flags) {
-    return handleDeviceVolume(true);
+    return handleSetDeviceVolume(remoteVolume + RemoteSessionDevice.DEVICE_VOLUME_STEP, flags);
   }
 
   @Override
   @NonNull
   protected ListenableFuture<?> handleDecreaseDeviceVolume(@C.VolumeFlags int flags) {
-    return handleDeviceVolume(false);
-  }
-
-  @NonNull
-  private ListenableFuture<?> handleDeviceVolume(boolean isIncrease) {
-    remoteVolume = isIncrease ?
-      Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, remoteVolume + RemoteSessionDevice.DEVICE_VOLUME_STEP) :
-      Math.max(0, remoteVolume - RemoteSessionDevice.DEVICE_VOLUME_STEP);
-    invalidateState();
-    commands.onAdjustVolume(isIncrease ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER);
-    return Futures.immediateVoidFuture();
+    return handleSetDeviceVolume(remoteVolume - RemoteSessionDevice.DEVICE_VOLUME_STEP, flags);
   }
 
   private int getPlayerState() {

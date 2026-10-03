@@ -785,26 +785,16 @@ public class MainActivity
   }
 
   private void exportFile() {
-    final android.content.DialogInterface.OnClickListener listener =
+    showImportExportDialog(string.title_export, R.drawable.ic_output_white_24dp, R.string.export_message,
       (dialog, which) -> {
         importExportAction = (which == DialogInterface.BUTTON_NEUTRAL) ?
           ImportExportAction.CSV_EXPORT : ImportExportAction.JSON_EXPORT;
         safeLaunch(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), importExportLauncher);
-      };
-    new AlertDialog.Builder(this)
-      .setTitle(string.title_export)
-      .setIcon(R.drawable.ic_output_white_24dp)
-      .setMessage(R.string.export_message)
-      .setNeutralButton(R.string.action_csv_export, listener)
-      .setPositiveButton(R.string.action_json_export, listener)
-      // Restore checked item
-      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
-      .create()
-      .show();
+      });
   }
 
   private void importFile() {
-    final android.content.DialogInterface.OnClickListener listener =
+    showImportExportDialog(string.title_import, R.drawable.ic_exit_to_app_white_24dp, R.string.import_message,
       (dialog, which) -> {
         final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
           .addCategory(Intent.CATEGORY_OPENABLE);
@@ -816,11 +806,15 @@ public class MainActivity
           importExportAction = ImportExportAction.JSON_IMPORT;
         }
         safeLaunch(intent, importExportLauncher);
-      };
+      });
+  }
+
+  // Neutral button is CSV, positive is JSON
+  private void showImportExportDialog(int title, int icon, int message, @NonNull DialogInterface.OnClickListener listener) {
     new AlertDialog.Builder(this)
-      .setTitle(string.title_import)
-      .setIcon(R.drawable.ic_exit_to_app_white_24dp)
-      .setMessage(R.string.import_message)
+      .setTitle(title)
+      .setIcon(icon)
+      .setMessage(message)
       .setNeutralButton(R.string.action_csv_export, listener)
       .setPositiveButton(R.string.action_json_export, listener)
       // Restore checked item

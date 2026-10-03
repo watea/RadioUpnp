@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 public abstract class ItemFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemFragment.class.getSimpleName();
@@ -219,9 +220,9 @@ public abstract class ItemFragment extends MainActivityFragment {
       } else {
         // Search in icon URL if available
         if (iconUrl == null) {
-          new IconWebSearcher(webPageUrl);
+          new IconSearcher(() -> RadioURL.iconSearch(webPageUrl));
         } else {
-          new IconUrlSearcher(iconUrl);
+          new IconSearcher(() -> new RadioURL(iconUrl).getBitmap());
         }
       }
     } else {
@@ -275,18 +276,23 @@ public abstract class ItemFragment extends MainActivityFragment {
     }
   }
 
-  private abstract class IconSearcher extends Searcher {
+  private class IconSearcher extends Searcher {
     @NonNull
-    protected final URL url;
+    private final Supplier<Bitmap> iconSupplier;
     @Nullable
-    protected Bitmap icon = null;
+    private Bitmap icon = null;
 
-    private IconSearcher(@NonNull URL url) {
+    private IconSearcher(@NonNull Supplier<Bitmap> iconSupplier) {
       super();
-      this.url = url;
+      this.iconSupplier = iconSupplier;
       tellWait();
       showSearchButton(false);
       start();
+    }
+
+    @Override
+    protected void onSearch() {
+      icon = iconSupplier.get();
     }
 
     @Override
@@ -298,28 +304,6 @@ public abstract class ItemFragment extends MainActivityFragment {
         setRadioIcon(icon);
         tell(R.string.icon_updated);
       }
-    }
-  }
-
-  private class IconWebSearcher extends IconSearcher {
-    private IconWebSearcher(@NonNull URL url) {
-      super(url);
-    }
-
-    @Override
-    protected void onSearch() {
-      icon = RadioURL.iconSearch(url);
-    }
-  }
-
-  private class IconUrlSearcher extends IconSearcher {
-    private IconUrlSearcher(@NonNull URL url) {
-      super(url);
-    }
-
-    @Override
-    protected void onSearch() {
-      icon = new RadioURL(url).getBitmap();
     }
   }
 
