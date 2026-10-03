@@ -39,7 +39,6 @@ import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.datasource.DataSource;
-import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -53,18 +52,12 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy;
 import androidx.media3.extractor.metadata.icy.IcyInfo;
 
-import com.watea.radio_upnp.model.EasyX509TrustManager;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.RadioURL;
 
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import okhttp3.OkHttpClient;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice implements Player.Listener {
@@ -121,19 +114,11 @@ public abstract class SessionDevice implements Player.Listener {
   // building it lazily on the main thread the first time a SessionDevice is constructed
   static synchronized void warmUpHttpDataSourceFactory() {
     if (httpDataSourceFactory == null) {
-      final Map<String, String> userAgentProperty = Collections.singletonMap("User-Agent", STREAMING_USER_AGENT);
-      try {
-        final EasyX509TrustManager easyX509TrustManager = new EasyX509TrustManager();
-        httpDataSourceFactory = new OkHttpDataSource.Factory(new OkHttpClient.Builder()
-          .sslSocketFactory(EasyX509TrustManager.getSSLSocketFactory(easyX509TrustManager), easyX509TrustManager)
-          .connectTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
-          .readTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
-          .build())
-          .setDefaultRequestProperties(userAgentProperty);
-      } catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException exception) {
-        Log.e(LOG_TAG, "Internal failure: error handling SSL connection", exception);
-        httpDataSourceFactory = new DefaultHttpDataSource.Factory().setDefaultRequestProperties(userAgentProperty);
-      }
+      httpDataSourceFactory = new OkHttpDataSource.Factory(RadioURL.getOkHttpClient().newBuilder()
+        .connectTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
+        .readTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
+        .build())
+        .setDefaultRequestProperties(Collections.singletonMap("User-Agent", STREAMING_USER_AGENT));
     }
   }
 

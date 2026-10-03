@@ -84,6 +84,13 @@ public class RadioURL {
     this.uRL = uRL;
   }
 
+  // Shared client: building the SSL trust manager reads system CA certificates from disk.
+  // Derive variants with newBuilder() to share its connection pool.
+  @NonNull
+  public static OkHttpClient getOkHttpClient() {
+    return OK_HTTP_CLIENT;
+  }
+
   @Nullable
   public static Bitmap iconSearch(@NonNull URL uRL) {
     Bitmap result = null;
