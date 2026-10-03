@@ -886,7 +886,6 @@ public class MainActivity
             (importExportAction == ImportExportAction.JSON_IMPORT),
             false,
             inputStream,
-            () -> true,
             result -> runSafelyOnUiThread(() -> tell(result ? R.string.import_successful : string.import_failed)));
         }
       } catch (Exception exception) {

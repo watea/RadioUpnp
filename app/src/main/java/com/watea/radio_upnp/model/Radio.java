@@ -66,7 +66,6 @@ public class Radio {
   private static final String IS_PREFERRED = "is_preferred";
   private static final int DEFAULT = -1;
   private static int lastId = DEFAULT;
-  private static boolean isBackwardCompatible = false;
 
   static {
     Radio radio = null;
@@ -153,7 +152,7 @@ public class Radio {
 
   public Radio(@NonNull JSONObject jSONObject, boolean isInit) throws JSONException, MalformedURLException {
     this(
-      getId(jSONObject, isInit),
+      isInit ? jSONObject.getString(ID) : getNextId(),
       jSONObject.getString(NAME),
       null,
       jSONObject.getString(ICON),
@@ -162,23 +161,6 @@ public class Radio {
       jSONObject.getString(MIME),
       jSONObject.getInt(QUALITY),
       jSONObject.getBoolean(IS_PREFERRED));
-  }
-
-  // Backward compatibility: generates an ID if not existing or not isInit
-  @NonNull
-  public static String getId(@NonNull JSONObject jsonObject, boolean isInit) {
-    if (isInit) {
-      try {
-        return jsonObject.getString(ID);
-      } catch (JSONException jSONException) {
-        isBackwardCompatible = true;
-      }
-    }
-    return getNextId();
-  }
-
-  public static boolean isBackwardCompatible() {
-    return isBackwardCompatible;
   }
 
   @NonNull

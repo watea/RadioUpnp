@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 // All public methods must be called from UI thread, if not otherwise specified
@@ -117,12 +116,10 @@ public class Radios extends ArrayList<Radio> {
         // Init
         new Thread(() -> {
           try (final FileInputStream fileInputStream = new FileInputStream(radios.fileName)) {
-            // If IDs have been generated for backward compatibility, we shall store result
             radios.importFrom(
               true,
               true,
               fileInputStream,
-              Radio::isBackwardCompatible,
               unused -> onInitFailed(loadingAlertDialog));
           } catch (Exception exception) {
             Log.e(LOG_TAG, "setInstance: internal failure", exception);
@@ -287,12 +284,11 @@ public class Radios extends ArrayList<Radio> {
     boolean isJSON,
     boolean isInit,
     @NonNull InputStream inputStream,
-    @NonNull Supplier<Boolean> isToWrite,
     @NonNull Consumer<Boolean> callback) {
     final boolean result = isJSON ? read(inputStream, isInit) : readCsv(inputStream);
     putOnUiThread(() -> {
       callback.accept(result);
-      if (isToWrite.get()) {
+      if (!isInit) {
         write();
       }
     });
