@@ -268,7 +268,7 @@ public class SearchFragment extends SearchRootFragment {
     private final OkHttpClient client;
     private final Random random = new Random();
     @Nullable
-    private HttpUrl.Builder lastValidHttpUrlBuilder = null; // Cache
+    private String lastValidHost = null; // Cache
 
     public RadioBrowserClient(@NonNull Context context) {
       final String userAgent = context.getString(R.string.app_name)
@@ -289,32 +289,34 @@ public class SearchFragment extends SearchRootFragment {
       IOException last = null;
       for (int attempt = 0; attempt < 10; attempt++) {
         try {
-          final HttpUrl base = baseUrlBuilder.apply(lastValidHttpUrlBuilder = (lastValidHttpUrlBuilder == null) ? pickBaseUrlBuilder() : lastValidHttpUrlBuilder).build();
-          final Response response = client.newCall(new Request.Builder().url(base).get().build()).execute();
+          if (lastValidHost == null) {
+            lastValidHost = pickHost();
+          }
+          // New builder on each request: baseUrlBuilder appends path segments and parameters
+          final HttpUrl url = baseUrlBuilder.apply(new HttpUrl.Builder().scheme("https").host(lastValidHost)).build();
+          final Response response = client.newCall(new Request.Builder().url(url).get().build()).execute();
           if (response.isSuccessful()) {
             return response;
-          } else {
-            last = new IOException("Unexpected code " + response);
-            lastValidHttpUrlBuilder = null;
-            response.close();
           }
+          last = new IOException("Unexpected code " + response);
+          response.close();
         } catch (IOException iOException) {
           last = iOException;
         }
+        // Try another host
+        lastValidHost = null;
       }
-      lastValidHttpUrlBuilder = null;
       throw last;
     }
 
     @NonNull
-    private HttpUrl.Builder pickBaseUrlBuilder() throws UnknownHostException {
+    private String pickHost() throws UnknownHostException {
       final InetAddress[] ips = InetAddress.getAllByName(ALL_HOSTS);
       if (ips.length == 0) {
         throw new UnknownHostException(ALL_HOSTS);
       }
       final InetAddress ip = ips[random.nextInt(ips.length)];
-      final String host = ip.getCanonicalHostName();
-      return new HttpUrl.Builder().scheme("https").host(host);
+      return ip.getCanonicalHostName();
     }
   }
 }
