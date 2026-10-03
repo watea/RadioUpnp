@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
-import android.graphics.Bitmap;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -52,7 +51,6 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -60,10 +58,6 @@ import java.util.concurrent.Future;
 public abstract class SearchRootFragment extends MainActivityFragment {
   private static final String LOG_TAG = SearchRootFragment.class.getSimpleName();
   private final ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
-  protected String name;
-  protected String stream;
-  protected String homepage;
-  protected Bitmap icon;
   private FrameLayout defaultFrameLayout;
   private ProgressBar progressBar;
   private LinearLayout linearLayout;
@@ -141,8 +135,9 @@ public abstract class SearchRootFragment extends MainActivityFragment {
 
   protected abstract void setDialogItems();
 
-  // Shall prepare Radio items if needed
-  protected abstract boolean validCurrentRadio(@NonNull JSONObject station) throws JSONException;
+  // Returns null if station is filtered out
+  @Nullable
+  protected abstract Radio toRadio(@NonNull JSONObject station) throws JSONException, MalformedURLException;
 
   @Override
   protected int getLayout() {
@@ -170,15 +165,6 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     return false;
   }
 
-  @NonNull
-  protected Radio buildRadio() throws MalformedURLException {
-    return new Radio(
-      name,
-      (icon == null) ? getMainActivity().getDefaultIcon() : icon,
-      new URL(stream),
-      homepage.isEmpty() ? null : new URL(homepage));
-  }
-
   private void search() {
     final int currentSession = ++searchSessionId;
     radiosSearchAdapter.clear();
@@ -198,8 +184,8 @@ public abstract class SearchRootFragment extends MainActivityFragment {
           return;
         }
         try {
-          if (validCurrentRadio(stations.getJSONObject(i))) {
-            final Radio radio = buildRadio();
+          final Radio radio = toRadio(stations.getJSONObject(i));
+          if (radio != null) {
             protectedRunOnUiThread(() -> {
               // Ignore old search results
               if (currentSession != searchSessionId) {

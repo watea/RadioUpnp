@@ -25,6 +25,7 @@ package com.watea.radio_upnp.activity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,6 +38,7 @@ import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 
 import org.json.JSONArray;
@@ -151,24 +153,27 @@ public class SearchFragment extends SearchRootFragment {
   }
 
   @Override
-  protected boolean validCurrentRadio(@NonNull JSONObject station) throws JSONException {
+  @Nullable
+  protected Radio toRadio(@NonNull JSONObject station) throws JSONException, MalformedURLException {
     // Bitrate shall be filtered by client
-    if (station.optInt("bitrate", 0) >= selectedBitrate) {
-      name = station.getString("name");
-      stream = station.getString("url_resolved");
-      homepage = station.optString("homepage", "");
-      icon = null;
-      final String favicon = station.optString("favicon", "");
-      if (!favicon.isEmpty()) {
-        try {
-          icon = new RadioURL(new URL(favicon)).getBitmap();
-        } catch (MalformedURLException malformedURLException) {
-          Log.w(LOG_TAG, "validCurrentRadio: icon fetch error");
-        }
-      }
-      return true;
+    if (station.optInt("bitrate", 0) < selectedBitrate) {
+      return null;
     }
-    return false;
+    // Mandatory fields first: no icon download for an invalid station
+    final String name = station.getString("name");
+    final URL stream = new URL(station.getString("url_resolved"));
+    final String homepage = station.optString("homepage", "");
+    final URL homepageUrl = homepage.isEmpty() ? null : new URL(homepage);
+    Bitmap icon = null;
+    final String favicon = station.optString("favicon", "");
+    if (!favicon.isEmpty()) {
+      try {
+        icon = new RadioURL(new URL(favicon)).getBitmap();
+      } catch (MalformedURLException malformedURLException) {
+        Log.w(LOG_TAG, "toRadio: icon fetch error");
+      }
+    }
+    return new Radio(name, (icon == null) ? getMainActivity().getDefaultIcon() : icon, stream, homepageUrl);
   }
 
   @NonNull
