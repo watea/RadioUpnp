@@ -34,6 +34,7 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -49,6 +50,7 @@ import java.util.Map;
 public class URLService {
   private static final int CONNECT_TIMEOUT = 8000; // ms
   private static final int READ_TIMEOUT = 3000; // ms
+  private static final int BUFFER_SIZE = 8192;
   private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
   @NonNull
   private final URLConnection uRLConnection;
@@ -77,22 +79,28 @@ public class URLService {
     tags.clear();
   }
 
-  public boolean isPngUrlSignature() throws IOException {
-    try (final InputStream inputStream = getInputStream()) {
-      final byte[] buffer = new byte[PNG_SIGNATURE.length];
-      if (inputStream.read(buffer) == PNG_SIGNATURE.length) {
-        return Arrays.equals(buffer, PNG_SIGNATURE);
-      }
-      return false;
-    }
+  public static boolean isPng(@NonNull byte[] bytes) {
+    return (bytes.length >= PNG_SIGNATURE.length) &&
+      Arrays.equals(Arrays.copyOf(bytes, PNG_SIGNATURE.length), PNG_SIGNATURE);
   }
 
   @Nullable
-  public Bitmap getBitmap() throws IOException {
+  public static Bitmap getBitmap(@NonNull byte[] bytes) {
+    final BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inPreferredConfig = Bitmap.Config.ARGB_8888; // Enable transparency
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+  }
+
+  @NonNull
+  public byte[] fetchBytes() throws IOException {
     try (final InputStream inputStream = getInputStream()) {
-      final BitmapFactory.Options options = new BitmapFactory.Options();
-      options.inPreferredConfig = Bitmap.Config.ARGB_8888; // Enable transparency
-      return BitmapFactory.decodeStream(inputStream, null, options);
+      final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+      final byte[] buffer = new byte[BUFFER_SIZE];
+      int length;
+      while ((length = inputStream.read(buffer)) >= 0) {
+        outputStream.write(buffer, 0, length);
+      }
+      return outputStream.toByteArray();
     }
   }
 

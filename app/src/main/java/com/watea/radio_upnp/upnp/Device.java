@@ -463,12 +463,16 @@ public class Device extends Asset {
             final int height = Integer.parseInt(stringHeight);
             final boolean isDefined = (device.icon != null);
             final boolean isIconSmaller = isDefined && (device.icon.getWidth() <= width) && (device.icon.getHeight() <= height);
-            final boolean isPngUrlSignature = new URLService(location, uRI).isPngUrlSignature();
-            if (!isDefined || isIconSmaller && (isPngUrlSignature || !device.isPngIcon)) {
-              final Bitmap newIcon = new URLService(location, uRI).getBitmap();
-              if (newIcon != null) {
-                device.icon = newIcon;
-                device.isPngIcon = isPngUrlSignature;
+            // Single fetch, only for a candidate icon
+            if (!isDefined || isIconSmaller) {
+              final byte[] iconBytes = new URLService(location, uRI).fetchBytes();
+              final boolean isPng = URLService.isPng(iconBytes);
+              if (!isDefined || isPng || !device.isPngIcon) {
+                final Bitmap newIcon = URLService.getBitmap(iconBytes);
+                if (newIcon != null) {
+                  device.icon = newIcon;
+                  device.isPngIcon = isPng;
+                }
               }
             }
           } catch (IOException | URISyntaxException exception) {
