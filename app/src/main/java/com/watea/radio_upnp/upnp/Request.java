@@ -41,9 +41,8 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -62,8 +61,8 @@ public abstract class Request implements Runnable {
 
   @NonNull
   private final Action action;
-  // List as parameter must follow an order
-  private final List<Argument> arguments = new ArrayList<>();
+  // Arguments must follow insertion order
+  private final Map<String, String> arguments = new LinkedHashMap<>();
   private final Map<String, String> responses = new HashMap<>();
 
   public Request(@NonNull Action action) {
@@ -105,7 +104,7 @@ public abstract class Request implements Runnable {
 
   @NonNull
   public Request addArgument(@NonNull String name, @NonNull String value) {
-    arguments.add(new Argument(name, value));
+    arguments.put(name, value);
     return this;
   }
 
@@ -184,19 +183,17 @@ public abstract class Request implements Runnable {
         onFailure();
         return;
       }
-      final Map<String, String> responseMap = new HashMap<>();
       final NodeList childNodes = node.getChildNodes();
       for (int i = 0; i < childNodes.getLength(); i++) {
         final Node childNode = childNodes.item(i);
         if (childNode.getNodeType() == Node.ELEMENT_NODE) {
           final String key = ((Element) childNode).getTagName();
           final String value = childNode.getTextContent();
-          responseMap.put(key, value);
+          responses.put(key, value);
           Log.d(LOG_TAG, "execute: response item => " + key + ": " + value);
         }
       }
       Log.d(LOG_TAG, "execute: " + name + " => success");
-      responses.putAll(responseMap);
       onSuccess();
     } catch (IOException ioException) {
       Log.d(LOG_TAG, "execute: " + name + " => " + ioException);
@@ -235,16 +232,16 @@ public abstract class Request implements Runnable {
       .append(" xmlns:u=\"")
       .append(serviceType)
       .append("\">");
-    for (final Argument argument : arguments) {
+    arguments.forEach((key, value) -> {
       soapBody.append("<")
-        .append(argument.getKey())
+        .append(key)
         .append(">")
-        .append(escapeXml(argument.getValue()))
+        .append(escapeXml(value))
         .append("</")
-        .append(argument.getKey())
+        .append(key)
         .append(">");
-      Log.d(LOG_TAG, "execute: property => " + argument.getKey() + "/" + argument.getValue());
-    }
+      Log.d(LOG_TAG, "execute: property => " + key + "/" + value);
+    });
     soapBody
       .append("</u:")
       .append(name)
@@ -252,27 +249,5 @@ public abstract class Request implements Runnable {
       .append("</s:Body>")
       .append("</s:Envelope>");
     return soapBody;
-  }
-
-  public static class Argument {
-    @NonNull
-    private final String key;
-    @NonNull
-    private final String value;
-
-    public Argument(@NonNull String key, @NonNull String value) {
-      this.key = key;
-      this.value = value;
-    }
-
-    @NonNull
-    public String getKey() {
-      return key;
-    }
-
-    @NonNull
-    public String getValue() {
-      return value;
-    }
   }
 }
