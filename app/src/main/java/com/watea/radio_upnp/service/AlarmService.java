@@ -23,10 +23,9 @@
 
 package com.watea.radio_upnp.service;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -35,7 +34,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
-import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -53,6 +51,7 @@ import androidx.annotation.Nullable;
 import androidx.car.app.connection.CarConnection;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
 import androidx.media3.common.MediaItem;
 import androidx.media3.session.MediaController;
@@ -101,30 +100,11 @@ public class AlarmService extends Service implements MediaController.Listener {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
     // Notification
-    channelId = getResources().getString(R.string.app_name) + "." + LOG_TAG;
-    final NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-    // Cancel all notifications to handle the case where the Service was killed and
-    // restarted by the system
-    notificationManager.cancelAll();
+    // Cancel own notification to handle the case where the Service was killed and
+    // restarted by the system; others belong to RadioService
+    NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
     // Create the (mandatory) notification channel
-    if (notificationManager.getNotificationChannel(channelId) == null) {
-      final NotificationChannel notificationChannel = new NotificationChannel(
-        channelId,
-        getString(R.string.alarm_service_notification_name),
-        NotificationManager.IMPORTANCE_HIGH);
-      // Configure the notification channel
-      notificationChannel.setDescription(getString(R.string.alarm_service_description)); // User-visible
-      notificationChannel.enableLights(true);
-      notificationChannel.enableVibration(false);
-      // Sets the notification light color for notifications posted to this
-      // channel, if the device supports this feature
-      notificationChannel.setLightColor(Color.GREEN);
-      notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-      notificationManager.createNotificationChannel(notificationChannel);
-      Log.d(LOG_TAG, "New channel created");
-    } else {
-      Log.d(LOG_TAG, "Existing channel reused");
-    }
+    channelId = NotificationChannels.create(this, LOG_TAG, R.string.alarm_service_notification_name, R.string.alarm_service_description);
     // RadioService session token
     sessionToken = new SessionToken(this, new ComponentName(this, RadioService.class));
     // AlarmManager
@@ -156,6 +136,8 @@ public class AlarmService extends Service implements MediaController.Listener {
     return binder;
   }
 
+  // InlinedApi: FOREGROUND_SERVICE_TYPE_* are compile-time constants, ignored by ServiceCompat before API 29
+  @SuppressLint("InlinedApi")
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d(LOG_TAG, "onStartCommand");
@@ -163,14 +145,7 @@ public class AlarmService extends Service implements MediaController.Listener {
       return super.onStartCommand(null, flags, startId);
     }
     if (!isStarted) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        startForeground(
-          NOTIFICATION_ID,
-          getNotification(),
-          ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-      } else {
-        startForeground(NOTIFICATION_ID, getNotification());
-      }
+      ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
       isStarted = true;
     }
     if (ALARM_CANCEL.equals(intent.getAction())) {

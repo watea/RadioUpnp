@@ -23,17 +23,14 @@
 
 package com.watea.radio_upnp.service;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ServiceInfo;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -46,6 +43,7 @@ import androidx.annotation.OptIn;
 import androidx.car.app.connection.CarConnection;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.media3.common.MediaItem;
@@ -209,30 +207,13 @@ public class RadioService
       .build();
     setMediaNotificationProvider(this);
     // Notification
-    CHANNEL_ID = getResources().getString(R.string.app_name) + "." + LOG_TAG;
     notificationManager = NotificationManagerCompat.from(this);
-    // Cancel all notifications to handle the case where the Service was killed and
-    // restarted by the system
-    notificationManager.cancelAll();
+    // Cancel own notifications to handle the case where the Service was killed and
+    // restarted by the system; others belong to AlarmService
+    notificationManager.cancel(FOREGROUND_NOTIFICATION_ID);
+    notificationManager.cancel(SleepController.NOTIFICATION_ID);
     // Create the (mandatory) notification channel
-    if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-      final NotificationChannel notificationChannel = new NotificationChannel(
-        CHANNEL_ID,
-        getString(R.string.radio_service_notification_name),
-        NotificationManager.IMPORTANCE_HIGH);
-      // Configure the notification channel
-      notificationChannel.setDescription(getString(R.string.radio_service_description)); // User-visible
-      notificationChannel.enableLights(true);
-      notificationChannel.enableVibration(false);
-      // Sets the notification light color for notifications posted to this
-      // channel, if the device supports this feature
-      notificationChannel.setLightColor(Color.GREEN);
-      notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-      notificationManager.createNotificationChannel(notificationChannel);
-      Log.d(LOG_TAG, "New channel created");
-    } else {
-      Log.d(LOG_TAG, "Existing channel reused");
-    }
+    CHANNEL_ID = NotificationChannels.create(this, LOG_TAG, R.string.radio_service_notification_name, R.string.radio_service_description);
     // Bind to UPnP service
     if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
@@ -337,21 +318,19 @@ public class RadioService
     return super.onStartCommand(intent, flags, startId);
   }
 
+  // InlinedApi: FOREGROUND_SERVICE_TYPE_* are compile-time constants, ignored by ServiceCompat before API 29
+  @SuppressLint("InlinedApi")
   @Override
   public void onUpdateNotification(@NonNull MediaSession session, boolean startInForegroundRequired) {
     if (startInForegroundRequired) {
       // startForeground must always be called when required to avoid RemoteServiceException
-      final Notification notification = getNotification();
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        startForeground(
-          FOREGROUND_NOTIFICATION_ID,
-          notification,
-          (sessionDevice != null) && sessionDevice.isRemote()
-            ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-      } else {
-        startForeground(FOREGROUND_NOTIFICATION_ID, notification);
-      }
+      ServiceCompat.startForeground(
+        this,
+        FOREGROUND_NOTIFICATION_ID,
+        getNotification(),
+        (sessionDevice != null) && sessionDevice.isRemote()
+          ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+          : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
       if (sessionDevice == null) {
         stopForeground(STOP_FOREGROUND_REMOVE);
       }
