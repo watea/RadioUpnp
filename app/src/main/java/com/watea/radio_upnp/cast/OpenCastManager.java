@@ -39,10 +39,10 @@ import java.util.function.Consumer;
 // Singleton.
 // CastManager that does nothing.
 @SuppressWarnings("unused")
-public class OpenCastManager<T extends SessionDevice> {
+public class OpenCastManager {
   private static final String LOG_TAG = OpenCastManager.class.getSimpleName();
   @Nullable
-  protected static OpenCastManager<?> instance = null;
+  protected static OpenCastManager instance = null;
 
   protected OpenCastManager() {
   }
@@ -64,7 +64,7 @@ public class OpenCastManager<T extends SessionDevice> {
   }
 
   @Nullable
-  public T getCastSessionDevice(
+  public SessionDevice getCastSessionDevice(
     @NonNull Context context,
     @NonNull SessionDevice.Listener listener,
     @NonNull Radio radio,

@@ -44,7 +44,7 @@ import com.watea.radio_upnp.service.StreamServer;
 
 import java.util.function.Consumer;
 
-public class CastManager extends OpenCastManager<CastSessionDevice> {
+public class CastManager extends OpenCastManager {
   private static final String LOG_TAG = CastManager.class.getSimpleName();
   @NonNull
   private Callback callback = new Callback() {
