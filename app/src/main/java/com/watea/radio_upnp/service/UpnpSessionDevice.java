@@ -114,7 +114,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   @NonNull
   public static String getDlnaTail(@NonNull String mime) {
     String result;
-    if (mime.startsWith(L16_MIME)) {
+    if (isRawPcm(mime)) {
       result = "DLNA.ORG_PN=LPCM;";
     } else {
       switch (mime) {

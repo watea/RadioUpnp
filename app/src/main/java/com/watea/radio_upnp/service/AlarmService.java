@@ -38,7 +38,6 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
-import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -71,7 +70,7 @@ public class AlarmService extends Service implements MediaController.Listener {
   private static final int DEFAULT_TIME = -1;
   private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
   private static final String ALARM_CANCEL = "com.watea.radio_upnp.ALARM_CANCEL";
-  private final Binder binder = new AlarmServiceBinder();
+  private final AlarmServiceBinder binder = new AlarmServiceBinder();
   private final NetworkRequest networkRequest = new NetworkRequest.Builder()
     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     .build();
@@ -149,7 +148,7 @@ public class AlarmService extends Service implements MediaController.Listener {
       isStarted = true;
     }
     if (ALARM_CANCEL.equals(intent.getAction())) {
-      ((AlarmServiceBinder) binder).cancelAlarm();
+      binder.cancelAlarm();
       return super.onStartCommand(intent, flags, startId);
     } else if (ALARM_TRIGGERED.equals(intent.getAction())) {
       // Wake lock
@@ -159,9 +158,8 @@ public class AlarmService extends Service implements MediaController.Listener {
       // Register network callback
       connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
       // Relaunch alarm
-      final AlarmServiceBinder alarmServiceBinder = (AlarmServiceBinder) binder;
-      if (!setAlarmManagerAlarm(alarmServiceBinder.getHour(), alarmServiceBinder.getMinute(), true)) {
-        alarmServiceBinder.cancelAlarm();
+      if (!setAlarmManagerAlarm(binder.getHour(), binder.getMinute(), true)) {
+        binder.cancelAlarm();
       }
       return super.onStartCommand(intent, flags, startId);
     } else {
@@ -202,12 +200,12 @@ public class AlarmService extends Service implements MediaController.Listener {
 
   @NonNull
   private Notification getNotification() {
-    final AlarmServiceBinder alarmServiceBinder = (AlarmServiceBinder) binder;
-    final String radioName = (alarmServiceBinder.getRadio() == null) ? getString(R.string.no_radio_available) : alarmServiceBinder.getRadio().getName();
+    final Radio radio = binder.getRadio();
+    final String radioName = (radio == null) ? getString(R.string.no_radio_available) : radio.getName();
     return new NotificationCompat.Builder(this, channelId)
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
       .setContentTitle(getString(R.string.alarm_title))
-      .setContentText(getString(R.string.alarm_set_for, alarmServiceBinder.getHour(), alarmServiceBinder.getMinute()) + " / " + radioName)
+      .setContentText(getString(R.string.alarm_set_for, binder.getHour(), binder.getMinute()) + " / " + radioName)
       .addAction(R.drawable.ic_stop_white_24dp, getString(android.R.string.cancel), getCancelPendingIntent())
       .build();
   }
@@ -384,7 +382,7 @@ public class AlarmService extends Service implements MediaController.Listener {
       if (isAndroidAutoConnected) {
         Log.d(LOG_TAG, "launch: Android Auto is connected => no launch");
       } else {
-        final Radio radio = ((AlarmServiceBinder) binder).getRadio();
+        final Radio radio = binder.getRadio();
         if (radio == null) {
           Log.e(LOG_TAG, "launch: alarm radio is null");
         } else if (mediaController == null) {
@@ -397,7 +395,7 @@ public class AlarmService extends Service implements MediaController.Listener {
         }
       }
       // Something went wrong, cancel alarm
-      ((AlarmServiceBinder) binder).cancelAlarm();
+      binder.cancelAlarm();
     }
   }
 }

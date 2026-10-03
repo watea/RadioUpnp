@@ -70,16 +70,6 @@ public class URLService {
     this(uRL.toURI().resolve(uRI).toURL());
   }
 
-  // Ignore case
-  @Nullable
-  public String getTag(@NonNull String key) {
-    return tags.get(key.toLowerCase(Locale.ROOT));
-  }
-
-  public void clearTags() {
-    tags.clear();
-  }
-
   public static boolean isPng(@NonNull byte[] bytes) {
     return (bytes.length >= PNG_SIGNATURE.length) &&
       Arrays.equals(Arrays.copyOf(bytes, PNG_SIGNATURE.length), PNG_SIGNATURE);
@@ -109,6 +99,16 @@ public class URLService {
       }
     }
     return StandardCharsets.UTF_8;
+  }
+
+  // Ignore case
+  @Nullable
+  public String getTag(@NonNull String key) {
+    return tags.get(key.toLowerCase(Locale.ROOT));
+  }
+
+  public void clearTags() {
+    tags.clear();
   }
 
   @NonNull

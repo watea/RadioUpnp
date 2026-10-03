@@ -82,8 +82,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     @Override
     protected void setView(@NonNull Radio radio) {
       super.setView(radio);
-      preferredImageButton.setImageResource(this.radio.isPreferred() ?
-        R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp);
+      preferredImageButton.setImageResource(MainActivity.getStarResource(this.radio.isPreferred()));
     }
   }
 

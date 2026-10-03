@@ -341,9 +341,7 @@ public class Radio {
 
   @NonNull
   public Bitmap resizeToWidth(int targetWidth) {
-    final float ratio = (float) icon.getHeight() / icon.getWidth();
-    final int targetHeight = (int) (targetWidth * ratio);
-    return Bitmap.createScaledBitmap(icon, targetWidth, targetHeight, true);
+    return createScaledBitmap(icon, targetWidth); // Icon is square, see normalize()
   }
 
   @Nullable

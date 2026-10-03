@@ -24,7 +24,6 @@
 package com.watea.radio_upnp.activity;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,7 +38,6 @@ import com.watea.radio_upnp.model.Radios;
 import java.net.URL;
 
 public class ItemModifyFragment extends ItemFragment {
-  private static final String LOG_TAG = ItemModifyFragment.class.getSimpleName();
   @Nullable
   private Radio radio = null;
 
@@ -75,14 +73,8 @@ public class ItemModifyFragment extends ItemFragment {
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
-    // Store radio; may fail
-    try {
-      if (radio != null) {
-        outState.putString(getString(R.string.key_radio_id), radio.getId());
-      }
-    } catch (Exception exception) {
-      outState.clear();
-      Log.e(LOG_TAG, "onSaveInstanceState: internal failure", exception);
+    if (radio != null) {
+      outState.putString(getString(R.string.key_radio_id), radio.getId());
     }
   }
 

@@ -49,7 +49,6 @@ import java.util.function.Consumer;
 
 public class CastSessionDevice extends RemoteSessionDevice {
   private static final String LOG_TAG = CastSessionDevice.class.getSimpleName();
-  private static final double VOLUME_STEP = VOLUME_STEP_RATIO;
   private static final int HEART_BEAT = 60; // s
   @NonNull
   private final CastSession castSession;
@@ -114,9 +113,9 @@ public class CastSessionDevice extends RemoteSessionDevice {
     }
     final double previousVolume = currentVolume;
     if (direction > 0) {
-      currentVolume = Math.min(1.0, currentVolume + VOLUME_STEP);
+      currentVolume = Math.min(1.0, currentVolume + VOLUME_STEP_RATIO);
     } else if (direction < 0) {
-      currentVolume = Math.max(0.0, currentVolume - VOLUME_STEP);
+      currentVolume = Math.max(0.0, currentVolume - VOLUME_STEP_RATIO);
     }
     try {
       castSession.setVolume(currentVolume);

@@ -523,6 +523,6 @@ public class PlayerController
   }
 
   private void setPreferredButton(boolean isPreferred) {
-    preferredImageButton.setImageResource(isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp);
+    preferredImageButton.setImageResource(MainActivity.getStarResource(isPreferred));
   }
 }

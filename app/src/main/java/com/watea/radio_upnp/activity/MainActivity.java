@@ -178,6 +178,10 @@ public class MainActivity
   @Nullable
   private Consumer<Bitmap> upnpIconConsumer = null;
 
+  public static int getStarResource(boolean isPreferred) {
+    return isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp;
+  }
+
   public static int getThemeAttributeColor(@NonNull Context context, int attr) {
     final int[] attrs = {attr};
     try (final TypedArray typedArray = context.obtainStyledAttributes(attrs)) {
