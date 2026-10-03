@@ -74,7 +74,6 @@ import com.watea.radio_upnp.upnp.Device;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -728,25 +727,14 @@ public class RadioService
     }
   }
 
-  private void playFromSearch(@Nullable String query) {
+  private void playFromSearch(@NonNull String query) {
     Log.d(LOG_TAG, "playFromSearch: query = " + query);
     if (!Radios.isInit()) {
       pendingSearchQuery = query;
       return;
     }
-    final Radios radios = Radios.getInstance();
-    Radio match = null;
-    if ((query == null) || query.trim().isEmpty()) {
-      if (!radios.isEmpty()) {
-        match = radios.get(0);
-      }
-    } else {
-      final String normalizedQuery = query.trim().toLowerCase(Locale.getDefault());
-      match = radios.stream().filter(radio -> radio.getName().toLowerCase(Locale.getDefault()).equals(normalizedQuery)).findAny().orElse(null);
-      if (match == null) {
-        match = radios.stream().filter(radio -> radio.getName().toLowerCase(Locale.getDefault()).contains(normalizedQuery)).findAny().orElse(null);
-      }
-    }
+    // Empty query matches first radio, as every name contains ""
+    final Radio match = Radios.getInstance().getRadioFromName(query);
     if (match == null) {
       Log.w(LOG_TAG, "playFromSearch: no match found for query = " + query);
     } else {
