@@ -170,6 +170,11 @@ public class RadioService
     }
 
     @Override
+    public void onMove(int from, int to) {
+      notifyChildrenChanged();
+    }
+
+    @Override
     public void onInitEnd() {
       Log.d(LOG_TAG, "onInitEnd");
       HANDLER.post(() -> {
