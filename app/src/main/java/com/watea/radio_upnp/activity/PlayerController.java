@@ -126,7 +126,6 @@ public class PlayerController
   @Nullable
   private Consumer<Radio> listener = null;
   private int previousPlaybackState = Player.STATE_IDLE;
-  private boolean isLongPress = false;
 
   @SuppressLint("ClickableViewAccessibility")
   public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
@@ -199,9 +198,7 @@ public class PlayerController
     final GestureDetector gestureDetector = new GestureDetector(this.mainActivity, new GestureDetector.SimpleOnGestureListener() {
       @Override
       public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
-        if (!isLongPress) {
-          onPlayClick();
-        }
+        onPlayClick();
         return true;
       }
 
@@ -211,24 +208,14 @@ public class PlayerController
         onPlayDoubleClick();
         return true;
       }
-    });
-    playImageButton.setOnTouchListener((v, event) -> {
-      switch (event.getAction()) {
-        case MotionEvent.ACTION_DOWN:
-          isLongPress = false;
-          HANDLER.postDelayed(() -> {
-            isLongPress = true;
-            onPlayLongClick();
-          }, 500);
-          break;
-        case MotionEvent.ACTION_UP:
-        case MotionEvent.ACTION_CANCEL:
-          // No long click
-          HANDLER.removeCallbacksAndMessages(null);
-          break;
+
+      // No single tap is confirmed after a long press
+      @Override
+      public void onLongPress(@NonNull MotionEvent e) {
+        onPlayLongClick();
       }
-      return gestureDetector.onTouchEvent(event);
     });
+    playImageButton.setOnTouchListener((v, event) -> gestureDetector.onTouchEvent(event));
     preferredImageButton = view.findViewById(R.id.preferred_image_button);
     preferredImageButton.setOnClickListener(v -> {
       final Radio radio = getCurrentRadio();
