@@ -54,6 +54,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -136,7 +137,7 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
   @Override
   public void onStop() {
     Log.d(LOG_TAG, "onStop");
-    devices.forEach(this::tellRemoveListeners);
+    devices.forEach(device -> tellListeners(device, Listener::onDeviceRemove));
     devices.clear();
     // If we missed the onAvailable() because the client was still started
     if (!isDestroyed && networkProxy.isOnWifi()) {
@@ -144,21 +145,13 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
     }
   }
 
-  private void tellRemoveListeners(@NonNull Device device) {
+  // Tells device and its embedded devices
+  private void tellListeners(@NonNull Device device, @NonNull BiConsumer<Listener, Device> callback) {
     // Pre-capture embedded devices while the set is still populated
     final List<Device> embedded = devices.getEmbeddedDevicesStream(device).collect(Collectors.toList());
     listeners.forEach(listener -> {
-      listener.onDeviceRemove(device);
-      embedded.forEach(listener::onDeviceRemove);
-    });
-  }
-
-  private void tellAddListeners(@NonNull Device device) {
-    // Pre-capture embedded devices while the set is still populated
-    final List<Device> embedded = devices.getEmbeddedDevicesStream(device).collect(Collectors.toList());
-    listeners.forEach(listener -> {
-      listener.onDeviceAdd(device);
-      embedded.forEach(listener::onDeviceAdd);
+      callback.accept(listener, device);
+      embedded.forEach(embeddedDevice -> callback.accept(listener, embeddedDevice));
     });
   }
 
@@ -320,11 +313,7 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
       } else if (knownDevice.isAlive() != isAlive) {
         Log.d(LOG_TAG, "Device announcement: " + knownDevice.getDisplayString() + " => " + status);
         knownDevice.setAlive(isAlive);
-        if (isAlive) {
-          tellAddListeners(knownDevice);
-        } else {
-          tellRemoveListeners(knownDevice);
-        }
+        tellListeners(knownDevice, isAlive ? Listener::onDeviceAdd : Listener::onDeviceRemove);
       }
     }
 
