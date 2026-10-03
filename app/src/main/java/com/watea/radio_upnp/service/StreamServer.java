@@ -124,9 +124,11 @@ public class StreamServer extends HttpServer {
   @NonNull
   private Uri.Builder getUriBuilder(@NonNull String lockKey) {
     final String localIp = new NetworkProxy(context).getWifiIpAddress();
+    // IPv6 literal must be bracketed in URI authority (RFC 3986)
+    final String host = (localIp == null) ? "0.0.0.0" : localIp.contains(":") ? "[" + localIp + "]" : localIp;
     return new Uri.Builder()
       .scheme(SCHEME)
-      .encodedAuthority(((localIp == null) ? "0.0.0.0" : localIp) + ":" + getListeningPort())
+      .encodedAuthority(host + ":" + getListeningPort())
       .appendQueryParameter(LOCKKEY_PARAM, lockKey);
   }
 
