@@ -28,25 +28,21 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.media3.common.AudioAttributes;
-import androidx.media3.common.AuxEffectInfo;
 import androidx.media3.common.Format;
-import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.common.util.Util;
 import androidx.media3.exoplayer.audio.AudioSink;
+import androidx.media3.exoplayer.audio.ForwardingAudioSink;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 @OptIn(markerClass = UnstableApi.class)
-public class CapturingAudioSink implements AudioSink {
+public class CapturingAudioSink extends ForwardingAudioSink {
   private static final String LOG_TAG = CapturingAudioSink.class.getSimpleName();
   private static final long LONG_DEFAULT = -1L;
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
-  @NonNull
-  private final AudioSink delegate;
   private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);
   @Nullable
   private Callback callback = null;
@@ -56,7 +52,7 @@ public class CapturingAudioSink implements AudioSink {
   private volatile long lastPresentationTimeUs = 0; // Presentation time microseconds
 
   public CapturingAudioSink(@NonNull AudioSink delegate) {
-    this.delegate = delegate;
+    super(delegate);
   }
 
   public void setCallback(@NonNull Callback callback) {
@@ -76,7 +72,7 @@ public class CapturingAudioSink implements AudioSink {
       byteRate = (long) sampleRate * channelCount * bytesPerSample;
       callback.onFormatChanged(sampleRate, channelCount, bytesPerSample * 8);
     }
-    delegate.configure(audioSinkConfig);
+    super.configure(audioSinkConfig);
   }
 
   // presentationTimeUs: microseconds, it is the timestamp in microseconds at which this audio frame must be presented (played) to the user, within the media timeline
@@ -84,7 +80,7 @@ public class CapturingAudioSink implements AudioSink {
   public boolean handleBuffer(@NonNull ByteBuffer buffer, long presentationTimeUs, int encodedAccessUnitCount)
     throws InitializationException, WriteException {
     if (callback == null) {
-      return delegate.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount);
+      return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount);
     } else {
       lastPresentationTimeUs = presentationTimeUs;
       if (buffer.hasRemaining()) {
@@ -100,135 +96,38 @@ public class CapturingAudioSink implements AudioSink {
   }
 
   @Override
-  public void playToEndOfStream() throws WriteException {
-    delegate.playToEndOfStream();
-  }
-
-  @Override
-  public void play() {
-    delegate.play();
-  }
-
-  @Override
-  public void pause() {
-    delegate.pause();
-  }
-
-  @Override
-  public void handleDiscontinuity() {
-    delegate.handleDiscontinuity();
-  }
-
-  @Override
   public void flush() {
     pcmBuffer.clear();
-    delegate.flush();
+    super.flush();
   }
 
   @Override
   public void reset() {
     stopPacer();
     pcmBuffer.clear();
-    delegate.reset();
+    super.reset();
   }
 
   @Override
   public void release() {
     stopPacer();
     pcmBuffer.clear();
-    delegate.release();
+    super.release();
   }
 
   @Override
   public boolean isEnded() {
-    return (callback == null) && delegate.isEnded();
+    return (callback == null) && super.isEnded();
   }
 
   @Override
   public boolean hasPendingData() {
-    return (callback == null) ? delegate.hasPendingData() : !pcmBuffer.isEmpty();
-  }
-
-  @Override
-  @NonNull
-  public PlaybackParameters getPlaybackParameters() {
-    return delegate.getPlaybackParameters();
-  }
-
-  @Override
-  public void setPlaybackParameters(@NonNull PlaybackParameters playbackParameters) {
-    delegate.setPlaybackParameters(playbackParameters);
-  }
-
-  @Override
-  public boolean getSkipSilenceEnabled() {
-    return delegate.getSkipSilenceEnabled();
-  }
-
-  @Override
-  public void setSkipSilenceEnabled(boolean skipSilenceEnabled) {
-    delegate.setSkipSilenceEnabled(skipSilenceEnabled);
-  }
-
-  @Override
-  @Nullable
-  public AudioAttributes getAudioAttributes() {
-    return delegate.getAudioAttributes();
-  }
-
-  @Override
-  public void setAudioAttributes(@NonNull AudioAttributes audioAttributes) {
-    delegate.setAudioAttributes(audioAttributes);
-  }
-
-  @Override
-  public void setAudioSessionId(int audioSessionId) {
-    delegate.setAudioSessionId(audioSessionId);
-  }
-
-  @Override
-  public void setAuxEffectInfo(@NonNull AuxEffectInfo auxEffectInfo) {
-    delegate.setAuxEffectInfo(auxEffectInfo);
-  }
-
-  @Override
-  public long getAudioTrackBufferSizeUs() {
-    return delegate.getAudioTrackBufferSizeUs();
-  }
-
-  @Override
-  public void enableTunnelingV21() {
-    delegate.enableTunnelingV21();
-  }
-
-  @Override
-  public void disableTunneling() {
-    delegate.disableTunneling();
-  }
-
-  @Override
-  public void setVolume(float volume) {
-    delegate.setVolume(volume);
-  }
-
-  @Override
-  public void setListener(@NonNull Listener listener) {
-    delegate.setListener(listener);
-  }
-
-  @Override
-  public boolean supportsFormat(@NonNull Format format) {
-    return delegate.supportsFormat(format);
-  }
-
-  @Override
-  public int getFormatSupport(@NonNull Format format) {
-    return delegate.getFormatSupport(format);
+    return (callback == null) ? super.hasPendingData() : !pcmBuffer.isEmpty();
   }
 
   @Override
   public long getCurrentPositionUs(boolean sourceEnded) {
-    return (callback == null) ? delegate.getCurrentPositionUs(sourceEnded) : lastPresentationTimeUs;
+    return (callback == null) ? super.getCurrentPositionUs(sourceEnded) : lastPresentationTimeUs;
   }
 
   private void stopPacer() {
