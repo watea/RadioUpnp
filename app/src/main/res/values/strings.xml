@@ -8,7 +8,6 @@
     <string name="credit">Credit:</string>
     <string name="credit_0" translatable="false">- Icon by shareicon.net</string>
     <string name="credit_1" translatable="false">- ExoPlayer [Apache License 2.0]</string>
-    <string name="credit_2" translatable="false">- Apache Commons IO [Apache License 2.0]</string>
     <string name="credit_3" translatable="false">- Jsoup [MIT License]</string>
     <string name="credit_4" translatable="false">- OkHttp [Apache License 2.0]</string>
     <string name="credit_5" translatable="false">- German translation by Ronny Steiner</string>

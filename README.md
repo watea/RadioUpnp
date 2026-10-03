@@ -70,7 +70,7 @@ Most Android UPnP apps historically relied on **Cling**, a library that has been
 The custom stack covers:
 - **SSDP discovery** — via [AndroidSsdpClient](https://github.com/watea/androidssdpclient), a purpose-built library
 - **Device description parsing** — XML UPnP device and service descriptors
-- **SOAP action control** — UPnP action invocation over HTTP via OkHttp
+- **SOAP action control** — UPnP action invocation over HTTP
 - **AVTransport / RenderingControl / ConnectionManager** — the three core UPnP services for audio rendering
 
 This makes RadioUpnp one of the very few modern Android open source apps with a fully self-contained UPnP implementation.
@@ -82,9 +82,9 @@ This makes RadioUpnp one of the very few modern Android open source apps with a 
 - **Media3 / ExoPlayer** — radio decoding and PCM capture via custom `AudioSink`
 - **NanoHTTPD** — embedded HTTP server for WAV streaming
 - **AndroidSsdpClient** — lightweight SSDP discovery (custom library)
-- **OkHttp** — UPnP/DLNA SOAP action control
+- **OkHttp** — radio stream connections and radio-browser search
 - **Google Cast SDK** — Chromecast support
-- **MediaBrowserServiceCompat** — background playback and Android Auto
+- **Media3 MediaLibraryService** — background playback and Android Auto
 
 ---
 
