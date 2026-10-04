@@ -95,7 +95,7 @@ public class NetworkProxy {
   // Looks up every known network (not just the active/default one), so a VPN taking over
   // the default route does not hide an underlying Wi-Fi/Cellular network that is still up.
   // getAllNetworks() is deprecated (API 31) in favor of NetworkCallback, which would require a
-  // long-lived NetworkProxy; still functional and needed here for the VPN case
+  // long-lived NetworkProxy; still functional and needed here for the VPN case.
   @SuppressWarnings("deprecation")
   @Nullable
   private Network findNetwork(int networkCapability) {

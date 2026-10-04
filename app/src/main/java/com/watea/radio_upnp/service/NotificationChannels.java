@@ -41,8 +41,7 @@ public class NotificationChannels {
   @NonNull
   public static String create(@NonNull Context context, @NonNull String tag, int nameId, int descriptionId) {
     final String id = context.getString(R.string.app_name) + "." + tag;
-    final NotificationChannel notificationChannel =
-      new NotificationChannel(id, context.getString(nameId), NotificationManager.IMPORTANCE_HIGH);
+    final NotificationChannel notificationChannel = new NotificationChannel(id, context.getString(nameId), NotificationManager.IMPORTANCE_HIGH);
     notificationChannel.setDescription(context.getString(descriptionId)); // User-visible
     notificationChannel.enableLights(true);
     notificationChannel.enableVibration(false);

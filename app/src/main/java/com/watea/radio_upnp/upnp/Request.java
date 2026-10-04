@@ -137,16 +137,14 @@ public abstract class Request implements Runnable {
       onFailure();
       return;
     }
-    try (final OutputStreamWriter writer =
-           new OutputStreamWriter(httpURLConnection.getOutputStream(), StandardCharsets.UTF_8)) {
+    try (final OutputStreamWriter writer = new OutputStreamWriter(httpURLConnection.getOutputStream(), StandardCharsets.UTF_8)) {
       writer.write(getSoapBody(serviceType, name).toString());
       writer.flush();
       final int responseCode = httpURLConnection.getResponseCode();
       Log.d(LOG_TAG, "execute: response is " + responseCode);
       final boolean isFailure = (responseCode < 200) || (responseCode >= 300);
       final Document document;
-      try (final InputStream responseStream =
-             isFailure ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream()) {
+      try (final InputStream responseStream = isFailure ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream()) {
         if (responseStream == null) {
           Log.d(LOG_TAG, "execute: " + name + " => no response available");
           onFailure();

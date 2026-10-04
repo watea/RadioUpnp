@@ -789,7 +789,10 @@ public class MainActivity
   }
 
   private void exportFile() {
-    showImportExportDialog(string.title_export, R.drawable.ic_output_white_24dp, R.string.export_message,
+    showImportExportDialog(
+      string.title_export,
+      R.drawable.ic_output_white_24dp,
+      R.string.export_message,
       (dialog, which) -> {
         importExportAction = (which == DialogInterface.BUTTON_NEUTRAL) ?
           ImportExportAction.CSV_EXPORT : ImportExportAction.JSON_EXPORT;
@@ -798,7 +801,10 @@ public class MainActivity
   }
 
   private void importFile() {
-    showImportExportDialog(string.title_import, R.drawable.ic_exit_to_app_white_24dp, R.string.import_message,
+    showImportExportDialog(
+      string.title_import,
+      R.drawable.ic_exit_to_app_white_24dp,
+      R.string.import_message,
       (dialog, which) -> {
         final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
           .addCategory(Intent.CATEGORY_OPENABLE);

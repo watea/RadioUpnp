@@ -98,7 +98,6 @@ public class AlarmService extends Service implements MediaController.Listener {
   public void onCreate() {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
-    // Notification
     // Cancel own notification to handle the case where the Service was killed and
     // restarted by the system; others belong to RadioService
     NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
