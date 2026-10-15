@@ -108,9 +108,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public class MainActivity
-  extends AppCompatActivity
-  implements NavigationView.OnNavigationItemSelectedListener, AndroidUpnpService.Listener {
+public class MainActivity extends AppCompatActivity {
   public static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
@@ -149,6 +147,37 @@ public class MainActivity
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
+  private NetworkProxy networkProxy;
+  private ActivityResultLauncher<Intent> importExportLauncher;
+  @Nullable
+  private ImportExportAction importExportAction = null;
+  @Nullable
+  private Consumer<Bitmap> upnpIconConsumer = null;
+  private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
+    @Override
+    public void onFatalError() {
+      runSafelyOnUiThread(() -> tell(R.string.upnp_error));
+    }
+
+    @Override
+    public void onDeviceAdd(@NonNull Device device) {
+      if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
+        onNewSelectedDevice(device);
+      }
+    }
+
+    @Override
+    public void onDeviceRemove(@NonNull Device device) {
+      if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
+        onNewSelectedDevice(null);
+      }
+    }
+
+    @Override
+    public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
+      onNewSelectedDevice(device);
+    }
+  };
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
@@ -156,7 +185,7 @@ public class MainActivity
       if (upnpService != null) {
         // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
-        upnpService.addListener(MainActivity.this);
+        upnpService.addListener(upnpListener);
       }
     }
 
@@ -171,12 +200,6 @@ public class MainActivity
       upnpDevicesAdapter.setUpnpService(null);
     }
   };
-  private NetworkProxy networkProxy;
-  private ActivityResultLauncher<Intent> importExportLauncher;
-  @Nullable
-  private ImportExportAction importExportAction = null;
-  @Nullable
-  private Consumer<Bitmap> upnpIconConsumer = null;
 
   public static int getStarResource(boolean isPreferred) {
     return isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp;
@@ -207,40 +230,6 @@ public class MainActivity
   // With animation
   public void setToolbarExpanded(boolean isExpanded) {
     appBarLayout.setExpanded(isExpanded, true);
-  }
-
-  @Override
-  public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-    final int id = menuItem.getItemId();
-    if (id == R.id.action_alarm) {
-      alarmController.launch();
-    } else if (id == R.id.action_sleep) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-          requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_POST_NOTIFICATIONS);
-        }
-      }
-      sleepAlertDialog.show();
-    } else if (id == R.id.action_export) {
-      exportFile();
-    } else if (id == R.id.action_import) {
-      importFile();
-    } else if (id == R.id.action_settings) {
-      settingsAlertDialog.show();
-    } else if (id == R.id.action_about) {
-      aboutAlertDialog.show();
-    } else if (id == R.id.action_log) {
-      sendLogcatMail();
-    } else {
-      // Shall not fail to find!
-      for (final Map.Entry<Class<? extends Fragment>, Integer> entry : FRAGMENT_MENU_IDS.entrySet()) {
-        if (id == entry.getValue()) {
-          setFragment(entry.getKey());
-        }
-      }
-    }
-    drawerLayout.closeDrawers();
-    return true;
   }
 
   public void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
@@ -382,30 +371,6 @@ public class MainActivity
       loadingAlertDialog;
   }
 
-  @Override
-  public void onFatalError() {
-    runSafelyOnUiThread(() -> tell(R.string.upnp_error));
-  }
-
-  @Override
-  public void onDeviceAdd(@NonNull Device device) {
-    if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
-      onNewSelectedDevice(device);
-    }
-  }
-
-  @Override
-  public void onDeviceRemove(@NonNull Device device) {
-    if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
-      onNewSelectedDevice(null);
-    }
-  }
-
-  @Override
-  public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
-    onNewSelectedDevice(device);
-  }
-
   // Is called also when coming back after a "Back" exit
   @Override
   @SuppressLint({"InflateParams", "NonConstantResourceId"})
@@ -476,7 +441,7 @@ public class MainActivity
     drawerLayout.addDrawerListener(drawerToggle);
     // Navigation drawer
     final NavigationView navigationView = findViewById(R.id.navigation_view);
-    navigationView.setNavigationItemSelectedListener(this);
+    navigationView.setNavigationItemSelectedListener(this::onNavigationItemSelected);
     navigationMenu = navigationView.getMenu();
     // Build about dialog
     final AlertDialog.Builder aboutAlertDialogBuilder = new AlertDialog.Builder(this);
@@ -691,6 +656,39 @@ public class MainActivity
     if (radioName != null) {
       playerController.startReadingFromName(radioName);
     }
+  }
+
+  private boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+    final int id = menuItem.getItemId();
+    if (id == R.id.action_alarm) {
+      alarmController.launch();
+    } else if (id == R.id.action_sleep) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+          requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_POST_NOTIFICATIONS);
+        }
+      }
+      sleepAlertDialog.show();
+    } else if (id == R.id.action_export) {
+      exportFile();
+    } else if (id == R.id.action_import) {
+      importFile();
+    } else if (id == R.id.action_settings) {
+      settingsAlertDialog.show();
+    } else if (id == R.id.action_about) {
+      aboutAlertDialog.show();
+    } else if (id == R.id.action_log) {
+      sendLogcatMail();
+    } else {
+      // Shall not fail to find!
+      for (final Map.Entry<Class<? extends Fragment>, Integer> entry : FRAGMENT_MENU_IDS.entrySet()) {
+        if (id == entry.getValue()) {
+          setFragment(entry.getKey());
+        }
+      }
+    }
+    drawerLayout.closeDrawers();
+    return true;
   }
 
   private void onNewSelectedDevice(@Nullable Device device) {

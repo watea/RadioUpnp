@@ -173,7 +173,7 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   @Override
-  public void onMetadata(@NonNull Metadata metadata) {
+  public final void onMetadata(@NonNull Metadata metadata) {
     String title = null;
     for (int i = 0; i < metadata.length(); i++) {
       final Metadata.Entry entry = metadata.get(i);
@@ -190,7 +190,7 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   @Override
-  public void onTracksChanged(@NonNull Tracks tracks) {
+  public final void onTracksChanged(@NonNull Tracks tracks) {
     for (final Tracks.Group group : tracks.getGroups()) {
       for (int i = 0; i < group.length; i++) {
         final Format format = group.getTrackFormat(i);
@@ -204,7 +204,7 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   @Override
-  public void onPlayerError(@NonNull PlaybackException error) {
+  public final void onPlayerError(@NonNull PlaybackException error) {
     Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
     onState(State.ERROR);
   }

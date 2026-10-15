@@ -30,7 +30,7 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 
-public abstract class Asset implements URLService.Consumer {
+public abstract class Asset {
   private boolean isOnError = false;
 
   @NonNull
@@ -44,6 +44,15 @@ public abstract class Asset implements URLService.Consumer {
 
   protected void setOnError() {
     isOnError = true;
+  }
+
+  protected void endParseAccept(@NonNull URLService uRLService) {
+  }
+
+  protected void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  }
+
+  protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
   }
 
   protected void hydrate(@NonNull URLService uRLService) throws IOException, XmlPullParserException {

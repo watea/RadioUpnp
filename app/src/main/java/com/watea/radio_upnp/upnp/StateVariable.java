@@ -47,17 +47,6 @@ public class StateVariable extends Asset {
   @Nullable
   private Integer maximum = null;
 
-  @Override
-  public void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
-    if (currentTag.equals(XML_NAME)) {
-      name = uRLService.getTag("name");
-      minimum = parseInt(uRLService.getTag("minimum"));
-      maximum = parseInt(uRLService.getTag("maximum"));
-      // No more tags for StateVariable
-      uRLService.clearTags();
-    }
-  }
-
   @Nullable
   public String getName() {
     return name;
@@ -74,6 +63,17 @@ public class StateVariable extends Asset {
 
   public int getMaximum() {
     return (maximum == null) ? 0 : maximum;
+  }
+
+  @Override
+  protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+    if (currentTag.equals(XML_NAME)) {
+      name = uRLService.getTag("name");
+      minimum = parseInt(uRLService.getTag("minimum"));
+      maximum = parseInt(uRLService.getTag("maximum"));
+      // No more tags for StateVariable
+      uRLService.clearTags();
+    }
   }
 
   @Nullable

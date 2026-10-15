@@ -47,8 +47,32 @@ public class Action extends Asset {
     this.service = service;
   }
 
+  @NonNull
+  public Set<Argument> getArguments() {
+    return arguments;
+  }
+
+  @NonNull
+  public String getName() {
+    return (name == null) ? "Unknown" : name;
+  }
+
+  public boolean hasName(@NonNull String name) {
+    return name.equals(this.name);
+  }
+
+  @NonNull
+  public Service getService() {
+    return service;
+  }
+
+  @NonNull
+  public Device getDevice() {
+    return service.getDevice();
+  }
+
   @Override
-  public void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  protected void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     // Process Argument, if any
     if (currentTag.equals(Argument.XML_NAME)) {
       currentArgument = new Argument();
@@ -56,7 +80,7 @@ public class Action extends Asset {
   }
 
   @Override
-  public void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     final Argument argument = currentArgument;
     if (argument == null) {
       // Process Action field
@@ -90,30 +114,6 @@ public class Action extends Asset {
     }
   }
 
-  @NonNull
-  public Set<Argument> getArguments() {
-    return arguments;
-  }
-
-  @NonNull
-  public String getName() {
-    return (name == null) ? "Unknown" : name;
-  }
-
-  public boolean hasName(@NonNull String name) {
-    return name.equals(this.name);
-  }
-
-  @NonNull
-  public Service getService() {
-    return service;
-  }
-
-  @NonNull
-  public Device getDevice() {
-    return service.getDevice();
-  }
-
   public static class Argument extends Asset {
     private static final String XML_NAME = "argument";
     private static final String LOG_TAG = Argument.class.getSimpleName();
@@ -122,8 +122,17 @@ public class Action extends Asset {
     @Nullable
     private String direction = null;
 
+    public boolean isIn() {
+      return (direction != null) && direction.equalsIgnoreCase("in");
+    }
+
+    @NonNull
+    public String getName() {
+      return (name == null) ? "Unknown" : name;
+    }
+
     @Override
-    public void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+    protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
       if (currentTag.equals(XML_NAME)) {
         name = uRLService.getTag("name");
         direction = uRLService.getTag("direction");
@@ -134,15 +143,6 @@ public class Action extends Asset {
         // No more tags for Argument
         uRLService.clearTags();
       }
-    }
-
-    public boolean isIn() {
-      return (direction != null) && direction.equalsIgnoreCase("in");
-    }
-
-    @NonNull
-    public String getName() {
-      return (name == null) ? "Unknown" : name;
     }
   }
 }

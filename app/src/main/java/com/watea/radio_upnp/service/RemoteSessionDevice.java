@@ -63,7 +63,7 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
   }
 
   @Override
-  public void onDisconnected(@NonNull String lockKey) {
+  public final void onDisconnected(@NonNull String lockKey) {
     Log.d(LOG_TAG, "onDisconnected: " + lockKey);
     if (lockKey.equals(this.lockKey)) {
       onState(State.ERROR);
@@ -71,7 +71,7 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
   }
 
   @Override
-  public void onConnected(@NonNull String lockKey) {
+  public final void onConnected(@NonNull String lockKey) {
     Log.d(LOG_TAG, "onConnected: " + lockKey);
     if (lockKey.equals(this.lockKey)) {
       allowRewind();
@@ -79,7 +79,7 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
   }
 
   @Override
-  public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
+  public final void onNewInformation(@NonNull String information, @NonNull String lockKey) {
     listener.onNewInformation(information, lockKey);
   }
 

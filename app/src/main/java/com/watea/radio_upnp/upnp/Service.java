@@ -97,55 +97,6 @@ public class Service extends Asset {
     hydrate(new URLService(baseURL, this.descriptionURL));
   }
 
-  @Override
-  public void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
-    switch (currentTag) {
-      case Action.XML_NAME:
-        currentAction = new Action(this);
-        break;
-      case StateVariable.XML_NAME:
-        currentStateVariable = new StateVariable();
-        break;
-      default:
-        // Nothing to do
-    }
-    final Action action = currentAction;
-    if (action != null) {
-      action.startAccept(urlService, currentTag);
-    }
-  }
-
-  @Override
-  public void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
-    // Process Action, if any
-    final Action action = currentAction;
-    if (action != null) {
-      action.endAccept(urlService, currentTag);
-      // Action complete?
-      if (currentTag.equals(Action.XML_NAME)) {
-        if (action.isOnError()) {
-          // No setOnError() here as we want to tolerate incomplete service
-          Log.e(LOG_TAG, "enAccept: try to add an incomplete Action to: " + serviceType);
-        } else {
-          actions.add(action);
-        }
-        currentAction = null;
-      }
-      return;
-    }
-    // Process StateVariable, if any
-    final StateVariable stateVariable = currentStateVariable;
-    if (stateVariable != null) {
-      stateVariable.endAccept(urlService, currentTag);
-      // StateVariable complete?
-      if (currentTag.equals(StateVariable.XML_NAME)) {
-        // Incomplete allowedValueRange is tolerated: not every state variable declares one
-        stateVariables.add(stateVariable);
-        currentStateVariable = null;
-      }
-    }
-  }
-
   @NonNull
   public Device getDevice() {
     return device;
@@ -197,5 +148,54 @@ public class Service extends Asset {
       .filter(stateVariable -> stateVariableName.equals(stateVariable.getName()))
       .findFirst()
       .orElse(null);
+  }
+
+  @Override
+  protected void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+    switch (currentTag) {
+      case Action.XML_NAME:
+        currentAction = new Action(this);
+        break;
+      case StateVariable.XML_NAME:
+        currentStateVariable = new StateVariable();
+        break;
+      default:
+        // Nothing to do
+    }
+    final Action action = currentAction;
+    if (action != null) {
+      action.startAccept(urlService, currentTag);
+    }
+  }
+
+  @Override
+  protected void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+    // Process Action, if any
+    final Action action = currentAction;
+    if (action != null) {
+      action.endAccept(urlService, currentTag);
+      // Action complete?
+      if (currentTag.equals(Action.XML_NAME)) {
+        if (action.isOnError()) {
+          // No setOnError() here as we want to tolerate incomplete service
+          Log.e(LOG_TAG, "enAccept: try to add an incomplete Action to: " + serviceType);
+        } else {
+          actions.add(action);
+        }
+        currentAction = null;
+      }
+      return;
+    }
+    // Process StateVariable, if any
+    final StateVariable stateVariable = currentStateVariable;
+    if (stateVariable != null) {
+      stateVariable.endAccept(urlService, currentTag);
+      // StateVariable complete?
+      if (currentTag.equals(StateVariable.XML_NAME)) {
+        // Incomplete allowedValueRange is tolerated: not every state variable declares one
+        stateVariables.add(stateVariable);
+        currentStateVariable = null;
+      }
+    }
   }
 }

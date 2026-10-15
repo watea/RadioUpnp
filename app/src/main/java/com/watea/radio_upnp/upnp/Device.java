@@ -367,8 +367,53 @@ public class Device extends Asset {
     return getService(SERVICE_NAME_SPACE + serviceId);
   }
 
+  @NonNull
+  public SsdpService getSsdpService() {
+    return ssdpService;
+  }
+
+  @Nullable
+  public String getUUID() {
+    return uUID;
+  }
+
+  public boolean hasUUID(@Nullable String otherUUID) {
+    return (uUID != null) && uUID.equals(otherUUID);
+  }
+
+  public boolean hasUUID(@NonNull Device device) {
+    return hasUUID(device.uUID);
+  }
+
+  @NonNull
+  public String getDeviceType() {
+    return getTag(deviceType);
+  }
+
+  @NonNull
+  public String getDisplayString() {
+    return getTag(friendlyName);
+  }
+
+  @Nullable
+  public Bitmap getIcon() {
+    return icon;
+  }
+
   @Override
-  public void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+  public boolean equals(@Nullable Object obj) {
+    if (this == obj) return true;
+    if ((obj == null) || (getClass() != obj.getClass())) return false;
+    return hasUUID((Device) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return (uUID == null) ? super.hashCode() : uUID.hashCode();
+  }
+
+  @Override
+  protected void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     switch (currentTag) {
       case DEVICE_LIST:
         isEmbeddedDevices = true;
@@ -382,7 +427,7 @@ public class Device extends Asset {
   }
 
   @Override
-  public void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+  protected void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     final Device device = currentDevice;
     switch (currentTag) {
       case DEVICE_LIST:
@@ -497,55 +542,10 @@ public class Device extends Asset {
   }
 
   @Override
-  public void endParseAccept(@NonNull URLService uRLService) {
+  protected void endParseAccept(@NonNull URLService uRLService) {
     // Some device have no UUID (tag UDN) in XML, so we take it from SSDP response
     uUID = (uUID == null) ? getUUID(ssdpService) : uUID;
     // Alive?
     isAlive = isAlive(ssdpService.getStatus());
-  }
-
-  @NonNull
-  public SsdpService getSsdpService() {
-    return ssdpService;
-  }
-
-  @Nullable
-  public String getUUID() {
-    return uUID;
-  }
-
-  public boolean hasUUID(@Nullable String otherUUID) {
-    return (uUID != null) && uUID.equals(otherUUID);
-  }
-
-  public boolean hasUUID(@NonNull Device device) {
-    return hasUUID(device.uUID);
-  }
-
-  @NonNull
-  public String getDeviceType() {
-    return getTag(deviceType);
-  }
-
-  @NonNull
-  public String getDisplayString() {
-    return getTag(friendlyName);
-  }
-
-  @Nullable
-  public Bitmap getIcon() {
-    return icon;
-  }
-
-  @Override
-  public boolean equals(@Nullable Object obj) {
-    if (this == obj) return true;
-    if ((obj == null) || (getClass() != obj.getClass())) return false;
-    return hasUUID((Device) obj);
-  }
-
-  @Override
-  public int hashCode() {
-    return (uUID == null) ? super.hashCode() : uUID.hashCode();
   }
 }

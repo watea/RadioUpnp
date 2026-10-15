@@ -131,10 +131,10 @@ public class URLService {
     return this;
   }
 
-  // Calls consumer on START_TAG, END_TAG.
+  // Calls asset on START_TAG, END_TAG.
   // XML contents may be handled with getTag, clearTags.
   // fetchContent() must be called before parseXml().
-  public void parseXml(@NonNull Consumer consumer) throws XmlPullParserException, IOException {
+  public void parseXml(@NonNull Asset asset) throws XmlPullParserException, IOException {
     if (content == null) {
       throw new IllegalStateException("fetchContent() must be called before parseXml()");
     }
@@ -147,7 +147,7 @@ public class URLService {
     while (eventType != XmlPullParser.END_DOCUMENT) {
       switch (eventType = xmlPullParser.next()) {
         case XmlPullParser.START_TAG:
-          consumer.startAccept(this, currentTag = xmlPullParser.getName());
+          asset.startAccept(this, currentTag = xmlPullParser.getName());
           break;
         case XmlPullParser.TEXT:
           if (currentTag != null) {
@@ -157,13 +157,13 @@ public class URLService {
           }
           break;
         case XmlPullParser.END_TAG:
-          consumer.endAccept(this, xmlPullParser.getName());
+          asset.endAccept(this, xmlPullParser.getName());
           break;
         default:
           // Nothing to do
       }
     }
-    consumer.endParseAccept(this);
+    asset.endParseAccept(this);
   }
 
   @NonNull
@@ -178,16 +178,5 @@ public class URLService {
     }
     streamConsumed = true;
     return uRLConnection.getInputStream();
-  }
-
-  public interface Consumer {
-    default void endParseAccept(@NonNull URLService uRLService) {
-    }
-
-    default void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
-    }
-
-    default void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
-    }
   }
 }
