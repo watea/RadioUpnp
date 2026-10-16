@@ -264,9 +264,10 @@ public class RadioService
   @Override
   public void onDestroy() {
     Log.d(LOG_TAG, "onDestroy");
-    // Stop and null sessionDevice before super.onDestroy() so onUpdateNotification sees null and removes the notification
+    // Stop, release and null sessionDevice before super.onDestroy() so onUpdateNotification sees null and removes the notification
     if (sessionDevice != null) {
       sessionDevice.stop();
+      sessionDevice.release();
       sessionDevice = null;
     }
     super.onDestroy();

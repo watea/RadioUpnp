@@ -180,12 +180,6 @@ class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public void stop() {
-    super.stop();
-    scheduleActionStop();
-  }
-
-  @Override
   public void release() {
     super.release();
     scheduleActionStop();
