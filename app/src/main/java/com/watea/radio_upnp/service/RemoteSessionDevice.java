@@ -71,11 +71,8 @@ abstract class RemoteSessionDevice extends SessionDevice implements StreamServer
   }
 
   @Override
-  public final void onConnected(@NonNull String lockKey) {
+  public void onConnected(@NonNull String lockKey) {
     Log.d(LOG_TAG, "onConnected: " + lockKey);
-    if (lockKey.equals(this.lockKey)) {
-      allowRewind();
-    }
   }
 
   @Override

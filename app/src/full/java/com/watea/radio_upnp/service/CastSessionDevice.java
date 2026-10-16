@@ -64,6 +64,8 @@ public class CastSessionDevice extends RemoteSessionDevice {
       Log.d(LOG_TAG, "onStatusUpdated: state = " + playerState);
       switch (playerState) {
         case MediaStatus.PLAYER_STATE_PLAYING:
+          // Receiver reports actual playback
+          allowRewind();
           onState(State.PLAYING);
           break;
         case MediaStatus.PLAYER_STATE_PAUSED:

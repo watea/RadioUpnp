@@ -185,6 +185,15 @@ class UpnpSessionDevice extends RemoteSessionDevice {
     scheduleActionStop();
   }
 
+  // No playback feedback from UPnP renderer: stream connection is the best evidence
+  @Override
+  public void onConnected(@NonNull String lockKey) {
+    super.onConnected(lockKey);
+    if (lockKey.equals(this.lockKey)) {
+      allowRewind();
+    }
+  }
+
   @Override
   public void onPcmFormat(int sampleRate, int channelCount, int bitsPerSample) {
     launchPlay(sampleRate, channelCount, bitsPerSample);
