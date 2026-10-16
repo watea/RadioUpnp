@@ -62,6 +62,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   private static final String PLAYLIST_ITEM_SEPARATOR = "&&";
   private static final DeviceInfo REMOTE_DEVICE_INFO = new DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(RemoteSessionDevice.DEVICE_MAX_VOLUME).build(); // Device volume is relative
   private static final PlaybackException PLAYBACK_EXCEPTION = new PlaybackException(null, null, PlaybackException.ERROR_CODE_UNSPECIFIED);
+  private static final PlaybackException UNSUPPORTED_EXCEPTION = new PlaybackException(null, null, PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED);
   @NonNull
   private final Commands commands;
   @NonNull
@@ -106,7 +107,7 @@ public class RadioPlayer extends SimpleBasePlayer {
     final SimpleBasePlayer.State.Builder builder = new SimpleBasePlayer.State.Builder()
       .setPlaybackState(getPlayerState())
       .setPlayWhenReady(playWhenReady(), Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
-      .setPlayerError((sessionDeviceState == SessionDevice.State.ERROR) ? PLAYBACK_EXCEPTION : null)
+      .setPlayerError(getPlaybackException())
       .setAvailableCommands(buildAvailableCommands());
     if (currentItem == null) {
       builder.setCurrentMediaItemIndex(C.INDEX_UNSET);
@@ -219,6 +220,18 @@ public class RadioPlayer extends SimpleBasePlayer {
   void setRemoteVolume(int remoteVolume) {
     this.remoteVolume = clampVolume(remoteVolume);
     invalidateState();
+  }
+
+  @Nullable
+  private PlaybackException getPlaybackException() {
+    switch (sessionDeviceState) {
+      case ERROR:
+        return PLAYBACK_EXCEPTION;
+      case UNSUPPORTED:
+        return UNSUPPORTED_EXCEPTION;
+      default:
+        return null;
+    }
   }
 
   private int getPlayerState() {

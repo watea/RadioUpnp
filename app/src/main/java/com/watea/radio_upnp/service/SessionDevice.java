@@ -153,7 +153,10 @@ public abstract class SessionDevice implements Player.Listener {
   @Override
   public final void onPlayerError(@NonNull PlaybackException error) {
     Log.e(LOG_TAG, "ExoPlayer transcoder error: " + error.getMessage());
-    onState(State.ERROR);
+    // Parsing (3xxx) and decoding (4xxx) errors: stream format is not supported
+    final boolean isUnsupported = (error.errorCode >= PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED) &&
+      (error.errorCode < PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED);
+    onState(isUnsupported ? State.UNSUPPORTED : State.ERROR);
   }
 
   abstract boolean isRemote();
@@ -319,7 +322,7 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   public enum State {
-    IDLE, PLAYING, PAUSED, BUFFERING, ERROR, STOPPED
+    IDLE, PLAYING, PAUSED, BUFFERING, ERROR, UNSUPPORTED, STOPPED
   }
 
   protected enum Mode {

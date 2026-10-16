@@ -446,7 +446,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     assert mediaController != null;
     final int playbackState = mediaController.getPlaybackState();
     final boolean isPlaying = mediaController.isPlaying();
-    final boolean hasError = (mediaController.getPlayerError() != null);
+    final PlaybackException playerError = mediaController.getPlayerError();
     setDefaultPlayImageButton();
     switch (playbackState) {
       case Player.STATE_READY:
@@ -462,7 +462,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
         break;
       }
       default:
-        if (hasError) {
+        if (playerError != null) {
           if (getCurrentRadio() == null) {
             setPlayImageButtonVisibility(false, false);
           } else {
@@ -470,7 +470,8 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
             playImageButton.setTag(TAG_ACTION_PLAY);
             setPlayImageButtonVisibility(true, false);
           }
-          mainActivity.tell(R.string.radio_connection_error);
+          mainActivity.tell((playerError.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED) ?
+            R.string.radio_format_error : R.string.radio_connection_error);
         } else {
           if (previousPlaybackState != Player.STATE_IDLE) {
             mainActivity.tell(R.string.media_session_stopped);

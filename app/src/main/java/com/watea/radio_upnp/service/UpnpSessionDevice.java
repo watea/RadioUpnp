@@ -400,7 +400,7 @@ class UpnpSessionDevice extends RemoteSessionDevice {
             normalize((connectionSet == null) ? Radio.DEFAULT_MIME : connectionSet.getContent());
           if (mime == null) {
             Log.d(LOG_TAG, "scheduleActionSetAvTransportUri: no format compatible with this renderer");
-            onFailure();
+            fail(State.UNSUPPORTED);
             return;
           }
           addArgument("CurrentURI", radioUri.toString());
@@ -416,7 +416,12 @@ class UpnpSessionDevice extends RemoteSessionDevice {
         @Override
         protected void onFailure() {
           Log.d(LOG_TAG, "scheduleActionSetAvTransportUri: error");
-          onState(State.ERROR);
+          // Raw stream relayed: rejection is assumed to be format related
+          fail((mode == Mode.PCM) ? State.ERROR : State.UNSUPPORTED);
+        }
+
+        private void fail(@NonNull State state) {
+          onState(state);
           // Release other UPnP actions on this device
           requestController.release(action.getDevice());
         }

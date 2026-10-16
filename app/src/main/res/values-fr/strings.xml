@@ -8,6 +8,7 @@
     <string name="version">Version: </string>
     <string name="no_web_page">Pas de page web pour cette radio!</string>
     <string name="radio_connection_error">Erreur de connexion à la radio!</string>
+    <string name="radio_format_error">Format du flux non supporté!</string>
     <string name="media_session_stopped">Session multimédia arrêtée.</string>
     <string name="no_internet">Connexion Internet non disponible!</string>
     <string name="radio_connection_waiting">Le service radio démarre, veuillez patienter&#8230;</string>

@@ -661,6 +661,7 @@ public class RadioService
         break;
       case PAUSED:
       case ERROR:
+      case UNSUPPORTED:
         builder
           .addAction(actionPlay)
           .setOngoing(false);
