@@ -128,6 +128,8 @@ class AlarmController implements ServiceConnection {
     toggleButton.setChecked(alarmService.isStarted());
     toggleButton.setEnabled(isPossible);
     timePicker.setOnTimeChangedListener(null);
+    // Drop any uncommitted keyboard entry left from previous display
+    timePicker.clearFocus();
     timePicker.setEnabled(isPossible);
     final int hour = alarmService.getHour();
     final int minute = alarmService.getMinute();
@@ -136,12 +138,17 @@ class AlarmController implements ServiceConnection {
       timePicker.setMinute(minute);
     }
     if (isPossible) {
-      timePicker.setOnTimeChangedListener((v, h, m) -> toggleButton.setChecked(false));
+      final TimePicker.OnTimeChangedListener onTimeChangedListener = (v, h, m) -> toggleButton.setChecked(false);
+      timePicker.setOnTimeChangedListener(onTimeChangedListener);
       toggleButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
         if (alarmService == null) {
           mainActivity.tell(R.string.alarm_not_available);
         } else if (isChecked) {
           assert radio != null;
+          // Commit keyboard entry; listener detached so that it does not uncheck
+          timePicker.setOnTimeChangedListener(null);
+          timePicker.clearFocus();
+          timePicker.setOnTimeChangedListener(onTimeChangedListener);
           if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), radio.getId())) {
             batteryOptimisationUserHint.show();
           } else {
