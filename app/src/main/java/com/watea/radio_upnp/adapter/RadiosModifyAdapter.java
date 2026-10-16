@@ -89,12 +89,16 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
     private static final int DRAG_FLAGS = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
     private static final int IDLE_FLAGS = ItemTouchHelper.START | ItemTouchHelper.END;
+    private boolean isMoved = false;
 
     @Override
     public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
       super.clearView(recyclerView, viewHolder);
-      // Write once, after drag gesture is fully complete
-      ((Radios) getRadios()).write();
+      // Write once, after drag gesture is fully complete; swipe already wrote on remove
+      if (isMoved) {
+        isMoved = false;
+        ((Radios) getRadios()).write();
+      }
     }
 
     @Override
@@ -108,7 +112,11 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
       @NonNull RecyclerView.ViewHolder viewHolder,
       @NonNull RecyclerView.ViewHolder targetViewHolder) {
       ((MainActivity) recyclerView.getContext()).setToolbarExpanded(false);
-      return ((Radios) getRadios()).swap(viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition());
+      if (((Radios) getRadios()).swap(viewHolder.getAbsoluteAdapterPosition(), targetViewHolder.getAbsoluteAdapterPosition())) {
+        isMoved = true;
+        return true;
+      }
+      return false;
     }
 
     @Override
