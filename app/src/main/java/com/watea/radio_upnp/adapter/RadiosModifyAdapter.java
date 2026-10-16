@@ -73,7 +73,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
     @NonNull
     private final ImageButton preferredImageButton;
 
-    protected ViewHolder(@NonNull View itemView) {
+    ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_modify_radio_text_view);
       preferredImageButton = itemView.findViewById(R.id.row_radio_preferred_image_button);
       preferredImageButton.setOnClickListener(v -> ((Radios) getRadios()).setPreferred(radio, !radio.isPreferred()));

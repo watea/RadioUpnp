@@ -48,35 +48,6 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   }
 
   @Override
-  @NonNull
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> getMainActivity().setFragment(ItemAddFragment.class);
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_playlist_add_white_24dp;
-  }
-
-  @Override
-  public int getTitle() {
-    return R.string.title_modify;
-  }
-
-  @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
-    final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    assert container != null;
-    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
-    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
-    // Adapter
-    radiosModifyAdapter = new RadiosModifyAdapter(
-      radiosRecyclerView,
-      this,
-      (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
-  }
-
-  @Override
   public void onClick(@NonNull Radio radio) {
     ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
   }
@@ -89,5 +60,34 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
   @Override
   protected int getLayout() {
     return R.layout.content_main;
+  }
+
+  @Override
+  @NonNull
+  View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return v -> getMainActivity().setFragment(ItemAddFragment.class);
+  }
+
+  @Override
+  int getFloatingActionButtonResource() {
+    return R.drawable.ic_playlist_add_white_24dp;
+  }
+
+  @Override
+  int getTitle() {
+    return R.string.title_modify;
+  }
+
+  @Override
+  void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+    final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    assert container != null;
+    radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
+    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
+    // Adapter
+    radiosModifyAdapter = new RadiosModifyAdapter(
+      radiosRecyclerView,
+      this,
+      (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
   }
 }

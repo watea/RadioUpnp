@@ -34,12 +34,12 @@ import com.watea.radio_upnp.model.Radios;
 
 public class ItemAddFragment extends ItemFragment {
   @Override
-  public int getTitle() {
+  int getTitle() {
     return R.string.title_item_add;
   }
 
   @Override
-  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+  boolean onMenuItemSelected(@NonNull MenuItem item) {
     if (!super.onMenuItemSelected(item)) {
       final Bitmap icon = getIcon();
       if ((urlWatcher.url == null) ||

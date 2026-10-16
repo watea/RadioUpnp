@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class DefaultRadios {
+class DefaultRadios {
   private static final String LOG_TAG = DefaultRadios.class.getSimpleName();
   private static final List<DefaultRadio> DEFAULT_RADIOS = Arrays.asList(
     new DefaultRadio(
@@ -113,7 +113,7 @@ public class DefaultRadios {
       "https://www.radiofrance.fr/fip/radio-rock"));
 
   @NonNull
-  public static List<Radio> get(@NonNull Context context) {
+  static List<Radio> get(@NonNull Context context) {
     return DEFAULT_RADIOS.stream()
       .map(defaultRadio -> {
         try {

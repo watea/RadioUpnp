@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class IcyStreamParser {
+class IcyStreamParser {
   private static final Pattern STREAM_TITLE_PATTERN = Pattern.compile("StreamTitle='([^;]*)';");
   private final int icyMetaInt;
   @NonNull
@@ -46,7 +46,7 @@ public class IcyStreamParser {
   private int metaLength;
   private int metaRead;
 
-  public IcyStreamParser(int icyMetaInt, @NonNull Consumer<String> metaConsumer) {
+  IcyStreamParser(int icyMetaInt, @NonNull Consumer<String> metaConsumer) {
     this.icyMetaInt = icyMetaInt;
     this.audioRemaining = icyMetaInt;
     this.metaConsumer = metaConsumer;
@@ -59,7 +59,7 @@ public class IcyStreamParser {
   }
 
   @NonNull
-  public byte[] parse(@NonNull byte[] chunk, int length) {
+  byte[] parse(@NonNull byte[] chunk, int length) {
     audioOut.reset();
     int pos = 0;
     while (pos < length) {

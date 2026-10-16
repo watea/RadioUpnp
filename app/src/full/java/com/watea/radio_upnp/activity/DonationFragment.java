@@ -62,7 +62,7 @@ public class DonationFragment extends OpenDonationFragment
 
   // Recovers purchases left unconsumed at each app start, e.g. slow payments completed after the
   // donation screen was left; otherwise Google refunds them after 3 days
-  public static void consumePendingPurchases(@NonNull Context context) {
+  static void consumePendingPurchases(@NonNull Context context) {
     final BillingClient client = BillingClient.newBuilder(context.getApplicationContext())
       .setListener((billingResult, purchases) -> {
       })

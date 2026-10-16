@@ -54,7 +54,7 @@ public class Radio {
   private static final int RADIO_ICON_SIZE = 300;
   private static final String LOG_TAG = Radio.class.getSimpleName();
   private static final String SPACER = ";";
-  public static final String EXPORT_HEAD =
+  static final String EXPORT_HEAD =
     export("name") + export("url") + export("webPageUrl") + export("isPreferred");
   private static final String ID = "id";
   private static final String NAME = "name";
@@ -189,8 +189,13 @@ public class Radio {
     return new File(context.getFilesDir().getPath() + "/" + fileName);
   }
 
+  @NonNull
+  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
+    return Bitmap.createScaledBitmap(bitmap, size, size, true);
+  }
+
   @Nullable
-  public static Radio getRadioFromCsv(@NonNull String csvLine) {
+  static Radio getRadioFromCsv(@NonNull String csvLine) {
     final String[] fields = csvLine.split(SPACER);
     if (fields.length == 4) {
       try {
@@ -208,11 +213,6 @@ public class Radio {
       Log.e(LOG_TAG, "getRadioFromCsv: bad .csv line");
     }
     return null;
-  }
-
-  @NonNull
-  public static Bitmap createScaledBitmap(@NonNull Bitmap bitmap, int size) {
-    return Bitmap.createScaledBitmap(bitmap, size, size, true);
   }
 
   @NonNull
@@ -295,10 +295,6 @@ public class Radio {
     return isPreferred;
   }
 
-  public void setIsPreferred(boolean isPreferred) {
-    this.isPreferred = isPreferred;
-  }
-
   @NonNull
   public String getId() {
     return id;
@@ -316,27 +312,6 @@ public class Radio {
       .setArtist(information)
       .setDisplayTitle(information)
       .setUserRating(new StarRating(5, isPreferred ? 5 : 0));
-  }
-
-  @NonNull
-  public String export() {
-    return export(name) +
-      export(url.toString()) +
-      export((webPageUrl == null) ? "" : webPageUrl.toString()) +
-      export(Boolean.toString(isPreferred));
-  }
-
-  @NonNull
-  public JSONObject getJSONObject() throws JSONException {
-    return new JSONObject()
-      .put(ID, id)
-      .put(NAME, name)
-      .put(ICON, base64Icon)
-      .put(URL, url.toString())
-      .put(WEB_PAGE_URL, (webPageUrl == null) ? "" : webPageUrl.toString())
-      .put(MIME, mime)
-      .put(QUALITY, quality)
-      .put(IS_PREFERRED, isPreferred);
   }
 
   @NonNull
@@ -372,6 +347,31 @@ public class Radio {
 
   public byte[] iconToBytes(@NonNull Bitmap.CompressFormat format, int quality) {
     return iconToBytes(icon, format, quality);
+  }
+
+  @NonNull
+  JSONObject getJSONObject() throws JSONException {
+    return new JSONObject()
+      .put(ID, id)
+      .put(NAME, name)
+      .put(ICON, base64Icon)
+      .put(URL, url.toString())
+      .put(WEB_PAGE_URL, (webPageUrl == null) ? "" : webPageUrl.toString())
+      .put(MIME, mime)
+      .put(QUALITY, quality)
+      .put(IS_PREFERRED, isPreferred);
+  }
+
+  void setIsPreferred(boolean isPreferred) {
+    this.isPreferred = isPreferred;
+  }
+
+  @NonNull
+  String export() {
+    return export(name) +
+      export(url.toString()) +
+      export((webPageUrl == null) ? "" : webPageUrl.toString()) +
+      export(Boolean.toString(isPreferred));
   }
 
   @NonNull

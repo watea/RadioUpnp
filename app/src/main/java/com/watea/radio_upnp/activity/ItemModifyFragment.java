@@ -41,11 +41,6 @@ public class ItemModifyFragment extends ItemFragment {
   @Nullable
   private Radio radio = null;
 
-  // Must be called before creation
-  public void set(@NonNull Radio radio) {
-    this.radio = radio;
-  }
-
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -78,19 +73,24 @@ public class ItemModifyFragment extends ItemFragment {
     }
   }
 
+  // Must be called before creation
+  void set(@NonNull Radio radio) {
+    this.radio = radio;
+  }
+
   @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+  void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     super.onCreateView(view, container);
     updateView();
   }
 
   @Override
-  public int getTitle() {
+  int getTitle() {
     return R.string.title_item_modify;
   }
 
   @Override
-  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+  boolean onMenuItemSelected(@NonNull MenuItem item) {
     if (!super.onMenuItemSelected(item)) {
       if (radio != null) {
         radio.setName(getRadioName());

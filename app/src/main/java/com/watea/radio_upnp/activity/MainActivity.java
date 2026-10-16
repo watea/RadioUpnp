@@ -109,7 +109,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public class MainActivity extends AppCompatActivity {
-  public static final int SLEEP_MIN = 5;
+  static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int SLEEP_MAX = 90;
@@ -212,134 +212,9 @@ public class MainActivity extends AppCompatActivity {
     }
   }
 
-  @NonNull
-  public SharedPreferences getSharedPreferences() {
-    return sharedPreferences;
-  }
-
-  @NonNull
-  public Bitmap getDefaultIcon(int id) {
-    return BitmapFactory.decodeResource(getResources(), id);
-  }
-
-  @NonNull
-  public Bitmap getDefaultIcon() {
-    return getDefaultIcon(R.drawable.ic_radio_gray);
-  }
-
   // With animation
   public void setToolbarExpanded(boolean isExpanded) {
     appBarLayout.setExpanded(isExpanded, true);
-  }
-
-  public void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
-    invalidateOptionsMenu();
-    actionBarLayout.setTitle(getResources().getString(mainActivityFragment.getTitle()));
-    floatingActionButton.setOnClickListener(mainActivityFragment.getFloatingActionButtonOnClickListener());
-    floatingActionButton.setOnLongClickListener(mainActivityFragment.getFloatingActionButtonOnLongClickListener());
-    final int resource = mainActivityFragment.getFloatingActionButtonResource();
-    if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
-      floatingActionButton.setImageResource(resource);
-    }
-    final Integer menuId = FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass());
-    // Change checked menu if necessary
-    if (menuId != null) {
-      checkNavigationMenu(menuId);
-    }
-    // Back button?
-    final boolean isMainFragment = getCurrentFragment() instanceof MainFragment;
-    drawerToggle.setDrawerIndicatorEnabled(isMainFragment);
-    drawerLayout.setDrawerLockMode(isMainFragment ? DrawerLayout.LOCK_MODE_UNLOCKED : DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
-  }
-
-  public void tell(int message) {
-    tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
-  }
-
-  public void tell(@NonNull String message) {
-    tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
-  }
-
-  public void showWarningOverlay(@NonNull String message) {
-    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-  }
-
-  public void startReading(@NonNull Radio radio) {
-    playerController.startReading(radio);
-  }
-
-  @Nullable
-  public Radio getLastPlayedRadio() {
-    final String id = getLastPlayedRadioId();
-    return id.isEmpty() ? null : Radios.getInstance().getRadioFromId(id);
-  }
-
-  @NonNull
-  public Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
-    final Fragment currentFragment = getCurrentFragment();
-    final Fragment fragment;
-    try {
-      fragment = fragmentClass.getConstructor().newInstance();
-    } catch (Exception exception) {
-      // Should not happen
-      Log.e(LOG_TAG, "setFragment: internal failure", exception);
-      throw new RuntimeException();
-    }
-    final FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-    // Register back if fragment exists
-    if (currentFragment != null) {
-      fragmentTransaction.addToBackStack(null);
-    }
-    // Set
-    fragmentTransaction.replace(R.id.content_frame, fragment).commit();
-    return fragment;
-  }
-
-  @NonNull
-  public NetworkProxy getNetworkProxy() {
-    assert networkProxy != null;
-    return networkProxy;
-  }
-
-  public void checkNavigationMenu() {
-    checkNavigationMenu(navigationMenuCheckedId);
-  }
-
-  public void onUpnp() {
-    if (CastManager.getInstance().hasCastSession()) {
-      tell(R.string.cast_already_running);
-    } else {
-      upnpAlertDialog.show();
-    }
-  }
-
-  public void setUpnpIconConsumer(@Nullable Consumer<Bitmap> upnpIconConsumer) {
-    this.upnpIconConsumer = upnpIconConsumer;
-    // Update icon if needed
-    if (upnpService != null) {
-      onNewSelectedDevice(upnpService.getSelectedDevice());
-    }
-  }
-
-  @NonNull
-  public PlayerController getPlayerController() {
-    assert playerController != null;
-    return playerController;
-  }
-
-  public void resetSelectedDevice() {
-    if (upnpService == null) {
-      Log.e(LOG_TAG, "resetSelectedDevice: internal failure, upnpService not defined");
-      return;
-    }
-    upnpService.setSelectedDeviceIdentity(null);
-  }
-
-  @NonNull
-  public Intent getNewSendIntent() {
-    return new Intent(Intent.ACTION_SEND)
-      .setType("message/rfc822")
-      .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
   }
 
   @Override
@@ -358,17 +233,6 @@ public class MainActivity extends AppCompatActivity {
   @NonNull
   public Layout getLayout() {
     return layout;
-  }
-
-  // Builds load dialog if necessary
-  @NonNull
-  public AlertDialog getLoadingAlertDialog() {
-    return (loadingAlertDialog == null) ?
-      loadingAlertDialog = new AlertDialog.Builder(this)
-        .setCancelable(false)
-        .setView(R.layout.view_loading)
-        .create() :
-      loadingAlertDialog;
   }
 
   // Is called also when coming back after a "Back" exit
@@ -639,6 +503,142 @@ public class MainActivity extends AppCompatActivity {
     if (currentFragment != null) {
       outState.putString(getString(R.string.key_current_fragment), currentFragment.getClass().getSimpleName());
     }
+  }
+
+  @NonNull
+  SharedPreferences getSharedPreferences() {
+    return sharedPreferences;
+  }
+
+  @NonNull
+  Bitmap getDefaultIcon(int id) {
+    return BitmapFactory.decodeResource(getResources(), id);
+  }
+
+  @NonNull
+  Bitmap getDefaultIcon() {
+    return getDefaultIcon(R.drawable.ic_radio_gray);
+  }
+
+  void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
+    invalidateOptionsMenu();
+    actionBarLayout.setTitle(getResources().getString(mainActivityFragment.getTitle()));
+    floatingActionButton.setOnClickListener(mainActivityFragment.getFloatingActionButtonOnClickListener());
+    floatingActionButton.setOnLongClickListener(mainActivityFragment.getFloatingActionButtonOnLongClickListener());
+    final int resource = mainActivityFragment.getFloatingActionButtonResource();
+    if (resource != MainActivityFragment.DEFAULT_RESOURCE) {
+      floatingActionButton.setImageResource(resource);
+    }
+    final Integer menuId = FRAGMENT_MENU_IDS.get(mainActivityFragment.getClass());
+    // Change checked menu if necessary
+    if (menuId != null) {
+      checkNavigationMenu(menuId);
+    }
+    // Back button?
+    final boolean isMainFragment = getCurrentFragment() instanceof MainFragment;
+    drawerToggle.setDrawerIndicatorEnabled(isMainFragment);
+    drawerLayout.setDrawerLockMode(isMainFragment ? DrawerLayout.LOCK_MODE_UNLOCKED : DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
+  }
+
+  void tell(int message) {
+    tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
+  }
+
+  void tell(@NonNull String message) {
+    tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
+  }
+
+  void showWarningOverlay(@NonNull String message) {
+    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+  }
+
+  void startReading(@NonNull Radio radio) {
+    playerController.startReading(radio);
+  }
+
+  @Nullable
+  Radio getLastPlayedRadio() {
+    final String id = getLastPlayedRadioId();
+    return id.isEmpty() ? null : Radios.getInstance().getRadioFromId(id);
+  }
+
+  @NonNull
+  Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
+    final Fragment currentFragment = getCurrentFragment();
+    final Fragment fragment;
+    try {
+      fragment = fragmentClass.getConstructor().newInstance();
+    } catch (Exception exception) {
+      // Should not happen
+      Log.e(LOG_TAG, "setFragment: internal failure", exception);
+      throw new RuntimeException();
+    }
+    final FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+    // Register back if fragment exists
+    if (currentFragment != null) {
+      fragmentTransaction.addToBackStack(null);
+    }
+    // Set
+    fragmentTransaction.replace(R.id.content_frame, fragment).commit();
+    return fragment;
+  }
+
+  @NonNull
+  NetworkProxy getNetworkProxy() {
+    assert networkProxy != null;
+    return networkProxy;
+  }
+
+  void checkNavigationMenu() {
+    checkNavigationMenu(navigationMenuCheckedId);
+  }
+
+  void onUpnp() {
+    if (CastManager.getInstance().hasCastSession()) {
+      tell(R.string.cast_already_running);
+    } else {
+      upnpAlertDialog.show();
+    }
+  }
+
+  void setUpnpIconConsumer(@Nullable Consumer<Bitmap> upnpIconConsumer) {
+    this.upnpIconConsumer = upnpIconConsumer;
+    // Update icon if needed
+    if (upnpService != null) {
+      onNewSelectedDevice(upnpService.getSelectedDevice());
+    }
+  }
+
+  @NonNull
+  PlayerController getPlayerController() {
+    assert playerController != null;
+    return playerController;
+  }
+
+  void resetSelectedDevice() {
+    if (upnpService == null) {
+      Log.e(LOG_TAG, "resetSelectedDevice: internal failure, upnpService not defined");
+      return;
+    }
+    upnpService.setSelectedDeviceIdentity(null);
+  }
+
+  @NonNull
+  Intent getNewSendIntent() {
+    return new Intent(Intent.ACTION_SEND)
+      .setType("message/rfc822")
+      .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
+  }
+
+  // Builds load dialog if necessary
+  @NonNull
+  AlertDialog getLoadingAlertDialog() {
+    return (loadingAlertDialog == null) ?
+      loadingAlertDialog = new AlertDialog.Builder(this)
+        .setCancelable(false)
+        .setView(R.layout.view_loading)
+        .create() :
+      loadingAlertDialog;
   }
 
   @NonNull
@@ -914,14 +914,14 @@ public class MainActivity extends AppCompatActivity {
     JSON_IMPORT, CSV_IMPORT, JSON_EXPORT, CSV_EXPORT
   }
 
-  public class UserHint {
+  class UserHint {
     @NonNull
     private final AlertDialog alertDialog;
     private final int delay;
     private boolean gotIt;
     private int count = 0;
 
-    public UserHint(int key, int message, int delay) {
+    UserHint(int key, int message, int delay) {
       this.delay = delay;
       gotIt = sharedPreferences.getBoolean(getString(key), false);
       alertDialog = new AlertDialog.Builder(MainActivity.this)
@@ -933,11 +933,11 @@ public class MainActivity extends AppCompatActivity {
         .create();
     }
 
-    public UserHint(int key, int message) {
+    UserHint(int key, int message) {
       this(key, message, 0);
     }
 
-    public void show() {
+    void show() {
       count = (count < delay) ? count + 1 : count;
       if (!alertDialog.isShowing() && !gotIt && (count >= delay)) {
         alertDialog.show();

@@ -69,8 +69,42 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   private boolean isServerAvailable = false;
 
   @Override
+  public void onResume() {
+    super.onResume();
+    // Build search dialog if not yet done
+    if (!isServerAvailable) {
+      handleSearchAlertDialog();
+    }
+  }
+
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    cancelSearch();
+    searchExecutor.shutdown();
+  }
+
+  @Override
+  protected int getLayout() {
+    return R.layout.content_main;
+  }
+
+  abstract void clearDialog();
+
   @NonNull
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+  abstract JSONArray getStations() throws IOException, JSONException;
+
+  abstract void fetchDialogItems() throws IOException, JSONException;
+
+  abstract void setDialogItems();
+
+  // Returns null if station is filtered out
+  @Nullable
+  abstract Radio toRadio(@NonNull JSONObject station) throws JSONException, MalformedURLException;
+
+  @Override
+  @NonNull
+  View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
       // If search dialog already built, use it, or else build it
       if (isServerAvailable) {
@@ -82,27 +116,18 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   }
 
   @Override
-  public int getTitle() {
+  int getTitle() {
     return R.string.title_search;
   }
 
   @Override
-  public int getFloatingActionButtonResource() {
+  int getFloatingActionButtonResource() {
     return R.drawable.ic_search_white_24dp;
-  }
-
-  @Override
-  public void onResume() {
-    super.onResume();
-    // Build search dialog if not yet done
-    if (!isServerAvailable) {
-      handleSearchAlertDialog();
-    }
   }
 
   @SuppressLint("InflateParams")
   @NonNull
-  public View onCreateView(@NonNull View view, int viewId) {
+  View onCreateView(@NonNull View view, int viewId) {
     final RecyclerView radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
     radiosRecyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
@@ -119,40 +144,15 @@ public abstract class SearchRootFragment extends MainActivityFragment {
     return searchView;
   }
 
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
-    cancelSearch();
-    searchExecutor.shutdown();
-  }
-
-  protected abstract void clearDialog();
-
-  @NonNull
-  protected abstract JSONArray getStations() throws IOException, JSONException;
-
-  protected abstract void fetchDialogItems() throws IOException, JSONException;
-
-  protected abstract void setDialogItems();
-
-  // Returns null if station is filtered out
-  @Nullable
-  protected abstract Radio toRadio(@NonNull JSONObject station) throws JSONException, MalformedURLException;
-
-  @Override
-  protected int getLayout() {
-    return R.layout.content_main;
-  }
-
-  protected boolean isServerAvailable() {
+  boolean isServerAvailable() {
     return isServerAvailable;
   }
 
-  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+  void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
     menuInflater.inflate(R.menu.menu_search, menu);
   }
 
-  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+  boolean onMenuItemSelected(@NonNull MenuItem item) {
     final int id = item.getItemId();
     if (id == R.id.action_all) {
       radiosSearchAdapter.selectAll();

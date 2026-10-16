@@ -25,13 +25,13 @@ package com.watea.radio_upnp.adapter;
 
 import android.graphics.Color;
 
-public class ColorContrastChecker {
-  public static boolean hasSufficientContrast(int color1, int color2) {
+class ColorContrastChecker {
+  static boolean hasSufficientContrast(int color1, int color2) {
     final double contrastRatio = calculateContrastRatio(color1, color2);
     return (contrastRatio >= 4.5); // Minimum contrast ratio for normal text
   }
 
-  public static boolean isMoreThanHalfTransparent(int color) {
+  static boolean isMoreThanHalfTransparent(int color) {
     return (Color.alpha(color) < 128);
   }
 

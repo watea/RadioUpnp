@@ -170,11 +170,6 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
   }
 
   public class UpnpService extends android.os.Binder {
-    @NonNull
-    public RequestController getRequestController() {
-      return requestController;
-    }
-
     public void addListener(@NonNull Listener listener) {
       devices.addListener(listener);
     }
@@ -197,9 +192,14 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
       return (selectedDeviceIdentity == null) ? null : devices.get(selectedDeviceIdentity);
     }
 
+    @NonNull
+    RequestController getRequestController() {
+      return requestController;
+    }
+
     // Returns null if no device is selected OR if the selected device is no longer alive
     @Nullable
-    public Device getActiveSelectedDevice() {
+    Device getActiveSelectedDevice() {
       final Device result = getSelectedDevice();
       return ((result == null) || result.isAlive()) ? result : null;
     }
@@ -249,11 +249,11 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
     }
 
     @Nullable
-    public synchronized Device get(@NonNull String uUID) {
+    synchronized Device get(@NonNull String uUID) {
       return stream().filter(device -> device.hasUUID(uUID)).findFirst().orElse(null);
     }
 
-    public synchronized void process(@NonNull SsdpService service) {
+    synchronized void process(@NonNull SsdpService service) {
       final String uUID = Device.getUUID(service);
       final Device knownDevice = (uUID == null) ? null : get(uUID);
       final SsdpService.Status status = service.getStatus();
@@ -317,14 +317,14 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
       }
     }
 
-    @NonNull
-    public synchronized Stream<Device> getEmbeddedDevicesStream(@NonNull Device device) {
-      return device.getEmbeddedDevices().stream().filter(this::contains);
-    }
-
-    public synchronized void addListener(@NonNull Listener listener) {
+    synchronized void addListener(@NonNull Listener listener) {
       stream().filter(Device::isAlive).forEach(listener::onDeviceAdd);
       listeners.add(listener);
+    }
+
+    @NonNull
+    synchronized Stream<Device> getEmbeddedDevicesStream(@NonNull Device device) {
+      return device.getEmbeddedDevices().stream().filter(this::contains);
     }
   }
 }

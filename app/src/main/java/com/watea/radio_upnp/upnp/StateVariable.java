@@ -39,18 +39,13 @@ import androidx.annotation.Nullable;
 //  Declarations for other state variables (if any) go here
 // </serviceStateTable>
 public class StateVariable extends Asset {
-  public static final String XML_NAME = "stateVariable";
+  static final String XML_NAME = "stateVariable";
   @Nullable
   private String name = null;
   @Nullable
   private Integer minimum = null;
   @Nullable
   private Integer maximum = null;
-
-  @Nullable
-  public String getName() {
-    return name;
-  }
 
   // Native allowed range, when declared; false if this state variable has no allowedValueRange
   public boolean hasRange() {
@@ -65,8 +60,13 @@ public class StateVariable extends Asset {
     return (maximum == null) ? 0 : maximum;
   }
 
+  @Nullable
+  String getName() {
+    return name;
+  }
+
   @Override
-  protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     if (currentTag.equals(XML_NAME)) {
       name = uRLService.getTag("name");
       minimum = parseInt(uRLService.getTag("minimum"));

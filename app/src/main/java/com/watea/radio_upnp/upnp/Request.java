@@ -201,10 +201,6 @@ public abstract class Request implements Runnable {
     }
   }
 
-  public boolean hasDevice(@NonNull Device device) {
-    return action.getDevice().equals(device);
-  }
-
   @Nullable
   protected String getResponse(@NonNull String name) {
     return responses.get(name);
@@ -216,6 +212,10 @@ public abstract class Request implements Runnable {
 
   // Override to react to a failed call
   protected void onFailure() {
+  }
+
+  boolean hasDevice(@NonNull Device device) {
+    return action.getDevice().equals(device);
   }
 
   @NonNull

@@ -45,22 +45,15 @@ import com.watea.radio_upnp.service.NetworkProxy;
 
 // Upper class for fragments of the main activity
 public abstract class MainActivityFragment extends Fragment {
-  protected static final int DEFAULT_RESOURCE = -1;
+  static final int DEFAULT_RESOURCE = -1;
   @Nullable
   private View view = null;
   private ViewGroup container;
   private int yScrollPosition = 0;
 
-  protected static int getVisibleFrom(boolean isVisible) {
+  static int getVisibleFrom(boolean isVisible) {
     return isVisible ? View.VISIBLE : View.INVISIBLE;
   }
-
-  @NonNull
-  public abstract View.OnClickListener getFloatingActionButtonOnClickListener();
-
-  public abstract int getFloatingActionButtonResource();
-
-  public abstract int getTitle();
 
   @Override
   @Nullable
@@ -117,52 +110,59 @@ public abstract class MainActivityFragment extends Fragment {
     yScrollPosition = container.getScrollY();
   }
 
-  @NonNull
-  public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return v -> false;
-  }
-
-  protected abstract int getLayout();
-
-  protected abstract void onCreateView(@NonNull View view, @Nullable ViewGroup container);
-
-  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
-  }
-
-  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
-    return false;
-  }
+  abstract int getLayout();
 
   @NonNull
-  protected SharedPreferences getSharedPreferences() {
+  abstract View.OnClickListener getFloatingActionButtonOnClickListener();
+
+  abstract int getFloatingActionButtonResource();
+
+  abstract int getTitle();
+
+  abstract void onCreateView(@NonNull View view, @Nullable ViewGroup container);
+
+  @NonNull
+  SharedPreferences getSharedPreferences() {
     return getMainActivity().getSharedPreferences();
   }
 
-  protected void tell(int message) {
+  @NonNull
+  View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
+    return v -> false;
+  }
+
+  void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+  }
+
+  boolean onMenuItemSelected(@NonNull MenuItem item) {
+    return false;
+  }
+
+  void tell(int message) {
     getMainActivity().tell(message);
   }
 
-  protected void tell(@NonNull String message) {
+  void tell(@NonNull String message) {
     getMainActivity().tell(message);
   }
 
   @NonNull
-  protected NetworkProxy getNetworkProxy() {
+  NetworkProxy getNetworkProxy() {
     return getMainActivity().getNetworkProxy();
   }
 
   @NonNull
-  protected MainActivity getMainActivity() {
+  MainActivity getMainActivity() {
     assert getActivity() != null;
     return (MainActivity) getActivity();
   }
 
-  protected void onBackPressed() {
+  void onBackPressed() {
     assert getActivity() != null;
     getActivity().getOnBackPressedDispatcher().onBackPressed();
   }
 
-  protected void flushKeyboard() {
+  void flushKeyboard() {
     assert getActivity() != null;
     final View focus = getActivity().getCurrentFocus();
     if (focus != null) {
@@ -170,13 +170,13 @@ public abstract class MainActivityFragment extends Fragment {
     }
   }
 
-  protected void flushKeyboard(@NonNull View focus) {
+  void flushKeyboard(@NonNull View focus) {
     assert getActivity() != null;
     ((InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
       .hideSoftInputFromWindow(focus.getWindowToken(), 0);
   }
 
-  protected void protectedRunOnUiThread(@NonNull Runnable runnable) {
+  void protectedRunOnUiThread(@NonNull Runnable runnable) {
     final Activity activity = getActivity();
     if (activity != null) {
       activity.runOnUiThread(() -> {
@@ -188,15 +188,15 @@ public abstract class MainActivityFragment extends Fragment {
   }
 
   // Abstract class to handle web search
-  protected abstract class Searcher extends Thread {
+  abstract class Searcher extends Thread {
     @Override
     public void run() {
       onSearch();
       protectedRunOnUiThread(this::onPostSearch);
     }
 
-    protected abstract void onSearch();
+    abstract void onSearch();
 
-    protected abstract void onPostSearch();
+    abstract void onPostSearch();
   }
 }

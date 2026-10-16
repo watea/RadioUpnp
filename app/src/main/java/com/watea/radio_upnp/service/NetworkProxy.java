@@ -56,7 +56,7 @@ public class NetworkProxy {
   }
 
   @Nullable
-  public String getWifiIpAddress() {
+  String getWifiIpAddress() {
     final Network wifiNetwork = findNetwork(NetworkCapabilities.TRANSPORT_WIFI);
     if (wifiNetwork == null) {
       return null;

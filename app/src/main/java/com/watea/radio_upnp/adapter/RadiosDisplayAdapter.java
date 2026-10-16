@@ -35,10 +35,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 
-public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.ViewHolder>
+abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.ViewHolder>
   extends RadiosAdapter<V> {
   @NonNull
-  protected final Listener listener;
+  final Listener listener;
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onChange(@NonNull Radio radio) {
@@ -79,7 +79,7 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     }
   };
 
-  protected RadiosDisplayAdapter(
+  RadiosDisplayAdapter(
     @NonNull Supplier<List<Radio>> radiosSupplier,
     int row,
     @NonNull RecyclerView recyclerView,
@@ -96,10 +96,10 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     Radios.getInstance().removeListener(radiosListener);
   }
 
-  protected void onPreferredChange() {
+  void onPreferredChange() {
   }
 
-  protected void onCountChange() {
+  void onCountChange() {
     listener.onCountChange(getRadios().isEmpty());
   }
 
@@ -109,8 +109,8 @@ public abstract class RadiosDisplayAdapter<V extends RadiosDisplayAdapter<?>.Vie
     void onCountChange(boolean isEmpty);
   }
 
-  protected abstract class ViewHolder extends RadiosAdapter.ViewHolder {
-    protected ViewHolder(@NonNull View itemView, int textViewId) {
+  abstract class ViewHolder extends RadiosAdapter.ViewHolder {
+    ViewHolder(@NonNull View itemView, int textViewId) {
       super(itemView, textViewId);
       radioTextView.setOnClickListener(v -> listener.onClick(radio));
     }

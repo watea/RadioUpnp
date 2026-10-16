@@ -78,25 +78,25 @@ public abstract class SessionDevice implements Player.Listener {
   @Nullable
   private static DataSource.Factory httpDataSourceFactory = null;
   @NonNull
-  protected final Context context;
+  final Context context;
   @NonNull
-  protected final Radio radio;
+  final Radio radio;
   @NonNull
-  protected final String lockKey; // Current tag
+  final Listener listener;
   @NonNull
-  protected final Listener listener;
+  final String lockKey; // Current tag
   @NonNull
-  protected final ExoPlayer exoPlayer;
+  final ExoPlayer exoPlayer;
   @NonNull
-  protected final Mode mode;
+  final Mode mode;
   @NonNull
-  protected final CapturingAudioSink capturingAudioSink;
+  final CapturingAudioSink capturingAudioSink;
   @Nullable
-  protected Radio.ConnectionSet connectionSet = null;
+  Radio.ConnectionSet connectionSet = null;
   private volatile boolean isReleased = false;
   private volatile boolean isAllowedToRewind = false;
 
-  protected SessionDevice(
+  SessionDevice(
     @NonNull Context context,
     @NonNull Mode mode,
     @NonNull Listener listener,
@@ -122,56 +122,6 @@ public abstract class SessionDevice implements Player.Listener {
     }
   }
 
-  public abstract boolean isRemote();
-
-  public abstract void adjustVolume(int direction);
-
-  @NonNull
-  public String getLockKey() {
-    return lockKey;
-  }
-
-  @NonNull
-  public Radio getRadio() {
-    return radio;
-  }
-
-  public void play() {
-    if (isExoPlayerActive()) {
-      exoPlayer.play();
-    }
-  }
-
-  public void pause() {
-    if (isExoPlayerActive()) {
-      exoPlayer.pause();
-    }
-  }
-
-  public void stop() {
-    if (isExoPlayerActive()) {
-      exoPlayer.stop();
-    }
-    // A voluntary stop is never a recoverable stream drop
-    isAllowedToRewind = false;
-  }
-
-  public void launch() {
-    new Thread(this::prepare).start();
-  }
-
-  public boolean consumeRewind() {
-    final boolean result = isAllowedToRewind;
-    isAllowedToRewind = false;
-    return result;
-  }
-
-  public void release() {
-    exoPlayer.removeListener(this);
-    exoPlayer.release();
-    isReleased = true;
-  }
-
   @Override
   public final void onMetadata(@NonNull Metadata metadata) {
     String title = null;
@@ -184,9 +134,6 @@ public abstract class SessionDevice implements Player.Listener {
       }
     }
     listener.onNewInformation((title == null) ? "" : title, lockKey);
-  }
-
-  public void onAndroidAutoDisconnected() {
   }
 
   @Override
@@ -209,18 +156,75 @@ public abstract class SessionDevice implements Player.Listener {
     onState(State.ERROR);
   }
 
-  protected abstract void setVolume(float volume);
+  abstract boolean isRemote();
 
-  protected void allowRewind() {
+  abstract void adjustVolume(int direction);
+
+  abstract void setVolume(float volume);
+
+  @NonNull
+  Radio getRadio() {
+    return radio;
+  }
+
+  void play() {
+    if (isExoPlayerActive()) {
+      exoPlayer.play();
+    }
+  }
+
+  void pause() {
+    if (isExoPlayerActive()) {
+      exoPlayer.pause();
+    }
+  }
+
+  void stop() {
+    if (isExoPlayerActive()) {
+      exoPlayer.stop();
+    }
+    // A voluntary stop is never a recoverable stream drop
+    isAllowedToRewind = false;
+  }
+
+  void launch() {
+    new Thread(this::prepare).start();
+  }
+
+  void release() {
+    exoPlayer.removeListener(this);
+    exoPlayer.release();
+    isReleased = true;
+  }
+
+  boolean isPlaying() {
+    return (getState() == State.PLAYING);
+  }
+
+  @NonNull
+  String getLockKey() {
+    return lockKey;
+  }
+
+  boolean consumeRewind() {
+    final boolean result = isAllowedToRewind;
+    isAllowedToRewind = false;
+    return result;
+  }
+
+  void onAndroidAutoDisconnected() {
+  }
+
+  void allowRewind() {
     isAllowedToRewind = true;
   }
 
-  protected void onState(@NonNull State state) {
+  void onState(@NonNull State state) {
     Log.d(LOG_TAG, "onState: " + state.name() + "/" + lockKey);
     listener.onState(state, lockKey);
   }
 
-  protected void postIfNotReleased(@NonNull Runnable runnable) {
+  void postIfNotReleased(@NonNull Runnable runnable) {
     HANDLER.post(() -> {
       if (!isReleased) {
         runnable.run();
@@ -229,7 +233,7 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   // Fires ERROR if upstream connection failed.
-  protected boolean prepare() {
+  boolean prepare() {
     if (isReleased) {
       return false;
     }
@@ -259,15 +263,11 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   @NonNull
-  protected State getState() {
+  State getState() {
     return listener.getPlaybackState();
   }
 
-  protected boolean isPlaying() {
-    return (getState() == State.PLAYING);
-  }
-
-  protected void startExoPlayer() {
+  void startExoPlayer() {
     if (connectionSet == null) {
       Log.e(LOG_TAG, "startExoPlayer: internal failure, connectionSet is null");
       return;
@@ -278,7 +278,7 @@ public abstract class SessionDevice implements Player.Listener {
     exoPlayer.setPlayWhenReady(true);
   }
 
-  protected void restartExoPlayer() {
+  void restartExoPlayer() {
     exoPlayer.removeListener(this);
     exoPlayer.stop();
     exoPlayer.clearMediaItems();

@@ -62,13 +62,13 @@ import java.util.function.Supplier;
 
 public abstract class ItemFragment extends MainActivityFragment {
   private static final String LOG_TAG = ItemFragment.class.getSimpleName();
-  protected EditText nameEditText;
-  protected EditText urlEditText;
-  protected EditText webPageEditText;
-  protected EditText iconEditText;
-  protected UrlWatcher urlWatcher;
-  protected UrlWatcher webPageWatcher;
-  protected UrlWatcher iconWatcher;
+  EditText nameEditText;
+  EditText urlEditText;
+  EditText webPageEditText;
+  EditText iconEditText;
+  UrlWatcher urlWatcher;
+  UrlWatcher webPageWatcher;
+  UrlWatcher iconWatcher;
   private Button iconSearchButton;
   private ProgressBar iconSearchProgressBar;
   @Nullable
@@ -111,8 +111,19 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   @Override
+  protected int getLayout() {
+    return R.layout.content_item;
+  }
+
+  @Nullable
+  Bitmap getIcon() {
+    // nameEditText may be null if called before creation
+    return (nameEditText == null) ? null : (Bitmap) nameEditText.getTag();
+  }
+
+  @Override
   @NonNull
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+  View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> {
       if (!getNetworkProxy().isDeviceOnline()) {
         tell(R.string.no_internet);
@@ -126,12 +137,12 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   @Override
-  public int getFloatingActionButtonResource() {
+  int getFloatingActionButtonResource() {
     return R.drawable.ic_radio_white_24dp;
   }
 
   @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+  void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     nameEditText = view.findViewById(R.id.name_edit_text);
     urlEditText = view.findViewById(R.id.url_edit_text);
     iconEditText = view.findViewById(R.id.icon_edit_text);
@@ -173,17 +184,12 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   @Override
-  protected int getLayout() {
-    return R.layout.content_item;
-  }
-
-  @Override
-  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+  void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
     menuInflater.inflate(R.menu.menu_item_modify, menu);
   }
 
   @Override
-  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+  boolean onMenuItemSelected(@NonNull MenuItem item) {
     flushKeyboard();
     if ((item.getItemId() == R.id.action_done) && (urlWatcher.url == null)) {
       tell(R.string.radio_definition_error);
@@ -193,17 +199,11 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   @NonNull
-  protected String getRadioName() {
+  String getRadioName() {
     return nameEditText.getText().toString().toUpperCase(Locale.ROOT);
   }
 
-  @Nullable
-  protected Bitmap getIcon() {
-    // nameEditText may be null if called before creation
-    return (nameEditText == null) ? null : (Bitmap) nameEditText.getTag();
-  }
-
-  protected void setRadioIcon(@NonNull Bitmap icon) {
+  void setRadioIcon(@NonNull Bitmap icon) {
     final Bitmap resizedIcon = Radio.normalize(icon);
     nameEditText.setCompoundDrawablesRelativeWithIntrinsicBounds(
       null, new BitmapDrawable(getResources(), resizedIcon), null, null);
@@ -242,13 +242,13 @@ public abstract class ItemFragment extends MainActivityFragment {
   }
 
   // Utility class to listen for URL edition
-  protected class UrlWatcher implements TextWatcher {
+  class UrlWatcher implements TextWatcher {
     private final int defaultColor;
     private final int errorColor;
     @NonNull
     private final EditText editText;
     @Nullable
-    protected URL url = null;
+    URL url = null;
 
     private UrlWatcher(@NonNull EditText editText) {
       this.editText = editText;
@@ -292,12 +292,12 @@ public abstract class ItemFragment extends MainActivityFragment {
     }
 
     @Override
-    protected void onSearch() {
+    void onSearch() {
       icon = iconSupplier.get();
     }
 
     @Override
-    protected void onPostSearch() {
+    void onPostSearch() {
       showSearchButton(true);
       if (icon == null) {
         tell(R.string.no_icon_found);
@@ -324,7 +324,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     }
 
     @Override
-    protected void onSearch() {
+    void onSearch() {
       try (final okhttp3.Response response = new RadioURL(url).getActualOkHttpResponse(SessionDevice.STREAMING_USER_AGENT)) {
         streamContent = RadioURL.getStreamContentType(response);
         actualUrl = response.request().url().url().toString();
@@ -334,7 +334,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     }
 
     @Override
-    protected void onPostSearch() {
+    void onPostSearch() {
       if (streamContent == null) {
         tell(R.string.connection_test_failed);
       } else {

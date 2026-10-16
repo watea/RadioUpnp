@@ -48,7 +48,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-public class URLService {
+class URLService {
   private static final int CONNECT_TIMEOUT = 8000; // ms
   private static final int READ_TIMEOUT = 3000; // ms
   private static final int BUFFER_SIZE = 8192;
@@ -60,26 +60,26 @@ public class URLService {
   private String content = null;
   private boolean streamConsumed = false; // Guards against double getInputStream() calls on the same URLConnection
 
-  public URLService(@NonNull URL uRL) throws IOException {
+  URLService(@NonNull URL uRL) throws IOException {
     uRLConnection = uRL.openConnection();
     uRLConnection.setConnectTimeout(CONNECT_TIMEOUT);
     uRLConnection.setReadTimeout(READ_TIMEOUT);
   }
 
-  public URLService(@NonNull URL uRL, @NonNull URI uRI) throws IOException, URISyntaxException {
+  URLService(@NonNull URL uRL, @NonNull URI uRI) throws IOException, URISyntaxException {
     this(uRL.toURI().resolve(uRI).toURL());
   }
 
-  public static boolean isPng(@NonNull byte[] bytes) {
-    return (bytes.length >= PNG_SIGNATURE.length) &&
-      Arrays.equals(Arrays.copyOf(bytes, PNG_SIGNATURE.length), PNG_SIGNATURE);
-  }
-
   @Nullable
-  public static Bitmap getBitmap(@NonNull byte[] bytes) {
+  static Bitmap getBitmap(@NonNull byte[] bytes) {
     final BitmapFactory.Options options = new BitmapFactory.Options();
     options.inPreferredConfig = Bitmap.Config.ARGB_8888; // Enable transparency
     return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+  }
+
+  static boolean isPng(@NonNull byte[] bytes) {
+    return (bytes.length >= PNG_SIGNATURE.length) &&
+      Arrays.equals(Arrays.copyOf(bytes, PNG_SIGNATURE.length), PNG_SIGNATURE);
   }
 
   // Charset from Content-Type parameter (e.g. text/xml; charset="utf-8"), UTF-8 by default.
@@ -103,16 +103,21 @@ public class URLService {
 
   // Ignore case
   @Nullable
-  public String getTag(@NonNull String key) {
+  String getTag(@NonNull String key) {
     return tags.get(key.toLowerCase(Locale.ROOT));
   }
 
-  public void clearTags() {
+  @NonNull
+  URL getURL() {
+    return uRLConnection.getURL();
+  }
+
+  void clearTags() {
     tags.clear();
   }
 
   @NonNull
-  public byte[] fetchBytes() throws IOException {
+  byte[] fetchBytes() throws IOException {
     try (final InputStream inputStream = getInputStream()) {
       final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
       final byte[] buffer = new byte[BUFFER_SIZE];
@@ -125,7 +130,7 @@ public class URLService {
   }
 
   @NonNull
-  public URLService fetchContent() throws IOException {
+  URLService fetchContent() throws IOException {
     final byte[] bytes = fetchBytes(); // Connects, so headers are available below
     content = new String(bytes, getCharset(uRLConnection.getContentType()));
     return this;
@@ -134,7 +139,7 @@ public class URLService {
   // Calls asset on START_TAG, END_TAG.
   // XML contents may be handled with getTag, clearTags.
   // fetchContent() must be called before parseXml().
-  public void parseXml(@NonNull Asset asset) throws XmlPullParserException, IOException {
+  void parseXml(@NonNull Asset asset) throws XmlPullParserException, IOException {
     if (content == null) {
       throw new IllegalStateException("fetchContent() must be called before parseXml()");
     }
@@ -164,11 +169,6 @@ public class URLService {
       }
     }
     asset.endParseAccept(this);
-  }
-
-  @NonNull
-  public URL getURL() {
-    return uRLConnection.getURL();
   }
 
   @NonNull

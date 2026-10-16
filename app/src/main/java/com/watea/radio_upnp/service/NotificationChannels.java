@@ -35,11 +35,11 @@ import androidx.core.app.NotificationManagerCompat;
 import com.watea.radio_upnp.R;
 
 // Notification channel setup shared by the foreground services
-public class NotificationChannels {
+class NotificationChannels {
   // Returns the channel id.
   // Creating an existing channel is a no-op, except that its name and description are updated.
   @NonNull
-  public static String create(@NonNull Context context, @NonNull String tag, int nameId, int descriptionId) {
+  static String create(@NonNull Context context, @NonNull String tag, int nameId, int descriptionId) {
     final String id = context.getString(R.string.app_name) + "." + tag;
     final NotificationChannel notificationChannel = new NotificationChannel(id, context.getString(nameId), NotificationManager.IMPORTANCE_HIGH);
     notificationChannel.setDescription(context.getString(descriptionId)); // User-visible

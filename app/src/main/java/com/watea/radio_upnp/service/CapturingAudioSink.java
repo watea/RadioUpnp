@@ -39,7 +39,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 @OptIn(markerClass = UnstableApi.class)
-public class CapturingAudioSink extends ForwardingAudioSink {
+class CapturingAudioSink extends ForwardingAudioSink {
   private static final String LOG_TAG = CapturingAudioSink.class.getSimpleName();
   private static final long LONG_DEFAULT = -1L;
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
@@ -51,13 +51,8 @@ public class CapturingAudioSink extends ForwardingAudioSink {
   private volatile long byteRate = LONG_DEFAULT;
   private volatile long lastPresentationTimeUs = 0; // Presentation time microseconds
 
-  public CapturingAudioSink(@NonNull AudioSink delegate) {
+  CapturingAudioSink(@NonNull AudioSink delegate) {
     super(delegate);
-  }
-
-  public void setCallback(@NonNull Callback callback) {
-    this.callback = callback;
-    pacer = new Pacer();
   }
 
   // Called before handleBuffer
@@ -128,6 +123,11 @@ public class CapturingAudioSink extends ForwardingAudioSink {
   @Override
   public long getCurrentPositionUs(boolean sourceEnded) {
     return (callback == null) ? super.getCurrentPositionUs(sourceEnded) : lastPresentationTimeUs;
+  }
+
+  void setCallback(@NonNull Callback callback) {
+    this.callback = callback;
+    pacer = new Pacer();
   }
 
   private void stopPacer() {

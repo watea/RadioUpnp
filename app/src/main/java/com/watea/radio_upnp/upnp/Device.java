@@ -335,41 +335,14 @@ public class Device extends Asset {
     isAlive = alive;
   }
 
-  public boolean isEmbeddedDevice() {
-    return (superDevice != null);
-  }
-
   @NonNull
   public Set<Device> getEmbeddedDevices() {
     return embeddedDevices;
   }
 
   @Nullable
-  public Device getEmbeddedDevice(@NonNull String uUID) {
-    return embeddedDevices.stream().filter(device -> device.hasUUID(uUID)).findAny().orElse(null);
-  }
-
-  @NonNull
-  public Set<Service> getServices() {
-    return services;
-  }
-
-  @Nullable
-  public Service getService(@NonNull String serviceId) {
-    return services.stream()
-      .filter(service -> service.getServiceId().equals(serviceId))
-      .findAny()
-      .orElse(null);
-  }
-
-  @Nullable
   public Service getShortService(@NonNull String serviceId) {
     return getService(SERVICE_NAME_SPACE + serviceId);
-  }
-
-  @NonNull
-  public SsdpService getSsdpService() {
-    return ssdpService;
   }
 
   @Nullable
@@ -412,8 +385,35 @@ public class Device extends Asset {
     return (uUID == null) ? super.hashCode() : uUID.hashCode();
   }
 
+  boolean isEmbeddedDevice() {
+    return (superDevice != null);
+  }
+
+  @Nullable
+  Device getEmbeddedDevice(@NonNull String uUID) {
+    return embeddedDevices.stream().filter(device -> device.hasUUID(uUID)).findAny().orElse(null);
+  }
+
+  @NonNull
+  Set<Service> getServices() {
+    return services;
+  }
+
+  @Nullable
+  Service getService(@NonNull String serviceId) {
+    return services.stream()
+      .filter(service -> service.getServiceId().equals(serviceId))
+      .findAny()
+      .orElse(null);
+  }
+
+  @NonNull
+  SsdpService getSsdpService() {
+    return ssdpService;
+  }
+
   @Override
-  protected void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+  void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     switch (currentTag) {
       case DEVICE_LIST:
         isEmbeddedDevices = true;
@@ -427,7 +427,7 @@ public class Device extends Asset {
   }
 
   @Override
-  protected void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+  void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     final Device device = currentDevice;
     switch (currentTag) {
       case DEVICE_LIST:
@@ -542,7 +542,7 @@ public class Device extends Asset {
   }
 
   @Override
-  protected void endParseAccept(@NonNull URLService uRLService) {
+  void endParseAccept(@NonNull URLService uRLService) {
     // Some device have no UUID (tag UDN) in XML, so we take it from SSDP response
     uUID = (uUID == null) ? getUUID(ssdpService) : uUID;
     // Alive?

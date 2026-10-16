@@ -30,7 +30,7 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 
-public abstract class Asset {
+abstract class Asset {
   private boolean isOnError = false;
 
   @NonNull
@@ -42,20 +42,20 @@ public abstract class Asset {
     return isOnError;
   }
 
-  protected void setOnError() {
+  void setOnError() {
     isOnError = true;
   }
 
-  protected void endParseAccept(@NonNull URLService uRLService) {
+  void endParseAccept(@NonNull URLService uRLService) {
   }
 
-  protected void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
   }
 
-  protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
   }
 
-  protected void hydrate(@NonNull URLService uRLService) throws IOException, XmlPullParserException {
+  void hydrate(@NonNull URLService uRLService) throws IOException, XmlPullParserException {
     uRLService.fetchContent().parseXml(this);
   }
 }

@@ -45,8 +45,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class UpnpSessionDevice extends RemoteSessionDevice {
-  public static final String PCM_MIME = "audio/wav";
+class UpnpSessionDevice extends RemoteSessionDevice {
+  static final String PCM_MIME = "audio/wav";
   private static final String L16_MIME = "audio/L16";
   private static final int L16_BITS_PER_SAMPLE = 16;
   private static final int PCM_FORMAT_UNKNOWN = -1;
@@ -87,7 +87,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   private String instanceId = "0";
   private boolean isLaunched = false;
 
-  public UpnpSessionDevice(
+  UpnpSessionDevice(
     @NonNull Context context,
     boolean isPcm,
     @NonNull Listener listener,
@@ -112,7 +112,33 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @NonNull
-  public static String getDlnaTail(@NonNull String mime) {
+  static String normalize(@NonNull String mime) {
+    switch (mime) {
+      case "audio/aac":
+      case "audio/x-aac":
+      case "audio/aacp":
+        // Renderers list audio/mp4, not raw AAC MIME types
+        return "audio/mp4";
+      case "audio/x-mpeg":
+      case "audio/mp2":
+      case "audio/mpeg3":
+      case "audio/x-mp3":
+        // Normalize all MP3 variants
+        return Radio.DEFAULT_MIME;
+      case "audio/x-m4a":
+        return "audio/mp4";
+      case "audio/ogg":
+      case "audio/vorbis":
+      case "application/ogg":
+        // OGG: no standard DLNA MIME, best effort
+        return "audio/ogg";
+      default:
+        return mime;
+    }
+  }
+
+  @NonNull
+  static String getDlnaTail(@NonNull String mime) {
     String result;
     if (isRawPcm(mime)) {
       result = "DLNA.ORG_PN=LPCM;";
@@ -143,40 +169,8 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
     return result + PROTOCOL_INFO_TAIL;
   }
 
-  public static boolean isRawPcm(@NonNull String mime) {
+  static boolean isRawPcm(@NonNull String mime) {
     return mime.startsWith(L16_MIME);
-  }
-
-  @NonNull
-  public static String normalize(@NonNull String mime) {
-    switch (mime) {
-      case "audio/aac":
-      case "audio/x-aac":
-      case "audio/aacp":
-        // Renderers list audio/mp4, not raw AAC MIME types
-        return "audio/mp4";
-      case "audio/x-mpeg":
-      case "audio/mp2":
-      case "audio/mpeg3":
-      case "audio/x-mp3":
-        // Normalize all MP3 variants
-        return Radio.DEFAULT_MIME;
-      case "audio/x-m4a":
-        return "audio/mp4";
-      case "audio/ogg":
-      case "audio/vorbis":
-      case "application/ogg":
-        // OGG: no standard DLNA MIME, best effort
-        return "audio/ogg";
-      default:
-        return mime;
-    }
-  }
-
-  @Override
-  public void adjustVolume(int direction) {
-    // Always resync: no UPnP eventing available, volume may have changed externally (e.g. remote control)
-    scheduleActionGetVolume(direction);
   }
 
   @Override
@@ -203,7 +197,13 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  protected boolean prepare() {
+  void adjustVolume(int direction) {
+    // Always resync: no UPnP eventing available, volume may have changed externally (e.g. remote control)
+    scheduleActionGetVolume(direction);
+  }
+
+  @Override
+  boolean prepare() {
     // super.prepare() blocks until the upstream HTTP connection is established
     if (super.prepare()) {
       scheduleActionGetProtocolInfo();
@@ -218,7 +218,7 @@ public class UpnpSessionDevice extends RemoteSessionDevice {
 
   // Not implemented
   @Override
-  protected void setVolume(float volume) {
+  void setVolume(float volume) {
   }
 
   private void launchPlay(int sampleRate, int channelCount, int bitsPerSample) {

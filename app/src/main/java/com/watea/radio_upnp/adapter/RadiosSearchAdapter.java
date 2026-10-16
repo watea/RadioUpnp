@@ -80,7 +80,7 @@ public class RadiosSearchAdapter extends RadiosAdapter<RadiosSearchAdapter.ViewH
     @NonNull
     private final CheckBox checkBox;
 
-    protected ViewHolder(@NonNull View itemView) {
+    ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_search_radio_text_view);
       checkBox = itemView.findViewById(R.id.check_image_button);
       checkBox.setOnClickListener(view -> {

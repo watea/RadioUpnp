@@ -106,23 +106,13 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
     @NonNull
     private final Context context;
 
-    protected ViewHolder(@NonNull View itemView) {
+    ViewHolder(@NonNull View itemView) {
       super(itemView, R.id.row_radio_name_text_view);
       backgroundColor = getTextViewColor(android.R.attr.colorPrimary);
       textColor = getTextViewColor(android.R.attr.textColorPrimary);
       windowBackgroundColor = getTextViewColor(android.R.attr.windowBackground);
       radioTextView.setOnLongClickListener(v -> ((Listener) listener).onLongClick(radio.getWebPageUri()));
       context = itemView.getContext();
-    }
-
-    @Override
-    protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
-      radioTextView
-        .setCompoundDrawablesRelativeWithIntrinsicBounds(
-          (getLayout() == MainActivity.Layout.ROW) ? bitmapDrawable : null,
-          (getLayout() == MainActivity.Layout.TILE) ? bitmapDrawable : null,
-          null,
-          null);
     }
 
     @Override
@@ -139,6 +129,16 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
       final boolean isTile = (getLayout() == MainActivity.Layout.TILE);
       radioTextView.getLayoutParams().width = isTile ? tileSize : ViewGroup.LayoutParams.MATCH_PARENT;
       radioTextView.getLayoutParams().height = isTile ? tileSize : context.getResources().getDimensionPixelSize(R.dimen.row_height);
+    }
+
+    @Override
+    void setImage(@NonNull BitmapDrawable bitmapDrawable) {
+      radioTextView
+        .setCompoundDrawablesRelativeWithIntrinsicBounds(
+          (getLayout() == MainActivity.Layout.ROW) ? bitmapDrawable : null,
+          (getLayout() == MainActivity.Layout.TILE) ? bitmapDrawable : null,
+          null,
+          null);
     }
 
     @NonNull

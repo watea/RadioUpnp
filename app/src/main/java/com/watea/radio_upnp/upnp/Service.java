@@ -53,11 +53,11 @@ import java.util.Set;
 //  Declarations for other actions (if any) go here
 // </actionList>
 public class Service extends Asset {
-  public static final String XML_TAG = "service";
-  public static final String SERVICE_TYPE = "serviceType";
-  public static final String SERVICE_ID = "serviceId";
-  public static final String SCPDURL = "SCPDURL";
-  public static final String CONTROL_URL = "controlURL";
+  static final String XML_TAG = "service";
+  static final String SERVICE_TYPE = "serviceType";
+  static final String SERVICE_ID = "serviceId";
+  static final String SCPDURL = "SCPDURL";
+  static final String CONTROL_URL = "controlURL";
   private static final String LOG_TAG = Service.class.getSimpleName();
   @NonNull
   private final Device device;
@@ -102,41 +102,6 @@ public class Service extends Asset {
     return device;
   }
 
-  @NonNull
-  public URL getBaseURL() {
-    return baseURL;
-  }
-
-  @NonNull
-  public String getServiceType() {
-    return serviceType;
-  }
-
-  @NonNull
-  public String getServiceId() {
-    return serviceId;
-  }
-
-  @NonNull
-  public URI getControlURL() {
-    return controlURL;
-  }
-
-  @NonNull
-  public URI getDescriptionURL() {
-    return descriptionURL;
-  }
-
-  @NonNull
-  public URI getActualControlURI() throws URISyntaxException {
-    return baseURL.toURI().resolve(controlURL);
-  }
-
-  @NonNull
-  public Set<Action> getActions() {
-    return actions;
-  }
-
   @Nullable
   public Action getAction(@NonNull String actionName) {
     return actions.stream().filter(action -> action.hasName(actionName)).findFirst().orElse(null);
@@ -150,8 +115,43 @@ public class Service extends Asset {
       .orElse(null);
   }
 
+  @NonNull
+  URL getBaseURL() {
+    return baseURL;
+  }
+
+  @NonNull
+  String getServiceType() {
+    return serviceType;
+  }
+
+  @NonNull
+  String getServiceId() {
+    return serviceId;
+  }
+
+  @NonNull
+  URI getControlURL() {
+    return controlURL;
+  }
+
+  @NonNull
+  URI getDescriptionURL() {
+    return descriptionURL;
+  }
+
+  @NonNull
+  URI getActualControlURI() throws URISyntaxException {
+    return baseURL.toURI().resolve(controlURL);
+  }
+
+  @NonNull
+  Set<Action> getActions() {
+    return actions;
+  }
+
   @Override
-  protected void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+  void startAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     switch (currentTag) {
       case Action.XML_NAME:
         currentAction = new Action(this);
@@ -169,7 +169,7 @@ public class Service extends Asset {
   }
 
   @Override
-  protected void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
+  void endAccept(@NonNull URLService urlService, @NonNull String currentTag) {
     // Process Action, if any
     final Action action = currentAction;
     if (action != null) {

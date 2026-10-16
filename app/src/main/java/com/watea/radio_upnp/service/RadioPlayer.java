@@ -75,7 +75,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   private String remoteSuffix = "";
   private int remoteVolume;
 
-  public RadioPlayer(@NonNull Commands commands, @NonNull String remoteLabel) {
+  RadioPlayer(@NonNull Commands commands, @NonNull String remoteLabel) {
     super(Looper.getMainLooper());
     this.commands = commands;
     this.remoteLabel = remoteLabel;
@@ -98,40 +98,6 @@ public class RadioPlayer extends SimpleBasePlayer {
 
   private static int clampVolume(int volume) {
     return Math.max(0, Math.min(RemoteSessionDevice.DEVICE_MAX_VOLUME, volume));
-  }
-
-  // Must be called at init
-  public void init(
-    @NonNull Radio radio,
-    boolean isVolumeControlled,
-    int volumeNominalValue,
-    boolean isCurrentPlaylistToKeep) {
-    this.isVolumeControlled = isVolumeControlled;
-    remoteSuffix = this.isVolumeControlled ? " " + remoteLabel : "";
-    remoteVolume = volumeNominalValue;
-    buildSessionMetadata(radio, "", isCurrentPlaylistToKeep ? getCurrentPlaylist() : "");
-    setState(SessionDevice.State.BUFFERING);
-  }
-
-  public void buildSessionMetadata(@NonNull Radio radio, @NonNull String information) {
-    String playlist = getCurrentPlaylist();
-    if (!playlist.endsWith(information)) {
-      final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-      final String entry = dateFormat.format(Calendar.getInstance().getTime()) + PLAYLIST_ITEM_SEPARATOR + information;
-      playlist = playlist.isEmpty() ? entry : playlist + PLAYLIST_SEPARATOR + entry;
-    }
-    buildSessionMetadata(radio, information, playlist);
-  }
-
-  @NonNull
-  public SessionDevice.State getSessionDeviceState() {
-    return sessionDeviceState;
-  }
-
-  // Must be called on main thread
-  public void setRemoteVolume(int remoteVolume) {
-    this.remoteVolume = clampVolume(remoteVolume);
-    invalidateState();
   }
 
   @Override
@@ -158,7 +124,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   // Must be called on main thread
-  public void setState(@NonNull SessionDevice.State sessionDeviceState) {
+  void setState(@NonNull SessionDevice.State sessionDeviceState) {
     this.sessionDeviceState = sessionDeviceState;
     invalidateState();
   }
@@ -225,6 +191,36 @@ public class RadioPlayer extends SimpleBasePlayer {
     return handleSetDeviceVolume(remoteVolume - RemoteSessionDevice.DEVICE_VOLUME_STEP, flags);
   }
 
+  // Must be called at init
+  void init(@NonNull Radio radio, boolean isVolumeControlled, boolean isCurrentPlaylistToKeep) {
+    this.isVolumeControlled = isVolumeControlled;
+    remoteSuffix = this.isVolumeControlled ? " " + remoteLabel : "";
+    remoteVolume = RemoteSessionDevice.DEVICE_MAX_VOLUME / 2; // Nominal value until the device reports its own
+    buildSessionMetadata(radio, "", isCurrentPlaylistToKeep ? getCurrentPlaylist() : "");
+    setState(SessionDevice.State.BUFFERING);
+  }
+
+  void buildSessionMetadata(@NonNull Radio radio, @NonNull String information) {
+    String playlist = getCurrentPlaylist();
+    if (!playlist.endsWith(information)) {
+      final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+      final String entry = dateFormat.format(Calendar.getInstance().getTime()) + PLAYLIST_ITEM_SEPARATOR + information;
+      playlist = playlist.isEmpty() ? entry : playlist + PLAYLIST_SEPARATOR + entry;
+    }
+    buildSessionMetadata(radio, information, playlist);
+  }
+
+  @NonNull
+  SessionDevice.State getSessionDeviceState() {
+    return sessionDeviceState;
+  }
+
+  // Must be called on main thread
+  void setRemoteVolume(int remoteVolume) {
+    this.remoteVolume = clampVolume(remoteVolume);
+    invalidateState();
+  }
+
   private int getPlayerState() {
     switch (sessionDeviceState) {
       case PLAYING:
@@ -287,7 +283,7 @@ public class RadioPlayer extends SimpleBasePlayer {
     return builder.build();
   }
 
-  public interface Commands {
+  interface Commands {
     void onPlay();
 
     void onPause();

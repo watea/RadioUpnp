@@ -707,7 +707,7 @@ public class RadioService
     sleepController.release();
     sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
-    radioPlayer.init(radio, sessionDevice.isRemote(), RemoteSessionDevice.DEVICE_MAX_VOLUME / 2, (radio == lastRadio));
+    radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
     sessionDevice.launch();
     try {
       startForegroundService(new Intent(this, RadioService.class));
@@ -813,7 +813,7 @@ public class RadioService
     @Nullable
     private ScheduledExecutorService scheduler = null;
 
-    public void set(int minutes) {
+    void set(int minutes) {
       scheduler = Executors.newScheduledThreadPool(1);
       scheduler.schedule(() -> HANDLER.post(RadioService.this::onPause), minutes, TimeUnit.MINUTES);
       scheduler.shutdown();
@@ -836,7 +836,7 @@ public class RadioService
       }
     }
 
-    public void release() {
+    void release() {
       if (scheduler != null) {
         scheduler.shutdownNow();
         scheduler = null;

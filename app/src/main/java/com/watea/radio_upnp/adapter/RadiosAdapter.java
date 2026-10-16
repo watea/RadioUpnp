@@ -39,7 +39,7 @@ import java.util.function.Supplier;
 
 public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
   extends RecyclerView.Adapter<V> {
-  protected static final int DEFAULT = -1;
+  static final int DEFAULT = -1;
   private static final float RADIO_ICON_HEIGHT_RATIO = 0.6f;
   @NonNull
   private final Supplier<List<Radio>> radiosSupplier;
@@ -68,41 +68,36 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
     return radios.size();
   }
 
-  @NonNull
-  protected List<Radio> getRadios() {
-    return radios;
-  }
-
-  protected int indexOf(@NonNull Radio radio) {
+  int indexOf(@NonNull Radio radio) {
     return radios.indexOf(radio);
   }
 
-  protected void setRadios() {
-    radios = radiosSupplier.get();
+  @NonNull
+  View getView(@NonNull ViewGroup viewGroup) {
+    return LayoutInflater.from(viewGroup.getContext()).inflate(row, viewGroup, false);
   }
 
   @NonNull
-  protected View getView(@NonNull ViewGroup viewGroup) {
-    return LayoutInflater.from(viewGroup.getContext()).inflate(row, viewGroup, false);
+  List<Radio> getRadios() {
+    return radios;
+  }
+
+  void setRadios() {
+    radios = radiosSupplier.get();
   }
 
   protected abstract static class ViewHolder extends RecyclerView.ViewHolder {
     @NonNull
-    protected final TextView radioTextView;
+    final TextView radioTextView;
     @NonNull
-    protected Radio radio = Radio.DUMMY_RADIO;
+    Radio radio = Radio.DUMMY_RADIO;
 
     protected ViewHolder(@NonNull View itemView, int textViewId) {
       super(itemView);
       radioTextView = itemView.findViewById(textViewId);
     }
 
-    // Places the Drawable relatively to radioTextView
-    protected void setImage(@NonNull BitmapDrawable bitmapDrawable) {
-      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(bitmapDrawable, null, null, null);
-    }
-
-    protected void setView(@NonNull Radio radio) {
+    void setView(@NonNull Radio radio) {
       this.radio = radio;
       radioTextView.post(() -> {
         // Detached?
@@ -113,6 +108,11 @@ public abstract class RadiosAdapter<V extends RadiosAdapter.ViewHolder>
           radioTextView.setText(this.radio.getName());
         }
       });
+    }
+
+    // Places the Drawable relatively to radioTextView
+    void setImage(@NonNull BitmapDrawable bitmapDrawable) {
+      radioTextView.setCompoundDrawablesRelativeWithIntrinsicBounds(bitmapDrawable, null, null, null);
     }
   }
 }

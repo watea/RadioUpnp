@@ -107,25 +107,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  public synchronized void adjustVolume(int direction) {
-    if (currentVolume < 0) {
-      currentVolume = castSession.getVolume();
-    }
-    final double previousVolume = currentVolume;
-    if (direction > 0) {
-      currentVolume = Math.min(1.0, currentVolume + VOLUME_STEP_RATIO);
-    } else if (direction < 0) {
-      currentVolume = Math.max(0.0, currentVolume - VOLUME_STEP_RATIO);
-    }
-    try {
-      castSession.setVolume(currentVolume);
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "Failed to adjust volume", iOException);
-      currentVolume = previousVolume;
-    }
-  }
-
-  @Override
   public void pause() {
     super.pause();
     if (remoteMediaClient != null) {
@@ -156,7 +137,26 @@ public class CastSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  protected boolean prepare() {
+  synchronized void adjustVolume(int direction) {
+    if (currentVolume < 0) {
+      currentVolume = castSession.getVolume();
+    }
+    final double previousVolume = currentVolume;
+    if (direction > 0) {
+      currentVolume = Math.min(1.0, currentVolume + VOLUME_STEP_RATIO);
+    } else if (direction < 0) {
+      currentVolume = Math.max(0.0, currentVolume - VOLUME_STEP_RATIO);
+    }
+    try {
+      castSession.setVolume(currentVolume);
+    } catch (IOException iOException) {
+      Log.e(LOG_TAG, "Failed to adjust volume", iOException);
+      currentVolume = previousVolume;
+    }
+  }
+
+  @Override
+  boolean prepare() {
     if (super.prepare()) {
       postIfNotReleased(() -> {
         reportCurrentVolume();
@@ -178,7 +178,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
   }
 
   @Override
-  protected void setVolume(float volume) {
+  void setVolume(float volume) {
     try {
       castSession.setVolume(volume); // 0.0 to 1.0
       currentVolume = volume;

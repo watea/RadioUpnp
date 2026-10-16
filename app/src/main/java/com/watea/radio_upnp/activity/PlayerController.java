@@ -278,8 +278,17 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     });
   }
 
+  @Override
+  public void setListener(@Nullable Consumer<Radio> listener) {
+    this.listener = listener;
+    // Init listener
+    if (this.listener != null) {
+      this.listener.accept(getCurrentRadio());
+    }
+  }
+
   // Must be called on activity create
-  public void onActivityCreate() {
+  void onActivityCreate() {
     // Create MediaController
     final SessionToken token = new SessionToken(mainActivity, new ComponentName(mainActivity, RadioService.class));
     controllerFuture = new MediaController.Builder(mainActivity, token)
@@ -314,7 +323,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
 
   // Must be called on activity destroy.
   // Handles services.
-  public void onActivityDestroy() {
+  void onActivityDestroy() {
     // Disconnect radios to other components
     Radios.getInstance().removeListener(radiosListener);
     // Disconnect controller
@@ -329,16 +338,16 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     }
   }
 
-  public void enableAutoPlay() {
+  void enableAutoPlay() {
     pendingAutoPlay = true;
   }
 
-  public void startReadingFromName(@NonNull String radioName) {
+  void startReadingFromName(@NonNull String radioName) {
     pendingRadioName = radioName;
     handleInit();
   }
 
-  public void startReading(@NonNull Radio radio) {
+  void startReading(@NonNull Radio radio) {
     if (mediaController == null) {
       mainActivity.tell(R.string.radio_connection_waiting);
     } else {
@@ -347,20 +356,11 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   }
 
   @Nullable
-  public Radio getCurrentRadio() {
+  Radio getCurrentRadio() {
     if (mediaController == null) return null;
     final MediaItem item = mediaController.getCurrentMediaItem();
     if ((item == null) || item.mediaId.isEmpty()) return null;
     return Radios.getInstance().getRadioFromId(item.mediaId);
-  }
-
-  @Override
-  public void setListener(@Nullable Consumer<Radio> listener) {
-    this.listener = listener;
-    // Init listener
-    if (this.listener != null) {
-      this.listener.accept(getCurrentRadio());
-    }
   }
 
   private void handleInit() {

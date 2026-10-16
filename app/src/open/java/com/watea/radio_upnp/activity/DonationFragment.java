@@ -29,6 +29,6 @@ import androidx.annotation.NonNull;
 
 public class DonationFragment extends OpenDonationFragment {
   // No Google billing in this flavor
-  public static void consumePendingPurchases(@NonNull Context context) {
+  static void consumePendingPurchases(@NonNull Context context) {
   }
 }

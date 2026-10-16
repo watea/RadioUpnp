@@ -99,7 +99,7 @@ public class SearchFragment extends SearchRootFragment {
 
   @SuppressLint("InflateParams")
   @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+  void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     final View searchView = super.onCreateView(view, R.layout.view_search);
     countrySpinner = searchView.findViewById(R.id.country_spinner);
     radioTagSpinner = searchView.findViewById(R.id.radio_tag_spinner);
@@ -109,19 +109,19 @@ public class SearchFragment extends SearchRootFragment {
 
   @Override
   @NonNull
-  protected JSONArray getStations() throws IOException, JSONException {
+  JSONArray getStations() throws IOException, JSONException {
     return getJSONArray(getRequest());
   }
 
   @Override
-  protected void clearDialog() {
+  void clearDialog() {
     countries.clear();
     radioTags.clear();
     bitrates.clear();
   }
 
   @Override
-  protected void fetchDialogItems() throws IOException, JSONException {
+  void fetchDialogItems() throws IOException, JSONException {
     bitrates.addAll(Arrays.asList(getResources().getStringArray(R.array.bitrates_array)));
     bitrates.replaceAll(s -> s + getString(R.string.kbps));
     bitrates.add(0, getString(R.string.bitrate));
@@ -143,7 +143,7 @@ public class SearchFragment extends SearchRootFragment {
   }
 
   @Override
-  protected void setDialogItems() {
+  void setDialogItems() {
     final ArrayAdapter<String> countriesAdapter = new ArrayAdapter<>(countrySpinner.getContext(), R.layout.view_spinner_item, countries);
     final ArrayAdapter<String> radioTagsAdapter = new ArrayAdapter<>(radioTagSpinner.getContext(), R.layout.view_spinner_item, radioTags);
     final ArrayAdapter<String> bitratesAdapter = new ArrayAdapter<>(bitrateSpinner.getContext(), R.layout.view_spinner_item, bitrates);
@@ -154,7 +154,7 @@ public class SearchFragment extends SearchRootFragment {
 
   @Override
   @Nullable
-  protected Radio toRadio(@NonNull JSONObject station) throws JSONException, MalformedURLException {
+  Radio toRadio(@NonNull JSONObject station) throws JSONException, MalformedURLException {
     // Bitrate shall be filtered by client
     if (station.optInt("bitrate", 0) < selectedBitrate) {
       return null;
@@ -270,7 +270,7 @@ public class SearchFragment extends SearchRootFragment {
     @Nullable
     private String lastValidHost = null; // Cache
 
-    public RadioBrowserClient(@NonNull Context context) {
+    RadioBrowserClient(@NonNull Context context) {
       final String userAgent = context.getString(R.string.app_name)
         + "/" + BuildConfig.VERSION_NAME
         + " (Android)";
@@ -285,7 +285,7 @@ public class SearchFragment extends SearchRootFragment {
     }
 
     @NonNull
-    public Response search(@NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder) throws IOException {
+    Response search(@NonNull Function<HttpUrl.Builder, HttpUrl.Builder> baseUrlBuilder) throws IOException {
       IOException last = null;
       for (int attempt = 0; attempt < 10; attempt++) {
         try {

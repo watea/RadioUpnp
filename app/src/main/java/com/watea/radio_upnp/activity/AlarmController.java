@@ -49,7 +49,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.AlarmService;
 
-public class AlarmController implements ServiceConnection {
+class AlarmController implements ServiceConnection {
   private static final String LOG_TAG = AlarmController.class.getSimpleName();
   @NonNull
   private final MainActivity mainActivity;
@@ -70,7 +70,7 @@ public class AlarmController implements ServiceConnection {
   @Nullable
   private AlarmService.AlarmServiceBinder alarmService = null;
 
-  public AlarmController(@NonNull MainActivity mainActivity) {
+  AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
     // Build alert dialogs
     batteryOptimisationUserHint = mainActivity
@@ -109,20 +109,7 @@ public class AlarmController implements ServiceConnection {
     alarmService = null;
   }
 
-  public void onActivityStart() {
-    // Bind to AlarmService
-    if (!mainActivity.bindService(new Intent(mainActivity, AlarmService.class), this, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; AlarmService not bound");
-    }
-  }
-
-  public void onActivityStop() {
-    mainActivity.unbindService(this);
-    // Force suspended connection
-    onServiceDisconnected(null);
-  }
-
-  public void launch() {
+  void launch() {
     if (alarmService == null) {
       mainActivity.tell(R.string.alarm_not_available);
       return;
@@ -169,5 +156,18 @@ public class AlarmController implements ServiceConnection {
       mainActivity.showWarningOverlay(mainActivity.getString(R.string.no_radio_available));
     }
     alertDialog.show();
+  }
+
+  void onActivityStart() {
+    // Bind to AlarmService
+    if (!mainActivity.bindService(new Intent(mainActivity, AlarmService.class), this, BIND_AUTO_CREATE)) {
+      Log.e(LOG_TAG, "Internal failure; AlarmService not bound");
+    }
+  }
+
+  void onActivityStop() {
+    mainActivity.unbindService(this);
+    // Force suspended connection
+    onServiceDisconnected(null);
   }
 }

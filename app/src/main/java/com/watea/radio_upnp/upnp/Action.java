@@ -33,7 +33,7 @@ import java.util.Set;
 
 @SuppressWarnings("unused")
 public class Action extends Asset {
-  public static final String XML_NAME = "action";
+  static final String XML_NAME = "action";
   private static final String LOG_TAG = Action.class.getSimpleName();
   @NonNull
   private final Service service;
@@ -48,31 +48,31 @@ public class Action extends Asset {
   }
 
   @NonNull
-  public Set<Argument> getArguments() {
-    return arguments;
-  }
-
-  @NonNull
-  public String getName() {
-    return (name == null) ? "Unknown" : name;
-  }
-
-  public boolean hasName(@NonNull String name) {
-    return name.equals(this.name);
-  }
-
-  @NonNull
-  public Service getService() {
-    return service;
-  }
-
-  @NonNull
   public Device getDevice() {
     return service.getDevice();
   }
 
+  @NonNull
+  String getName() {
+    return (name == null) ? "Unknown" : name;
+  }
+
+  @NonNull
+  Set<Argument> getArguments() {
+    return arguments;
+  }
+
+  boolean hasName(@NonNull String name) {
+    return name.equals(this.name);
+  }
+
+  @NonNull
+  Service getService() {
+    return service;
+  }
+
   @Override
-  protected void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  void startAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     // Process Argument, if any
     if (currentTag.equals(Argument.XML_NAME)) {
       currentArgument = new Argument();
@@ -80,7 +80,7 @@ public class Action extends Asset {
   }
 
   @Override
-  protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+  void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
     final Argument argument = currentArgument;
     if (argument == null) {
       // Process Action field
@@ -114,7 +114,7 @@ public class Action extends Asset {
     }
   }
 
-  public static class Argument extends Asset {
+  static class Argument extends Asset {
     private static final String XML_NAME = "argument";
     private static final String LOG_TAG = Argument.class.getSimpleName();
     @Nullable
@@ -122,17 +122,17 @@ public class Action extends Asset {
     @Nullable
     private String direction = null;
 
-    public boolean isIn() {
-      return (direction != null) && direction.equalsIgnoreCase("in");
-    }
-
     @NonNull
-    public String getName() {
+    String getName() {
       return (name == null) ? "Unknown" : name;
     }
 
+    boolean isIn() {
+      return (direction != null) && direction.equalsIgnoreCase("in");
+    }
+
     @Override
-    protected void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
+    void endAccept(@NonNull URLService uRLService, @NonNull String currentTag) {
       if (currentTag.equals(XML_NAME)) {
         name = uRLService.getTag("name");
         direction = uRLService.getTag("direction");

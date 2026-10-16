@@ -37,32 +37,32 @@ public class OpenDonationFragment extends MainActivityFragment {
   private static final Uri LIBERAPAY_URI = Uri.parse("https://liberapay.com/watea/donate");
   private static final Uri PAYPAL_URI = Uri.parse("https://paypal.me/frwatea?country.x=FR&locale.x=fr_FR");
 
+  @Override
+  protected int getLayout() {
+    return R.layout.content_donation;
+  }
+
   // Sends a mail for contact
   @Override
   @NonNull
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
+  View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> startActivity(getMainActivity().getNewSendIntent());
   }
 
   @Override
-  public int getFloatingActionButtonResource() {
+  int getFloatingActionButtonResource() {
     return R.drawable.ic_email_white_24dp;
   }
 
   @Override
-  public int getTitle() {
+  int getTitle() {
     return R.string.title_donate;
   }
 
   @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+  void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
     view.findViewById(R.id.liberapay_image_button).setOnClickListener(getLauncher(LIBERAPAY_URI));
     view.findViewById(R.id.paypal_image_button).setOnClickListener(getLauncher(PAYPAL_URI));
-  }
-
-  @Override
-  protected int getLayout() {
-    return R.layout.content_donation;
   }
 
   @NonNull

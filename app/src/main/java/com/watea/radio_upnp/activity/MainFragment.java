@@ -69,54 +69,6 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   }
 
   @Override
-  @NonNull
-  public View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> wifiTest(() -> {
-      getMainActivity().onUpnp();
-      dlnaEnableUserHint.show();
-    });
-  }
-
-  @Override
-  @NonNull
-  public View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
-    return v -> {
-      wifiTest(() -> getMainActivity().onUpnp());
-      return true;
-    };
-  }
-
-  @Override
-  public int getFloatingActionButtonResource() {
-    return R.drawable.ic_cast_warm_24dp;
-  }
-
-  @Override
-  public int getTitle() {
-    return R.string.title_main;
-  }
-
-  @Override
-  public void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
-    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
-    setLayoutManager();
-    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
-    // Adapter
-    radiosMainAdapter = new RadiosMainAdapter(
-      Radios.getInstance()::getActuallySelectedRadios,
-      radiosRecyclerView,
-      this,
-      getMainActivity().getPlayerController());
-    // Build alert dialogs
-    radioLongPressUserHint = getMainActivity()
-      .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);
-    dlnaEnableUserHint = getMainActivity()
-      .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
-    preferredRadiosUserHint = getMainActivity()
-      .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
-  }
-
-  @Override
   public void onDestroy() {
     super.onDestroy();
     if (radiosMainAdapter != null) {
@@ -137,17 +89,6 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), Radios.isPreferred());
-  }
-
-  @SuppressLint("NotifyDataSetChanged")
-  public void setLayoutManager() {
-    final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
-    radiosRecyclerView.setLayoutManager((getMainActivity().getLayout() == MainActivity.Layout.TILE) ?
-      new VarColumnGridLayoutManager(getContext(), tileSize) :
-      new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
-    if (radiosMainAdapter != null) {
-      radiosMainAdapter.notifyDataSetChanged();
-    }
   }
 
   @Override
@@ -182,7 +123,66 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   }
 
   @Override
-  protected void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+  @NonNull
+  View.OnClickListener getFloatingActionButtonOnClickListener() {
+    return v -> wifiTest(() -> {
+      getMainActivity().onUpnp();
+      dlnaEnableUserHint.show();
+    });
+  }
+
+  @Override
+  @NonNull
+  View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
+    return v -> {
+      wifiTest(() -> getMainActivity().onUpnp());
+      return true;
+    };
+  }
+
+  @Override
+  int getFloatingActionButtonResource() {
+    return R.drawable.ic_cast_warm_24dp;
+  }
+
+  @Override
+  int getTitle() {
+    return R.string.title_main;
+  }
+
+  @Override
+  void onCreateView(@NonNull View view, @Nullable ViewGroup container) {
+    radiosRecyclerView = view.findViewById(R.id.radios_recycler_view);
+    setLayoutManager();
+    defaultFrameLayout = view.findViewById(R.id.default_frame_layout);
+    // Adapter
+    radiosMainAdapter = new RadiosMainAdapter(
+      Radios.getInstance()::getActuallySelectedRadios,
+      radiosRecyclerView,
+      this,
+      getMainActivity().getPlayerController());
+    // Build alert dialogs
+    radioLongPressUserHint = getMainActivity()
+      .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);
+    dlnaEnableUserHint = getMainActivity()
+      .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
+    preferredRadiosUserHint = getMainActivity()
+      .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
+  }
+
+  @SuppressLint("NotifyDataSetChanged")
+  void setLayoutManager() {
+    final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
+    radiosRecyclerView.setLayoutManager((getMainActivity().getLayout() == MainActivity.Layout.TILE) ?
+      new VarColumnGridLayoutManager(getContext(), tileSize) :
+      new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
+    if (radiosMainAdapter != null) {
+      radiosMainAdapter.notifyDataSetChanged();
+    }
+  }
+
+  @Override
+  void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
     menuInflater.inflate(R.menu.menu_main, menu);
     upnpMenuItem = menu.findItem(R.id.action_upnp);
     upnpMenuItem.setVisible(false);
@@ -209,7 +209,7 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   }
 
   @Override
-  protected boolean onMenuItemSelected(@NonNull MenuItem item) {
+  boolean onMenuItemSelected(@NonNull MenuItem item) {
     final int id = item.getItemId();
     if (id == R.id.action_preferred) {
       Radios.setPreferred(!Radios.isPreferred());
@@ -240,7 +240,7 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   private static class VarColumnGridLayoutManager extends GridLayoutManager {
     private final int itemWidth;
 
-    public VarColumnGridLayoutManager(Context context, int itemWidth) {
+    VarColumnGridLayoutManager(Context context, int itemWidth) {
       // Dummy size
       super(context, 1);
       this.itemWidth = itemWidth;

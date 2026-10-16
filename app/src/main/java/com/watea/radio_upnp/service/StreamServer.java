@@ -64,7 +64,7 @@ public class StreamServer extends HttpServer {
   @Nullable
   private volatile StreamContext streamContext = null;
 
-  public StreamServer(@NonNull Context context) throws IOException {
+  StreamServer(@NonNull Context context) throws IOException {
     this.context = context;
     addHandler(new LogoHandler());
     addHandler(new PcmStreamHandler());
@@ -88,24 +88,7 @@ public class StreamServer extends HttpServer {
     return null;
   }
 
-  public void onPcmMime(@NonNull String mime, @NonNull String lockKey) {
-    final StreamContext streamContext = this.streamContext;
-    if (streamContext != null) {
-      streamContext.onPcmMime(mime, lockKey);
-    }
-  }
-
-  @NonNull
-  public Uri getLogoUri(@NonNull String lockKey) {
-    return getUriBuilder(lockKey).path(LOGO_PATH).build();
-  }
-
-  @NonNull
-  public Uri getStreamUri(@NonNull String lockKey, boolean isPcm) {
-    return getUriBuilder(lockKey).path(STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : "")).build();
-  }
-
-  public void release() {
+  void release() {
     Log.d(LOG_TAG, "release");
     streamContext = null;
   }
@@ -114,11 +97,28 @@ public class StreamServer extends HttpServer {
   // Returns the CapturingAudioSink.Callback to wire directly to that session's own
   // CapturingAudioSink — each session's sink talks only to its own StreamContext.
   @NonNull
-  public CapturingAudioSink.Callback launch(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
+  CapturingAudioSink.Callback launch(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
     Log.d(LOG_TAG, "launch: " + lockKey);
     final StreamContext newStreamContext = new StreamContext(radio, listener, lockKey);
     streamContext = newStreamContext;
     return newStreamContext;
+  }
+
+  void onPcmMime(@NonNull String mime, @NonNull String lockKey) {
+    final StreamContext streamContext = this.streamContext;
+    if (streamContext != null) {
+      streamContext.onPcmMime(mime, lockKey);
+    }
+  }
+
+  @NonNull
+  Uri getLogoUri(@NonNull String lockKey) {
+    return getUriBuilder(lockKey).path(LOGO_PATH).build();
+  }
+
+  @NonNull
+  Uri getStreamUri(@NonNull String lockKey, boolean isPcm) {
+    return getUriBuilder(lockKey).path(STREAM_PATH + (isPcm ? STREAM_SUFFIX_PCM : "")).build();
   }
 
   @NonNull
@@ -150,7 +150,7 @@ public class StreamServer extends HttpServer {
     private final Runnable runnable;
     private final int timeoutS;
 
-    public Watchdog(@NonNull Consumer<String> consumer, @NonNull String lockKey, int timeoutS) {
+    Watchdog(@NonNull Consumer<String> consumer, @NonNull String lockKey, int timeoutS) {
       this.timeoutS = timeoutS;
       runnable = () -> {
         Log.d(LOG_TAG, "Watchdog fired for " + lockKey);
@@ -159,13 +159,13 @@ public class StreamServer extends HttpServer {
       launch();
     }
 
-    public void relaunch() {
-      cancel();
-      launch();
+    void cancel() {
+      HANDLER.removeCallbacks(runnable);
     }
 
-    public void cancel() {
-      HANDLER.removeCallbacks(runnable);
+    void relaunch() {
+      cancel();
+      launch();
     }
 
     private void launch() {
@@ -200,16 +200,16 @@ public class StreamServer extends HttpServer {
     }
 
     // Returns true if this handler is responsible for the given path
-    protected abstract boolean accept(@NonNull String path);
+    abstract boolean accept(@NonNull String path);
 
-    protected abstract void handleStream(
+    abstract void handleStream(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull StreamContext streamContext) throws IOException;
 
     // Send HTTP headers immediately — the renderer must not wait on a cold socket
-    protected void sendDlnaResponse(
+    void sendDlnaResponse(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       @NonNull String mime,
@@ -252,16 +252,11 @@ public class StreamServer extends HttpServer {
     @NonNull
     private volatile String pcmMime = UpnpSessionDevice.PCM_MIME;
 
-    public StreamContext(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
+    StreamContext(@NonNull Radio radio, @NonNull Listener listener, @NonNull String lockKey) {
       this.radio = radio;
       this.listener = listener;
       this.lockKey = lockKey;
       watchdog = new Watchdog(listener::onDisconnected, this.lockKey, CONNECT_WATCHDOG_TIMEOUT_S);
-    }
-
-    @NonNull
-    public Radio getRadio() {
-      return radio;
     }
 
     @Override
@@ -277,29 +272,6 @@ public class StreamServer extends HttpServer {
       this.channelCount = channelCount;
       this.bitsPerSample = bitsPerSample;
       listener.onPcmFormat(sampleRate, channelCount, bitsPerSample);
-    }
-
-    public int getBitsPerSample() {
-      return bitsPerSample;
-    }
-
-    public int getChannelCount() {
-      return channelCount;
-    }
-
-    public int getSampleRate() {
-      return sampleRate;
-    }
-
-    public void onPcmMime(@NonNull String pcmMime, @NonNull String lockKey) {
-      if (hasLockKey(lockKey)) {
-        this.pcmMime = pcmMime;
-      }
-    }
-
-    @NonNull
-    public String getPcmMime() {
-      return pcmMime;
     }
 
     @Override
@@ -321,44 +293,72 @@ public class StreamServer extends HttpServer {
     }
 
     @NonNull
-    public String getLockKey() {
+    Radio getRadio() {
+      return radio;
+    }
+
+    void onDisconnected() {
+      listener.onDisconnected(lockKey);
+    }
+
+    int getBitsPerSample() {
+      return bitsPerSample;
+    }
+
+    int getChannelCount() {
+      return channelCount;
+    }
+
+    int getSampleRate() {
+      return sampleRate;
+    }
+
+    void onPcmMime(@NonNull String pcmMime, @NonNull String lockKey) {
+      if (hasLockKey(lockKey)) {
+        this.pcmMime = pcmMime;
+      }
+    }
+
+    @NonNull
+    String getPcmMime() {
+      return pcmMime;
+    }
+
+    @NonNull
+    String getLockKey() {
       return lockKey;
     }
 
-    public void relaunchWatchdog() {
+    void relaunchWatchdog() {
       watchdog.relaunch();
     }
 
-    public void onConnected() {
+    void onConnected() {
       listener.onConnected(lockKey);
       watchdog.cancel();
       watchdog = new Watchdog(listener::onDisconnected, lockKey, LIVELINESS_WATCHDOG_TIMEOUT_S);
     }
 
-    public void onDisconnected() {
-      listener.onDisconnected(lockKey);
-    }
-
-    public void onNewInformation(@NonNull String information) {
+    void onNewInformation(@NonNull String information) {
       listener.onNewInformation(information, lockKey);
     }
 
     @NonNull
-    public ArrayBlockingQueue<byte[]> addQueue() {
+    ArrayBlockingQueue<byte[]> addQueue() {
       final ArrayBlockingQueue<byte[]> result = new ArrayBlockingQueue<>(QUEUE_SIZE);
       queues.add(result);
       return result;
     }
 
-    public void removeQueue(@NonNull ArrayBlockingQueue<byte[]> queue) {
+    void removeQueue(@NonNull ArrayBlockingQueue<byte[]> queue) {
       queues.remove(queue);
     }
 
-    public boolean hasLockKey(@Nullable String lockKey) {
+    boolean hasLockKey(@Nullable String lockKey) {
       return this.lockKey.equals(lockKey);
     }
 
-    public boolean hasLockKey() {
+    boolean hasLockKey() {
       return (this == streamContext);
     }
   }
@@ -371,7 +371,7 @@ public class StreamServer extends HttpServer {
     }
 
     @Override
-    protected void handleStream(
+    void handleStream(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
@@ -404,7 +404,7 @@ public class StreamServer extends HttpServer {
     }
 
     @Override
-    protected void handleStream(
+    void handleStream(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,
@@ -510,7 +510,7 @@ public class StreamServer extends HttpServer {
     }
 
     @Override
-    protected void handleStream(
+    void handleStream(
       @NonNull HttpServer.Response response,
       @NonNull OutputStream responseStream,
       boolean isHead,

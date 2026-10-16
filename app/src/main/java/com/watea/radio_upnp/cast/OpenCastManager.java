@@ -39,12 +39,12 @@ import java.util.function.Consumer;
 // Singleton.
 // CastManager that does nothing.
 @SuppressWarnings("unused")
-public class OpenCastManager {
+class OpenCastManager {
   private static final String LOG_TAG = OpenCastManager.class.getSimpleName();
   @Nullable
-  protected static OpenCastManager instance = null;
+  static OpenCastManager instance = null;
 
-  protected OpenCastManager() {
+  OpenCastManager() {
   }
 
   public static void mediaRouteActionProviderSetRouteSelector(@NonNull Context context, @NonNull MenuItem castItem) {

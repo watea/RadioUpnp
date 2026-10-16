@@ -42,11 +42,11 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 @SuppressLint("CustomX509TrustManager")
-public class EasyX509TrustManager implements X509TrustManager {
+class EasyX509TrustManager implements X509TrustManager {
   @NonNull
   private final X509TrustManager standardTrustManager;
 
-  public EasyX509TrustManager() throws NoSuchAlgorithmException, KeyStoreException {
+  EasyX509TrustManager() throws NoSuchAlgorithmException, KeyStoreException {
     super();
     final TrustManagerFactory factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     factory.init((KeyStore) null);
@@ -58,7 +58,7 @@ public class EasyX509TrustManager implements X509TrustManager {
   }
 
   @NonNull
-  public static SSLSocketFactory getSSLSocketFactory(@NonNull EasyX509TrustManager easyX509TrustManager) throws NoSuchAlgorithmException, KeyManagementException {
+  static SSLSocketFactory getSSLSocketFactory(@NonNull EasyX509TrustManager easyX509TrustManager) throws NoSuchAlgorithmException, KeyManagementException {
     final SSLContext sSLContext = SSLContext.getInstance("TLS");
     sSLContext.init(null, new TrustManager[]{easyX509TrustManager}, new SecureRandom());
     return sSLContext.getSocketFactory();

@@ -33,22 +33,22 @@ import com.watea.radio_upnp.model.Radio;
 
 import java.util.function.Consumer;
 
-public abstract class RemoteSessionDevice extends SessionDevice implements StreamServer.Listener {
-  public static final int DEVICE_MAX_VOLUME = 100;
-  public static final int DEVICE_VOLUME_STEP = 4;
+abstract class RemoteSessionDevice extends SessionDevice implements StreamServer.Listener {
+  static final int DEVICE_MAX_VOLUME = 100;
+  static final int DEVICE_VOLUME_STEP = 4;
   // Fraction of a device's own volume range moved per adjustment, regardless of that device's native scale
-  public static final double VOLUME_STEP_RATIO = DEVICE_VOLUME_STEP / (double) DEVICE_MAX_VOLUME;
+  static final double VOLUME_STEP_RATIO = DEVICE_VOLUME_STEP / (double) DEVICE_MAX_VOLUME;
   private static final String LOG_TAG = RemoteSessionDevice.class.getSimpleName();
   @NonNull
-  protected final Uri radioUri;
+  final Uri radioUri;
   @NonNull
-  protected final Uri logoUri;
+  final Uri logoUri;
   @NonNull
   private final Consumer<Radio> onPlayCallback;
   @NonNull
   private final StreamServer streamServer;
 
-  protected RemoteSessionDevice(
+  RemoteSessionDevice(
     @NonNull Context context,
     @NonNull Mode mode,
     @NonNull Listener listener,
@@ -93,11 +93,6 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
   }
 
   @Override
-  public final boolean isRemote() {
-    return true;
-  }
-
-  @Override
   public void play() {
     onPlayCallback.accept(radio);
   }
@@ -108,15 +103,20 @@ public abstract class RemoteSessionDevice extends SessionDevice implements Strea
     super.stop();
   }
 
+  @Override
+  final boolean isRemote() {
+    return true;
+  }
+
   // Convenient return value for setPcmMime()
   @NonNull
-  protected String onPcmMime(@NonNull String mime) {
+  String onPcmMime(@NonNull String mime) {
     streamServer.onPcmMime(mime, lockKey);
     return mime;
   }
 
   @Override
-  protected void onState(@NonNull State state) {
+  void onState(@NonNull State state) {
     // Error is not accepted if paused
     if ((state != State.ERROR) || (getState() != State.PAUSED)) {
       super.onState(state);

@@ -39,7 +39,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.Radio;
 
-public class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFocusChangeListener {
+class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFocusChangeListener {
   private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
@@ -65,7 +65,7 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
     }
   };
 
-  public LocalSessionDevice(
+  LocalSessionDevice(
     @NonNull Context context,
     @NonNull Listener listener,
     @NonNull Radio radio) {
@@ -75,15 +75,6 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
       .setOnAudioFocusChangeListener(this, HANDLER)
       .build();
-  }
-
-  @Override
-  public boolean isRemote() {
-    return false;
-  }
-
-  @Override
-  public void adjustVolume(int direction) {
   }
 
   @Override
@@ -113,11 +104,6 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
   public void release() {
     releaseAudioAndListeners();
     super.release();
-  }
-
-  @Override
-  public void onAndroidAutoDisconnected() {
-    pause();
   }
 
   @Override
@@ -175,13 +161,27 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
   }
 
   @Override
-  protected void setVolume(float volume) {
+  boolean isRemote() {
+    return false;
+  }
+
+  @Override
+  void adjustVolume(int direction) {
+  }
+
+  @Override
+  void onAndroidAutoDisconnected() {
+    pause();
+  }
+
+  @Override
+  void setVolume(float volume) {
     exoPlayer.setVolume(volume);
   }
 
   // Runs on main thread — audio focus requested here for thread safety
   @Override
-  protected void startExoPlayer() {
+  void startExoPlayer() {
     if (requestAudioFocus()) {
       if (!audioNoisyReceiverRegistered) {
         context.registerReceiver(audioNoisyReceiver, AUDIO_NOISY_INTENT_FILTER);
@@ -194,7 +194,7 @@ public class LocalSessionDevice extends SessionDevice implements AudioManager.On
   }
 
   @Override
-  protected void onState(@NonNull State state) {
+  void onState(@NonNull State state) {
     if (state == State.PLAYING) {
       allowRewind();
     }
