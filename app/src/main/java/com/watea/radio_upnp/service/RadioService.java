@@ -206,7 +206,8 @@ public class RadioService
     radioPlayer = new RadioPlayer(this, getString(R.string.remote));
     // Built once: FLAG_CANCEL_CURRENT would cancel the instance held by the session
     mainActivityPendingIntent = PendingIntent.getActivity(
-      this, REQUEST_CODE,
+      this,
+      REQUEST_CODE,
       new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
       PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, this)

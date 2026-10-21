@@ -245,7 +245,7 @@ public class StreamServer extends HttpServer {
     private final Set<ArrayBlockingQueue<byte[]>> queues = new CopyOnWriteArraySet<>();
     @NonNull
     private volatile Watchdog watchdog;
-    // Audio format — set by onFormatChanged() on ExoPlayer thread, read on HTTP server thread.
+    // Audio format — set by onFormatChanged() on ExoPlayer thread, read on HTTP server thread
     private volatile int sampleRate = DEFAULT;
     private volatile int channelCount = DEFAULT;
     private volatile int bitsPerSample = DEFAULT;

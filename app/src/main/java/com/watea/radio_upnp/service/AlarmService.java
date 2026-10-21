@@ -153,7 +153,7 @@ public class AlarmService extends Service implements MediaController.Listener {
       // Wake lock
       final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
       final PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, LOG_TAG);
-      wakeLock.acquire(10 * 60 * 1000L); // 10 min.
+      wakeLock.acquire(10 * 60 * 1000L); // 10 min
       // Register network callback
       connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
       // Relaunch alarm
