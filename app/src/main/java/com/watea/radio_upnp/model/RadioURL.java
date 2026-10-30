@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -162,8 +163,13 @@ public class RadioURL {
       throw new IOException("getActualOkHttpResponse: URL is null");
     }
     Log.d(LOG_TAG, "Try connect to URL: " + uRL);
+    // OkHttp is stricter than java.net.URL (http/https only, valid host and port)
+    final HttpUrl httpUrl = HttpUrl.parse(uRL.toString());
+    if (httpUrl == null) {
+      throw new IOException("getActualOkHttpResponse: URL not supported - " + uRL);
+    }
     final Request.Builder requestBuilder = new Request.Builder()
-      .url(uRL.toString())
+      .url(httpUrl)
       .header("User-Agent", userAgent)
       .header("Accept-Encoding", "identity");
     requestProperties.forEach(requestBuilder::header);
