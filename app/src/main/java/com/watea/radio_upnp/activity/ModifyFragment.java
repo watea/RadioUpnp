@@ -39,12 +39,15 @@ import com.watea.radio_upnp.model.Radio;
 
 public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
   private FrameLayout defaultFrameLayout;
-  private RadiosModifyAdapter radiosModifyAdapter;
+  @Nullable
+  private RadiosModifyAdapter radiosModifyAdapter = null;
 
   @Override
   public void onDestroy() {
     super.onDestroy();
-    radiosModifyAdapter.onDestroy();
+    if (radiosModifyAdapter != null) {
+      radiosModifyAdapter.onDestroy();
+    }
   }
 
   @Override
