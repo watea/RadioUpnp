@@ -86,7 +86,7 @@ dependencies {
     // jsoup HTML parser library @ http://jsoup.org/
     implementation 'org.jsoup:jsoup:1.23.2'
     // CandidHttpServer
-    implementation 'com.github.watea:candidhttpserver:1.0.16'
+    implementation 'com.github.watea:candidhttpserver:2.0.0'
     // AndroidSsdpClient
     implementation 'com.github.watea:androidssdpclient:2.0.0'
     // okhttp

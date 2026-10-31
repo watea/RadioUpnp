@@ -179,8 +179,7 @@ public class StreamServer extends HttpServer {
     @Override
     public final void handle(
       @NonNull HttpServer.Request request,
-      @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream) throws IOException {
+      @NonNull HttpServer.Response response) throws IOException {
       final String className = getClass().getSimpleName();
       final String incomingLockKey = getParam(request);
       final String method = request.getMethod();
@@ -194,7 +193,7 @@ public class StreamServer extends HttpServer {
       final boolean isGet = "GET".equals(method);
       if (streamContext.hasLockKey(incomingLockKey) && (isHead || isGet) && accept(request.getPath())) {
         Log.d(LOG_TAG, className + ": handle valid");
-        handleStream(response, responseStream, isHead, streamContext);
+        handleStream(response, isHead, streamContext);
       }
       Log.d(LOG_TAG, className + ": handle exit - " + method + " - " + incomingLockKey);
     }
@@ -204,27 +203,19 @@ public class StreamServer extends HttpServer {
 
     abstract void handleStream(
       @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull StreamContext streamContext) throws IOException;
 
     // Send HTTP headers immediately — the renderer must not wait on a cold socket
     void sendDlnaResponse(
       @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream,
       @NonNull String mime,
       @NonNull StreamContext streamContext) throws IOException {
       response.addHeader("transferMode.dlna.org", "Streaming");
       response.addHeader("contentFeatures.dlna.org", UpnpSessionDevice.getDlnaTail(mime));
       response.addHeader(Response.CONTENT_TYPE, mime);
-      // Body length is unbounded and unknown upfront; the socket is closed when the
-      // stream ends, so make that explicit instead of leaving HTTP/1.1 framing ambiguous
-      // (no Content-Length can correctly describe a live stream, and there is no chunked
-      // transfer-encoding support in HttpServer)
-      response.addHeader("Connection", "close");
       try {
         response.send();
-        responseStream.flush();
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "sendDlnaResponse: IOException - " + streamContext.getLockKey() + "; " + ioException.getMessage());
         streamContext.onDisconnected();
@@ -373,7 +364,6 @@ public class StreamServer extends HttpServer {
     @Override
     void handleStream(
       @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull StreamContext streamContext) throws IOException {
       // Should not happen
@@ -389,7 +379,7 @@ public class StreamServer extends HttpServer {
       response.addHeader(Response.CONTENT_TYPE, "image/jpeg");
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(logoBytes.length));
       response.send();
-      responseStream.write(logoBytes);
+      response.getOutputStream().write(logoBytes);
     }
   }
 
@@ -406,15 +396,15 @@ public class StreamServer extends HttpServer {
     @Override
     void handleStream(
       @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull StreamContext streamContext) throws IOException {
       // HEAD
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming PCM
-      sendDlnaResponse(response, responseStream, streamContext.getPcmMime(), streamContext);
+      sendDlnaResponse(response, streamContext.getPcmMime(), streamContext);
       if (isHead) {
         return;
       }
+      final OutputStream responseStream = response.getOutputStream();
       // Create queue
       final ArrayBlockingQueue<byte[]> queue = streamContext.addQueue();
       // Wait for onFormatChanged()
@@ -512,7 +502,6 @@ public class StreamServer extends HttpServer {
     @Override
     void handleStream(
       @NonNull HttpServer.Response response,
-      @NonNull OutputStream responseStream,
       boolean isHead,
       @NonNull StreamContext streamContext) throws IOException {
       // HEAD
@@ -522,10 +511,11 @@ public class StreamServer extends HttpServer {
         streamContext.onDisconnected();
         return;
       }
-      sendDlnaResponse(response, responseStream, UpnpSessionDevice.normalize(connectionSet.getContent()), streamContext);
+      sendDlnaResponse(response, UpnpSessionDevice.normalize(connectionSet.getContent()), streamContext);
       if (isHead) {
         return;
       }
+      final OutputStream responseStream = response.getOutputStream();
       // New upstream connection per GET thread — a shared connection causes concurrent stream corruption
       final okhttp3.Response upstreamResponse;
       try {
@@ -537,15 +527,15 @@ public class StreamServer extends HttpServer {
         streamContext.onDisconnected();
         throw ioException;
       }
-      // We signal actual connection and start stream
-      streamContext.onConnected();
-      final String icyMetaIntValue = upstreamResponse.header("Icy-Metaint");
-      final IcyStreamParser parser = (icyMetaIntValue == null) ? null :
-        new IcyStreamParser(Integer.parseInt(icyMetaIntValue), streamContext::onNewInformation);
-      final byte[] buf = new byte[PIPE_BUFFER_SIZE];
-      int n;
-      Log.d(LOG_TAG, "PassthroughStreamHandler: start streaming - " + streamContext.getLockKey());
-      try (final InputStream inputStream = upstreamResponse.body().byteStream()) {
+      // Closing the response also closes its body stream
+      try (upstreamResponse) {
+        // We signal actual connection and start stream
+        streamContext.onConnected();
+        final IcyStreamParser parser = getParser(upstreamResponse.header("Icy-Metaint"), streamContext);
+        final InputStream inputStream = upstreamResponse.body().byteStream();
+        final byte[] buf = new byte[PIPE_BUFFER_SIZE];
+        int n;
+        Log.d(LOG_TAG, "PassthroughStreamHandler: start streaming - " + streamContext.getLockKey());
         while (streamContext.hasLockKey() && ((n = inputStream.read(buf)) >= 0)) {
           streamContext.relaunchWatchdog();
           if (parser == null) {
@@ -557,9 +547,26 @@ public class StreamServer extends HttpServer {
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "PassthroughStreamHandler: IOException - " + streamContext.getLockKey() + "; " + ioException.getMessage());
         throw ioException;
-      } finally {
-        upstreamResponse.close();
       }
+    }
+
+    // Malformed or non-positive Icy-Metaint is treated as no metadata
+    @Nullable
+    private IcyStreamParser getParser(@Nullable String icyMetaIntValue, @NonNull StreamContext streamContext) {
+      if (icyMetaIntValue == null) {
+        return null;
+      }
+      int icyMetaInt;
+      try {
+        icyMetaInt = Integer.parseInt(icyMetaIntValue);
+      } catch (NumberFormatException numberFormatException) {
+        icyMetaInt = 0;
+      }
+      if (icyMetaInt > 0) {
+        return new IcyStreamParser(icyMetaInt, streamContext::onNewInformation);
+      }
+      Log.w(LOG_TAG, "PassthroughStreamHandler: malformed Icy-Metaint - " + icyMetaIntValue);
+      return null;
     }
   }
 }
