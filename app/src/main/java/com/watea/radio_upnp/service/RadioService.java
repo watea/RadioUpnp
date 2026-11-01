@@ -63,6 +63,8 @@ import androidx.media3.session.SessionResult;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.cast.CastManager;
@@ -103,6 +105,7 @@ public class RadioService
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final SleepController sleepController = new SleepController();
+  private final SettableFuture<Void> radiosInitFuture = SettableFuture.create();   // Completed at onInitEnd; browse requests received before radios init wait on it
   private boolean isAndroidAutoConnected = false;
   @Nullable
   private SessionDevice sessionDevice = null;
@@ -178,6 +181,7 @@ public class RadioService
     public void onInitEnd() {
       Log.d(LOG_TAG, "onInitEnd");
       HANDLER.post(() -> {
+        radiosInitFuture.set(null);
         mediaLibrarySession.notifyChildrenChanged(MEDIA_ROOT_ID, 0, null);
         if (pendingSearchQuery != null) {
           playFromSearch(pendingSearchQuery);
@@ -536,8 +540,6 @@ public class RadioService
       .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_ITEM)
       .add(SessionCommand.COMMAND_CODE_LIBRARY_SUBSCRIBE)
       .add(SessionCommand.COMMAND_CODE_LIBRARY_UNSUBSCRIBE)
-      .add(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
-      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
       .add(new SessionCommand(ACTION_SLEEP_SET, Bundle.EMPTY))
       .add(new SessionCommand(ACTION_SLEEP_CANCEL, Bundle.EMPTY))
       .build();
@@ -571,9 +573,17 @@ public class RadioService
     int pageSize,
     @Nullable MediaLibraryService.LibraryParams params) {
     Log.d(LOG_TAG, "onGetChildren: " + parentId);
-    if (!MEDIA_ROOT_ID.equals(parentId) || !Radios.isInit()) {
+    if (!MEDIA_ROOT_ID.equals(parentId)) {
       return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(), params));
     }
+    // Browser may connect at service start, before radios init: an empty answer would stick
+    return Radios.isInit() ?
+      Futures.immediateFuture(getChildren(params)) :
+      Futures.transform(radiosInitFuture, unused -> getChildren(params), MoreExecutors.directExecutor());
+  }
+
+  @NonNull
+  private LibraryResult<ImmutableList<MediaItem>> getChildren(@Nullable MediaLibraryService.LibraryParams params) {
     final ImmutableList.Builder<MediaItem> items = new ImmutableList.Builder<>();
     for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
       items.add(new MediaItem.Builder()
@@ -584,7 +594,7 @@ public class RadioService
           .build())
         .build());
     }
-    return Futures.immediateFuture(LibraryResult.ofItemList(items.build(), params));
+    return LibraryResult.ofItemList(items.build(), params);
   }
 
   @Override

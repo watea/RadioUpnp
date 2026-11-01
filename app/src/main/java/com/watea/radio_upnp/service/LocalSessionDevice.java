@@ -129,7 +129,13 @@ class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFo
         break;
       case AudioManager.AUDIOFOCUS_LOSS:
         playOnAudioFocus = false;
-        stop();
+        // Pause when possible: stop leads to STATE_IDLE, reported as ERROR.
+        // pause() is a no-op while buffering, so stop to keep playback from starting without focus.
+        if (isPlaying()) {
+          pause();
+        } else {
+          stop();
+        }
         break;
     }
   }
