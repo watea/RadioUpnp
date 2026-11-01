@@ -46,6 +46,7 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
+import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -58,6 +59,7 @@ import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaStyleNotificationHelper.MediaStyle;
 import androidx.media3.session.SessionCommand;
 import androidx.media3.session.SessionCommands;
+import androidx.media3.session.SessionError;
 import androidx.media3.session.SessionResult;
 
 import com.google.common.collect.ImmutableList;
@@ -75,6 +77,7 @@ import com.watea.radio_upnp.upnp.Device;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -101,11 +104,12 @@ public class RadioService
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final int REQUEST_CODE = 501;
   private static final String MEDIA_ROOT_ID = "root_id";
+  private static final String RECENT_ROOT_ID = "recent_root_id"; // Playback resumption: last played radio
   private static final int FOREGROUND_NOTIFICATION_ID = 9;
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static String CHANNEL_ID;
   private final SleepController sleepController = new SleepController();
-  private final SettableFuture<Void> radiosInitFuture = SettableFuture.create();   // Completed at onInitEnd; browse requests received before radios init wait on it
+  private final SettableFuture<Void> radiosInitFuture = SettableFuture.create(); // Completed at onInitEnd; browse requests received before radios init wait on it
   private boolean isAndroidAutoConnected = false;
   @Nullable
   private SessionDevice sessionDevice = null;
@@ -118,8 +122,6 @@ public class RadioService
     Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
   };
   private boolean isLastRadioToLaunch = false;
-  @Nullable
-  private String pendingSearchQuery = null;
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -182,11 +184,8 @@ public class RadioService
       Log.d(LOG_TAG, "onInitEnd");
       HANDLER.post(() -> {
         radiosInitFuture.set(null);
-        mediaLibrarySession.notifyChildrenChanged(MEDIA_ROOT_ID, 0, null);
-        if (pendingSearchQuery != null) {
-          playFromSearch(pendingSearchQuery);
-          pendingSearchQuery = null;
-        } else if (isLastRadioToLaunch) {
+        notifyChildrenChanged();
+        if (isLastRadioToLaunch) {
           launchLastRadio();
           isLastRadioToLaunch = false;
         }
@@ -195,10 +194,53 @@ public class RadioService
 
     private void notifyChildrenChanged() {
       if (Radios.isInit()) {
-        mediaLibrarySession.notifyChildrenChanged(MEDIA_ROOT_ID, 0, null);
+        mediaLibrarySession.notifyChildrenChanged(MEDIA_ROOT_ID, Radios.getInstance().getActuallySelectedRadios().size(), null);
       }
     }
   };
+
+  @NonNull
+  private static MediaItem toMediaItem(@NonNull Radio radio) {
+    return new MediaItem.Builder()
+      .setMediaId(radio.getId())
+      .setMediaMetadata(radio.getMediaMetadataBuilder("", "")
+        .setIsPlayable(true)
+        .setIsBrowsable(false)
+        .build())
+      .build();
+  }
+
+  // Empty search query matches first radio, as every name contains ""
+  @Nullable
+  private static Radio getRadio(@NonNull MediaItem mediaItem) {
+    final String query = mediaItem.requestMetadata.searchQuery;
+    return (mediaItem.mediaId.isEmpty() && (query != null)) ?
+      Radios.getInstance().getRadioFromName(query) :
+      Radios.getInstance().getRadioFromId(mediaItem.mediaId);
+  }
+
+  @NonNull
+  private static LibraryResult<MediaItem> getItem(@NonNull String mediaId) {
+    final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
+    return (radio == null) ?
+      LibraryResult.ofError(SessionError.ERROR_BAD_VALUE) :
+      LibraryResult.ofItem(toMediaItem(radio), null);
+  }
+
+  private static boolean isRootId(@NonNull String mediaId) {
+    return MEDIA_ROOT_ID.equals(mediaId) || RECENT_ROOT_ID.equals(mediaId);
+  }
+
+  @NonNull
+  private static MediaItem getRootItem(@NonNull String rootId) {
+    return new MediaItem.Builder()
+      .setMediaId(rootId)
+      .setMediaMetadata(new MediaMetadata.Builder()
+        .setIsBrowsable(true)
+        .setIsPlayable(false)
+        .build())
+      .build();
+  }
 
   @Override
   public void onCreate() {
@@ -466,6 +508,23 @@ public class RadioService
   }
 
   @Override
+  public void onSetMediaItem(@NonNull String mediaId) {
+    Log.d(LOG_TAG, "onSetMediaItem: " + mediaId);
+    final State state = getPlaybackState();
+    // Changing item keeps playing state: switch now, as the following play request is a no-op
+    if ((state == State.PLAYING) || (state == State.BUFFERING)) {
+      playFromMediaId(mediaId);
+    } else {
+      setLastPlayedRadioId(mediaId);
+      // Selection drops a paused session: next play launches anew, honoring current environment (renderer, Android Auto)
+      if (sessionDevice != null) {
+        sessionDevice.release();
+        sessionDevice = null;
+      }
+    }
+  }
+
+  @Override
   public void onPause() {
     Log.d(LOG_TAG, "onPause");
     if (sessionDevice == null) {
@@ -553,14 +612,24 @@ public class RadioService
     @NonNull MediaSession.ControllerInfo browser,
     @Nullable MediaLibraryService.LibraryParams params) {
     Log.d(LOG_TAG, "onGetLibraryRoot");
-    return Futures.immediateFuture(LibraryResult.ofItem(
-      new MediaItem.Builder()
-        .setMediaId(MEDIA_ROOT_ID)
-        .setMediaMetadata(new MediaMetadata.Builder()
-          .setIsBrowsable(true)
-          .setIsPlayable(false)
-          .build())
-        .build(), params));
+    final boolean isRecent = (params != null) && params.isRecent;
+    return Futures.immediateFuture(LibraryResult.ofItem(getRootItem(isRecent ? RECENT_ROOT_ID : MEDIA_ROOT_ID), params));
+  }
+
+  @Override
+  @NonNull
+  public ListenableFuture<LibraryResult<MediaItem>> onGetItem(
+    @NonNull MediaLibrarySession session,
+    @NonNull MediaSession.ControllerInfo browser,
+    @NonNull String mediaId) {
+    Log.d(LOG_TAG, "onGetItem: " + mediaId);
+    // Roots are needed at once: default onSubscribe accepts subscription on browsable result
+    if (isRootId(mediaId)) {
+      return Futures.immediateFuture(LibraryResult.ofItem(getRootItem(mediaId), null));
+    }
+    return Radios.isInit() ?
+      Futures.immediateFuture(getItem(mediaId)) :
+      Futures.transform(radiosInitFuture, unused -> getItem(mediaId), MoreExecutors.directExecutor());
   }
 
   @Override
@@ -573,28 +642,13 @@ public class RadioService
     int pageSize,
     @Nullable MediaLibraryService.LibraryParams params) {
     Log.d(LOG_TAG, "onGetChildren: " + parentId);
-    if (!MEDIA_ROOT_ID.equals(parentId)) {
-      return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(), params));
+    if (!isRootId(parentId)) {
+      return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE, params));
     }
     // Browser may connect at service start, before radios init: an empty answer would stick
     return Radios.isInit() ?
-      Futures.immediateFuture(getChildren(params)) :
-      Futures.transform(radiosInitFuture, unused -> getChildren(params), MoreExecutors.directExecutor());
-  }
-
-  @NonNull
-  private LibraryResult<ImmutableList<MediaItem>> getChildren(@Nullable MediaLibraryService.LibraryParams params) {
-    final ImmutableList.Builder<MediaItem> items = new ImmutableList.Builder<>();
-    for (final Radio radio : Radios.getInstance().getActuallySelectedRadios()) {
-      items.add(new MediaItem.Builder()
-        .setMediaId(radio.getId())
-        .setMediaMetadata(radio.getMediaMetadataBuilder("", "")
-          .setIsPlayable(true)
-          .setIsBrowsable(false)
-          .build())
-        .build());
-    }
-    return LibraryResult.ofItemList(items.build(), params);
+      Futures.immediateFuture(getChildren(parentId, page, pageSize, params)) :
+      Futures.transform(radiosInitFuture, unused -> getChildren(parentId, page, pageSize, params), MoreExecutors.directExecutor());
   }
 
   @Override
@@ -623,17 +677,67 @@ public class RadioService
     @NonNull MediaSession mediaSession,
     @NonNull MediaSession.ControllerInfo controller,
     @NonNull List<MediaItem> mediaItems) {
-    if (!mediaItems.isEmpty()) {
-      final MediaItem item = mediaItems.get(mediaItems.size() - 1);
-      final String mediaId = item.mediaId;
-      if (!mediaId.isEmpty() && !MEDIA_ROOT_ID.equals(mediaId)) {
-        HANDLER.post(() -> playFromMediaId(mediaId));
-      } else if (item.requestMetadata.searchQuery != null) {
-        final String query = item.requestMetadata.searchQuery;
-        HANDLER.post(() -> playFromSearch(query));
+    // Requests may come at service start, before radios init
+    return Radios.isInit() ?
+      resolveMediaItems(mediaItems) :
+      Futures.transformAsync(radiosInitFuture, unused -> resolveMediaItems(mediaItems), MoreExecutors.directExecutor());
+  }
+
+  @Override
+  @NonNull
+  public ListenableFuture<MediaSession.MediaItemsWithStartPosition> onPlaybackResumption(
+    @NonNull MediaSession mediaSession,
+    @NonNull MediaSession.ControllerInfo controller,
+    boolean isForPlayback) {
+    // Requests may come at service start, before radios init
+    return Radios.isInit() ?
+      getResumptionItems() :
+      Futures.transformAsync(radiosInitFuture, unused -> getResumptionItems(), MoreExecutors.directExecutor());
+  }
+
+  @NonNull
+  private LibraryResult<ImmutableList<MediaItem>> getChildren(
+    @NonNull String parentId,
+    int page,
+    int pageSize,
+    @Nullable MediaLibraryService.LibraryParams params) {
+    final List<Radio> radios;
+    if (RECENT_ROOT_ID.equals(parentId)) {
+      final Radio lastRadio = getLastRadio();
+      radios = (lastRadio == null) ? Collections.emptyList() : Collections.singletonList(lastRadio);
+    } else {
+      radios = Radios.getInstance().getActuallySelectedRadios();
+    }
+    // Requested page, empty if out of range; long arithmetic as pageSize may be Integer.MAX_VALUE
+    final int from = (int) Math.min((long) page * pageSize, radios.size());
+    final int to = (int) Math.min((long) from + pageSize, radios.size());
+    final ImmutableList.Builder<MediaItem> items = new ImmutableList.Builder<>();
+    for (final Radio radio : radios.subList(from, to)) {
+      items.add(toMediaItem(radio));
+    }
+    return LibraryResult.ofItemList(items.build(), params);
+  }
+
+  // Single item player: first resolved item only.
+  // Fails if none is found, so that playback is not started.
+  @NonNull
+  private ListenableFuture<List<MediaItem>> resolveMediaItems(@NonNull List<MediaItem> mediaItems) {
+    for (final MediaItem mediaItem : mediaItems) {
+      final Radio radio = getRadio(mediaItem);
+      if (radio != null) {
+        return Futures.immediateFuture(ImmutableList.of(toMediaItem(radio)));
       }
     }
-    return Futures.immediateFuture(mediaItems);
+    Log.w(LOG_TAG, "resolveMediaItems: no radio found");
+    return Futures.immediateFailedFuture(new IllegalArgumentException("No radio found"));
+  }
+
+  @NonNull
+  private ListenableFuture<MediaSession.MediaItemsWithStartPosition> getResumptionItems() {
+    final Radio radio = getLastRadio();
+    return (radio == null) ?
+      Futures.immediateFailedFuture(new IllegalStateException("No radio to resume")) :
+      Futures.immediateFuture(new MediaSession.MediaItemsWithStartPosition(ImmutableList.of(toMediaItem(radio)), 0, C.TIME_UNSET));
   }
 
   @NonNull
@@ -718,7 +822,7 @@ public class RadioService
 
   private void play(@NonNull Radio radio) {
     Log.d(LOG_TAG, "play: " + radio.getName() + " => " + radio.getUri());
-    Radios.getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radio.getId()).apply();
+    setLastPlayedRadioId(radio.getId());
     final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
     if (sessionDevice != null) {
       sessionDevice.release();
@@ -747,24 +851,26 @@ public class RadioService
     }
   }
 
-  private void playFromSearch(@NonNull String query) {
-    Log.d(LOG_TAG, "playFromSearch: query = " + query);
-    if (!Radios.isInit()) {
-      pendingSearchQuery = query;
-      return;
-    }
-    // Empty query matches first radio, as every name contains ""
-    final Radio match = Radios.getInstance().getRadioFromName(query);
-    if (match == null) {
-      Log.w(LOG_TAG, "playFromSearch: no match found for query = " + query);
-    } else {
-      Log.d(LOG_TAG, "playFromSearch: matched radio = " + match.getName());
-      play(match);
-    }
+  @Nullable
+  private String getLastPlayedRadioId() {
+    return Radios.getAppPreferences(this).getString(getString(R.string.key_last_played_radio), null);
+  }
+
+  private void setLastPlayedRadioId(@NonNull String radioId) {
+    Radios.getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radioId).apply();
+  }
+
+  // Last played radio, or first one if none; null if no radio
+  @Nullable
+  private Radio getLastRadio() {
+    final Radios radios = Radios.getInstance();
+    final String lastId = getLastPlayedRadioId();
+    final Radio radio = (lastId == null) ? null : radios.getRadioFromId(lastId);
+    return ((radio == null) && !radios.isEmpty()) ? radios.get(0) : radio;
   }
 
   private void skipTo(int direction) {
-    final String lastId = Radios.getAppPreferences(this).getString(getString(R.string.key_last_played_radio), null);
+    final String lastId = getLastPlayedRadioId();
     final Radio currentRadio = (lastId == null) ? null : Radios.getInstance().getRadioFromId(lastId);
     if (currentRadio == null) {
       Log.d(LOG_TAG, "skipTo: no current radio");
@@ -783,9 +889,9 @@ public class RadioService
   private boolean launchLastRadio() {
     Log.d(LOG_TAG, "launchLastRadio");
     if (Radios.isInit()) {
-      final Radios radios = Radios.getInstance();
-      if (!radios.isEmpty()) {
-        playFromMediaId(Radios.getAppPreferences(this).getString(getString(R.string.key_last_played_radio), radios.get(0).getId()));
+      final Radio radio = getLastRadio();
+      if (radio != null) {
+        play(radio);
       }
       return true;
     }

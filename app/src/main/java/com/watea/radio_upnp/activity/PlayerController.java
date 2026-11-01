@@ -351,7 +351,8 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     if (mediaController == null) {
       mainActivity.tell(R.string.radio_connection_waiting);
     } else {
-      mediaController.addMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
+      mediaController.setMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
+      mediaController.play();
     }
   }
 

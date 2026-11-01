@@ -388,7 +388,8 @@ public class AlarmService extends Service implements MediaController.Listener {
           Log.e(LOG_TAG, "launch: mediaController is null");
         } else {
           Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
-          mediaController.addMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
+          mediaController.setMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
+          mediaController.play();
           releaseController();
           return;
         }

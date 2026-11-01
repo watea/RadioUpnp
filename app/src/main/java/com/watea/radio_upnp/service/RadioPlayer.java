@@ -152,8 +152,13 @@ public class RadioPlayer extends SimpleBasePlayer {
 
   @Override
   @NonNull
-  protected ListenableFuture<List<MediaItem>> handleAddMediaItems(int index, @NonNull List<MediaItem> mediaItems) {
-    return Futures.immediateFuture(mediaItems);
+  protected ListenableFuture<?> handleSetMediaItems(@NonNull List<MediaItem> mediaItems, int startIndex, long startPositionMs) {
+    final MediaItem mediaItem = mediaItems.get(Math.max(startIndex, 0));
+    if ((currentItem == null) || !currentItem.uid.equals(mediaItem.mediaId)) {
+      setCurrentItem(mediaItem.mediaId, mediaItem.mediaMetadata);
+    }
+    commands.onSetMediaItem(mediaItem.mediaId);
+    return Futures.immediateVoidFuture();
   }
 
   @Override
@@ -268,6 +273,9 @@ public class RadioPlayer extends SimpleBasePlayer {
     currentItem = new SimpleBasePlayer.MediaItemData.Builder(mediaId)
       .setMediaItem(new MediaItem.Builder().setMediaId(mediaId).setMediaMetadata(metadata).build())
       .setMediaMetadata(metadata)
+      // Live radio stream
+      .setIsDynamic(true)
+      .setLiveConfiguration(MediaItem.LiveConfiguration.UNSET)
       .build();
     invalidateState();
   }
@@ -279,7 +287,6 @@ public class RadioPlayer extends SimpleBasePlayer {
         COMMAND_PLAY_PAUSE,
         COMMAND_STOP,
         COMMAND_SET_MEDIA_ITEM,
-        COMMAND_CHANGE_MEDIA_ITEMS,
         COMMAND_SEEK_TO_NEXT,
         COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
         COMMAND_SEEK_TO_PREVIOUS,
@@ -298,6 +305,8 @@ public class RadioPlayer extends SimpleBasePlayer {
 
   interface Commands {
     void onPlay();
+
+    void onSetMediaItem(@NonNull String mediaId);
 
     void onPause();
 
