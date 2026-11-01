@@ -6,7 +6,8 @@
 -dontwarn com.google.re2j.Pattern
 
 # JitPack libs (no bundled consumer rules)
--keep class com.github.watea.** { *; }
+-keep class com.watea.candidhttpserver.** { *; }
+-keep class com.watea.androidssdpclient.** { *; }
 
 # Android services/activities/receivers are kept via manifest, but explicit for safety
 -keep public class * extends android.app.Service
