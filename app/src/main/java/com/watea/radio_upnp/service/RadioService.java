@@ -332,14 +332,20 @@ public class RadioService
   @Override
   public void onUpdateNotification(@NonNull MediaSession session, boolean startInForegroundRequired) {
     if (startInForegroundRequired) {
-      // startForeground must always be called when required to avoid RemoteServiceException
-      ServiceCompat.startForeground(
-        this,
-        FOREGROUND_NOTIFICATION_ID,
-        getNotification(),
-        (sessionDevice != null) && sessionDevice.isRemote()
-          ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-          : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+      // startForeground must be called when required to avoid RemoteServiceException
+      try {
+        ServiceCompat.startForeground(
+          this,
+          FOREGROUND_NOTIFICATION_ID,
+          getNotification(),
+          (sessionDevice != null) && sessionDevice.isRemote()
+            ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+      } catch (IllegalStateException illegalStateException) {
+        // Denied from the background when no foreground start is pending (e.g. Media3 user-engaged
+        // timeout after an error); ForegroundServiceStartNotAllowedException (API 31+) extends IllegalStateException
+        Log.e(LOG_TAG, "onUpdateNotification: unable to start foreground", illegalStateException);
+      }
       if (sessionDevice == null) {
         stopForeground(STOP_FOREGROUND_REMOVE);
       }
