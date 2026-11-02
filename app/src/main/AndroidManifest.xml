@@ -50,6 +50,13 @@
 
             </intent-filter>
 
+            <!-- Voice search from assistants: activity intent -->
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+            </intent-filter>
+
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
@@ -69,8 +76,6 @@
                 <action android:name="androidx.media3.session.MediaLibraryService" />
                 <!-- Required for Android Auto and legacy clients -->
                 <action android:name="android.media.browse.MediaBrowserService" />
-                <!-- Required for Google Assistant voice commands (API 21+) -->
-                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
 
             </intent-filter>
 

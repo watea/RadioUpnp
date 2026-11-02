@@ -170,9 +170,10 @@ public class Radios extends ArrayList<Radio> {
     }
   }
 
+  // Set before telling: listeners may check isInit()
   private static void onInit() {
-    getInstance().tellListeners(true, false, Listener::onInitEnd);
     isInit = true;
+    getInstance().tellListeners(true, false, Listener::onInitEnd);
   }
 
   private static void onInitFailed(@Nullable AlertDialog loadingAlertDialog) {

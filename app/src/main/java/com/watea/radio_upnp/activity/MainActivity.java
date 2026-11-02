@@ -28,6 +28,7 @@ import static com.watea.radio_upnp.R.string;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.SearchManager;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
@@ -47,6 +48,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -651,8 +653,11 @@ public class MainActivity extends AppCompatActivity {
     snackbar.setTextColor(getThemeAttributeColor(dialogContext, android.R.attr.textColorPrimary)).show();
   }
 
+  // Voice search (empty query matches first radio) or shortcut
   private void handleIntent(@NonNull Intent intent) {
-    final String radioName = intent.getStringExtra(getString(R.string.key_radio_name));
+    final String radioName = MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH.equals(intent.getAction()) ?
+      intent.getStringExtra(SearchManager.QUERY) :
+      intent.getStringExtra(getString(R.string.key_radio_name));
     if (radioName != null) {
       playerController.startReadingFromName(radioName);
     }

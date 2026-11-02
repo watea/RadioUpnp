@@ -113,14 +113,6 @@ public class RadioService
   private boolean isAndroidAutoConnected = false;
   @Nullable
   private SessionDevice sessionDevice = null;
-  private final Observer<Integer> carConnectionObserver = type -> {
-    final boolean connected = (type != null) && (type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
-    if (isAndroidAutoConnected && !connected && (sessionDevice != null)) {
-      sessionDevice.onAndroidAutoDisconnected();
-    }
-    isAndroidAutoConnected = connected;
-    Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
-  };
   private boolean isLastRadioToLaunch = false;
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
@@ -148,6 +140,20 @@ public class RadioService
   @Nullable
   private LiveData<Integer> carConnectionLiveData = null;
   private CastManager castManager;
+  private final Observer<Integer> carConnectionObserver = type -> {
+    final boolean connected = (type != null) && (type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
+    final boolean wasConnected = isAndroidAutoConnected;
+    isAndroidAutoConnected = connected;
+    Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
+    if (sessionDevice != null) {
+      if (wasConnected && !connected) {
+        sessionDevice.onAndroidAutoDisconnected();
+      } else if (!wasConnected && connected && sessionDevice.isRemote() && isPlayingOrBuffering()) {
+        // Remote session launched before connection was known (or ongoing at home): move it to the car
+        play(sessionDevice.getRadio());
+      }
+    }
+  };
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onPreferredChange() {
@@ -510,9 +516,8 @@ public class RadioService
   @Override
   public void onSetMediaItem(@NonNull String mediaId) {
     Log.d(LOG_TAG, "onSetMediaItem: " + mediaId);
-    final State state = getPlaybackState();
     // Changing item keeps playing state: switch now, as the following play request is a no-op
-    if ((state == State.PLAYING) || (state == State.BUFFERING)) {
+    if (isPlayingOrBuffering()) {
       playFromMediaId(mediaId);
     } else {
       setLastPlayedRadioId(mediaId);
@@ -693,6 +698,11 @@ public class RadioService
     return Radios.isInit() ?
       getResumptionItems() :
       Futures.transformAsync(radiosInitFuture, unused -> getResumptionItems(), MoreExecutors.directExecutor());
+  }
+
+  private boolean isPlayingOrBuffering() {
+    final State state = getPlaybackState();
+    return (state == State.PLAYING) || (state == State.BUFFERING);
   }
 
   @NonNull
