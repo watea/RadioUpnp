@@ -49,7 +49,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.AlarmService;
 
-class AlarmController implements ServiceConnection {
+class AlarmController {
   private static final String LOG_TAG = AlarmController.class.getSimpleName();
   @NonNull
   private final MainActivity mainActivity;
@@ -69,6 +69,25 @@ class AlarmController implements ServiceConnection {
   private Radio radio = null;
   @Nullable
   private AlarmService.AlarmServiceBinder alarmService = null;
+  private final ServiceConnection alarmConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName componentName, IBinder service) {
+      alarmService = (AlarmService.AlarmServiceBinder) service;
+      alarmService.setListener(() -> {
+        if (alertDialog.isShowing()) {
+          toggleButton.setChecked(false);
+        }
+      });
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+      if (alarmService != null) {
+        alarmService.setListener(null);
+      }
+      alarmService = null;
+    }
+  };
 
   AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
@@ -89,24 +108,6 @@ class AlarmController implements ServiceConnection {
       // Restore checked item
       .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())
       .create();
-  }
-
-  @Override
-  public void onServiceConnected(ComponentName componentName, IBinder service) {
-    alarmService = (AlarmService.AlarmServiceBinder) service;
-    alarmService.setListener(() -> {
-      if (alertDialog.isShowing()) {
-        toggleButton.setChecked(false);
-      }
-    });
-  }
-
-  @Override
-  public void onServiceDisconnected(ComponentName name) {
-    if (alarmService != null) {
-      alarmService.setListener(null);
-    }
-    alarmService = null;
   }
 
   void launch() {
@@ -166,15 +167,14 @@ class AlarmController implements ServiceConnection {
   }
 
   void onActivityStart() {
-    // Bind to AlarmService
-    if (!mainActivity.bindService(new Intent(mainActivity, AlarmService.class), this, BIND_AUTO_CREATE)) {
+    if (!mainActivity.bindService(new Intent(mainActivity, AlarmService.class), alarmConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AlarmService not bound");
     }
   }
 
   void onActivityStop() {
-    mainActivity.unbindService(this);
+    mainActivity.unbindService(alarmConnection);
     // Force suspended connection
-    onServiceDisconnected(null);
+    alarmConnection.onServiceDisconnected(null);
   }
 }

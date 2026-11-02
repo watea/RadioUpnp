@@ -58,7 +58,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class AndroidUpnpService extends android.app.Service implements SsdpClient.Listener {
+public class AndroidUpnpService extends android.app.Service {
   private static final String LOG_TAG = AndroidUpnpService.class.getSimpleName();
   private static final String DEVICE = "urn:schemas-upnp-org:device:MediaRenderer:";
   private static final String DEVICE_VERSION = "1";
@@ -84,13 +84,43 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
   private NetworkProxy networkProxy;
   private SsdpClient ssdpClient;
   private volatile boolean isDestroyed = false;
+  private final SsdpClient.Listener ssdpListener = new SsdpClient.Listener() {
+    @Override
+    public void onServiceDiscovered(@NonNull SsdpService service) {
+      Log.d(LOG_TAG, "Found SsdpService: " + service);
+      devices.process(service);
+    }
+
+    @Override
+    public void onServiceAnnouncement(@NonNull SsdpService service) {
+      Log.d(LOG_TAG, "Announce SsdpService: " + service);
+      devices.process(service);
+    }
+
+    @Override
+    public void onFatalError() {
+      Log.e(LOG_TAG, "onFatalError");
+      listeners.forEach(Listener::onFatalError);
+    }
+
+    @Override
+    public void onStop() {
+      Log.d(LOG_TAG, "onStop");
+      devices.forEach(device -> tellListeners(device, Listener::onDeviceRemove));
+      devices.clear();
+      // If we missed the onAvailable() because the client was still started
+      if (!isDestroyed && networkProxy.isOnWifi()) {
+        ssdpClient.start();
+      }
+    }
+  };
 
   @Override
   public void onCreate() {
     super.onCreate();
     // Order matters
     networkProxy = new NetworkProxy(AndroidUpnpService.this);
-    ssdpClient = new SsdpClient(this, DEVICE + DEVICE_VERSION, this);
+    ssdpClient = new SsdpClient(this, DEVICE + DEVICE_VERSION, ssdpListener);
     connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
     connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
   }
@@ -114,35 +144,6 @@ public class AndroidUpnpService extends android.app.Service implements SsdpClien
   @Nullable
   public IBinder onBind(Intent intent) {
     return binder;
-  }
-
-  @Override
-  public void onServiceDiscovered(@NonNull SsdpService service) {
-    Log.d(LOG_TAG, "Found SsdpService: " + service);
-    devices.process(service);
-  }
-
-  @Override
-  public void onServiceAnnouncement(@NonNull SsdpService service) {
-    Log.d(LOG_TAG, "Announce SsdpService: " + service);
-    devices.process(service);
-  }
-
-  @Override
-  public void onFatalError() {
-    Log.e(LOG_TAG, "onFatalError");
-    listeners.forEach(Listener::onFatalError);
-  }
-
-  @Override
-  public void onStop() {
-    Log.d(LOG_TAG, "onStop");
-    devices.forEach(device -> tellListeners(device, Listener::onDeviceRemove));
-    devices.clear();
-    // If we missed the onAvailable() because the client was still started
-    if (!isDestroyed && networkProxy.isOnWifi()) {
-      ssdpClient.start();
-    }
   }
 
   // Tells device and its embedded devices

@@ -39,7 +39,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.Radio;
 
-class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFocusChangeListener {
+class LocalSessionDevice extends SessionDevice {
   private static final String LOG_TAG = LocalSessionDevice.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final float MEDIA_VOLUME_DEFAULT = 1.0f;
@@ -71,9 +71,41 @@ class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFo
     @NonNull Radio radio) {
     super(context, Mode.LOCAL, listener, radio);
     audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+    final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = focusChange -> {
+      Log.d(LOG_TAG, "onAudioFocusChange: " + focusChange);
+      switch (focusChange) {
+        case AudioManager.AUDIOFOCUS_GAIN:
+          if (isPlaying()) {
+            setVolume(MEDIA_VOLUME_DEFAULT);
+          } else if (playOnAudioFocus) {
+            play();
+          }
+          playOnAudioFocus = false;
+          break;
+        case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+          setVolume(MEDIA_VOLUME_DUCK);
+          break;
+        case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+          if (isPlaying()) {
+            playOnAudioFocus = true;
+            pause();
+          }
+          break;
+        case AudioManager.AUDIOFOCUS_LOSS:
+          playOnAudioFocus = false;
+          // Pause when possible: stop leads to STATE_IDLE, reported as ERROR.
+          // pause() is a no-op while buffering, so stop to keep playback from starting without focus.
+          if (isPlaying()) {
+            pause();
+          } else {
+            stop();
+          }
+          break;
+      }
+    };
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
-      .setOnAudioFocusChangeListener(this, HANDLER)
+      .setOnAudioFocusChangeListener(audioFocusChangeListener, HANDLER)
       .build();
   }
 
@@ -104,40 +136,6 @@ class LocalSessionDevice extends SessionDevice implements AudioManager.OnAudioFo
   public void release() {
     releaseAudioAndListeners();
     super.release();
-  }
-
-  @Override
-  public void onAudioFocusChange(int focusChange) {
-    Log.d(LOG_TAG, "onAudioFocusChange: " + focusChange);
-    switch (focusChange) {
-      case AudioManager.AUDIOFOCUS_GAIN:
-        if (isPlaying()) {
-          setVolume(MEDIA_VOLUME_DEFAULT);
-        } else if (playOnAudioFocus) {
-          play();
-        }
-        playOnAudioFocus = false;
-        break;
-      case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-        setVolume(MEDIA_VOLUME_DUCK);
-        break;
-      case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-        if (isPlaying()) {
-          playOnAudioFocus = true;
-          pause();
-        }
-        break;
-      case AudioManager.AUDIOFOCUS_LOSS:
-        playOnAudioFocus = false;
-        // Pause when possible: stop leads to STATE_IDLE, reported as ERROR.
-        // pause() is a no-op while buffering, so stop to keep playback from starting without focus.
-        if (isPlaying()) {
-          pause();
-        } else {
-          stop();
-        }
-        break;
-    }
   }
 
   @Override

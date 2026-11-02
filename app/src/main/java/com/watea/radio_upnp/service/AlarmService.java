@@ -63,7 +63,7 @@ import com.watea.radio_upnp.model.Radios;
 
 import java.util.Calendar;
 
-public class AlarmService extends Service implements MediaController.Listener {
+public class AlarmService extends Service {
   private static final String LOG_TAG = AlarmService.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int NOTIFICATION_ID = 10;
@@ -81,6 +81,13 @@ public class AlarmService extends Service implements MediaController.Listener {
   private ListenableFuture<MediaController> controllerFuture = null;
   @Nullable
   private MediaController mediaController = null;
+  private final MediaController.Listener controllerListener = new MediaController.Listener() {
+    @Override
+    public void onDisconnected(@NonNull MediaController controller) {
+      Log.d(LOG_TAG, "onDisconnected");
+      mediaController = null;
+    }
+  };
   private SessionToken sessionToken;
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
@@ -164,12 +171,6 @@ public class AlarmService extends Service implements MediaController.Listener {
     } else {
       return START_STICKY;
     }
-  }
-
-  @Override
-  public void onDisconnected(@NonNull MediaController controller) {
-    Log.d(LOG_TAG, "onDisconnected");
-    mediaController = null;
   }
 
   private boolean setAlarmManagerAlarm(int hour, int minute, boolean isRelaunch) {
@@ -333,7 +334,7 @@ public class AlarmService extends Service implements MediaController.Listener {
       HANDLER.post(() -> {
         // Build on main thread so MediaController is bound to the main looper
         controllerFuture = new MediaController.Builder(AlarmService.this, sessionToken)
-          .setListener(AlarmService.this)
+          .setListener(controllerListener)
           .buildAsync();
         controllerFuture.addListener(new MediaBrowserConnectionCallback(), HANDLER::post);
         releaseConnectivityManagerCallback();
