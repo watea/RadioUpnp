@@ -439,7 +439,7 @@ public class MainActivity extends AppCompatActivity {
     // PlayerController init
     playerController.onActivityCreate();
     // Auto-restart last played radio (fresh start or process kill recovery)
-    if (!getLastPlayedRadioId().isEmpty()) {
+    if (Radios.getLastPlayedRadioId(this) != null) {
       playerController.enableAutoPlay();
     }
     // Intent
@@ -560,8 +560,7 @@ public class MainActivity extends AppCompatActivity {
 
   @Nullable
   Radio getLastPlayedRadio() {
-    final String id = getLastPlayedRadioId();
-    return id.isEmpty() ? null : Radios.getInstance().getRadioFromId(id);
+    return Radios.getInstance().getLastPlayedRadio(this);
   }
 
   @NonNull
@@ -641,11 +640,6 @@ public class MainActivity extends AppCompatActivity {
         .setView(R.layout.view_loading)
         .create() :
       loadingAlertDialog;
-  }
-
-  @NonNull
-  private String getLastPlayedRadioId() {
-    return sharedPreferences.getString(getString(R.string.key_last_played_radio), "");
   }
 
   private void tell(@NonNull Snackbar snackbar) {

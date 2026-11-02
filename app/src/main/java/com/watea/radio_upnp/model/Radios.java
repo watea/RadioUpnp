@@ -90,6 +90,15 @@ public class Radios extends ArrayList<Radio> {
     return context.getSharedPreferences("activity.MainActivity", Context.MODE_PRIVATE);
   }
 
+  @Nullable
+  public static String getLastPlayedRadioId(@NonNull Context context) {
+    return getAppPreferences(context).getString(context.getString(R.string.key_last_played_radio), null);
+  }
+
+  public static void setLastPlayedRadioId(@NonNull Context context, @NonNull String radioId) {
+    getAppPreferences(context).edit().putString(context.getString(R.string.key_last_played_radio), radioId).apply();
+  }
+
   // Must be called before getInstance
   public static void setInstance(@NonNull Context context, @Nullable AlertDialog loadingAlertDialog) {
     if (radios == null) {
@@ -260,6 +269,12 @@ public class Radios extends ArrayList<Radio> {
   @Nullable
   public Radio getRadioFromId(@NonNull String id) {
     return stream().filter(radio -> radio.getId().equals(id)).findFirst().orElse(null);
+  }
+
+  @Nullable
+  public Radio getLastPlayedRadio(@NonNull Context context) {
+    final String id = getLastPlayedRadioId(context);
+    return (id == null) ? null : getRadioFromId(id);
   }
 
   @Nullable

@@ -292,8 +292,7 @@ public class RadioPlayer extends SimpleBasePlayer {
         COMMAND_SEEK_TO_PREVIOUS,
         COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
         COMMAND_GET_CURRENT_MEDIA_ITEM,
-        COMMAND_GET_METADATA,
-        COMMAND_GET_TIMELINE);
+        COMMAND_GET_METADATA);
     if (isVolumeControlled) {
       builder.addAll(
         COMMAND_GET_DEVICE_VOLUME,

@@ -24,13 +24,10 @@
 package com.watea.radio_upnp.service;
 
 import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ServiceInfo;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -41,34 +38,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.car.app.connection.CarConnection;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
-import androidx.media3.common.C;
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.MediaMetadata;
-import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
-import androidx.media3.session.CommandButton;
-import androidx.media3.session.LibraryResult;
 import androidx.media3.session.MediaLibraryService;
-import androidx.media3.session.MediaNotification;
 import androidx.media3.session.MediaSession;
-import androidx.media3.session.MediaStyleNotificationHelper.MediaStyle;
-import androidx.media3.session.SessionCommand;
-import androidx.media3.session.SessionCommands;
-import androidx.media3.session.SessionError;
-import androidx.media3.session.SessionResult;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.SettableFuture;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
@@ -77,39 +54,15 @@ import com.watea.radio_upnp.upnp.Device;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
-@OptIn(markerClass = UnstableApi.class)
 public class RadioService
   extends MediaLibraryService
-  implements
-  SessionDevice.Listener,
-  CastManager.Callback,
-  RadioPlayer.Commands,
-  MediaNotification.Provider,
-  MediaLibraryService.MediaLibrarySession.Callback {
+  implements SessionDevice.Listener, CastManager.Callback, RadioPlayer.Commands {
   public static final boolean KEY_PCM_MODE_DEFAULT = true;
   public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
-  // Media action intent strings (for notification PendingIntents → onStartCommand)
-  private static final String ACTION_MEDIA_PLAY = "ACTION_MEDIA_PLAY";
-  private static final String ACTION_MEDIA_PAUSE = "ACTION_MEDIA_PAUSE";
-  private static final String ACTION_MEDIA_STOP = "ACTION_MEDIA_STOP";
-  private static final String ACTION_MEDIA_SKIP_NEXT = "ACTION_MEDIA_SKIP_NEXT";
-  private static final String ACTION_MEDIA_SKIP_PREVIOUS = "ACTION_MEDIA_SKIP_PREVIOUS";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
-  private static final int REQUEST_CODE = 501;
-  private static final String MEDIA_ROOT_ID = "root_id";
-  private static final String RECENT_ROOT_ID = "recent_root_id"; // Playback resumption: last played radio
-  private static final int FOREGROUND_NOTIFICATION_ID = 9;
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
-  private static String CHANNEL_ID;
-  private final SleepController sleepController = new SleepController();
-  private final SettableFuture<Void> radiosInitFuture = SettableFuture.create(); // Completed at onInitEnd; browse requests received before radios init wait on it
   private boolean isAndroidAutoConnected = false;
   @Nullable
   private SessionDevice sessionDevice = null;
@@ -127,16 +80,26 @@ public class RadioService
       upnpService = null;
     }
   };
-  private NotificationManagerCompat notificationManager;
   private MediaLibrarySession mediaLibrarySession;
-  private PendingIntent mainActivityPendingIntent;
+  private final SleepController.Listener sleepListener = new SleepController.Listener() {
+    @Override
+    public void onSleepOn(boolean isSleepOn) {
+      final Bundle extras = new Bundle(mediaLibrarySession.getSessionExtras());
+      extras.putBoolean(getString(R.string.key_sleep_set), isSleepOn);
+      mediaLibrarySession.setSessionExtras(extras);
+    }
+
+    @Override
+    public void onSleepEnd() {
+      onPause();
+    }
+  };
   private RadioPlayer radioPlayer;
+  private NotificationChannels notificationChannels;
+  private SleepController sleepController;
+  private MediaLibrarySessionCallback mediaLibrarySessionCallback;
   @Nullable
   private StreamServer streamServer = null;
-  private NotificationCompat.Action actionPause;
-  private NotificationCompat.Action actionPlay;
-  private NotificationCompat.Action actionSkipToNext;
-  private NotificationCompat.Action actionSkipToPrevious;
   @Nullable
   private LiveData<Integer> carConnectionLiveData = null;
   private CastManager castManager;
@@ -189,7 +152,7 @@ public class RadioService
     public void onInitEnd() {
       Log.d(LOG_TAG, "onInitEnd");
       HANDLER.post(() -> {
-        radiosInitFuture.set(null);
+        mediaLibrarySessionCallback.onRadiosInit();
         notifyChildrenChanged();
         if (isLastRadioToLaunch) {
           launchLastRadio();
@@ -199,55 +162,11 @@ public class RadioService
     }
 
     private void notifyChildrenChanged() {
-      if (Radios.isInit()) {
-        mediaLibrarySession.notifyChildrenChanged(MEDIA_ROOT_ID, Radios.getInstance().getActuallySelectedRadios().size(), null);
-      }
+      mediaLibrarySessionCallback.notifyChildrenChanged(mediaLibrarySession);
     }
   };
 
-  @NonNull
-  private static MediaItem toMediaItem(@NonNull Radio radio) {
-    return new MediaItem.Builder()
-      .setMediaId(radio.getId())
-      .setMediaMetadata(radio.getMediaMetadataBuilder("", "")
-        .setIsPlayable(true)
-        .setIsBrowsable(false)
-        .build())
-      .build();
-  }
-
-  // Empty search query matches first radio, as every name contains ""
-  @Nullable
-  private static Radio getRadio(@NonNull MediaItem mediaItem) {
-    final String query = mediaItem.requestMetadata.searchQuery;
-    return (mediaItem.mediaId.isEmpty() && (query != null)) ?
-      Radios.getInstance().getRadioFromName(query) :
-      Radios.getInstance().getRadioFromId(mediaItem.mediaId);
-  }
-
-  @NonNull
-  private static LibraryResult<MediaItem> getItem(@NonNull String mediaId) {
-    final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
-    return (radio == null) ?
-      LibraryResult.ofError(SessionError.ERROR_BAD_VALUE) :
-      LibraryResult.ofItem(toMediaItem(radio), null);
-  }
-
-  private static boolean isRootId(@NonNull String mediaId) {
-    return MEDIA_ROOT_ID.equals(mediaId) || RECENT_ROOT_ID.equals(mediaId);
-  }
-
-  @NonNull
-  private static MediaItem getRootItem(@NonNull String rootId) {
-    return new MediaItem.Builder()
-      .setMediaId(rootId)
-      .setMediaMetadata(new MediaMetadata.Builder()
-        .setIsBrowsable(true)
-        .setIsPlayable(false)
-        .build())
-      .build();
-  }
-
+  @OptIn(markerClass = UnstableApi.class)
   @Override
   public void onCreate() {
     super.onCreate();
@@ -256,24 +175,13 @@ public class RadioService
     new Thread(SessionDevice::warmUpHttpDataSourceFactory).start();
     // Create RadioPlayer and MediaLibrarySession
     radioPlayer = new RadioPlayer(this, getString(R.string.remote));
-    // Built once: FLAG_CANCEL_CURRENT would cancel the instance held by the session
-    mainActivityPendingIntent = PendingIntent.getActivity(
-      this,
-      REQUEST_CODE,
-      new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-      PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, this)
-      .setSessionActivity(mainActivityPendingIntent)
+    notificationChannels = new NotificationChannels(this, LOG_TAG, radioPlayer);
+    sleepController = new SleepController(notificationChannels, sleepListener);
+    mediaLibrarySessionCallback = new MediaLibrarySessionCallback(this, sleepController);
+    mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, mediaLibrarySessionCallback)
+      .setSessionActivity(notificationChannels.getContentIntent())
       .build();
-    setMediaNotificationProvider(this);
-    // Notification
-    notificationManager = NotificationManagerCompat.from(this);
-    // Cancel own notifications to handle the case where the Service was killed and
-    // restarted by the system; others belong to AlarmService
-    notificationManager.cancel(FOREGROUND_NOTIFICATION_ID);
-    notificationManager.cancel(SleepController.NOTIFICATION_ID);
-    // Create the (mandatory) notification channel
-    CHANNEL_ID = NotificationChannels.create(this, LOG_TAG, R.string.radio_service_notification_name, R.string.radio_service_description);
+    setMediaNotificationProvider(notificationChannels.getMediaNotificationProvider());
     // Bind to UPnP service
     if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
@@ -287,6 +195,10 @@ public class RadioService
     // Create radios if needed
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
+    // Already initialized (e.g. by activity): no onInitEnd to come
+    if (Radios.isInit()) {
+      mediaLibrarySessionCallback.onRadiosInit();
+    }
     // Launch HTTP server
     try {
       streamServer = new StreamServer(this);
@@ -295,23 +207,6 @@ public class RadioService
       Log.e(LOG_TAG, "HTTP server creation failed", iOException);
       streamServer = null;
     }
-    // Prepare notification actions using service intents
-    actionPause = new NotificationCompat.Action(
-      R.drawable.ic_pause_white_24dp,
-      getString(R.string.action_pause),
-      buildServicePendingIntent(ACTION_MEDIA_PAUSE));
-    actionPlay = new NotificationCompat.Action(
-      R.drawable.ic_play_arrow_white_24dp,
-      getString(R.string.action_play),
-      buildServicePendingIntent(ACTION_MEDIA_PLAY));
-    actionSkipToNext = new NotificationCompat.Action(
-      R.drawable.ic_skip_next_white_24dp,
-      getString(R.string.action_skip_to_next),
-      buildServicePendingIntent(ACTION_MEDIA_SKIP_NEXT));
-    actionSkipToPrevious = new NotificationCompat.Action(
-      R.drawable.ic_skip_previous_white_24dp,
-      getString(R.string.action_skip_to_previous),
-      buildServicePendingIntent(ACTION_MEDIA_SKIP_PREVIOUS));
   }
 
   @Override
@@ -356,19 +251,19 @@ public class RadioService
   public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
     if ((intent != null) && (intent.getAction() != null)) {
       switch (intent.getAction()) {
-        case ACTION_MEDIA_PLAY:
+        case NotificationChannels.ACTION_MEDIA_PLAY:
           onPlay();
           break;
-        case ACTION_MEDIA_PAUSE:
+        case NotificationChannels.ACTION_MEDIA_PAUSE:
           onPause();
           break;
-        case ACTION_MEDIA_STOP:
+        case NotificationChannels.ACTION_MEDIA_STOP:
           onStop();
           break;
-        case ACTION_MEDIA_SKIP_NEXT:
+        case NotificationChannels.ACTION_MEDIA_SKIP_NEXT:
           onSkipToNext();
           break;
-        case ACTION_MEDIA_SKIP_PREVIOUS:
+        case NotificationChannels.ACTION_MEDIA_SKIP_PREVIOUS:
           onSkipToPrevious();
           break;
         case ACTION_SLEEP_CANCEL:
@@ -388,8 +283,8 @@ public class RadioService
       try {
         ServiceCompat.startForeground(
           this,
-          FOREGROUND_NOTIFICATION_ID,
-          getNotification(),
+          NotificationChannels.PLAYER_NOTIFICATION_ID,
+          notificationChannels.getPlayerNotification(session),
           (sessionDevice != null) && sessionDevice.isRemote()
             ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
             : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
@@ -404,7 +299,7 @@ public class RadioService
     } else if (sessionDevice == null) {
       stopForeground(STOP_FOREGROUND_REMOVE);
     } else {
-      buildNotification();
+      notificationChannels.notifyPlayer(session);
     }
   }
 
@@ -444,7 +339,6 @@ public class RadioService
       Log.d(LOG_TAG, "onNewInformation: " + information);
       assert sessionDevice != null;
       radioPlayer.buildSessionMetadata(sessionDevice.getRadio(), information);
-      buildNotification();
     });
   }
 
@@ -457,7 +351,6 @@ public class RadioService
       extras.putString(getString(R.string.key_bitrate), bitrateDisplay);
       extras.putString(getString(R.string.key_mime_type), mimeType);
       mediaLibrarySession.setSessionExtras(extras);
-      buildNotification();
     });
   }
 
@@ -520,7 +413,7 @@ public class RadioService
     if (isPlayingOrBuffering()) {
       playFromMediaId(mediaId);
     } else {
-      setLastPlayedRadioId(mediaId);
+      Radios.setLastPlayedRadioId(this, mediaId);
       // Selection drops a paused session: next play launches anew, honoring current environment (renderer, Android Auto)
       if (sessionDevice != null) {
         sessionDevice.release();
@@ -571,248 +464,9 @@ public class RadioService
     sessionDevice.adjustVolume(direction);
   }
 
-  @Override
-  @NonNull
-  public MediaNotification createNotification(
-    @NonNull MediaSession mediaSession,
-    @NonNull ImmutableList<CommandButton> mediaButtonPreferences,
-    @NonNull MediaNotification.ActionFactory actionFactory,
-    @NonNull MediaNotification.Provider.Callback onNotificationChangedCallback) {
-    return new MediaNotification(FOREGROUND_NOTIFICATION_ID, getNotification());
-  }
-
-  @Override
-  public boolean handleCustomCommand(
-    @NonNull MediaSession session,
-    @NonNull String action,
-    @NonNull Bundle extras) {
-    return false;
-  }
-
-  @Override
-  @NonNull
-  public MediaNotification.Provider.NotificationChannelInfo getNotificationChannelInfo() {
-    return new MediaNotification.Provider.NotificationChannelInfo(CHANNEL_ID, getString(R.string.radio_service_notification_name));
-  }
-
-  @Override
-  @NonNull
-  public MediaSession.ConnectionResult onConnect(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
-    final SessionCommands sessionCommands = new SessionCommands.Builder()
-      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_LIBRARY_ROOT)
-      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_CHILDREN)
-      .add(SessionCommand.COMMAND_CODE_LIBRARY_GET_ITEM)
-      .add(SessionCommand.COMMAND_CODE_LIBRARY_SUBSCRIBE)
-      .add(SessionCommand.COMMAND_CODE_LIBRARY_UNSUBSCRIBE)
-      .add(new SessionCommand(ACTION_SLEEP_SET, Bundle.EMPTY))
-      .add(new SessionCommand(ACTION_SLEEP_CANCEL, Bundle.EMPTY))
-      .build();
-    return MediaSession.ConnectionResult.accept(sessionCommands, new Player.Commands.Builder().addAllCommands().build());
-  }
-
-  @Override
-  @NonNull
-  public ListenableFuture<LibraryResult<MediaItem>> onGetLibraryRoot(
-    @NonNull MediaLibrarySession session,
-    @NonNull MediaSession.ControllerInfo browser,
-    @Nullable MediaLibraryService.LibraryParams params) {
-    Log.d(LOG_TAG, "onGetLibraryRoot");
-    final boolean isRecent = (params != null) && params.isRecent;
-    return Futures.immediateFuture(LibraryResult.ofItem(getRootItem(isRecent ? RECENT_ROOT_ID : MEDIA_ROOT_ID), params));
-  }
-
-  @Override
-  @NonNull
-  public ListenableFuture<LibraryResult<MediaItem>> onGetItem(
-    @NonNull MediaLibrarySession session,
-    @NonNull MediaSession.ControllerInfo browser,
-    @NonNull String mediaId) {
-    Log.d(LOG_TAG, "onGetItem: " + mediaId);
-    // Roots are needed at once: default onSubscribe accepts subscription on browsable result
-    if (isRootId(mediaId)) {
-      return Futures.immediateFuture(LibraryResult.ofItem(getRootItem(mediaId), null));
-    }
-    return Radios.isInit() ?
-      Futures.immediateFuture(getItem(mediaId)) :
-      Futures.transform(radiosInitFuture, unused -> getItem(mediaId), MoreExecutors.directExecutor());
-  }
-
-  @Override
-  @NonNull
-  public ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> onGetChildren(
-    @NonNull MediaLibrarySession session,
-    @NonNull MediaSession.ControllerInfo browser,
-    @NonNull String parentId,
-    int page,
-    int pageSize,
-    @Nullable MediaLibraryService.LibraryParams params) {
-    Log.d(LOG_TAG, "onGetChildren: " + parentId);
-    if (!isRootId(parentId)) {
-      return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE, params));
-    }
-    // Browser may connect at service start, before radios init: an empty answer would stick
-    return Radios.isInit() ?
-      Futures.immediateFuture(getChildren(parentId, page, pageSize, params)) :
-      Futures.transform(radiosInitFuture, unused -> getChildren(parentId, page, pageSize, params), MoreExecutors.directExecutor());
-  }
-
-  @Override
-  @NonNull
-  public ListenableFuture<SessionResult> onCustomCommand(
-    @NonNull MediaSession session,
-    @NonNull MediaSession.ControllerInfo controller,
-    @NonNull SessionCommand customCommand,
-    @NonNull Bundle args) {
-    switch (customCommand.customAction) {
-      case ACTION_SLEEP_SET:
-        HANDLER.post(() -> sleepController.set(args.getInt(getString(R.string.key_sleep))));
-        break;
-      case ACTION_SLEEP_CANCEL:
-        HANDLER.post(sleepController::release);
-        break;
-      default:
-        Log.e(LOG_TAG, "onCustomCommand: unknown action: " + customCommand.customAction);
-    }
-    return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_SUCCESS));
-  }
-
-  @Override
-  @NonNull
-  public ListenableFuture<List<MediaItem>> onAddMediaItems(
-    @NonNull MediaSession mediaSession,
-    @NonNull MediaSession.ControllerInfo controller,
-    @NonNull List<MediaItem> mediaItems) {
-    // Requests may come at service start, before radios init
-    return Radios.isInit() ?
-      resolveMediaItems(mediaItems) :
-      Futures.transformAsync(radiosInitFuture, unused -> resolveMediaItems(mediaItems), MoreExecutors.directExecutor());
-  }
-
-  @Override
-  @NonNull
-  public ListenableFuture<MediaSession.MediaItemsWithStartPosition> onPlaybackResumption(
-    @NonNull MediaSession mediaSession,
-    @NonNull MediaSession.ControllerInfo controller,
-    boolean isForPlayback) {
-    // Requests may come at service start, before radios init
-    return Radios.isInit() ?
-      getResumptionItems() :
-      Futures.transformAsync(radiosInitFuture, unused -> getResumptionItems(), MoreExecutors.directExecutor());
-  }
-
   private boolean isPlayingOrBuffering() {
     final State state = getPlaybackState();
     return (state == State.PLAYING) || (state == State.BUFFERING);
-  }
-
-  @NonNull
-  private LibraryResult<ImmutableList<MediaItem>> getChildren(
-    @NonNull String parentId,
-    int page,
-    int pageSize,
-    @Nullable MediaLibraryService.LibraryParams params) {
-    final List<Radio> radios;
-    if (RECENT_ROOT_ID.equals(parentId)) {
-      final Radio lastRadio = getLastRadio();
-      radios = (lastRadio == null) ? Collections.emptyList() : Collections.singletonList(lastRadio);
-    } else {
-      radios = Radios.getInstance().getActuallySelectedRadios();
-    }
-    // Requested page, empty if out of range; long arithmetic as pageSize may be Integer.MAX_VALUE
-    final int from = (int) Math.min((long) page * pageSize, radios.size());
-    final int to = (int) Math.min((long) from + pageSize, radios.size());
-    final ImmutableList.Builder<MediaItem> items = new ImmutableList.Builder<>();
-    for (final Radio radio : radios.subList(from, to)) {
-      items.add(toMediaItem(radio));
-    }
-    return LibraryResult.ofItemList(items.build(), params);
-  }
-
-  // Single item player: first resolved item only.
-  // Fails if none is found, so that playback is not started.
-  @NonNull
-  private ListenableFuture<List<MediaItem>> resolveMediaItems(@NonNull List<MediaItem> mediaItems) {
-    for (final MediaItem mediaItem : mediaItems) {
-      final Radio radio = getRadio(mediaItem);
-      if (radio != null) {
-        return Futures.immediateFuture(ImmutableList.of(toMediaItem(radio)));
-      }
-    }
-    Log.w(LOG_TAG, "resolveMediaItems: no radio found");
-    return Futures.immediateFailedFuture(new IllegalArgumentException("No radio found"));
-  }
-
-  @NonNull
-  private ListenableFuture<MediaSession.MediaItemsWithStartPosition> getResumptionItems() {
-    final Radio radio = getLastRadio();
-    return (radio == null) ?
-      Futures.immediateFailedFuture(new IllegalStateException("No radio to resume")) :
-      Futures.immediateFuture(new MediaSession.MediaItemsWithStartPosition(ImmutableList.of(toMediaItem(radio)), 0, C.TIME_UNSET));
-  }
-
-  @NonNull
-  private PendingIntent buildServicePendingIntent(@NonNull String action) {
-    return PendingIntent.getForegroundService(
-      this, REQUEST_CODE,
-      new Intent(action, null, this, RadioService.class),
-      PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-  }
-
-  @NonNull
-  private Notification getNotification() {
-    final MediaStyle mediaStyle = new MediaStyle(mediaLibrarySession);
-    final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-      .setSmallIcon(R.drawable.ic_mic_white_24dp)
-      // Pending intent that is fired when user clicks on notification
-      .setContentIntent(mainActivityPendingIntent)
-      // When notification is deleted (when playback is paused and notification can be
-      // deleted), fire intent with ACTION_STOP
-      .setDeleteIntent(buildServicePendingIntent(ACTION_MEDIA_STOP))
-      // Show controls on lock screen even when user hides sensitive content
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .setSilent(true);
-    final MediaItem currentItem = radioPlayer.getCurrentMediaItem();
-    final MediaMetadata metadata = (currentItem != null) ? currentItem.mediaMetadata : null;
-    if (metadata != null) {
-      if (metadata.artworkData != null) {
-        builder.setLargeIcon(BitmapFactory.decodeByteArray(
-          metadata.artworkData, 0, metadata.artworkData.length));
-      }
-      builder
-        .setContentTitle(metadata.subtitle)
-        .setContentText(metadata.displayTitle)
-        .setSubText((sessionDevice != null) && sessionDevice.isRemote() ? getString(R.string.remote) : "");
-    }
-    builder.addAction(actionSkipToPrevious);
-    switch (getPlaybackState()) {
-      case PLAYING:
-        builder
-          .addAction(actionPause)
-          .setOngoing(true);
-        mediaStyle.setShowActionsInCompactView(0, 1, 2);
-        break;
-      case PAUSED:
-      case ERROR:
-      case UNSUPPORTED:
-        builder
-          .addAction(actionPlay)
-          .setOngoing(false);
-        mediaStyle.setShowActionsInCompactView(0, 1, 2);
-        break;
-      default:
-        builder.setOngoing(false);
-        mediaStyle.setShowActionsInCompactView(0, 1);
-    }
-    builder.addAction(actionSkipToNext);
-    return builder.setStyle(mediaStyle).build();
-  }
-
-  private void buildNotification() {
-    try {
-      notificationManager.notify(FOREGROUND_NOTIFICATION_ID, getNotification());
-    } catch (SecurityException securityException) {
-      Log.e(LOG_TAG, "Internal failure; notification not allowed");
-    }
   }
 
   private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
@@ -832,7 +486,7 @@ public class RadioService
 
   private void play(@NonNull Radio radio) {
     Log.d(LOG_TAG, "play: " + radio.getName() + " => " + radio.getUri());
-    setLastPlayedRadioId(radio.getId());
+    Radios.setLastPlayedRadioId(this, radio.getId());
     final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
     if (sessionDevice != null) {
       sessionDevice.release();
@@ -861,27 +515,8 @@ public class RadioService
     }
   }
 
-  @Nullable
-  private String getLastPlayedRadioId() {
-    return Radios.getAppPreferences(this).getString(getString(R.string.key_last_played_radio), null);
-  }
-
-  private void setLastPlayedRadioId(@NonNull String radioId) {
-    Radios.getAppPreferences(this).edit().putString(getString(R.string.key_last_played_radio), radioId).apply();
-  }
-
-  // Last played radio, or first one if none; null if no radio
-  @Nullable
-  private Radio getLastRadio() {
-    final Radios radios = Radios.getInstance();
-    final String lastId = getLastPlayedRadioId();
-    final Radio radio = (lastId == null) ? null : radios.getRadioFromId(lastId);
-    return ((radio == null) && !radios.isEmpty()) ? radios.get(0) : radio;
-  }
-
   private void skipTo(int direction) {
-    final String lastId = getLastPlayedRadioId();
-    final Radio currentRadio = (lastId == null) ? null : Radios.getInstance().getRadioFromId(lastId);
+    final Radio currentRadio = Radios.getInstance().getLastPlayedRadio(this);
     if (currentRadio == null) {
       Log.d(LOG_TAG, "skipTo: no current radio");
       return;
@@ -899,7 +534,7 @@ public class RadioService
   private boolean launchLastRadio() {
     Log.d(LOG_TAG, "launchLastRadio");
     if (Radios.isInit()) {
-      final Radio radio = getLastRadio();
+      final Radio radio = mediaLibrarySessionCallback.getLastRadio();
       if (radio != null) {
         play(radio);
       }
@@ -941,49 +576,5 @@ public class RadioService
     }
     Log.d(LOG_TAG, "createSessionDevice: " + result.getClass().getSimpleName() + " - " + result.getLockKey());
     return result;
-  }
-
-  private class SleepController {
-    private static final int NOTIFICATION_ID = 42;
-    @Nullable
-    private ScheduledExecutorService scheduler = null;
-
-    void set(int minutes) {
-      scheduler = Executors.newScheduledThreadPool(1);
-      scheduler.schedule(() -> HANDLER.post(RadioService.this::onPause), minutes, TimeUnit.MINUTES);
-      scheduler.shutdown();
-      setSleepOn(true);
-      try {
-        notificationManager.notify(NOTIFICATION_ID, new NotificationCompat.Builder(RadioService.this, CHANNEL_ID)
-          .setSmallIcon(R.drawable.ic_mic_white_24dp)
-          .setContentTitle(getString(R.string.sleep_timer_title))
-          .setContentText(getString(R.string.sleep_timer_set_for, minutes))
-          .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-          .setOngoing(true)
-          .setOnlyAlertOnce(true)
-          .addAction(new NotificationCompat.Action(
-            R.drawable.ic_stop_white_24dp,
-            getString(R.string.cancel_sleep_timer),
-            buildServicePendingIntent(ACTION_SLEEP_CANCEL)))
-          .build());
-      } catch (SecurityException securityException) {
-        Log.e(LOG_TAG, "Permission denied to post sleep timer notification", securityException);
-      }
-    }
-
-    void release() {
-      if (scheduler != null) {
-        scheduler.shutdownNow();
-        scheduler = null;
-        setSleepOn(false);
-        notificationManager.cancel(NOTIFICATION_ID);
-      }
-    }
-
-    private void setSleepOn(boolean isSleepOn) {
-      final Bundle extras = new Bundle(mediaLibrarySession.getSessionExtras());
-      extras.putBoolean(getString(R.string.key_sleep_set), isSleepOn);
-      mediaLibrarySession.setSessionExtras(extras);
-    }
   }
 }

@@ -313,9 +313,7 @@ public class AlarmService extends Service implements MediaController.Listener {
     public Radio getRadio() {
       final Radios radios = Radios.getInstance();
       final Radio radio = radios.getRadioFromId(getSharedPreferences().getString(getString(R.string.key_alarm_radio), ""));
-      return (radio == null) ?
-        radios.getRadioFromId(Radios.getAppPreferences(AlarmService.this).getString(getString(R.string.key_last_played_radio), "")) :
-        radio;
+      return (radio == null) ? radios.getLastPlayedRadio(AlarmService.this) : radio;
     }
 
     public boolean isStarted() {
