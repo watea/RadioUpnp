@@ -284,7 +284,6 @@ public class RadioPlayer extends SimpleBasePlayer {
   private Player.Commands buildAvailableCommands() {
     final Player.Commands.Builder builder = new Player.Commands.Builder()
       .addAll(
-        COMMAND_PLAY_PAUSE,
         COMMAND_STOP,
         COMMAND_SET_MEDIA_ITEM,
         COMMAND_SEEK_TO_NEXT,
@@ -293,6 +292,10 @@ public class RadioPlayer extends SimpleBasePlayer {
         COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
         COMMAND_GET_CURRENT_MEDIA_ITEM,
         COMMAND_GET_METADATA);
+    // No play/pause while buffering, as in app UI
+    if (sessionDeviceState != SessionDevice.State.BUFFERING) {
+      builder.add(COMMAND_PLAY_PAUSE);
+    }
     if (isVolumeControlled) {
       builder.addAll(
         COMMAND_GET_DEVICE_VOLUME,

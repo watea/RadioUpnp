@@ -86,20 +86,15 @@ class LocalSessionDevice extends SessionDevice {
           setVolume(MEDIA_VOLUME_DUCK);
           break;
         case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-          if (isPlaying()) {
+          if (isPlayingOrBuffering()) {
             playOnAudioFocus = true;
             pause();
           }
           break;
         case AudioManager.AUDIOFOCUS_LOSS:
           playOnAudioFocus = false;
-          // Pause when possible: stop leads to STATE_IDLE, reported as ERROR.
-          // pause() is a no-op while buffering, so stop to keep playback from starting without focus.
-          if (isPlaying()) {
-            pause();
-          } else {
-            stop();
-          }
+          // Pause, not stop: stop leads to STATE_IDLE, reported as ERROR
+          pause();
           break;
       }
     };
@@ -116,7 +111,8 @@ class LocalSessionDevice extends SessionDevice {
 
   @Override
   public void pause() {
-    if (!isPlaying()) {
+    // While buffering, ExoPlayer pause keeps it from starting once ready
+    if (!isPlayingOrBuffering()) {
       return;
     }
     if (!playOnAudioFocus) {
@@ -203,6 +199,11 @@ class LocalSessionDevice extends SessionDevice {
       allowRewind();
     }
     super.onState(state);
+  }
+
+  private boolean isPlayingOrBuffering() {
+    final State state = getState();
+    return (state == State.PLAYING) || (state == State.BUFFERING);
   }
 
   private boolean requestAudioFocus() {
