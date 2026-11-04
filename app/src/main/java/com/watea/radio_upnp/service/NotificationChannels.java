@@ -29,76 +29,35 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.os.Bundle;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.media3.common.DeviceInfo;
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.util.UnstableApi;
-import androidx.media3.session.CommandButton;
+import androidx.media3.session.DefaultMediaNotificationProvider;
 import androidx.media3.session.MediaNotification;
-import androidx.media3.session.MediaSession;
-import androidx.media3.session.MediaStyleNotificationHelper.MediaStyle;
 
-import com.google.common.collect.ImmutableList;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.activity.MainActivity;
 
 class NotificationChannels {
   static final int PLAYER_NOTIFICATION_ID = 9;
-  // Media action intent strings (notification PendingIntents → RadioService.onStartCommand)
-  static final String ACTION_MEDIA_PLAY = "ACTION_MEDIA_PLAY";
-  static final String ACTION_MEDIA_PAUSE = "ACTION_MEDIA_PAUSE";
-  static final String ACTION_MEDIA_STOP = "ACTION_MEDIA_STOP";
-  static final String ACTION_MEDIA_SKIP_NEXT = "ACTION_MEDIA_SKIP_NEXT";
-  static final String ACTION_MEDIA_SKIP_PREVIOUS = "ACTION_MEDIA_SKIP_PREVIOUS";
   private static final String LOG_TAG = NotificationChannels.class.getSimpleName();
   private static final int SLEEP_NOTIFICATION_ID = 42;
   private static final int REQUEST_CODE = 501;
   private final Context context;
-  private final RadioPlayer radioPlayer;
   private final NotificationManagerCompat notificationManager;
   private final String channelId;
   private final PendingIntent contentIntent;
-  private final NotificationCompat.Action actionPause;
-  private final NotificationCompat.Action actionPlay;
-  private final NotificationCompat.Action actionSkipToNext;
-  private final NotificationCompat.Action actionSkipToPrevious;
-  // Only the channel is used, for Media3 own notifications; RadioService builds the player notification
   @OptIn(markerClass = UnstableApi.class)
-  private final MediaNotification.Provider mediaNotificationProvider = new MediaNotification.Provider() {
-    @NonNull
-    @Override
-    public MediaNotification createNotification(
-      @NonNull MediaSession mediaSession,
-      @NonNull ImmutableList<CommandButton> mediaButtonPreferences,
-      @NonNull MediaNotification.ActionFactory actionFactory,
-      @NonNull Callback onNotificationChangedCallback) {
-      return new MediaNotification(PLAYER_NOTIFICATION_ID, getPlayerNotification(mediaSession));
-    }
+  private final MediaNotification.Provider mediaNotificationProvider;
 
-    @Override
-    public boolean handleCustomCommand(@NonNull MediaSession session, @NonNull String action, @NonNull Bundle extras) {
-      return false;
-    }
-
-    @NonNull
-    @Override
-    public NotificationChannelInfo getNotificationChannelInfo() {
-      return new NotificationChannelInfo(channelId, context.getString(R.string.radio_service_notification_name));
-    }
-  };
-
-  NotificationChannels(@NonNull Context context, @NonNull String tag, @NonNull RadioPlayer radioPlayer) {
+  @OptIn(markerClass = UnstableApi.class)
+  NotificationChannels(@NonNull Context context, @NonNull String tag) {
     this.context = context;
-    this.radioPlayer = radioPlayer;
     notificationManager = NotificationManagerCompat.from(context);
     // Cancel own notifications to handle the case where the Service was killed and
     // restarted by the system; others belong to AlarmService
@@ -112,10 +71,14 @@ class NotificationChannels {
       REQUEST_CODE,
       new Intent(context, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
       PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    actionPause = buildServiceAction(R.drawable.ic_pause_white_24dp, R.string.action_pause, ACTION_MEDIA_PAUSE);
-    actionPlay = buildServiceAction(R.drawable.ic_play_arrow_white_24dp, R.string.action_play, ACTION_MEDIA_PLAY);
-    actionSkipToNext = buildServiceAction(R.drawable.ic_skip_next_white_24dp, R.string.action_skip_to_next, ACTION_MEDIA_SKIP_NEXT);
-    actionSkipToPrevious = buildServiceAction(R.drawable.ic_skip_previous_white_24dp, R.string.action_skip_to_previous, ACTION_MEDIA_SKIP_PREVIOUS);
+    // Title: radio name (with remote suffix), text: stream information, see Radio.getMediaMetadataBuilder
+    final DefaultMediaNotificationProvider provider = new DefaultMediaNotificationProvider.Builder(context)
+      .setNotificationId(PLAYER_NOTIFICATION_ID)
+      .setChannelId(channelId)
+      .setChannelName(R.string.radio_service_notification_name)
+      .build();
+    provider.setSmallIcon(R.drawable.ic_mic_white_24dp);
+    mediaNotificationProvider = provider;
   }
 
   // Returns the channel id.
@@ -146,65 +109,6 @@ class NotificationChannels {
     return mediaNotificationProvider;
   }
 
-  @OptIn(markerClass = UnstableApi.class)
-  @NonNull
-  Notification getPlayerNotification(@NonNull MediaSession session) {
-    final MediaStyle mediaStyle = new MediaStyle(session);
-    final NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
-      .setSmallIcon(R.drawable.ic_mic_white_24dp)
-      // Pending intent that is fired when user clicks on notification
-      .setContentIntent(contentIntent)
-      // When notification is deleted (when playback is paused and notification can be
-      // deleted), fire intent with ACTION_STOP
-      .setDeleteIntent(buildServicePendingIntent(ACTION_MEDIA_STOP))
-      // Show controls on lock screen even when user hides sensitive content
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .setSilent(true);
-    final MediaItem currentItem = radioPlayer.getCurrentMediaItem();
-    final MediaMetadata metadata = (currentItem != null) ? currentItem.mediaMetadata : null;
-    if (metadata != null) {
-      if (metadata.artworkData != null) {
-        builder.setLargeIcon(BitmapFactory.decodeByteArray(
-          metadata.artworkData, 0, metadata.artworkData.length));
-      }
-      final boolean isRemote = (radioPlayer.getDeviceInfo().playbackType == DeviceInfo.PLAYBACK_TYPE_REMOTE);
-      builder
-        .setContentTitle(metadata.subtitle)
-        .setContentText(metadata.displayTitle)
-        .setSubText(isRemote ? context.getString(R.string.remote) : "");
-    }
-    builder.addAction(actionSkipToPrevious);
-    switch (radioPlayer.getSessionDeviceState()) {
-      case PLAYING:
-        builder
-          .addAction(actionPause)
-          .setOngoing(true);
-        mediaStyle.setShowActionsInCompactView(0, 1, 2);
-        break;
-      case PAUSED:
-      case ERROR:
-      case UNSUPPORTED:
-        builder
-          .addAction(actionPlay)
-          .setOngoing(false);
-        mediaStyle.setShowActionsInCompactView(0, 1, 2);
-        break;
-      default:
-        builder.setOngoing(false);
-        mediaStyle.setShowActionsInCompactView(0, 1);
-    }
-    builder.addAction(actionSkipToNext);
-    return builder.setStyle(mediaStyle).build();
-  }
-
-  void notifyPlayer(@NonNull MediaSession session) {
-    try {
-      notificationManager.notify(PLAYER_NOTIFICATION_ID, getPlayerNotification(session));
-    } catch (SecurityException securityException) {
-      Log.e(LOG_TAG, "Internal failure; notification not allowed");
-    }
-  }
-
   void notifySleep(int minutes) {
     try {
       notificationManager.notify(SLEEP_NOTIFICATION_ID, new NotificationCompat.Builder(context, channelId)
@@ -217,7 +121,7 @@ class NotificationChannels {
         .addAction(new NotificationCompat.Action(
           R.drawable.ic_stop_white_24dp,
           context.getString(R.string.cancel_sleep_timer),
-          buildServicePendingIntent(RadioService.ACTION_SLEEP_CANCEL)))
+          buildSleepCancelPendingIntent()))
         .build());
     } catch (SecurityException securityException) {
       Log.e(LOG_TAG, "Permission denied to post sleep timer notification", securityException);
@@ -229,16 +133,11 @@ class NotificationChannels {
   }
 
   @NonNull
-  private PendingIntent buildServicePendingIntent(@NonNull String action) {
+  private PendingIntent buildSleepCancelPendingIntent() {
     return PendingIntent.getForegroundService(
       context,
       REQUEST_CODE,
-      new Intent(action, null, context, RadioService.class),
+      new Intent(RadioService.ACTION_SLEEP_CANCEL, null, context, RadioService.class),
       PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-  }
-
-  @NonNull
-  private NotificationCompat.Action buildServiceAction(int iconId, int titleId, @NonNull String action) {
-    return new NotificationCompat.Action(iconId, context.getString(titleId), buildServicePendingIntent(action));
   }
 }

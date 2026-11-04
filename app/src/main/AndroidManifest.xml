@@ -7,6 +7,7 @@
         android:name="android.permission.FOREGROUND_SERVICE"
         tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Unused (RadioService foreground type is mediaPlayback, set by Media3); kept to match the Play Console declaration -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
@@ -68,7 +69,7 @@
             android:description="@string/radio_service_description"
             android:enabled="true"
             android:exported="true"
-            android:foregroundServiceType="mediaPlayback|connectedDevice"
+            android:foregroundServiceType="mediaPlayback"
             tools:ignore="ExportedService">
 
             <intent-filter>
@@ -85,8 +86,7 @@
             android:name="com.watea.radio_upnp.service.AndroidUpnpService"
             android:description="@string/upnp_service_description"
             android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:exported="false" />
 
         <service
             android:name="com.watea.radio_upnp.service.AlarmService"

@@ -23,11 +23,9 @@
 
 package com.watea.radio_upnp.service;
 
-import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.ServiceInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -38,7 +36,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.car.app.connection.CarConnection;
-import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.media3.common.util.UnstableApi;
@@ -95,7 +92,6 @@ public class RadioService
     }
   };
   private RadioPlayer radioPlayer;
-  private NotificationChannels notificationChannels;
   private SleepController sleepController;
   private MediaLibrarySessionCallback mediaLibrarySessionCallback;
   @Nullable
@@ -175,13 +171,15 @@ public class RadioService
     new Thread(SessionDevice::warmUpHttpDataSourceFactory).start();
     // Create RadioPlayer and MediaLibrarySession
     radioPlayer = new RadioPlayer(this, getString(R.string.remote));
-    notificationChannels = new NotificationChannels(this, LOG_TAG, radioPlayer);
+    final NotificationChannels notificationChannels = new NotificationChannels(this, LOG_TAG);
     sleepController = new SleepController(notificationChannels, sleepListener);
     mediaLibrarySessionCallback = new MediaLibrarySessionCallback(this, sleepController);
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, mediaLibrarySessionCallback)
       .setSessionActivity(notificationChannels.getContentIntent())
       .build();
     setMediaNotificationProvider(notificationChannels.getMediaNotificationProvider());
+    // No notification without session device (STOPPED, ERROR are STATE_IDLE)
+    setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_NEVER);
     // Bind to UPnP service
     if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
       Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
@@ -212,7 +210,7 @@ public class RadioService
   @Override
   public void onDestroy() {
     Log.d(LOG_TAG, "onDestroy");
-    // Stop, release and null sessionDevice before super.onDestroy() so onUpdateNotification sees null and removes the notification
+    // Stop and release sessionDevice before super.onDestroy()
     if (sessionDevice != null) {
       sessionDevice.stop();
       sessionDevice.release();
@@ -249,58 +247,11 @@ public class RadioService
 
   @Override
   public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
-    if ((intent != null) && (intent.getAction() != null)) {
-      switch (intent.getAction()) {
-        case NotificationChannels.ACTION_MEDIA_PLAY:
-          onPlay();
-          break;
-        case NotificationChannels.ACTION_MEDIA_PAUSE:
-          onPause();
-          break;
-        case NotificationChannels.ACTION_MEDIA_STOP:
-          onStop();
-          break;
-        case NotificationChannels.ACTION_MEDIA_SKIP_NEXT:
-          onSkipToNext();
-          break;
-        case NotificationChannels.ACTION_MEDIA_SKIP_PREVIOUS:
-          onSkipToPrevious();
-          break;
-        case ACTION_SLEEP_CANCEL:
-          sleepController.release();
-          break;
-      }
+    // Sleep notification; player notification commands are handled by Media3
+    if ((intent != null) && ACTION_SLEEP_CANCEL.equals(intent.getAction())) {
+      sleepController.release();
     }
     return super.onStartCommand(intent, flags, startId);
-  }
-
-  // InlinedApi: FOREGROUND_SERVICE_TYPE_* are compile-time constants, ignored by ServiceCompat before API 29
-  @SuppressLint("InlinedApi")
-  @Override
-  public void onUpdateNotification(@NonNull MediaSession session, boolean startInForegroundRequired) {
-    if (startInForegroundRequired) {
-      // startForeground must be called when required to avoid RemoteServiceException
-      try {
-        ServiceCompat.startForeground(
-          this,
-          NotificationChannels.PLAYER_NOTIFICATION_ID,
-          notificationChannels.getPlayerNotification(session),
-          (sessionDevice != null) && sessionDevice.isRemote()
-            ? ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-      } catch (IllegalStateException illegalStateException) {
-        // Denied from the background when no foreground start is pending (e.g. Media3 user-engaged
-        // timeout after an error); ForegroundServiceStartNotAllowedException (API 31+) extends IllegalStateException
-        Log.e(LOG_TAG, "onUpdateNotification: unable to start foreground", illegalStateException);
-      }
-      if (sessionDevice == null) {
-        stopForeground(STOP_FOREGROUND_REMOVE);
-      }
-    } else if (sessionDevice == null) {
-      stopForeground(STOP_FOREGROUND_REMOVE);
-    } else {
-      notificationChannels.notifyPlayer(session);
-    }
   }
 
   @Override
@@ -385,7 +336,6 @@ public class RadioService
           releaseResources();
           sessionDevice.release();
           sessionDevice = null;
-          stopForeground(STOP_FOREGROUND_REMOVE);
       }
     });
   }
@@ -496,13 +446,6 @@ public class RadioService
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
     sessionDevice.launch();
-    try {
-      startForegroundService(new Intent(this, RadioService.class));
-    } catch (IllegalStateException illegalStateException) {
-      // May be denied when triggered from the background (e.g. auto-retry after a stream drop);
-      // ForegroundServiceStartNotAllowedException (API 31+) also extends IllegalStateException
-      Log.e(LOG_TAG, "play: unable to (re)start foreground service", illegalStateException);
-    }
   }
 
   private void playFromMediaId(@NonNull String mediaId) {
