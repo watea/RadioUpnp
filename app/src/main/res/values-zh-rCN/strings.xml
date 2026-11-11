@@ -73,12 +73,10 @@
     <string name="bitrate">[请选择比特率]</string>
     <string name="no_radio_found">未找到电台！</string>
     <string name="alarm_title">闹钟</string>
-    <string name="alarm_set_for">%1$02d:%2$02d</string>
     <string name="alarm_cancelled">闹钟已取消！</string>
     <string name="alarm_not_available">闹钟不可用，请稍后重试&#8230;</string>
     <string name="no_radio_available">所选电台不可用，请播放一个电台！</string>
-    <string name="off">关闭</string>
-    <string name="on">开启</string>
+    <string name="all_days">全部</string>
     <string name="alarm_radio">闹钟设为最后播放的电台：</string>
     <string name="alarm_can_not_be_set">Android 不允许设置闹钟！</string>
     <string name="alarm_not_allowed">请允许 RadioUpnp 使用闹钟。</string>

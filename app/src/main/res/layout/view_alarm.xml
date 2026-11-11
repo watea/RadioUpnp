@@ -39,7 +39,8 @@
         android:id="@+id/days"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:theme="@style/ToggleTheme">
 
         <ToggleButton style="@style/DayToggleButton" />
 
@@ -54,15 +55,13 @@
         <ToggleButton style="@style/DayToggleButton" />
 
         <ToggleButton style="@style/DayToggleButton" />
+
+        <Button
+            android:id="@+id/all_button"
+            style="@style/DayButton"
+            android:contentDescription="@string/all_days"
+            android:text="@string/all_days_symbol" />
 
     </LinearLayout>
-
-    <ToggleButton
-        android:id="@+id/toggleButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:textOff="@string/off"
-        android:textOn="@string/on" />
 
 </LinearLayout>

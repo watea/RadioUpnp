@@ -59,12 +59,22 @@
         <item name="android:textColorHighlight">@color/warm_amber</item>
     </style>
 
-    <!-- Labels are set in code, in locale order -->
-    <style name="DayToggleButton">
+    <!-- Checked is white, unchecked is grey -->
+    <style name="ToggleTheme">
+        <item name="colorControlActivated">@color/white</item>
+        <item name="colorControlNormal">@color/grey</item>
+    </style>
+
+    <style name="DayButton">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_weight">1</item>
         <item name="android:minWidth">0dp</item>
+    </style>
+
+    <!-- Labels are set in code, in locale order -->
+    <style name="DayToggleButton" parent="DayButton">
+        <item name="android:textColor">@animator/day_selector</item>
     </style>
 
 </resources>

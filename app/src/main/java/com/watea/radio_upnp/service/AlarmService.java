@@ -34,6 +34,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.icu.text.DateFormatSymbols;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -64,12 +65,11 @@ import com.watea.radio_upnp.model.Radios;
 import java.util.Calendar;
 
 public class AlarmService extends Service {
+  public static final int ALL_DAYS = 0x7F; // One bit per day, bit index is Calendar.DAY_OF_WEEK - 1
   private static final String LOG_TAG = AlarmService.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int NOTIFICATION_ID = 10;
   private static final int DEFAULT_TIME = -1;
-  // One bit per day, bit index is Calendar.DAY_OF_WEEK - 1
-  private static final int ALL_DAYS = 0x7F;
   private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
   private static final String ALARM_CANCEL = "com.watea.radio_upnp.ALARM_CANCEL";
   private final AlarmServiceBinder binder = new AlarmServiceBinder();
@@ -102,6 +102,11 @@ public class AlarmService extends Service {
   };
   @Nullable
   private CarConnection carConnection = null;
+
+  // Calendar.DAY_OF_WEEK of day at position in locale order
+  public static int getDayOfWeek(int position) {
+    return (Calendar.getInstance().getFirstDayOfWeek() - 1 + position) % 7 + 1;
+  }
 
   @Override
   public void onCreate() {
@@ -151,10 +156,9 @@ public class AlarmService extends Service {
     if (intent == null) {
       return super.onStartCommand(null, flags, startId);
     }
-    if (!isStarted) {
-      ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-      isStarted = true;
-    }
+    // Also refreshes notification when running alarm is changed
+    ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+    isStarted = true;
     if (ALARM_CANCEL.equals(intent.getAction())) {
       binder.cancelAlarm();
       return super.onStartCommand(intent, flags, startId);
@@ -210,10 +214,24 @@ public class AlarmService extends Service {
   private Notification getNotification() {
     final Radio radio = binder.getRadio();
     final String radioName = (radio == null) ? getString(R.string.no_radio_available) : radio.getName();
+    // Checked days in locale order
+    final int days = binder.getDays();
+    final StringBuilder daysText = new StringBuilder();
+    if (days == ALL_DAYS) {
+      daysText.append(getString(R.string.all_days_symbol));
+    } else {
+      final String[] narrowDays = DateFormatSymbols.getInstance().getWeekdays(DateFormatSymbols.STANDALONE, DateFormatSymbols.NARROW);
+      for (int i = 0; i < 7; i++) {
+        final int day = getDayOfWeek(i);
+        if ((days & (1 << (day - 1))) != 0) {
+          daysText.append(narrowDays[day]);
+        }
+      }
+    }
     return new NotificationCompat.Builder(this, channelId)
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
       .setContentTitle(getString(R.string.alarm_title))
-      .setContentText(getString(R.string.alarm_set_for, binder.getHour(), binder.getMinute()) + " / " + radioName)
+      .setContentText(getString(R.string.alarm_set_for, binder.getHour(), binder.getMinute(), daysText) + " / " + radioName)
       .addAction(R.drawable.ic_stop_white_24dp, getString(android.R.string.cancel), getCancelPendingIntent())
       .build();
   }
