@@ -84,7 +84,7 @@ dependencies {
     // Cast
     fullImplementation 'com.google.android.gms:play-services-cast-framework:23.0.0'
     // jsoup HTML parser library @ http://jsoup.org/
-    implementation 'org.jsoup:jsoup:1.23.2'
+    implementation 'org.jsoup:jsoup:1.24.1'
     // CandidHttpServer
     implementation 'com.github.watea:candidhttpserver:2.0.0'
     // AndroidSsdpClient

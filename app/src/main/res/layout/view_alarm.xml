@@ -35,6 +35,28 @@
         android:layout_gravity="center_horizontal"
         android:timePickerMode="spinner" />
 
+    <LinearLayout
+        android:id="@+id/days"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <ToggleButton style="@style/DayToggleButton" />
+
+        <ToggleButton style="@style/DayToggleButton" />
+
+        <ToggleButton style="@style/DayToggleButton" />
+
+        <ToggleButton style="@style/DayToggleButton" />
+
+        <ToggleButton style="@style/DayToggleButton" />
+
+        <ToggleButton style="@style/DayToggleButton" />
+
+        <ToggleButton style="@style/DayToggleButton" />
+
+    </LinearLayout>
+
     <ToggleButton
         android:id="@+id/toggleButton"
         android:layout_width="wrap_content"

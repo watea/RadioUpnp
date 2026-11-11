@@ -68,6 +68,8 @@ public class AlarmService extends Service {
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int NOTIFICATION_ID = 10;
   private static final int DEFAULT_TIME = -1;
+  // One bit per day, bit index is Calendar.DAY_OF_WEEK - 1
+  private static final int ALL_DAYS = 0x7F;
   private static final String ALARM_TRIGGERED = "com.watea.radio_upnp.ALARM_TRIGGERED";
   private static final String ALARM_CANCEL = "com.watea.radio_upnp.ALARM_CANCEL";
   private final AlarmServiceBinder binder = new AlarmServiceBinder();
@@ -164,7 +166,7 @@ public class AlarmService extends Service {
       // Register network callback
       connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
       // Relaunch alarm
-      if (!setAlarmManagerAlarm(binder.getHour(), binder.getMinute(), true)) {
+      if (!setAlarmManagerAlarm(binder.getHour(), binder.getMinute(), binder.getDays(), true)) {
         binder.cancelAlarm();
       }
       return super.onStartCommand(intent, flags, startId);
@@ -173,9 +175,11 @@ public class AlarmService extends Service {
     }
   }
 
-  private boolean setAlarmManagerAlarm(int hour, int minute, boolean isRelaunch) {
+  private boolean setAlarmManagerAlarm(int hour, int minute, int days, boolean isRelaunch) {
     Log.d(LOG_TAG, "setAlarmManagerAlarm");
-    if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) && !alarmManager.canScheduleExactAlarms()) {
+    // No day selected would loop forever below
+    if (((days & ALL_DAYS) == 0) ||
+      ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) && !alarmManager.canScheduleExactAlarms())) {
       return false;
     }
     final Calendar calendar = Calendar.getInstance();
@@ -184,6 +188,10 @@ public class AlarmService extends Service {
     calendar.set(Calendar.SECOND, 0);
     // If the time is in the past, add one day
     if (isRelaunch || (calendar.getTimeInMillis() <= System.currentTimeMillis())) {
+      calendar.add(Calendar.DAY_OF_YEAR, 1);
+    }
+    // Move to next selected day
+    while ((days & (1 << (calendar.get(Calendar.DAY_OF_WEEK) - 1))) == 0) {
       calendar.add(Calendar.DAY_OF_YEAR, 1);
     }
     // Set
@@ -274,15 +282,16 @@ public class AlarmService extends Service {
       this.listener = listener;
     }
 
-    public boolean setAlarm(int hour, int minute, @NonNull String radioId) {
+    public boolean setAlarm(int hour, int minute, int days, @NonNull String radioId) {
       getSharedPreferences()
         .edit()
         .putString(getString(R.string.key_alarm_radio), radioId)
         .putInt(getString(R.string.key_alarm_hour), hour)
         .putInt(getString(R.string.key_alarm_minute), minute)
+        .putInt(getString(R.string.key_alarm_days), days)
         .apply();
       releaseAlarm(); // Robustness
-      if (setAlarmManagerAlarm(hour, minute, false)) {
+      if (setAlarmManagerAlarm(hour, minute, days, false)) {
         startForegroundService(new Intent(AlarmService.this, AlarmService.class));
         return true;
       }
@@ -308,6 +317,11 @@ public class AlarmService extends Service {
 
     public int getMinute() {
       return getSharedPreferences().getInt(getString(R.string.key_alarm_minute), DEFAULT_TIME);
+    }
+
+    // Bit index is Calendar.DAY_OF_WEEK - 1
+    public int getDays() {
+      return getSharedPreferences().getInt(getString(R.string.key_alarm_days), ALL_DAYS);
     }
 
     @Nullable

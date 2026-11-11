@@ -59,4 +59,12 @@
         <item name="android:textColorHighlight">@color/warm_amber</item>
     </style>
 
+    <!-- Labels are set in code, in locale order -->
+    <style name="DayToggleButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:minWidth">0dp</item>
+    </style>
+
 </resources>
