@@ -38,7 +38,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -47,6 +46,7 @@ import android.widget.ToggleButton;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.SwitchCompat;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
@@ -63,7 +63,7 @@ class AlarmController {
   @NonNull
   private final TextView textView;
   @NonNull
-  private final Button allButton;
+  private final SwitchCompat onOffButton;
   // Index is Calendar.DAY_OF_WEEK - 1
   @NonNull
   private final ToggleButton[] dayButtons = new ToggleButton[7];
@@ -71,6 +71,8 @@ class AlarmController {
   private final AlertDialog alertDialog;
   @NonNull
   private final MainActivity.UserHint batteryOptimisationUserHint;
+  @NonNull
+  private final TimePicker.OnTimeChangedListener onTimeChangedListener;
   @Nullable
   private Radio radio = null;
   @Nullable
@@ -81,7 +83,7 @@ class AlarmController {
       alarmService = (AlarmService.AlarmServiceBinder) service;
       alarmService.setListener(() -> {
         if (alertDialog.isShowing()) {
-          setDays(0);
+          onOffButton.setChecked(false);
         }
       });
     }
@@ -93,12 +95,8 @@ class AlarmController {
       }
       alarmService = null;
     }
-  };  // Running alarm follows time changes
-  private final TimePicker.OnTimeChangedListener onTimeChangedListener = (v, h, m) -> {
-    if (getDays() != 0) {
-      setAlarm();
-    }
   };
+
   AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
     // Build alert dialogs
@@ -108,11 +106,20 @@ class AlarmController {
     final View view = LayoutInflater.from(alertDialogBuilder.getContext()).inflate(R.layout.view_alarm, null);
     timePicker = view.findViewById(R.id.timePicker);
     timePicker.setIs24HourView(true);
-    allButton = view.findViewById(R.id.all_button);
-    allButton.setOnClickListener(v -> {
-      setDays((getDays() == AlarmService.ALL_DAYS) ? 0 : AlarmService.ALL_DAYS);
-      onDaysChanged();
+    onOffButton = view.findViewById(R.id.on_off_button);
+    onOffButton.setOnClickListener(v -> {
+      if (!onOffButton.isChecked()) {
+        cancelAlarm();
+      } else if (setAlarm()) {
+        batteryOptimisationUserHint.show();
+      }
     });
+    // Running alarm follows time changes
+    onTimeChangedListener = (v, h, m) -> {
+      if (onOffButton.isChecked()) {
+        setAlarm();
+      }
+    };
     imageView = view.findViewById(R.id.imageView);
     textView = view.findViewById(R.id.text_view);
     // Day buttons are labelled in locale order
@@ -120,7 +127,7 @@ class AlarmController {
     final DateFormatSymbols dateFormatSymbols = DateFormatSymbols.getInstance();
     final String[] narrowDays = dateFormatSymbols.getWeekdays(DateFormatSymbols.STANDALONE, DateFormatSymbols.NARROW);
     final String[] fullDays = dateFormatSymbols.getWeekdays();
-    // Last child is allButton
+    // Last child is onOffButton
     for (int i = 0; i < dayButtons.length; i++) {
       final int day = AlarmService.getDayOfWeek(i);
       final ToggleButton dayButton = (ToggleButton) daysLayout.getChildAt(i);
@@ -154,12 +161,13 @@ class AlarmController {
     final boolean isPossible = (radio != null);
     imageView.setImageBitmap(isPossible ? radio.getIcon() : mainActivity.getDefaultIcon());
     textView.setText(isPossible ? radio.getName() : mainActivity.getString(R.string.no_radio_available));
-    // Alarm is running if and only if a day is checked
-    setDays(alarmService.isStarted() ? alarmService.getDays() : 0);
+    setDays(alarmService.getDays());
     for (final ToggleButton dayButton : dayButtons) {
       dayButton.setEnabled(isPossible);
     }
-    allButton.setEnabled(isPossible);
+    onOffButton.setChecked(alarmService.isStarted());
+    // No day checked disables alarm
+    onOffButton.setEnabled(isPossible && (getDays() != 0));
     timePicker.setOnTimeChangedListener(null);
     // Drop any uncommitted keyboard entry left from previous display
     timePicker.clearFocus();
@@ -190,18 +198,27 @@ class AlarmController {
     alarmConnection.onServiceDisconnected(null);
   }
 
-  // No day checked cancels alarm
+  // No day checked cancels alarm; running alarm follows days changes
   private void onDaysChanged() {
+    final boolean hasDays = (getDays() != 0);
+    onOffButton.setEnabled(hasDays);
+    if (!onOffButton.isChecked()) {
+      return;
+    }
+    if (hasDays) {
+      setAlarm();
+    } else {
+      cancelAlarm();
+    }
+  }
+
+  private void cancelAlarm() {
+    onOffButton.setChecked(false);
     if (alarmService == null) {
       mainActivity.tell(R.string.alarm_not_available);
-    } else if (getDays() == 0) {
+    } else {
       alarmService.cancelAlarm();
       mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_cancelled));
-    } else {
-      final boolean isNew = !alarmService.isStarted();
-      if (setAlarm() && isNew) {
-        batteryOptimisationUserHint.show();
-      }
     }
   }
 
@@ -209,6 +226,7 @@ class AlarmController {
   private boolean setAlarm() {
     assert radio != null;
     if (alarmService == null) {
+      onOffButton.setChecked(false);
       mainActivity.tell(R.string.alarm_not_available);
       return false;
     }
@@ -219,6 +237,7 @@ class AlarmController {
     if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), getDays(), radio.getId())) {
       return true;
     }
+    onOffButton.setChecked(false);
     alarmService.cancelAlarm();
     mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_can_not_be_set));
     return false;

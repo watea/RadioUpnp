@@ -34,7 +34,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
-import android.icu.text.DateFormatSymbols;
+import android.icu.text.DateFormat;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -108,6 +108,24 @@ public class AlarmService extends Service {
     return (Calendar.getInstance().getFirstDayOfWeek() - 1 + position) % 7 + 1;
   }
 
+  // Relaunch skips today; at most one week ahead
+  @NonNull
+  private static Calendar getNextAlarm(int hour, int minute, int days, boolean isRelaunch) {
+    final Calendar calendar = Calendar.getInstance();
+    calendar.set(Calendar.HOUR_OF_DAY, hour);
+    calendar.set(Calendar.MINUTE, minute);
+    calendar.set(Calendar.SECOND, 0);
+    // If the time is in the past, add one day
+    if (isRelaunch || (calendar.getTimeInMillis() <= System.currentTimeMillis())) {
+      calendar.add(Calendar.DAY_OF_YEAR, 1);
+    }
+    // Move to next selected day
+    for (int i = 0; (i < 7) && ((days & (1 << (calendar.get(Calendar.DAY_OF_WEEK) - 1))) == 0); i++) {
+      calendar.add(Calendar.DAY_OF_YEAR, 1);
+    }
+    return calendar;
+  }
+
   @Override
   public void onCreate() {
     super.onCreate();
@@ -157,7 +175,11 @@ public class AlarmService extends Service {
       return super.onStartCommand(null, flags, startId);
     }
     // Also refreshes notification when running alarm is changed
-    ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+    ServiceCompat.startForeground(
+      this,
+      NOTIFICATION_ID,
+      getNotification(ALARM_TRIGGERED.equals(intent.getAction())),
+      ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
     isStarted = true;
     if (ALARM_CANCEL.equals(intent.getAction())) {
       binder.cancelAlarm();
@@ -181,26 +203,14 @@ public class AlarmService extends Service {
 
   private boolean setAlarmManagerAlarm(int hour, int minute, int days, boolean isRelaunch) {
     Log.d(LOG_TAG, "setAlarmManagerAlarm");
-    // No day selected would loop forever below
+    // No day selected, no alarm
     if (((days & ALL_DAYS) == 0) ||
       ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) && !alarmManager.canScheduleExactAlarms())) {
       return false;
     }
-    final Calendar calendar = Calendar.getInstance();
-    calendar.set(Calendar.HOUR_OF_DAY, hour);
-    calendar.set(Calendar.MINUTE, minute);
-    calendar.set(Calendar.SECOND, 0);
-    // If the time is in the past, add one day
-    if (isRelaunch || (calendar.getTimeInMillis() <= System.currentTimeMillis())) {
-      calendar.add(Calendar.DAY_OF_YEAR, 1);
-    }
-    // Move to next selected day
-    while ((days & (1 << (calendar.get(Calendar.DAY_OF_WEEK) - 1))) == 0) {
-      calendar.add(Calendar.DAY_OF_YEAR, 1);
-    }
-    // Set
     final PendingIntent pendingIntent = getPendingIntent();
-    final AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(calendar.getTimeInMillis(), pendingIntent);
+    final AlarmManager.AlarmClockInfo alarmClockInfo =
+      new AlarmManager.AlarmClockInfo(getNextAlarm(hour, minute, days, isRelaunch).getTimeInMillis(), pendingIntent);
     try {
       alarmManager.setAlarmClock(alarmClockInfo, pendingIntent);
     } catch (SecurityException securityException) {
@@ -211,27 +221,14 @@ public class AlarmService extends Service {
   }
 
   @NonNull
-  private Notification getNotification() {
+  private Notification getNotification(boolean isRelaunch) {
     final Radio radio = binder.getRadio();
     final String radioName = (radio == null) ? getString(R.string.no_radio_available) : radio.getName();
-    // Checked days in locale order
-    final int days = binder.getDays();
-    final StringBuilder daysText = new StringBuilder();
-    if (days == ALL_DAYS) {
-      daysText.append(getString(R.string.all_days_symbol));
-    } else {
-      final String[] narrowDays = DateFormatSymbols.getInstance().getWeekdays(DateFormatSymbols.STANDALONE, DateFormatSymbols.NARROW);
-      for (int i = 0; i < 7; i++) {
-        final int day = getDayOfWeek(i);
-        if ((days & (1 << (day - 1))) != 0) {
-          daysText.append(narrowDays[day]);
-        }
-      }
-    }
+    final Calendar nextAlarm = getNextAlarm(binder.getHour(), binder.getMinute(), binder.getDays(), isRelaunch);
     return new NotificationCompat.Builder(this, channelId)
       .setSmallIcon(R.drawable.ic_mic_white_24dp)
       .setContentTitle(getString(R.string.alarm_title))
-      .setContentText(getString(R.string.alarm_set_for, binder.getHour(), binder.getMinute(), daysText) + " / " + radioName)
+      .setContentText(DateFormat.getInstanceForSkeleton("EEEEHHmm").format(nextAlarm.getTime()) + " / " + radioName)
       .addAction(R.drawable.ic_stop_white_24dp, getString(android.R.string.cancel), getCancelPendingIntent())
       .build();
   }

@@ -76,7 +76,6 @@
     <string name="alarm_cancelled">Будильник выключен!</string>
     <string name="alarm_not_available">Будильник недоступен, пожалуйста, повторите позже&#8230;</string>
     <string name="no_radio_available">Нет выбранной радиостанции, пожалуйста, включите радио!</string>
-    <string name="all_days">Все</string>
     <string name="alarm_radio">Будильник установлен на последнюю прослушанную радиостанцию:</string>
     <string name="alarm_can_not_be_set">Android не позволяет установить будильник!</string>
     <string name="alarm_not_allowed">Пожалуйста, разрешите будильник для RadioUpnp.</string>

@@ -56,11 +56,12 @@
 
         <ToggleButton style="@style/DayToggleButton" />
 
-        <Button
-            android:id="@+id/all_button"
-            style="@style/DayButton"
-            android:contentDescription="@string/all_days"
-            android:text="@string/all_days_symbol" />
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/on_off_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:contentDescription="@string/alarm_title" />
 
     </LinearLayout>
 
