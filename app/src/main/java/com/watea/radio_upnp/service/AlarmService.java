@@ -231,6 +231,7 @@ public class AlarmService extends Service {
       .setContentTitle(getString(R.string.alarm_title))
       .setContentText(DateFormat.getInstanceForSkeleton("EEEEHHmm").format(nextAlarm.getTime()) + " / " + radioName)
       .addAction(R.drawable.ic_stop_white_24dp, getString(android.R.string.cancel), getCancelPendingIntent())
+      .setOnlyAlertOnce(true)
       .build();
   }
 
