@@ -26,6 +26,7 @@ package com.watea.radio_upnp.service;
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -134,7 +135,7 @@ public class AlarmService extends Service {
     // restarted by the system; others belong to RadioService
     NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
     // Create the (mandatory) notification channel
-    channelId = NotificationChannels.create(this, LOG_TAG, R.string.alarm_service_notification_name, R.string.alarm_service_description);
+    channelId = NotificationChannels.create(this, LOG_TAG, R.string.alarm_service_notification_name, R.string.alarm_service_description, NotificationManager.IMPORTANCE_HIGH);
     // RadioService session token
     sessionToken = new SessionToken(this, new ComponentName(this, RadioService.class));
     // AlarmManager

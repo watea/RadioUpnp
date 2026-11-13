@@ -63,8 +63,9 @@ class NotificationChannels {
     // restarted by the system; others belong to AlarmService
     notificationManager.cancel(PLAYER_NOTIFICATION_ID);
     notificationManager.cancel(SLEEP_NOTIFICATION_ID);
-    // Create the (mandatory) notification channel; tag kept as is, so that channel id is unchanged
-    channelId = create(context, tag, R.string.radio_service_notification_name, R.string.radio_service_description);
+    // Create the (mandatory) silent notification channel; tag kept as is, so that channel id is unchanged
+    channelId = create(
+      context, tag, R.string.radio_service_notification_name, R.string.radio_service_description, NotificationManager.IMPORTANCE_LOW);
     // Built once: FLAG_CANCEL_CURRENT would cancel the instance held by the session
     contentIntent = PendingIntent.getActivity(
       context,
@@ -82,11 +83,12 @@ class NotificationChannels {
   }
 
   // Returns the channel id.
-  // Creating an existing channel is a no-op, except that its name and description are updated.
+  // Creating an existing channel is a no-op, except that its name and description are updated
+  // and its importance is lowered, unless user has changed it.
   @NonNull
-  static String create(@NonNull Context context, @NonNull String tag, int nameId, int descriptionId) {
+  static String create(@NonNull Context context, @NonNull String tag, int nameId, int descriptionId, int importance) {
     final String id = context.getString(R.string.app_name) + "." + tag;
-    final NotificationChannel notificationChannel = new NotificationChannel(id, context.getString(nameId), NotificationManager.IMPORTANCE_HIGH);
+    final NotificationChannel notificationChannel = new NotificationChannel(id, context.getString(nameId), importance);
     notificationChannel.setDescription(context.getString(descriptionId)); // User-visible
     notificationChannel.enableLights(true);
     notificationChannel.enableVibration(false);
