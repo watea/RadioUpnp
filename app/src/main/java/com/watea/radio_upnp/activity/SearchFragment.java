@@ -110,7 +110,24 @@ public class SearchFragment extends SearchRootFragment {
   @Override
   @NonNull
   JSONArray getStations() throws IOException, JSONException {
-    return getJSONArray(getRequest());
+    final String bitrate = getBitrate();
+    selectedBitrate = 0;
+    try {
+      selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbps), ""));
+    } catch (NumberFormatException numberFormatException) {
+      Log.w(LOG_TAG, "getStations: invalid bitrate format: " + bitrate);
+    }
+    return getJSONArray(httpUrlBuilder -> {
+      httpUrlBuilder
+        .addPathSegment("json")
+        .addPathSegment("stations")
+        .addPathSegment("search");
+      buildQuery(httpUrlBuilder, "country", getCountry());
+      buildQuery(httpUrlBuilder, "tag", getRadioTag());
+      buildQuery(httpUrlBuilder, "name", nameEditText.getText().toString().trim());
+      httpUrlBuilder.addQueryParameter("limit", Integer.toString(MAX_RADIOS));
+      return httpUrlBuilder;
+    });
   }
 
   @Override
@@ -236,28 +253,6 @@ public class SearchFragment extends SearchRootFragment {
     spinner.setAdapter(arrayAdapter);
     final int position = list.indexOf(getSharedPreferences().getString(getString(key), ""));
     spinner.setSelection(Math.max(position, 0));
-  }
-
-  @NonNull
-  private Function<HttpUrl.Builder, HttpUrl.Builder> getRequest() {
-    final String bitrate = getBitrate();
-    selectedBitrate = 0;
-    try {
-      selectedBitrate = Integer.parseInt(bitrate.replace(getString(R.string.kbps), ""));
-    } catch (NumberFormatException numberFormatException) {
-      Log.w(LOG_TAG, "getRequest: invalid bitrate format: " + bitrate);
-    }
-    return httpUrlBuilder -> {
-      httpUrlBuilder
-        .addPathSegment("json")
-        .addPathSegment("stations")
-        .addPathSegment("search");
-      buildQuery(httpUrlBuilder, "country", getCountry());
-      buildQuery(httpUrlBuilder, "tag", getRadioTag());
-      buildQuery(httpUrlBuilder, "name", nameEditText.getText().toString().trim());
-      httpUrlBuilder.addQueryParameter("limit", Integer.toString(MAX_RADIOS));
-      return httpUrlBuilder;
-    };
   }
 
   private static class RadioBrowserClient {

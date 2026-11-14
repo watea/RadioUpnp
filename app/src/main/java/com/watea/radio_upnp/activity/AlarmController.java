@@ -161,9 +161,10 @@ class AlarmController {
     final boolean isPossible = (radio != null);
     imageView.setImageBitmap(isPossible ? radio.getIcon() : mainActivity.getDefaultIcon());
     textView.setText(isPossible ? radio.getName() : mainActivity.getString(R.string.no_radio_available));
-    setDays(alarmService.getDays());
-    for (final ToggleButton dayButton : dayButtons) {
-      dayButton.setEnabled(isPossible);
+    final int days = alarmService.getDays();
+    for (int i = 0; i < dayButtons.length; i++) {
+      dayButtons[i].setChecked((days & (1 << i)) != 0);
+      dayButtons[i].setEnabled(isPossible);
     }
     onOffButton.setChecked(alarmService.isStarted());
     // No day checked disables alarm
@@ -252,11 +253,5 @@ class AlarmController {
       }
     }
     return days;
-  }
-
-  private void setDays(int days) {
-    for (int i = 0; i < dayButtons.length; i++) {
-      dayButtons[i].setChecked((days & (1 << i)) != 0);
-    }
   }
 }

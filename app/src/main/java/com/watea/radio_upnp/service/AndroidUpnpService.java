@@ -183,7 +183,7 @@ public class AndroidUpnpService extends android.app.Service {
       final Device previousDevice = getSelectedDevice();
       final SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.app_name), Context.MODE_PRIVATE);
       sharedPreferences.edit().putString(getString(R.string.key_selected_device), selectedDeviceIdentity).apply();
-      tellSelectedDeviceIdentity(previousDevice);
+      listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
     }
 
     // Returns null if no device is persisted or if the persisted identity is no longer known
@@ -203,10 +203,6 @@ public class AndroidUpnpService extends android.app.Service {
     Device getActiveSelectedDevice() {
       final Device result = getSelectedDevice();
       return ((result == null) || result.isAlive()) ? result : null;
-    }
-
-    private void tellSelectedDeviceIdentity(@Nullable Device previousDevice) {
-      listeners.forEach(listener -> listener.onSelectedDeviceChange(previousDevice, getSelectedDevice()));
     }
   }
 

@@ -235,7 +235,7 @@ public abstract class SessionDevice implements Player.Listener {
     });
   }
 
-  // Fires ERROR if upstream connection failed
+  // Blocking network I/O, runs on launch() worker thread; fires ERROR if upstream connection failed
   boolean prepare() {
     if (isReleased) {
       return false;

@@ -27,20 +27,16 @@ import android.graphics.Color;
 
 class ColorContrastChecker {
   static boolean hasSufficientContrast(int color1, int color2) {
-    final double contrastRatio = calculateContrastRatio(color1, color2);
+    final double luminance1 = calculateRelativeLuminance(color1);
+    final double luminance2 = calculateRelativeLuminance(color2);
+    final double brighter = Math.max(luminance1, luminance2);
+    final double darker = Math.min(luminance1, luminance2);
+    final double contrastRatio = (brighter + 0.05) / (darker + 0.05);
     return (contrastRatio >= 4.5); // Minimum contrast ratio for normal text
   }
 
   static boolean isMoreThanHalfTransparent(int color) {
     return (Color.alpha(color) < 128);
-  }
-
-  private static double calculateContrastRatio(int color1, int color2) {
-    final double luminance1 = calculateRelativeLuminance(color1);
-    final double luminance2 = calculateRelativeLuminance(color2);
-    final double brighter = Math.max(luminance1, luminance2);
-    final double darker = Math.min(luminance1, luminance2);
-    return ((brighter + 0.05) / (darker + 0.05));
   }
 
   private static double calculateRelativeLuminance(int color) {
