@@ -105,9 +105,10 @@ public class RadioService
     isAndroidAutoConnected = connected;
     Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
     if (sessionDevice != null) {
+      final State state = getPlaybackState();
       if (wasConnected && !connected) {
         sessionDevice.onAndroidAutoDisconnected();
-      } else if (!wasConnected && connected && sessionDevice.isRemote() && isPlayingOrBuffering()) {
+      } else if (!wasConnected && connected && sessionDevice.isRemote() && ((state == State.PLAYING) || (state == State.BUFFERING))) {
         // Remote session launched before connection was known (or ongoing at home): move it to the car
         play(sessionDevice.getRadio());
       }
@@ -357,18 +358,24 @@ public class RadioService
   }
 
   @Override
-  public void onSetMediaItem(@NonNull String mediaId) {
-    Log.d(LOG_TAG, "onSetMediaItem: " + mediaId);
-    // Changing item keeps playing state: switch now, as the following play request is a no-op
-    if (isPlayingOrBuffering()) {
-      playFromMediaId(mediaId);
+  public void onPlayFromMediaId(@NonNull String mediaId) {
+    Log.d(LOG_TAG, "onPlayFromMediaId: " + mediaId);
+    final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
+    if (radio == null) {
+      Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
     } else {
-      Radios.setLastPlayedRadioId(this, mediaId);
-      // Selection drops a paused session: next play launches anew, honoring current environment (renderer, Android Auto)
-      if (sessionDevice != null) {
-        sessionDevice.release();
-        sessionDevice = null;
-      }
+      play(radio);
+    }
+  }
+
+  @Override
+  public void onSelectMediaItem(@NonNull String mediaId) {
+    Log.d(LOG_TAG, "onSelectMediaItem: " + mediaId);
+    Radios.setLastPlayedRadioId(this, mediaId);
+    // Selection drops a paused session: next play launches anew, honoring current environment (renderer, Android Auto)
+    if (sessionDevice != null) {
+      sessionDevice.release();
+      sessionDevice = null;
     }
   }
 
@@ -414,11 +421,6 @@ public class RadioService
     sessionDevice.adjustVolume(direction);
   }
 
-  private boolean isPlayingOrBuffering() {
-    final State state = getPlaybackState();
-    return (state == State.PLAYING) || (state == State.BUFFERING);
-  }
-
   private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
     HANDLER.post(() -> {
       if ((sessionDevice != null) && lockKey.equals(sessionDevice.getLockKey())) {
@@ -446,16 +448,6 @@ public class RadioService
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
     sessionDevice.launch();
-  }
-
-  private void playFromMediaId(@NonNull String mediaId) {
-    Log.d(LOG_TAG, "playFromMediaId: " + mediaId);
-    final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
-    if (radio == null) {
-      Log.e(LOG_TAG, "playFromMediaId: radio not found");
-    } else {
-      play(radio);
-    }
   }
 
   private void skipTo(int direction) {

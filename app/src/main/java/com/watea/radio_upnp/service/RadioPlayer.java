@@ -106,7 +106,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   protected SimpleBasePlayer.State getState() {
     final SimpleBasePlayer.State.Builder builder = new SimpleBasePlayer.State.Builder()
       .setPlaybackState(getPlayerState())
-      .setPlayWhenReady(playWhenReady(), Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+      .setPlayWhenReady(isPlayingOrBuffering(), Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
       .setPlayerError(getPlaybackException())
       .setAvailableCommands(buildAvailableCommands());
     if (currentItem == null) {
@@ -134,7 +134,8 @@ public class RadioPlayer extends SimpleBasePlayer {
   @NonNull
   protected ListenableFuture<?> handleSetPlayWhenReady(boolean playWhenReadyParam) {
     if (playWhenReadyParam) {
-      if (!playWhenReady()) {
+      // play relaunches the stream: ignore it while already playing or buffering
+      if (!isPlayingOrBuffering()) {
         commands.onPlay();
       }
     } else {
@@ -157,7 +158,12 @@ public class RadioPlayer extends SimpleBasePlayer {
     if ((currentItem == null) || !currentItem.uid.equals(mediaItem.mediaId)) {
       setCurrentItem(mediaItem.mediaId, mediaItem.mediaMetadata);
     }
-    commands.onSetMediaItem(mediaItem.mediaId);
+    // While playing, the following play request is ignored: switch now
+    if (isPlayingOrBuffering()) {
+      commands.onPlayFromMediaId(mediaItem.mediaId);
+    } else {
+      commands.onSelectMediaItem(mediaItem.mediaId);
+    }
     return Futures.immediateVoidFuture();
   }
 
@@ -251,7 +257,7 @@ public class RadioPlayer extends SimpleBasePlayer {
     }
   }
 
-  private boolean playWhenReady() {
+  private boolean isPlayingOrBuffering() {
     return (sessionDeviceState == SessionDevice.State.PLAYING) || (sessionDeviceState == SessionDevice.State.BUFFERING);
   }
 
@@ -308,7 +314,9 @@ public class RadioPlayer extends SimpleBasePlayer {
   interface Commands {
     void onPlay();
 
-    void onSetMediaItem(@NonNull String mediaId);
+    void onPlayFromMediaId(@NonNull String mediaId);
+
+    void onSelectMediaItem(@NonNull String mediaId);
 
     void onPause();
 
