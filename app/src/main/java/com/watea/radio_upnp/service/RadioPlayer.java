@@ -71,7 +71,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   private SessionDevice.State sessionDeviceState = SessionDevice.State.IDLE;
   @Nullable
   private SimpleBasePlayer.MediaItemData currentItem = null;
-  private boolean isVolumeControlled = false;
+  private boolean isRemote = false;
   @NonNull
   private String remoteSuffix = "";
   private int remoteVolume;
@@ -116,7 +116,7 @@ public class RadioPlayer extends SimpleBasePlayer {
         .setPlaylist(ImmutableList.of(currentItem))
         .setCurrentMediaItemIndex(0);
     }
-    if (isVolumeControlled) {
+    if (isVolumeControlled()) {
       builder
         .setDeviceInfo(REMOTE_DEVICE_INFO)
         .setDeviceVolume(remoteVolume);
@@ -204,9 +204,9 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   // Must be called at init
-  void init(@NonNull Radio radio, boolean isVolumeControlled, boolean isCurrentPlaylistToKeep) {
-    this.isVolumeControlled = isVolumeControlled;
-    remoteSuffix = this.isVolumeControlled ? " " + remoteLabel : "";
+  void init(@NonNull Radio radio, boolean isRemote, boolean isCurrentPlaylistToKeep) {
+    this.isRemote = isRemote;
+    remoteSuffix = this.isRemote ? " " + remoteLabel : "";
     remoteVolume = RemoteSessionDevice.DEVICE_MAX_VOLUME / 2; // Nominal value until the device reports its own
     buildSessionMetadata(radio, "", isCurrentPlaylistToKeep ? getCurrentPlaylist() : "");
     setState(SessionDevice.State.BUFFERING);
@@ -253,7 +253,11 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   private boolean isPlayingOrBuffering() {
-    return SessionDevice.isPlayingOrBuffering(sessionDeviceState);
+    return sessionDeviceState.isPlayingOrBuffering();
+  }
+
+  private boolean isVolumeControlled() {
+    return isRemote && sessionDeviceState.isRunning();
   }
 
   @NonNull
@@ -297,7 +301,7 @@ public class RadioPlayer extends SimpleBasePlayer {
     if (sessionDeviceState != SessionDevice.State.BUFFERING) {
       builder.add(COMMAND_PLAY_PAUSE);
     }
-    if (isVolumeControlled) {
+    if (isVolumeControlled()) {
       builder.addAll(
         COMMAND_GET_DEVICE_VOLUME,
         COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,

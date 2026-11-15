@@ -112,10 +112,6 @@ public abstract class SessionDevice implements Player.Listener {
     exoPlayer = getExoPlayer();
   }
 
-  static boolean isPlayingOrBuffering(@NonNull State state) {
-    return (state == State.PLAYING) || (state == State.BUFFERING);
-  }
-
   // Call once, off the main thread, as early as possible (e.g. Service.onCreate) to avoid
   // building it lazily on the main thread the first time a SessionDevice is constructed
   static synchronized void warmUpHttpDataSourceFactory() {
@@ -172,11 +168,11 @@ public abstract class SessionDevice implements Player.Listener {
   abstract void setVolume(float volume);
 
   boolean isPlayingOrBuffering() {
-    return isPlayingOrBuffering(state);
+    return state.isPlayingOrBuffering();
   }
 
   boolean isRunning() {
-    return isPlayingOrBuffering() || isPaused();
+    return state.isRunning();
   }
 
   boolean isPlaying() {
@@ -340,7 +336,15 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   public enum State {
-    IDLE, PLAYING, PAUSED, BUFFERING, ERROR, UNSUPPORTED, STOPPED
+    IDLE, PLAYING, PAUSED, BUFFERING, ERROR, UNSUPPORTED, STOPPED;
+
+    boolean isPlayingOrBuffering() {
+      return (this == PLAYING) || (this == BUFFERING);
+    }
+
+    boolean isRunning() {
+      return isPlayingOrBuffering() || (this == PAUSED);
+    }
   }
 
   protected enum Mode {
