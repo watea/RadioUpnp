@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+// All calls on main thread
 @OptIn(markerClass = UnstableApi.class)
 public class RadioPlayer extends SimpleBasePlayer {
   public static final String DATE = "date";
@@ -122,12 +123,6 @@ public class RadioPlayer extends SimpleBasePlayer {
         .setDeviceVolume(remoteVolume);
     }
     return builder.build();
-  }
-
-  // Must be called on main thread
-  void setState(@NonNull SessionDevice.State sessionDeviceState) {
-    this.sessionDeviceState = sessionDeviceState;
-    invalidateState();
   }
 
   @Override
@@ -203,13 +198,24 @@ public class RadioPlayer extends SimpleBasePlayer {
     return handleSetDeviceVolume(remoteVolume - RemoteSessionDevice.DEVICE_VOLUME_STEP, flags);
   }
 
-  // Must be called at init
-  void init(@NonNull Radio radio, boolean isRemote, boolean isCurrentPlaylistToKeep) {
+  void onSessionDeviceState(@NonNull SessionDevice.State sessionDeviceState) {
+    this.sessionDeviceState = sessionDeviceState;
+    invalidateState();
+  }
+
+  void set(@NonNull Radio radio, boolean isRemote, boolean isCurrentPlaylistToKeep) {
     this.isRemote = isRemote;
     remoteSuffix = this.isRemote ? " " + remoteLabel : "";
     remoteVolume = RemoteSessionDevice.DEVICE_MAX_VOLUME / 2; // Nominal value until the device reports its own
     buildSessionMetadata(radio, "", isCurrentPlaylistToKeep ? getCurrentPlaylist() : "");
-    setState(SessionDevice.State.BUFFERING);
+    onSessionDeviceState(SessionDevice.State.BUFFERING);
+  }
+
+  // Displayed metadata is kept, a released session cannot run
+  void unset() {
+    if (sessionDeviceState.isRunning()) {
+      onSessionDeviceState(SessionDevice.State.IDLE);
+    }
   }
 
   void buildSessionMetadata(@NonNull Radio radio, @NonNull String information) {
@@ -222,7 +228,6 @@ public class RadioPlayer extends SimpleBasePlayer {
     buildSessionMetadata(radio, information, playlist);
   }
 
-  // Must be called on main thread
   void setRemoteVolume(int remoteVolume) {
     this.remoteVolume = clampVolume(remoteVolume);
     invalidateState();

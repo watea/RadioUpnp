@@ -213,9 +213,8 @@ public class RadioService
     // Stop and release sessionDevice before super.onDestroy()
     if (sessionDevice != null) {
       sessionDevice.stop();
-      sessionDevice.release();
-      sessionDevice = null;
     }
+    releaseSessionDevice();
     super.onDestroy();
     // Radios
     Radios.getInstance().removeListener(radiosListener);
@@ -317,7 +316,7 @@ public class RadioService
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onState: " + state.name());
       assert sessionDevice != null;
-      radioPlayer.setState(state);
+      radioPlayer.onSessionDeviceState(state);
       switch (state) {
         case PAUSED:
           releaseResources();
@@ -331,8 +330,7 @@ public class RadioService
           }
         default:
           releaseResources();
-          sessionDevice.release();
-          sessionDevice = null;
+          releaseSessionDevice();
       }
     });
   }
@@ -362,11 +360,7 @@ public class RadioService
   public void onSelectMediaItem(@NonNull String mediaId) {
     Log.d(LOG_TAG, "onSelectMediaItem: " + mediaId);
     Radios.setLastPlayedRadioId(this, mediaId);
-    // Selection drops a paused session: next play launches anew, honoring current environment (renderer, Android Auto)
-    if (sessionDevice != null) {
-      sessionDevice.release();
-      sessionDevice = null;
-    }
+    releaseSessionDevice();
   }
 
   @Override
@@ -433,8 +427,16 @@ public class RadioService
     sleepController.release();
     sessionDevice = createSessionDevice(radio);
     mediaLibrarySession.setSessionExtras(new Bundle());
-    radioPlayer.init(radio, sessionDevice.isRemote(), (radio == lastRadio));
+    radioPlayer.set(radio, sessionDevice.isRemote(), (radio == lastRadio));
     sessionDevice.launch();
+  }
+
+  private void releaseSessionDevice() {
+    if (sessionDevice != null) {
+      sessionDevice.release();
+      sessionDevice = null;
+      radioPlayer.unset();
+    }
   }
 
   private void skipTo(int direction) {
