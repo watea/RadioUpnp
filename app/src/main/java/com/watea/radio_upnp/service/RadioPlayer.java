@@ -222,11 +222,6 @@ public class RadioPlayer extends SimpleBasePlayer {
     buildSessionMetadata(radio, information, playlist);
   }
 
-  @NonNull
-  SessionDevice.State getSessionDeviceState() {
-    return sessionDeviceState;
-  }
-
   // Must be called on main thread
   void setRemoteVolume(int remoteVolume) {
     this.remoteVolume = clampVolume(remoteVolume);
@@ -258,7 +253,7 @@ public class RadioPlayer extends SimpleBasePlayer {
   }
 
   private boolean isPlayingOrBuffering() {
-    return (sessionDeviceState == SessionDevice.State.PLAYING) || (sessionDeviceState == SessionDevice.State.BUFFERING);
+    return SessionDevice.isPlayingOrBuffering(sessionDeviceState);
   }
 
   @NonNull

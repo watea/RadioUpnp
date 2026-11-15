@@ -105,10 +105,9 @@ public class RadioService
     isAndroidAutoConnected = connected;
     Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
     if (sessionDevice != null) {
-      final State state = getPlaybackState();
       if (wasConnected && !connected) {
         sessionDevice.onAndroidAutoDisconnected();
-      } else if (!wasConnected && connected && sessionDevice.isRemote() && ((state == State.PLAYING) || (state == State.BUFFERING))) {
+      } else if (!wasConnected && connected && sessionDevice.isRemote() && sessionDevice.isPlayingOrBuffering()) {
         // Remote session launched before connection was known (or ongoing at home): move it to the car
         play(sessionDevice.getRadio());
       }
@@ -272,9 +271,8 @@ public class RadioService
 
   @Override
   public void onCastStarted() {
-    final State state = getPlaybackState();
-    Log.d(LOG_TAG, "onCastStarted with state: " + state);
-    if ((sessionDevice != null) && ((state == State.BUFFERING) || (state == State.PAUSED) || (state == State.PLAYING))) {
+    Log.d(LOG_TAG, "onCastStarted");
+    if ((sessionDevice != null) && sessionDevice.isRunning()) {
       play(sessionDevice.getRadio());
     }
   }
@@ -318,9 +316,7 @@ public class RadioService
   public void onState(@NonNull State state, @NonNull String lockKey) {
     runIfLocked(lockKey, () -> {
       Log.d(LOG_TAG, "onState: " + state.name());
-      if ((sessionDevice == null) || (getPlaybackState() == state)) {
-        return;
-      }
+      assert sessionDevice != null;
       radioPlayer.setState(state);
       switch (state) {
         case PAUSED:
@@ -339,12 +335,6 @@ public class RadioService
           sessionDevice = null;
       }
     });
-  }
-
-  @Override
-  @NonNull
-  public State getPlaybackState() {
-    return radioPlayer.getSessionDeviceState();
   }
 
   @Override
@@ -383,7 +373,6 @@ public class RadioService
   public void onPause() {
     Log.d(LOG_TAG, "onPause");
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "onPause: sessionDevice is null");
       return;
     }
     sessionDevice.pause();
@@ -393,7 +382,6 @@ public class RadioService
   public void onStop() {
     Log.d(LOG_TAG, "onStop");
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "onStop: sessionDevice is null");
       return;
     }
     onState(State.STOPPED, sessionDevice.getLockKey());
@@ -415,7 +403,6 @@ public class RadioService
   @Override
   public void onAdjustVolume(int direction) {
     if (sessionDevice == null) {
-      Log.e(LOG_TAG, "onAdjustVolume: sessionDevice is null");
       return;
     }
     sessionDevice.adjustVolume(direction);

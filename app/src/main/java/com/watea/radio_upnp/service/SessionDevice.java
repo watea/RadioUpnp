@@ -95,6 +95,8 @@ public abstract class SessionDevice implements Player.Listener {
   Radio.ConnectionSet connectionSet = null;
   private volatile boolean isReleased = false;
   private volatile boolean isAllowedToRewind = false;
+  @NonNull
+  private volatile State state = State.IDLE;
 
   SessionDevice(
     @NonNull Context context,
@@ -108,6 +110,10 @@ public abstract class SessionDevice implements Player.Listener {
     lockKey = UUID.randomUUID().toString();
     capturingAudioSink = new CapturingAudioSink(new DefaultAudioSink.Builder(this.context).build());
     exoPlayer = getExoPlayer();
+  }
+
+  static boolean isPlayingOrBuffering(@NonNull State state) {
+    return (state == State.PLAYING) || (state == State.BUFFERING);
   }
 
   // Call once, off the main thread, as early as possible (e.g. Service.onCreate) to avoid
@@ -165,6 +171,22 @@ public abstract class SessionDevice implements Player.Listener {
 
   abstract void setVolume(float volume);
 
+  boolean isPlayingOrBuffering() {
+    return isPlayingOrBuffering(state);
+  }
+
+  boolean isRunning() {
+    return isPlayingOrBuffering() || isPaused();
+  }
+
+  boolean isPlaying() {
+    return (state == State.PLAYING);
+  }
+
+  boolean isPaused() {
+    return (state == State.PAUSED);
+  }
+
   @NonNull
   Radio getRadio() {
     return radio;
@@ -191,6 +213,7 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   void launch() {
+    onState(State.BUFFERING);
     new Thread(this::prepare).start();
   }
 
@@ -198,10 +221,6 @@ public abstract class SessionDevice implements Player.Listener {
     exoPlayer.removeListener(this);
     exoPlayer.release();
     isReleased = true;
-  }
-
-  boolean isPlaying() {
-    return (getState() == State.PLAYING);
   }
 
   @NonNull
@@ -223,6 +242,10 @@ public abstract class SessionDevice implements Player.Listener {
   }
 
   void onState(@NonNull State state) {
+    if (this.state == state) {
+      return;
+    }
+    this.state = state;
     Log.d(LOG_TAG, "onState: " + state.name() + "/" + lockKey);
     listener.onState(state, lockKey);
   }
@@ -263,11 +286,6 @@ public abstract class SessionDevice implements Player.Listener {
       listener.onNewBitrate(connectionSet.getBitrate(), connectionSet.getContent(), lockKey);
     }
     return true;
-  }
-
-  @NonNull
-  State getState() {
-    return listener.getPlaybackState();
   }
 
   void startExoPlayer() {
@@ -337,8 +355,5 @@ public abstract class SessionDevice implements Player.Listener {
     void onNewBitrate(int bitrate, @NonNull String mimeType, @NonNull String lockKey);
 
     void onVolumeChanged(int volume, @NonNull String lockKey);
-
-    @NonNull
-    State getPlaybackState();
   }
 }

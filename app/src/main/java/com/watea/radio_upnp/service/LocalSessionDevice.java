@@ -201,11 +201,6 @@ class LocalSessionDevice extends SessionDevice {
     super.onState(state);
   }
 
-  private boolean isPlayingOrBuffering() {
-    final State state = getState();
-    return (state == State.PLAYING) || (state == State.BUFFERING);
-  }
-
   private boolean requestAudioFocus() {
     final boolean granted = (AudioManager.AUDIOFOCUS_REQUEST_GRANTED == audioManager.requestAudioFocus(audioFocusRequest));
     Log.d(LOG_TAG, "Audio focus request " + (granted ? "succeeded" : "failed"));
