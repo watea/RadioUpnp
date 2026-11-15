@@ -333,7 +333,7 @@ public class Radios extends ArrayList<Radio> {
       while ((line = reader.readLine()) != null) {
         final Radio radio = Radio.getRadioFromCsv(line);
         if (radio != null) {
-          putOnUiThread(() -> add(radio, false));
+          putOnUiThread(() -> addIfNew(radio));
         }
       }
       return true;
@@ -350,14 +350,7 @@ public class Radios extends ArrayList<Radio> {
       for (int i = 0; i < jSONArray.length(); i++) {
         try {
           final Radio radio = new Radio(jSONArray.getJSONObject(i), isInit);
-          // Avoid duplicate radio
-          putOnUiThread(() -> {
-            if (stream()
-              .map(Radio::getURL)
-              .noneMatch(uRL -> radio.getURL().toString().equals(uRL.toString()))) {
-              add(radio, false);
-            }
-          });
+          putOnUiThread(() -> addIfNew(radio));
         } catch (JSONException jSONException) {
           Log.e(LOG_TAG, "read: internal JSON failure", jSONException);
         } catch (MalformedURLException malformedURLException) {
@@ -368,6 +361,14 @@ public class Radios extends ArrayList<Radio> {
     } catch (IOException | UncheckedIOException | JSONException exception) {
       Log.e(LOG_TAG, "read: internal failure reading radios", exception);
       return false;
+    }
+  }
+
+  // Avoid duplicate radio (same URL)
+  private void addIfNew(@NonNull Radio radio) {
+    final String url = radio.getURL().toString();
+    if (stream().noneMatch(existing -> existing.getURL().toString().equals(url))) {
+      add(radio, false);
     }
   }
 
