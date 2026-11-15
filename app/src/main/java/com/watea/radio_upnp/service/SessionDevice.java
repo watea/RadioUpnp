@@ -345,6 +345,10 @@ public abstract class SessionDevice implements Player.Listener {
     boolean isRunning() {
       return isPlayingOrBuffering() || (this == PAUSED);
     }
+
+    boolean isFailure() {
+      return (this == ERROR) || (this == UNSUPPORTED);
+    }
   }
 
   protected enum Mode {

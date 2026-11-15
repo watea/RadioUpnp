@@ -286,16 +286,10 @@ public class MainActivity extends AppCompatActivity {
             final Uri uri = data.getData();
             if (uri != null) {
               assert importExportAction != null;
-              switch (importExportAction) {
-                case CSV_EXPORT:
-                  exportTo(uri, Radios.MIME_CSV);
-                  break;
-                case JSON_EXPORT:
-                  exportTo(uri, Radios.MIME_JSON);
-                  break;
-                case JSON_IMPORT:
-                case CSV_IMPORT:
-                  importFrom(uri, importExportAction);
+              if (importExportAction.isImport) {
+                importFrom(uri, importExportAction.mime);
+              } else {
+                exportTo(uri, importExportAction.mime);
               }
             }
           }
@@ -365,29 +359,13 @@ public class MainActivity extends AppCompatActivity {
     final RadioGroup themeRadioGroup = settingsView.findViewById(R.id.theme_radio_group);
     themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
       final Theme previousTheme = theme;
-      if (checkedId == R.id.dark_radio_button) {
-        theme = Theme.DARK;
-      } else if (checkedId == R.id.light_radio_button) {
-        theme = Theme.LIGHT;
-      } else {
-        theme = Theme.SYSTEM;
-      }
+      theme = Theme.fromRadioButtonId(checkedId);
       if (theme != previousTheme) {
+        settingsAlertDialog.dismiss();
         recreate();
       }
     });
-    int themeRadioButtonId;
-    switch (theme) {
-      case DARK:
-        themeRadioButtonId = R.id.dark_radio_button;
-        break;
-      case LIGHT:
-        themeRadioButtonId = R.id.light_radio_button;
-        break;
-      default:
-        themeRadioButtonId = R.id.system_radio_button;
-    }
-    ((RadioButton) settingsView.findViewById(themeRadioButtonId)).setChecked(true);
+    ((RadioButton) settingsView.findViewById(theme.radioButtonId)).setChecked(true);
     // Settings dialog: layout
     final RadioGroup layoutRadioGroup = settingsView.findViewById(R.id.layout_radio_group);
     layoutRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -877,14 +855,14 @@ public class MainActivity extends AppCompatActivity {
     return DocumentsContract.createDocument(getContentResolver(), docUri, type, fileName);
   }
 
-  private void importFrom(@NonNull Uri uri, @NonNull ImportExportAction importExportAction) {
+  private void importFrom(@NonNull Uri uri, @NonNull String type) {
     new Thread(() -> {
       try (final InputStream inputStream = getContentResolver().openInputStream(uri)) {
         if (inputStream == null) {
           Log.e(LOG_TAG, "importFrom: internal failure");
         } else {
           Radios.getInstance().importFrom(
-            (importExportAction == ImportExportAction.JSON_IMPORT),
+            Radios.MIME_JSON.equals(type),
             false,
             inputStream,
             result -> runSafelyOnUiThread(() -> tell(result ? R.string.import_successful : string.import_failed)));
@@ -906,11 +884,39 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private enum Theme {
-    SYSTEM, DARK, LIGHT
+    SYSTEM(R.id.system_radio_button), DARK(R.id.dark_radio_button), LIGHT(R.id.light_radio_button);
+
+    final int radioButtonId;
+
+    Theme(int radioButtonId) {
+      this.radioButtonId = radioButtonId;
+    }
+
+    @NonNull
+    static Theme fromRadioButtonId(int radioButtonId) {
+      for (final Theme theme : values()) {
+        if (theme.radioButtonId == radioButtonId) {
+          return theme;
+        }
+      }
+      return SYSTEM;
+    }
   }
 
   private enum ImportExportAction {
-    JSON_IMPORT, CSV_IMPORT, JSON_EXPORT, CSV_EXPORT
+    JSON_IMPORT(Radios.MIME_JSON, true),
+    CSV_IMPORT(Radios.MIME_CSV, true),
+    JSON_EXPORT(Radios.MIME_JSON, false),
+    CSV_EXPORT(Radios.MIME_CSV, false);
+
+    @NonNull
+    final String mime;
+    final boolean isImport;
+
+    ImportExportAction(@NonNull String mime, boolean isImport) {
+      this.mime = mime;
+      this.isImport = isImport;
+    }
   }
 
   class UserHint {

@@ -115,7 +115,7 @@ abstract class RemoteSessionDevice extends SessionDevice implements StreamServer
   @Override
   void onState(@NonNull State state) {
     // Error is not accepted if paused
-    if (((state != State.ERROR) && (state != State.UNSUPPORTED)) || !isPaused()) {
+    if (!state.isFailure() || !isPaused()) {
       super.onState(state);
     }
   }
