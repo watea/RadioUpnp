@@ -179,6 +179,13 @@ public class AndroidUpnpService extends android.app.Service {
       listeners.clear();
     }
 
+    // Multicast is not received while screen is off: devices may have expired meanwhile
+    public void search() {
+      if (ssdpClient.isStarted()) {
+        deviceExecutor.execute(ssdpClient::search);
+      }
+    }
+
     public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity) {
       final Device previousDevice = getSelectedDevice();
       final SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.app_name), Context.MODE_PRIVATE);

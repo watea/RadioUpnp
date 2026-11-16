@@ -188,6 +188,7 @@ public class MainActivity extends AppCompatActivity {
         // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
         upnpService.addListener(upnpListener);
+        upnpService.search();
       }
     }
 
