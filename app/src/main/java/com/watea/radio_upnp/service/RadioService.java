@@ -471,7 +471,7 @@ public class RadioService
   @NonNull
   private SessionDevice createSessionDevice(@NonNull Radio radio) {
     SessionDevice result = null;
-    if (!isAndroidAutoConnected && (streamServer != null) && new NetworkProxy(this).isOnWifi()) {
+    if (!isAndroidAutoConnected && (streamServer != null) && new NetworkProxy(this).isOnLan()) {
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
       if (castManager.hasCastSession()) {
         result = castManager.getCastSessionDevice(

@@ -125,7 +125,7 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   @Override
   @NonNull
   View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> wifiTest(() -> {
+    return v -> lanTest(() -> {
       getMainActivity().onUpnp();
       dlnaEnableUserHint.show();
     });
@@ -135,7 +135,7 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   @NonNull
   View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
-      wifiTest(() -> getMainActivity().onUpnp());
+      lanTest(() -> getMainActivity().onUpnp());
       return true;
     };
   }
@@ -224,8 +224,8 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
     return false;
   }
 
-  private void wifiTest(@NonNull Runnable runnable) {
-    if (getNetworkProxy().isOnWifi()) {
+  private void lanTest(@NonNull Runnable runnable) {
+    if (getNetworkProxy().isOnLan()) {
       runnable.run();
     } else {
       tell(R.string.lan_required);

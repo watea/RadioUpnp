@@ -123,7 +123,7 @@ public class StreamServer extends HttpServer {
 
   @NonNull
   private Uri.Builder getUriBuilder(@NonNull String lockKey) {
-    final String localIp = new NetworkProxy(context).getWifiIpAddress();
+    final String localIp = new NetworkProxy(context).getLanIpAddress();
     // IPv6 literal must be bracketed in URI authority (RFC 3986)
     final String host = (localIp == null) ? "0.0.0.0" : localIp.contains(":") ? "[" + localIp + "]" : localIp;
     return new Uri.Builder()

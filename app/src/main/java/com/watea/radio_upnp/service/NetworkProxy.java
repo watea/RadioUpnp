@@ -36,6 +36,8 @@ import androidx.annotation.Nullable;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 
 public class NetworkProxy {
   @Nullable
@@ -46,23 +48,31 @@ public class NetworkProxy {
     connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
   }
 
-  public boolean isOnWifi() {
-    return isOnNetworkCapability(NetworkCapabilities.TRANSPORT_WIFI);
+  // Local network: Wi-Fi or Ethernet
+  public boolean isOnLan() {
+    return (findLanNetwork() != null);
   }
 
-  // Only Wi-Fi and Cellular is supported
+  // Only Wi-Fi, Ethernet and Cellular are supported
   public boolean isDeviceOnline() {
-    return isOnWifi() || isOnNetworkCapability(NetworkCapabilities.TRANSPORT_CELLULAR);
+    return isOnLan() || (findNetwork(NetworkCapabilities.TRANSPORT_CELLULAR) != null);
+  }
+
+  // null: not found, system default to be used
+  @Nullable
+  NetworkInterface getLanNetworkInterface() {
+    final LinkProperties linkProperties = getLanLinkProperties();
+    final String interfaceName = (linkProperties == null) ? null : linkProperties.getInterfaceName();
+    try {
+      return (interfaceName == null) ? null : NetworkInterface.getByName(interfaceName);
+    } catch (SocketException socketException) {
+      return null;
+    }
   }
 
   @Nullable
-  String getWifiIpAddress() {
-    final Network wifiNetwork = findNetwork(NetworkCapabilities.TRANSPORT_WIFI);
-    if (wifiNetwork == null) {
-      return null;
-    }
-    assert connectivityManager != null;
-    final LinkProperties linkProperties = connectivityManager.getLinkProperties(wifiNetwork);
+  String getLanIpAddress() {
+    final LinkProperties linkProperties = getLanLinkProperties();
     if (linkProperties == null) {
       return null;
     }
@@ -88,14 +98,25 @@ public class NetworkProxy {
     return ipv6Fallback;
   }
 
-  private boolean isOnNetworkCapability(int networkCapability) {
-    return findNetwork(networkCapability) != null;
+  @Nullable
+  private LinkProperties getLanLinkProperties() {
+    final Network lanNetwork = findLanNetwork();
+    if (lanNetwork == null) {
+      return null;
+    }
+    assert connectivityManager != null;
+    return connectivityManager.getLinkProperties(lanNetwork);
   }
 
-  // Looks up every known network (not just the active/default one), so a VPN taking over
-  // the default route does not hide an underlying Wi-Fi/Cellular network that is still up.
+  // Wi-Fi preferred over Ethernet
+  @Nullable
+  private Network findLanNetwork() {
+    final Network wifiNetwork = findNetwork(NetworkCapabilities.TRANSPORT_WIFI);
+    return (wifiNetwork == null) ? findNetwork(NetworkCapabilities.TRANSPORT_ETHERNET) : wifiNetwork;
+  }
+
   // getAllNetworks() is deprecated (API 31) in favor of NetworkCallback, which would require a
-  // long-lived NetworkProxy; still functional and needed here for the VPN case.
+  // long-lived NetworkProxy; still functional and needed here for the VPN case
   @SuppressWarnings("deprecation")
   @Nullable
   private Network findNetwork(int networkCapability) {

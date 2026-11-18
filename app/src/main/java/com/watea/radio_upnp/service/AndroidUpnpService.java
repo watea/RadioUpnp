@@ -109,8 +109,8 @@ public class AndroidUpnpService extends android.app.Service {
       devices.forEach(device -> tellListeners(device, Listener::onDeviceRemove));
       devices.clear();
       // If we missed the onAvailable() because the client was still started
-      if (!isDestroyed && networkProxy.isOnWifi()) {
-        ssdpClient.start();
+      if (!isDestroyed && networkProxy.isOnLan()) {
+        ssdpClient.start(networkProxy.getLanNetworkInterface());
       }
     }
   };
@@ -216,16 +216,15 @@ public class AndroidUpnpService extends android.app.Service {
   private class NetworkCallback extends ConnectivityManager.NetworkCallback {
     @Override
     public void onAvailable(@NonNull Network network) {
-      final NetworkCapabilities cap = connectivityManager.getNetworkCapabilities(network);
-      if (!ssdpClient.isStarted() && (cap != null) && cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+      if (!ssdpClient.isStarted() && networkProxy.isOnLan()) {
         devices.clear();
-        ssdpClient.start();
+        ssdpClient.start(networkProxy.getLanNetworkInterface());
       }
     }
 
     @Override
     public void onLost(@NonNull Network network) {
-      if (!networkProxy.isOnWifi()) {
+      if (!networkProxy.isOnLan()) {
         ssdpClient.stop();
       }
     }
