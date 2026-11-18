@@ -31,7 +31,9 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -43,6 +45,7 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.upnp.Device;
 import com.watea.radio_upnp.upnp.RequestController;
 
+import java.net.NetworkInterface;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -80,10 +83,6 @@ public class AndroidUpnpService extends android.app.Service {
   private final Set<Listener> listeners = new CopyOnWriteArraySet<>();
   private final ExecutorService deviceExecutor = Executors.newCachedThreadPool(); // Bounded executor for device HTTP fetches — prevents unbounded raw thread creation
   private final ConnectivityManager.NetworkCallback networkCallback = new NetworkCallback();
-  private ConnectivityManager connectivityManager;
-  private NetworkProxy networkProxy;
-  private SsdpClient ssdpClient;
-  private volatile boolean isDestroyed = false;
   private final SsdpClient.Listener ssdpListener = new SsdpClient.Listener() {
     @Override
     public void onServiceDiscovered(@NonNull SsdpService service) {
@@ -108,12 +107,11 @@ public class AndroidUpnpService extends android.app.Service {
       Log.d(LOG_TAG, "onStop");
       devices.forEach(device -> tellListeners(device, Listener::onDeviceRemove));
       devices.clear();
-      // If we missed the onAvailable() because the client was still started
-      if (!isDestroyed && networkProxy.isOnLan()) {
-        ssdpClient.start(networkProxy.getLanNetworkInterface());
-      }
     }
   };
+  private ConnectivityManager connectivityManager;
+  private NetworkProxy networkProxy;
+  private SsdpClient ssdpClient;
 
   @Override
   public void onCreate() {
@@ -122,14 +120,13 @@ public class AndroidUpnpService extends android.app.Service {
     networkProxy = new NetworkProxy(AndroidUpnpService.this);
     ssdpClient = new SsdpClient(this, DEVICE + DEVICE_VERSION, ssdpListener);
     connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-    connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+    // Main thread, as onDestroy(): no network callback can restart the SSDP client after its stop
+    connectivityManager.registerNetworkCallback(networkRequest, networkCallback, new Handler(Looper.getMainLooper()));
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
-    // Tag we are destroyed
-    isDestroyed = true;
     connectivityManager.unregisterNetworkCallback(networkCallback);
     // Clear listeners BEFORE stopping the SSDP client to prevent
     // spurious onDeviceRemove() notifications during shutdown
@@ -144,6 +141,16 @@ public class AndroidUpnpService extends android.app.Service {
   @Nullable
   public IBinder onBind(Intent intent) {
     return binder;
+  }
+
+  // LAN changes (Wi-Fi A -> B, Wi-Fi -> Ethernet) are handled by SsdpClient.start()
+  private void updateSsdp() {
+    final NetworkInterface lanNetworkInterface = networkProxy.getLanNetworkInterface();
+    if (lanNetworkInterface == null) {
+      ssdpClient.stop();
+    } else {
+      ssdpClient.start(lanNetworkInterface);
+    }
   }
 
   // Tells device and its embedded devices
@@ -181,9 +188,7 @@ public class AndroidUpnpService extends android.app.Service {
 
     // Multicast is not received while screen is off: devices may have expired meanwhile
     public void search() {
-      if (ssdpClient.isStarted()) {
-        deviceExecutor.execute(ssdpClient::search);
-      }
+      deviceExecutor.execute(ssdpClient::search);
     }
 
     public void setSelectedDeviceIdentity(@Nullable String selectedDeviceIdentity) {
@@ -216,17 +221,12 @@ public class AndroidUpnpService extends android.app.Service {
   private class NetworkCallback extends ConnectivityManager.NetworkCallback {
     @Override
     public void onAvailable(@NonNull Network network) {
-      if (!ssdpClient.isStarted() && networkProxy.isOnLan()) {
-        devices.clear();
-        ssdpClient.start(networkProxy.getLanNetworkInterface());
-      }
+      updateSsdp();
     }
 
     @Override
     public void onLost(@NonNull Network network) {
-      if (!networkProxy.isOnLan()) {
-        ssdpClient.stop();
-      }
+      updateSsdp();
     }
   }
 
@@ -258,7 +258,12 @@ public class AndroidUpnpService extends android.app.Service {
 
     synchronized void process(@NonNull SsdpService service) {
       final String uUID = Device.getUUID(service);
-      final Device knownDevice = (uUID == null) ? null : get(uUID);
+      // Without UUID the device could never be matched again (no update, no byebye)
+      if (uUID == null) {
+        Log.d(LOG_TAG, "SSDP service without UUID ignored: " + service);
+        return;
+      }
+      final Device knownDevice = get(uUID);
       final SsdpService.Status status = service.getStatus();
       final boolean isAlive = Device.isAlive(status);
       if (knownDevice == null) {
@@ -302,10 +307,8 @@ public class AndroidUpnpService extends android.app.Service {
             } finally {
               // Always release the pending guard, even on failure, so
               // subsequent announcements for this UUID are not permanently blocked
-              if (uUID != null) {
-                synchronized (Devices.this) {
-                  pendingUUIDs.remove(uUID);
-                }
+              synchronized (Devices.this) {
+                pendingUUIDs.remove(uUID);
               }
             }
           });
