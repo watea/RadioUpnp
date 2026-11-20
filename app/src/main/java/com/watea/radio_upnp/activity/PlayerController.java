@@ -101,12 +101,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   @NonNull
   private final MainActivity mainActivity;
   private final List<Map<String, String>> playInformations = new ArrayList<>();
-  @Nullable
-  private ListenableFuture<MediaController> controllerFuture = null;
-  // MediaController once connected
-  @Nullable
-  private MediaController mediaController = null;
-  private final MediaController.Listener controllerListener = new MediaController.Listener() {
+  private final MediaController.Listener mediaControllerListener = new MediaController.Listener() {
     @Override
     public void onExtrasChanged(@NonNull MediaController controller, @NonNull Bundle extras) {
       String rate = extras.getString(mainActivity.getString(R.string.key_bitrate));
@@ -125,9 +120,6 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
       setPlayImageButtonVisibility(false, false);
     }
   };
-  @Nullable
-  private String pendingRadioName = null;
-  private boolean pendingAutoPlay = false;
   private final Radios.Listener radiosListener = new Radios.Listener() {
     @Override
     public void onChange(@NonNull Radio radio) {
@@ -141,9 +133,6 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
       handleInit();
     }
   };
-  @Nullable
-  private Consumer<Radio> listener = null;
-  private int previousPlaybackState = Player.STATE_IDLE;
   private final Player.Listener playerListener = new Player.Listener() {
     @Override
     public void onPlaybackStateChanged(int playbackState) {
@@ -177,6 +166,17 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
       }
     }
   };
+  @Nullable
+  private ListenableFuture<MediaController> controllerFuture = null;
+  // MediaController once connected
+  @Nullable
+  private MediaController mediaController = null;
+  @Nullable
+  private String pendingRadioName = null;
+  private boolean pendingAutoPlay = false;
+  @Nullable
+  private Consumer<Radio> listener = null;
+  private int previousPlaybackState = Player.STATE_IDLE;
 
   @SuppressLint("ClickableViewAccessibility")
   public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
@@ -292,7 +292,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     // Create MediaController
     final SessionToken token = new SessionToken(mainActivity, new ComponentName(mainActivity, RadioService.class));
     controllerFuture = new MediaController.Builder(mainActivity, token)
-      .setListener(controllerListener)
+      .setListener(mediaControllerListener)
       .buildAsync();
     controllerFuture.addListener(() -> {
       // Activity may have been destroyed before connection completed
@@ -314,7 +314,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
         playerListener.onPlaybackStateChanged(mediaController.getPlaybackState());
         final MediaMetadata metadata = mediaController.getMediaMetadata();
         playerListener.onMediaMetadataChanged(metadata);
-        controllerListener.onExtrasChanged(mediaController, mediaController.getSessionExtras());
+        mediaControllerListener.onExtrasChanged(mediaController, mediaController.getSessionExtras());
       } catch (ExecutionException | InterruptedException exception) {
         Log.e(LOG_TAG, "onActivityCreate: controller connection failed", exception);
       }

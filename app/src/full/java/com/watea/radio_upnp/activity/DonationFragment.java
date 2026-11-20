@@ -53,10 +53,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class DonationFragment extends OpenDonationFragment
-  implements ConsumeResponseListener, PurchasesUpdatedListener {
+public class DonationFragment extends OpenDonationFragment {
   private static final String LOG_TAG = DonationFragment.class.getSimpleName();
   private final Map<String, ProductDetails> ownProductDetailss = new HashMap<>();
+  private final PurchasesUpdatedListener purchasesUpdatedListener = new PurchasesUpdatedListener() {
+    @Override
+    public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
+      if ((billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) && (purchases != null)) {
+        for (final Purchase purchase : purchases) {
+          // Pending ones are consumed at a later app start
+          if (isPurchased(purchase)) {
+            consume(billingClient, purchase, (consumeResult, purchaseToken) -> logConsumeResponse(consumeResult));
+          }
+        }
+      } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
+        Log.i(LOG_TAG, "Purchase canceled by user");
+      } else {
+        Log.e(LOG_TAG, "Purchase failed: " + billingResult.getDebugMessage());
+      }
+    }
+  };
   private BillingClient billingClient;
   private String[] productIds;
 
@@ -178,31 +194,10 @@ public class DonationFragment extends OpenDonationFragment
     }
   }
 
-  @Override
-  public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> purchases) {
-    if ((billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) && (purchases != null)) {
-      for (final Purchase purchase : purchases) {
-        // Pending ones are consumed at a later app start
-        if (isPurchased(purchase)) {
-          consume(billingClient, purchase, this);
-        }
-      }
-    } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
-      Log.i(LOG_TAG, "Purchase canceled by user");
-    } else {
-      Log.e(LOG_TAG, "Purchase failed: " + billingResult.getDebugMessage());
-    }
-  }
-
-  @Override
-  public void onConsumeResponse(@NonNull BillingResult billingResult, @NonNull String purchaseToken) {
-    logConsumeResponse(billingResult);
-  }
-
   private void initGoogleBillingClient() {
     try {
       billingClient = BillingClient.newBuilder(requireContext())
-        .setListener(this)
+        .setListener(purchasesUpdatedListener)
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .enableAutoServiceReconnection()
         .build();

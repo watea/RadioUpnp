@@ -126,36 +126,7 @@ public class MainActivity extends AppCompatActivity {
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  private DrawerLayout drawerLayout;
-  private ActionBarDrawerToggle drawerToggle;
-  private FloatingActionButton floatingActionButton;
-  private Menu navigationMenu;
-  @Nullable
-  private AlertDialog loadingAlertDialog = null;
-  private AlertDialog upnpAlertDialog;
-  private AlertDialog settingsAlertDialog;
-  private AlertDialog aboutAlertDialog;
-  private AlertDialog sleepAlertDialog;
-  private UserHint toolbarUserHint;
-  private CollapsingToolbarLayout actionBarLayout;
-  private AppBarLayout appBarLayout;
-  private PlayerController playerController;
-  private SharedPreferences sharedPreferences;
-  private AlarmController alarmController;
-  private boolean isToolbarExpanded = true;
-  private int navigationMenuCheckedId;
-  private Theme theme = Theme.DARK;
-  private Layout layout = Layout.TILE;
-  @Nullable
-  private AndroidUpnpService.UpnpService upnpService = null;
-  private UpnpDevicesAdapter upnpDevicesAdapter;
-  private NetworkProxy networkProxy;
-  private ActivityResultLauncher<Intent> importExportLauncher;
-  @Nullable
-  private ImportExportAction importExportAction = null;
-  @Nullable
-  private Consumer<Bitmap> upnpIconConsumer = null;
-  private final AndroidUpnpService.Listener upnpListener = new AndroidUpnpService.Listener() {
+  private final AndroidUpnpService.Listener androidUpnpServiceListener = new AndroidUpnpService.Listener() {
     @Override
     public void onFatalError() {
       runSafelyOnUiThread(() -> tell(R.string.upnp_error));
@@ -187,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
       if (upnpService != null) {
         // Set listeners
         upnpDevicesAdapter.setUpnpService(upnpService);
-        upnpService.addListener(upnpListener);
+        upnpService.addListener(androidUpnpServiceListener);
         upnpService.search();
       }
     }
@@ -203,6 +174,35 @@ public class MainActivity extends AppCompatActivity {
       upnpDevicesAdapter.setUpnpService(null);
     }
   };
+  private DrawerLayout drawerLayout;
+  private ActionBarDrawerToggle drawerToggle;
+  private FloatingActionButton floatingActionButton;
+  private Menu navigationMenu;
+  @Nullable
+  private AlertDialog loadingAlertDialog = null;
+  private AlertDialog upnpAlertDialog;
+  private AlertDialog settingsAlertDialog;
+  private AlertDialog aboutAlertDialog;
+  private AlertDialog sleepAlertDialog;
+  private UserHint toolbarUserHint;
+  private CollapsingToolbarLayout actionBarLayout;
+  private AppBarLayout appBarLayout;
+  private PlayerController playerController;
+  private SharedPreferences sharedPreferences;
+  private AlarmController alarmController;
+  private boolean isToolbarExpanded = true;
+  private int navigationMenuCheckedId;
+  private Theme theme = Theme.DARK;
+  private Layout layout = Layout.TILE;
+  @Nullable
+  private AndroidUpnpService.UpnpService upnpService = null;
+  private UpnpDevicesAdapter upnpDevicesAdapter;
+  private NetworkProxy networkProxy;
+  private ActivityResultLauncher<Intent> importExportLauncher;
+  @Nullable
+  private ImportExportAction importExportAction = null;
+  @Nullable
+  private Consumer<Bitmap> upnpIconConsumer = null;
 
   public static int getStarResource(boolean isPreferred) {
     return isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp;
@@ -796,13 +796,13 @@ public class MainActivity extends AppCompatActivity {
   }
 
   // Neutral button is CSV, positive is JSON
-  private void showImportExportDialog(int title, int icon, int message, @NonNull DialogInterface.OnClickListener listener) {
+  private void showImportExportDialog(int title, int icon, int message, @NonNull DialogInterface.OnClickListener dialogInterfaceOnClickListener) {
     new AlertDialog.Builder(this)
       .setTitle(title)
       .setIcon(icon)
       .setMessage(message)
-      .setNeutralButton(R.string.action_csv_export, listener)
-      .setPositiveButton(R.string.action_json_export, listener)
+      .setNeutralButton(R.string.action_csv_export, dialogInterfaceOnClickListener)
+      .setPositiveButton(R.string.action_json_export, dialogInterfaceOnClickListener)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create()

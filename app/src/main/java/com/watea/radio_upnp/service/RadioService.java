@@ -52,20 +52,12 @@ import com.watea.radio_upnp.upnp.Device;
 import java.io.IOException;
 import java.util.Collection;
 
-public class RadioService
-  extends MediaLibraryService
-  implements SessionDevice.Listener, CastManager.Callback, RadioPlayer.Commands {
+public class RadioService extends MediaLibraryService {
   public static final boolean KEY_PCM_MODE_DEFAULT = true;
   public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
-  private boolean isAndroidAutoConnected = false;
-  @Nullable
-  private SessionDevice sessionDevice = null;
-  private boolean isLastRadioToLaunch = false;
-  @Nullable
-  private AndroidUpnpService.UpnpService upnpService = null;
   private final ServiceConnection upnpConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
@@ -77,8 +69,7 @@ public class RadioService
       upnpService = null;
     }
   };
-  private MediaLibrarySession mediaLibrarySession;
-  private final SleepController.Listener sleepListener = new SleepController.Listener() {
+  private final SleepController.Listener sleepControllerListener = new SleepController.Listener() {
     @Override
     public void onSleepOn(boolean isSleepOn) {
       final Bundle extras = new Bundle(mediaLibrarySession.getSessionExtras());
@@ -88,28 +79,23 @@ public class RadioService
 
     @Override
     public void onSleepEnd() {
-      onPause();
+      radioPlayerCommands.onPause();
     }
   };
-  private RadioPlayer radioPlayer;
-  private SleepController sleepController;
-  private MediaLibrarySessionCallback mediaLibrarySessionCallback;
-  @Nullable
-  private StreamServer streamServer = null;
-  @Nullable
-  private LiveData<Integer> carConnectionLiveData = null;
-  private CastManager castManager;
-  private final Observer<Integer> carConnectionObserver = type -> {
-    final boolean connected = (type != null) && (type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
-    final boolean wasConnected = isAndroidAutoConnected;
-    isAndroidAutoConnected = connected;
-    Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
-    if (sessionDevice != null) {
-      if (wasConnected && !connected) {
-        sessionDevice.onAndroidAutoDisconnected();
-      } else if (!wasConnected && connected && sessionDevice.isRemote() && sessionDevice.isPlayingOrBuffering()) {
-        // Remote session launched before connection was known (or ongoing at home): move it to the car
-        play(sessionDevice.getRadio());
+  private final Observer<Integer> carConnectionObserver = new Observer<>() {
+    @Override
+    public void onChanged(Integer type) {
+      final boolean connected = (type != null) && (type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED);
+      final boolean wasConnected = isAndroidAutoConnected;
+      isAndroidAutoConnected = connected;
+      Log.d(LOG_TAG, "Android Auto: " + (isAndroidAutoConnected ? "CONNECTED" : "DISCONNECTED"));
+      if (sessionDevice != null) {
+        if (wasConnected && !connected) {
+          sessionDevice.onAndroidAutoDisconnected();
+        } else if (!wasConnected && connected && sessionDevice.isRemote() && sessionDevice.isPlayingOrBuffering()) {
+          // Remote session launched before connection was known (or ongoing at home): move it to the car
+          play(sessionDevice.getRadio());
+        }
       }
     }
   };
@@ -161,6 +147,167 @@ public class RadioService
       mediaLibrarySessionCallback.notifyChildrenChanged(mediaLibrarySession);
     }
   };
+  private final CastManager.Callback castManagerCallback = new CastManager.Callback() {
+    @Override
+    public void onCastStarting() {
+      Log.d(LOG_TAG, "onCastStarting");
+      // UPnP no longer possible
+      if (upnpService != null) {
+        upnpService.setSelectedDeviceIdentity(null);
+      }
+    }
+
+    @Override
+    public void onCastStarted() {
+      Log.d(LOG_TAG, "onCastStarted");
+      if ((sessionDevice != null) && sessionDevice.isRunning()) {
+        play(sessionDevice.getRadio());
+      }
+    }
+
+    @Override
+    public void onCastStop() {
+      Log.d(LOG_TAG, "onCastStop");
+      radioPlayerCommands.onStop();
+    }
+  };
+  private final SessionDevice.Listener sessionDeviceListener = new SessionDevice.Listener() {
+    @Override
+    public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
+      runIfLocked(lockKey, () -> {
+        Log.d(LOG_TAG, "onNewInformation: " + information);
+        assert sessionDevice != null;
+        radioPlayer.buildSessionMetadata(sessionDevice.getRadio(), information);
+      });
+    }
+
+    @Override
+    public void onNewBitrate(int bitrate, @NonNull String mimeType, @NonNull String lockKey) {
+      runIfLocked(lockKey, () -> {
+        Log.d(LOG_TAG, "onNewBitrate: " + bitrate);
+        final String bitrateDisplay = (bitrate > 0) ? Integer.toString(bitrate) : "--";
+        final Bundle extras = new Bundle(mediaLibrarySession.getSessionExtras());
+        extras.putString(getString(R.string.key_bitrate), bitrateDisplay);
+        extras.putString(getString(R.string.key_mime_type), mimeType);
+        mediaLibrarySession.setSessionExtras(extras);
+      });
+    }
+
+    @Override
+    public void onVolumeChanged(int volume, @NonNull String lockKey) {
+      runIfLocked(lockKey, () -> {
+        Log.d(LOG_TAG, "onVolumeChanged: " + volume);
+        radioPlayer.setRemoteVolume(volume);
+      });
+    }
+
+    @Override
+    public void onState(@NonNull State state, @NonNull String lockKey) {
+      runIfLocked(lockKey, () -> {
+        Log.d(LOG_TAG, "onState: " + state.name());
+        assert sessionDevice != null;
+        radioPlayer.onSessionDeviceState(state);
+        switch (state) {
+          case PAUSED:
+            releaseResources();
+          case PLAYING:
+          case BUFFERING:
+            break;
+          case ERROR:
+            if (sessionDevice.consumeRewind()) {
+              play(sessionDevice.getRadio());
+              break;
+            }
+          default:
+            releaseResources();
+            releaseSessionDevice();
+        }
+      });
+    }
+  };
+  private final RadioPlayer.Commands radioPlayerCommands = new RadioPlayer.Commands() {
+    @Override
+    public void onPlay() {
+      Log.d(LOG_TAG, "onPlay");
+      if (sessionDevice == null) {
+        isLastRadioToLaunch = !launchLastRadio();
+      } else {
+        sessionDevice.play();
+      }
+    }
+
+    @Override
+    public void onPlayFromMediaId(@NonNull String mediaId) {
+      Log.d(LOG_TAG, "onPlayFromMediaId: " + mediaId);
+      final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
+      if (radio == null) {
+        Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
+      } else {
+        play(radio);
+      }
+    }
+
+    @Override
+    public void onSelectMediaItem(@NonNull String mediaId) {
+      Log.d(LOG_TAG, "onSelectMediaItem: " + mediaId);
+      Radios.setLastPlayedRadioId(RadioService.this, mediaId);
+      releaseSessionDevice();
+    }
+
+    @Override
+    public void onPause() {
+      Log.d(LOG_TAG, "onPause");
+      if (sessionDevice == null) {
+        return;
+      }
+      sessionDevice.pause();
+    }
+
+    @Override
+    public void onStop() {
+      Log.d(LOG_TAG, "onStop");
+      if (sessionDevice == null) {
+        return;
+      }
+      sessionDeviceListener.onState(State.STOPPED, sessionDevice.getLockKey());
+      sessionDevice.stop();
+    }
+
+    @Override
+    public void onSkipToNext() {
+      Log.d(LOG_TAG, "onSkipToNext");
+      skipTo(1);
+    }
+
+    @Override
+    public void onSkipToPrevious() {
+      Log.d(LOG_TAG, "onSkipToPrevious");
+      skipTo(-1);
+    }
+
+    @Override
+    public void onAdjustVolume(int direction) {
+      if (sessionDevice == null) {
+        return;
+      }
+      sessionDevice.adjustVolume(direction);
+    }
+  };
+  private boolean isAndroidAutoConnected = false;
+  @Nullable
+  private SessionDevice sessionDevice = null;
+  private boolean isLastRadioToLaunch = false;
+  @Nullable
+  private AndroidUpnpService.UpnpService upnpService = null;
+  private MediaLibrarySession mediaLibrarySession;
+  private RadioPlayer radioPlayer;
+  private SleepController sleepController;
+  private MediaLibrarySessionCallback mediaLibrarySessionCallback;
+  @Nullable
+  private StreamServer streamServer = null;
+  @Nullable
+  private LiveData<Integer> carConnectionLiveData = null;
+  private CastManager castManager;
 
   @OptIn(markerClass = UnstableApi.class)
   @Override
@@ -170,9 +317,9 @@ public class RadioService
     // Off the main thread: reads system CA certificates from disk
     new Thread(SessionDevice::warmUpHttpDataSourceFactory).start();
     // Create RadioPlayer and MediaLibrarySession
-    radioPlayer = new RadioPlayer(this, getString(R.string.remote));
+    radioPlayer = new RadioPlayer(radioPlayerCommands, getString(R.string.remote));
     final NotificationChannels notificationChannels = new NotificationChannels(this, LOG_TAG);
-    sleepController = new SleepController(notificationChannels, sleepListener);
+    sleepController = new SleepController(notificationChannels, sleepControllerListener);
     mediaLibrarySessionCallback = new MediaLibrarySessionCallback(this, sleepController);
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, mediaLibrarySessionCallback)
       .setSessionActivity(notificationChannels.getContentIntent())
@@ -189,7 +336,7 @@ public class RadioService
     carConnectionLiveData.observeForever(carConnectionObserver);
     // Cast
     castManager = CastManager.getInstance();
-    castManager.setContext(this, this);
+    castManager.setContext(this, castManagerCallback);
     // Create radios if needed
     Radios.setInstance(this, null);
     Radios.getInstance().addListener(radiosListener);
@@ -257,149 +404,6 @@ public class RadioService
   public void onTaskRemoved(@Nullable Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
     stopSelf();
-  }
-
-  @Override
-  public void onCastStarting() {
-    Log.d(LOG_TAG, "onCastStarting");
-    // UPnP no longer possible
-    if (upnpService != null) {
-      upnpService.setSelectedDeviceIdentity(null);
-    }
-  }
-
-  @Override
-  public void onCastStarted() {
-    Log.d(LOG_TAG, "onCastStarted");
-    if ((sessionDevice != null) && sessionDevice.isRunning()) {
-      play(sessionDevice.getRadio());
-    }
-  }
-
-  @Override
-  public void onCastStop() {
-    Log.d(LOG_TAG, "onCastStop");
-    onStop();
-  }
-
-  @Override
-  public void onNewInformation(@NonNull String information, @NonNull String lockKey) {
-    runIfLocked(lockKey, () -> {
-      Log.d(LOG_TAG, "onNewInformation: " + information);
-      assert sessionDevice != null;
-      radioPlayer.buildSessionMetadata(sessionDevice.getRadio(), information);
-    });
-  }
-
-  @Override
-  public void onNewBitrate(int bitrate, @NonNull String mimeType, @NonNull String lockKey) {
-    runIfLocked(lockKey, () -> {
-      Log.d(LOG_TAG, "onNewBitrate: " + bitrate);
-      final String bitrateDisplay = (bitrate > 0) ? Integer.toString(bitrate) : "--";
-      final Bundle extras = new Bundle(mediaLibrarySession.getSessionExtras());
-      extras.putString(getString(R.string.key_bitrate), bitrateDisplay);
-      extras.putString(getString(R.string.key_mime_type), mimeType);
-      mediaLibrarySession.setSessionExtras(extras);
-    });
-  }
-
-  @Override
-  public void onVolumeChanged(int volume, @NonNull String lockKey) {
-    runIfLocked(lockKey, () -> {
-      Log.d(LOG_TAG, "onVolumeChanged: " + volume);
-      radioPlayer.setRemoteVolume(volume);
-    });
-  }
-
-  @Override
-  public void onState(@NonNull State state, @NonNull String lockKey) {
-    runIfLocked(lockKey, () -> {
-      Log.d(LOG_TAG, "onState: " + state.name());
-      assert sessionDevice != null;
-      radioPlayer.onSessionDeviceState(state);
-      switch (state) {
-        case PAUSED:
-          releaseResources();
-        case PLAYING:
-        case BUFFERING:
-          break;
-        case ERROR:
-          if (sessionDevice.consumeRewind()) {
-            play(sessionDevice.getRadio());
-            break;
-          }
-        default:
-          releaseResources();
-          releaseSessionDevice();
-      }
-    });
-  }
-
-  @Override
-  public void onPlay() {
-    Log.d(LOG_TAG, "onPlay");
-    if (sessionDevice == null) {
-      isLastRadioToLaunch = !launchLastRadio();
-    } else {
-      sessionDevice.play();
-    }
-  }
-
-  @Override
-  public void onPlayFromMediaId(@NonNull String mediaId) {
-    Log.d(LOG_TAG, "onPlayFromMediaId: " + mediaId);
-    final Radio radio = Radios.getInstance().getRadioFromId(mediaId);
-    if (radio == null) {
-      Log.e(LOG_TAG, "onPlayFromMediaId: radio not found");
-    } else {
-      play(radio);
-    }
-  }
-
-  @Override
-  public void onSelectMediaItem(@NonNull String mediaId) {
-    Log.d(LOG_TAG, "onSelectMediaItem: " + mediaId);
-    Radios.setLastPlayedRadioId(this, mediaId);
-    releaseSessionDevice();
-  }
-
-  @Override
-  public void onPause() {
-    Log.d(LOG_TAG, "onPause");
-    if (sessionDevice == null) {
-      return;
-    }
-    sessionDevice.pause();
-  }
-
-  @Override
-  public void onStop() {
-    Log.d(LOG_TAG, "onStop");
-    if (sessionDevice == null) {
-      return;
-    }
-    onState(State.STOPPED, sessionDevice.getLockKey());
-    sessionDevice.stop();
-  }
-
-  @Override
-  public void onSkipToNext() {
-    Log.d(LOG_TAG, "onSkipToNext");
-    skipTo(1);
-  }
-
-  @Override
-  public void onSkipToPrevious() {
-    Log.d(LOG_TAG, "onSkipToPrevious");
-    skipTo(-1);
-  }
-
-  @Override
-  public void onAdjustVolume(int direction) {
-    if (sessionDevice == null) {
-      return;
-    }
-    sessionDevice.adjustVolume(direction);
   }
 
   private void runIfLocked(@NonNull final String lockKey, @NonNull final Runnable runnable) {
@@ -476,7 +480,7 @@ public class RadioService
       if (castManager.hasCastSession()) {
         result = castManager.getCastSessionDevice(
           this,
-          this,
+          sessionDeviceListener,
           radio,
           this::play,
           streamServer);
@@ -484,7 +488,7 @@ public class RadioService
         result = new UpnpSessionDevice(
           this,
           Radios.getAppPreferences(this).getBoolean(getString(R.string.key_pcm_mode), KEY_PCM_MODE_DEFAULT),
-          this,
+          sessionDeviceListener,
           radio,
           this::play,
           streamServer,
@@ -495,7 +499,7 @@ public class RadioService
     if (result == null) {
       result = new LocalSessionDevice(
         this,
-        this,
+        sessionDeviceListener,
         radio);
     }
     Log.d(LOG_TAG, "createSessionDevice: " + result.getClass().getSimpleName() + " - " + result.getLockKey());

@@ -82,9 +82,9 @@ abstract class RemoteSessionDevice extends SessionDevice implements StreamServer
 
   @Override
   public void launch() {
-    final CapturingAudioSink.Callback callback = streamServer.launch(radio, this, lockKey);
+    final CapturingAudioSink.Callback capturingAudioSinkCallback = streamServer.launch(radio, this, lockKey);
     if (mode == Mode.PCM) {
-      capturingAudioSink.setCallback(callback);
+      capturingAudioSink.setCallback(capturingAudioSinkCallback);
     }
     super.launch();
   }

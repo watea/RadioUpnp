@@ -85,15 +85,15 @@ public class CastSessionDevice extends RemoteSessionDevice {
       }
     }
   };
-  @Nullable
-  private ScheduledExecutorService heartbeat = null;
-  private double currentVolume = -1; // Unknown
   private final Cast.Listener castListener = new Cast.Listener() {
     @Override
     public void onVolumeChanged() {
       reportCurrentVolume();
     }
   };
+  @Nullable
+  private ScheduledExecutorService heartbeat = null;
+  private double currentVolume = -1; // Unknown
 
   public CastSessionDevice(
     @NonNull Context context,

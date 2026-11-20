@@ -49,7 +49,34 @@ import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 
-public class MainFragment extends MainActivityFragment implements RadiosMainAdapter.Listener {
+public class MainFragment extends MainActivityFragment {
+  private final RadiosMainAdapter.Listener radiosMainAdapterListener = new RadiosMainAdapter.Listener() {
+    @Override
+    public void onClick(@NonNull Radio radio) {
+      if (getNetworkProxy().isDeviceOnline()) {
+        getMainActivity().startReading(radio);
+        radioLongPressUserHint.show();
+      } else {
+        tell(R.string.no_internet);
+      }
+    }
+
+    @Override
+    public void onCountChange(boolean isEmpty) {
+      defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
+    }
+
+    @Override
+    public boolean onLongClick(@Nullable Uri webPageUri) {
+      if (webPageUri == null) {
+        tell(R.string.no_web_page);
+      } else {
+        assert getActivity() != null;
+        getActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
+      }
+      return true;
+    }
+  };
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;
   private MenuItem preferredMenuItem;
@@ -89,32 +116,6 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
   public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putBoolean(getString(R.string.key_preferred_radios), Radios.isPreferred());
-  }
-
-  @Override
-  public void onClick(@NonNull Radio radio) {
-    if (getNetworkProxy().isDeviceOnline()) {
-      getMainActivity().startReading(radio);
-      radioLongPressUserHint.show();
-    } else {
-      tell(R.string.no_internet);
-    }
-  }
-
-  @Override
-  public void onCountChange(boolean isEmpty) {
-    defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
-  }
-
-  @Override
-  public boolean onLongClick(@Nullable Uri webPageUri) {
-    if (webPageUri == null) {
-      tell(R.string.no_web_page);
-    } else {
-      assert getActivity() != null;
-      getActivity().startActivity(new Intent(Intent.ACTION_VIEW, webPageUri));
-    }
-    return true;
   }
 
   @Override
@@ -159,7 +160,7 @@ public class MainFragment extends MainActivityFragment implements RadiosMainAdap
     radiosMainAdapter = new RadiosMainAdapter(
       Radios.getInstance()::getActuallySelectedRadios,
       radiosRecyclerView,
-      this,
+      radiosMainAdapterListener,
       getMainActivity().getPlayerController());
     // Build alert dialogs
     radioLongPressUserHint = getMainActivity()

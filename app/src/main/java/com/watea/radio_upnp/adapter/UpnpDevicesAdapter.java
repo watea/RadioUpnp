@@ -46,9 +46,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class UpnpDevicesAdapter
-  extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder>
-  implements AndroidUpnpService.Listener {
+public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.ViewHolder> {
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private final List<Device> devices = new ArrayList<>();
   private final int selectedColor;
@@ -56,6 +54,35 @@ public class UpnpDevicesAdapter
   private final View defaultView;
   @NonNull
   private final Listener listener;
+  private final AndroidUpnpService.Listener androidUpnpServiceListener = new AndroidUpnpService.Listener() {
+    @Override
+    public void onDeviceAdd(@NonNull Device device) {
+      HANDLER.post(() -> {
+        devices.add(device);
+        devices.sort(Comparator.comparing(Device::getDisplayString));
+        notifyItemInserted(devices.indexOf(device));
+        onCountChange(false);
+      });
+    }
+
+    @Override
+    public void onDeviceRemove(@NonNull Device device) {
+      HANDLER.post(() -> {
+        final int position = devices.indexOf(device);
+        if (position >= 0) {
+          devices.remove(device);
+          notifyItemRemoved(position);
+          onCountChange(devices.isEmpty());
+        }
+      });
+    }
+
+    @Override
+    public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
+      notifyChange(previousDevice);
+      notifyChange(device);
+    }
+  };
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
 
@@ -69,7 +96,7 @@ public class UpnpDevicesAdapter
     resetRemoteDevices();
     this.upnpService = upnpService;
     if (this.upnpService != null) {
-      this.upnpService.addListener(this);
+      this.upnpService.addListener(androidUpnpServiceListener);
     }
   }
 
@@ -89,34 +116,6 @@ public class UpnpDevicesAdapter
   @Override
   public int getItemCount() {
     return devices.size();
-  }
-
-  @Override
-  public void onDeviceAdd(@NonNull Device device) {
-    HANDLER.post(() -> {
-      devices.add(device);
-      devices.sort(Comparator.comparing(Device::getDisplayString));
-      notifyItemInserted(devices.indexOf(device));
-      onCountChange(false);
-    });
-  }
-
-  @Override
-  public void onDeviceRemove(@NonNull Device device) {
-    HANDLER.post(() -> {
-      final int position = devices.indexOf(device);
-      if (position >= 0) {
-        devices.remove(device);
-        notifyItemRemoved(position);
-        onCountChange(devices.isEmpty());
-      }
-    });
-  }
-
-  @Override
-  public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
-    notifyChange(previousDevice);
-    notifyChange(device);
   }
 
   @SuppressLint("NotifyDataSetChanged")

@@ -54,8 +54,6 @@ class LocalSessionDevice extends SessionDevice {
   private final AudioManager audioManager;
   @NonNull
   private final AudioFocusRequest audioFocusRequest;
-  private boolean audioNoisyReceiverRegistered = false;
-  private boolean playOnAudioFocus = false;
   private final BroadcastReceiver audioNoisyReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -64,6 +62,8 @@ class LocalSessionDevice extends SessionDevice {
       }
     }
   };
+  private boolean audioNoisyReceiverRegistered = false;
+  private boolean playOnAudioFocus = false;
 
   LocalSessionDevice(
     @NonNull Context context,
@@ -71,7 +71,7 @@ class LocalSessionDevice extends SessionDevice {
     @NonNull Radio radio) {
     super(context, Mode.LOCAL, listener, radio);
     audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-    final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = focusChange -> {
+    final AudioManager.OnAudioFocusChangeListener audioManagerOnAudioFocusChangeListener = focusChange -> {
       Log.d(LOG_TAG, "onAudioFocusChange: " + focusChange);
       switch (focusChange) {
         case AudioManager.AUDIOFOCUS_GAIN:
@@ -100,7 +100,7 @@ class LocalSessionDevice extends SessionDevice {
     };
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
       .setAudioAttributes(PLAYBACK_ATTRIBUTES)
-      .setOnAudioFocusChangeListener(audioFocusChangeListener, HANDLER)
+      .setOnAudioFocusChangeListener(audioManagerOnAudioFocusChangeListener, HANDLER)
       .build();
   }
 

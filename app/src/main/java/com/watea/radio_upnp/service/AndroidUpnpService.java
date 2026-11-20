@@ -82,8 +82,8 @@ public class AndroidUpnpService extends android.app.Service {
   // add/remove can happen from binder threads concurrently
   private final Set<Listener> listeners = new CopyOnWriteArraySet<>();
   private final ExecutorService deviceExecutor = Executors.newCachedThreadPool(); // Bounded executor for device HTTP fetches — prevents unbounded raw thread creation
-  private final ConnectivityManager.NetworkCallback networkCallback = new NetworkCallback();
-  private final SsdpClient.Listener ssdpListener = new SsdpClient.Listener() {
+  private final ConnectivityManager.NetworkCallback connectivityManagerNetworkCallback = new NetworkCallback();
+  private final SsdpClient.Listener ssdpClientListener = new SsdpClient.Listener() {
     @Override
     public void onServiceDiscovered(@NonNull SsdpService service) {
       Log.d(LOG_TAG, "Found SsdpService: " + service);
@@ -118,16 +118,16 @@ public class AndroidUpnpService extends android.app.Service {
     super.onCreate();
     // Order matters
     networkProxy = new NetworkProxy(AndroidUpnpService.this);
-    ssdpClient = new SsdpClient(this, DEVICE + DEVICE_VERSION, ssdpListener);
+    ssdpClient = new SsdpClient(this, DEVICE + DEVICE_VERSION, ssdpClientListener);
     connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
     // Main thread, as onDestroy(): no network callback can restart the SSDP client after its stop
-    connectivityManager.registerNetworkCallback(networkRequest, networkCallback, new Handler(Looper.getMainLooper()));
+    connectivityManager.registerNetworkCallback(networkRequest, connectivityManagerNetworkCallback, new Handler(Looper.getMainLooper()));
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
-    connectivityManager.unregisterNetworkCallback(networkCallback);
+    connectivityManager.unregisterNetworkCallback(connectivityManagerNetworkCallback);
     // Clear listeners BEFORE stopping the SSDP client to prevent
     // spurious onDeviceRemove() notifications during shutdown
     listeners.clear();

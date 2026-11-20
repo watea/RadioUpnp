@@ -72,11 +72,7 @@ class AlarmController {
   @NonNull
   private final MainActivity.UserHint batteryOptimisationUserHint;
   @NonNull
-  private final TimePicker.OnTimeChangedListener onTimeChangedListener;
-  @Nullable
-  private Radio radio = null;
-  @Nullable
-  private AlarmService.AlarmServiceBinder alarmService = null;
+  private final TimePicker.OnTimeChangedListener timePickerOnTimeChangedListener;
   private final ServiceConnection alarmConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName componentName, IBinder service) {
@@ -96,6 +92,10 @@ class AlarmController {
       alarmService = null;
     }
   };
+  @Nullable
+  private Radio radio = null;
+  @Nullable
+  private AlarmService.AlarmServiceBinder alarmService = null;
 
   AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
@@ -115,7 +115,7 @@ class AlarmController {
       }
     });
     // Running alarm follows time changes
-    onTimeChangedListener = (v, h, m) -> {
+    timePickerOnTimeChangedListener = (v, h, m) -> {
       if (onOffButton.isChecked()) {
         setAlarm();
       }
@@ -180,7 +180,7 @@ class AlarmController {
       timePicker.setMinute(minute);
     }
     if (isPossible) {
-      timePicker.setOnTimeChangedListener(onTimeChangedListener);
+      timePicker.setOnTimeChangedListener(timePickerOnTimeChangedListener);
     } else {
       mainActivity.showWarningOverlay(mainActivity.getString(R.string.no_radio_available));
     }
@@ -234,7 +234,7 @@ class AlarmController {
     // Commit keyboard entry; listener detached so that alarm is not set twice
     timePicker.setOnTimeChangedListener(null);
     timePicker.clearFocus();
-    timePicker.setOnTimeChangedListener(onTimeChangedListener);
+    timePicker.setOnTimeChangedListener(timePickerOnTimeChangedListener);
     if (alarmService.setAlarm(timePicker.getHour(), timePicker.getMinute(), getDays(), radio.getId())) {
       return true;
     }

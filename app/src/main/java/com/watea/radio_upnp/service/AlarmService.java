@@ -79,28 +79,28 @@ public class AlarmService extends Service {
     .build();
   // Wait for internet connection
   private final ConnectivityManagerNetworkCallback networkCallback = new ConnectivityManagerNetworkCallback();
-  private String channelId;
-  @Nullable
-  private ListenableFuture<MediaController> controllerFuture = null;
-  @Nullable
-  private MediaController mediaController = null;
-  private final MediaController.Listener controllerListener = new MediaController.Listener() {
+  private final MediaController.Listener mediaControllerListener = new MediaController.Listener() {
     @Override
     public void onDisconnected(@NonNull MediaController controller) {
       Log.d(LOG_TAG, "onDisconnected");
       mediaController = null;
     }
   };
-  private SessionToken sessionToken;
-  private AlarmManager alarmManager;
-  private ConnectivityManager connectivityManager;
-  private boolean isStarted = false;
-  private boolean isAndroidAutoConnected = false;
   private final Observer<Integer> carConnectionObserver = type -> {
     final boolean connected = (type == CarConnection.CONNECTION_TYPE_PROJECTION);
     isAndroidAutoConnected = connected;
     Log.d(LOG_TAG, "Android Auto " + (connected ? "CONNECTED" : "DISCONNECTED"));
   };
+  private String channelId;
+  @Nullable
+  private ListenableFuture<MediaController> controllerFuture = null;
+  @Nullable
+  private MediaController mediaController = null;
+  private SessionToken sessionToken;
+  private AlarmManager alarmManager;
+  private ConnectivityManager connectivityManager;
+  private boolean isStarted = false;
+  private boolean isAndroidAutoConnected = false;
   @Nullable
   private CarConnection carConnection = null;
 
@@ -365,7 +365,7 @@ public class AlarmService extends Service {
       HANDLER.post(() -> {
         // Build on main thread so MediaController is bound to the main looper
         controllerFuture = new MediaController.Builder(AlarmService.this, sessionToken)
-          .setListener(controllerListener)
+          .setListener(mediaControllerListener)
           .buildAsync();
         controllerFuture.addListener(new MediaBrowserConnectionCallback(), HANDLER::post);
         releaseConnectivityManagerCallback();

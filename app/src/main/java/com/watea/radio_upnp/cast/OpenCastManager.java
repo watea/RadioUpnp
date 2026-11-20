@@ -52,7 +52,7 @@ class OpenCastManager {
   }
 
   // Only called in one place / app, when context is available
-  public void setContext(@NonNull Context context, @NonNull OpenCastManager.Callback callback) {
+  public void setContext(@NonNull Context context, @NonNull OpenCastManager.Callback castManagerCallback) {
   }
 
   // Only called in one place / app
@@ -66,7 +66,7 @@ class OpenCastManager {
   @Nullable
   public SessionDevice getCastSessionDevice(
     @NonNull Context context,
-    @NonNull SessionDevice.Listener listener,
+    @NonNull SessionDevice.Listener sessionDeviceListener,
     @NonNull Radio radio,
     @NonNull Consumer<Radio> onPlayCallback,
     @NonNull StreamServer streamServer) {

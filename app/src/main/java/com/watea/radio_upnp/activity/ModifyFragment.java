@@ -37,7 +37,18 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosModifyAdapter;
 import com.watea.radio_upnp.model.Radio;
 
-public class ModifyFragment extends MainActivityFragment implements RadiosModifyAdapter.Listener {
+public class ModifyFragment extends MainActivityFragment {
+  private final RadiosModifyAdapter.Listener radiosModifyAdapterListener = new RadiosModifyAdapter.Listener() {
+    @Override
+    public void onClick(@NonNull Radio radio) {
+      ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
+    }
+
+    @Override
+    public void onCountChange(boolean isEmpty) {
+      defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
+    }
+  };
   private FrameLayout defaultFrameLayout;
   @Nullable
   private RadiosModifyAdapter radiosModifyAdapter = null;
@@ -48,16 +59,6 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     if (radiosModifyAdapter != null) {
       radiosModifyAdapter.onDestroy();
     }
-  }
-
-  @Override
-  public void onClick(@NonNull Radio radio) {
-    ((ItemModifyFragment) getMainActivity().setFragment(ItemModifyFragment.class)).set(radio);
-  }
-
-  @Override
-  public void onCountChange(boolean isEmpty) {
-    defaultFrameLayout.setVisibility(getVisibleFrom(isEmpty));
   }
 
   @Override
@@ -90,7 +91,7 @@ public class ModifyFragment extends MainActivityFragment implements RadiosModify
     // Adapter
     radiosModifyAdapter = new RadiosModifyAdapter(
       radiosRecyclerView,
-      this,
+      radiosModifyAdapterListener,
       (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
   }
 }

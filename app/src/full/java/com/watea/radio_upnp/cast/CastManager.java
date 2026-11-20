@@ -46,11 +46,6 @@ import java.util.function.Consumer;
 
 public class CastManager extends OpenCastManager {
   private static final String LOG_TAG = CastManager.class.getSimpleName();
-  @NonNull
-  private Callback callback = new Callback() {
-  };
-  @Nullable
-  private CastSession castSession = null;
   private final SessionManagerListener<CastSession> sessionManagerListener = new SessionManagerListener<>() {
     @Override
     public void onSessionStarting(@NonNull CastSession castSession) {
@@ -103,6 +98,11 @@ public class CastManager extends OpenCastManager {
       callback.onCastStop();
     }
   };
+  @NonNull
+  private Callback callback = new Callback() {
+  };
+  @Nullable
+  private CastSession castSession = null;
 
   private CastManager() {
   }
@@ -137,8 +137,8 @@ public class CastManager extends OpenCastManager {
   }
 
   @Override
-  public void setContext(@NonNull Context context, @NonNull OpenCastManager.Callback callback) {
-    this.callback = callback;
+  public void setContext(@NonNull Context context, @NonNull OpenCastManager.Callback castManagerCallback) {
+    this.callback = castManagerCallback;
     try {
       final SessionManager sessionManager = CastContext.getSharedInstance(context).getSessionManager();
       sessionManager.addSessionManagerListener(sessionManagerListener, CastSession.class);
@@ -146,7 +146,7 @@ public class CastManager extends OpenCastManager {
       final CastSession currentCastSession = sessionManager.getCurrentCastSession();
       if ((currentCastSession != null) && currentCastSession.isConnected()) {
         castSession = currentCastSession;
-        callback.onCastStarted();
+        castManagerCallback.onCastStarted();
       }
     } catch (RuntimeException runtimeException) {
       Log.e(LOG_TAG, "setContext: Cast unavailable", runtimeException);
@@ -176,11 +176,11 @@ public class CastManager extends OpenCastManager {
   @NonNull
   public CastSessionDevice getCastSessionDevice(
     @NonNull Context context,
-    @NonNull SessionDevice.Listener listener,
+    @NonNull SessionDevice.Listener sessionDeviceListener,
     @NonNull Radio radio,
     @NonNull Consumer<Radio> onPlayCallback,
     @NonNull StreamServer streamServer) {
     assert castSession != null;
-    return new CastSessionDevice(context, listener, radio, onPlayCallback, streamServer, castSession);
+    return new CastSessionDevice(context, sessionDeviceListener, radio, onPlayCallback, streamServer, castSession);
   }
 }
