@@ -131,6 +131,8 @@ public class AlarmService extends Service {
   public void onCreate() {
     super.onCreate();
     Log.d(LOG_TAG, "onCreate");
+    // Process may be started by the alarm alone
+    Radios.setInstance(this, null);
     // Cancel own notification to handle the case where the Service was killed and
     // restarted by the system; others belong to RadioService
     NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
