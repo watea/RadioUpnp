@@ -10,8 +10,8 @@ android {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 36
-        versionCode = 302034
-        versionName = '3.02.034'
+        versionCode = 302035
+        versionName = '3.02.035'
     }
 
     buildTypes {
@@ -67,7 +67,7 @@ dependencies {
     implementation "androidx.media3:media3-exoplayer-dash:$media3" // Exoplayer codec
     implementation "androidx.media3:media3-datasource-okhttp:$media3" // Exoplayer OkHttp data source
     implementation "androidx.media3:media3-session:$media3" // Media3 session
-    implementation 'androidx.mediarouter:mediarouter:1.8.1'
+    implementation 'androidx.mediarouter:mediarouter:1.9.0'
     implementation 'androidx.car.app:app:1.7.0' // Car App Library
     // Cast
     fullImplementation 'com.google.android.gms:play-services-cast-framework:23.0.0'
@@ -76,7 +76,7 @@ dependencies {
     // CandidHttpServer
     implementation 'com.github.watea:candidhttpserver:2.0.0'
     // AndroidSsdpClient
-    implementation 'com.github.watea:androidssdpclient:2.0.0'
+    implementation 'com.github.watea:androidssdpclient:2.0.1'
     // okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.5.1'
     // Billing

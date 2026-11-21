@@ -30,6 +30,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentActivity;
 
 import com.watea.radio_upnp.R;
 
@@ -67,7 +68,11 @@ public class OpenDonationFragment extends MainActivityFragment {
 
   @NonNull
   private View.OnClickListener getLauncher(@NonNull Uri uri) {
-    assert getActivity() != null;
-    return (view -> getActivity().startActivity(new Intent(Intent.ACTION_VIEW, uri)));
+    return (view -> {
+      final FragmentActivity fragmentActivity = getActivity();
+      if (fragmentActivity != null) {
+        fragmentActivity.startActivity(new Intent(Intent.ACTION_VIEW, uri));
+      }
+    });
   }
 }

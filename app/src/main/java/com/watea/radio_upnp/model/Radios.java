@@ -121,6 +121,7 @@ public class Radios extends ArrayList<Radio> {
         }
         // Init
         new Thread(() -> {
+          assert radios != null;
           try (final FileInputStream fileInputStream = new FileInputStream(radios.fileName)) {
             radios.importFrom(
               true,
