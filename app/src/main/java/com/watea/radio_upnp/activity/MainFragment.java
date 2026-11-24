@@ -127,7 +127,7 @@ public class MainFragment extends MainActivityFragment {
   @NonNull
   View.OnClickListener getFloatingActionButtonOnClickListener() {
     return v -> lanTest(() -> {
-      getMainActivity().onUpnp();
+      getMainActivity().getUpnpController().showDialog();
       dlnaEnableUserHint.show();
     });
   }
@@ -136,7 +136,7 @@ public class MainFragment extends MainActivityFragment {
   @NonNull
   View.OnLongClickListener getFloatingActionButtonOnLongClickListener() {
     return v -> {
-      lanTest(() -> getMainActivity().onUpnp());
+      lanTest(() -> getMainActivity().getUpnpController().showDialog());
       return true;
     };
   }
@@ -190,7 +190,7 @@ public class MainFragment extends MainActivityFragment {
     preferredMenuItem = menu.findItem(R.id.action_preferred);
     setPreferredMenuItem();
     // Set listener
-    getMainActivity().setUpnpIconConsumer(bitmap -> {
+    getMainActivity().getUpnpController().setIconConsumer(bitmap -> {
       if ((upnpMenuItem != null) && isAdded()) {
         upnpMenuItem.setVisible((bitmap != null));
         if (bitmap != null) {
@@ -218,7 +218,7 @@ public class MainFragment extends MainActivityFragment {
       preferredRadiosUserHint.show();
       return true;
     } else if (id == R.id.action_upnp) {
-      getMainActivity().resetSelectedDevice();
+      getMainActivity().getUpnpController().resetSelectedDevice();
       tell(R.string.no_dlna_selection);
       return true;
     }

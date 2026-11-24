@@ -28,10 +28,8 @@ import static com.watea.radio_upnp.R.id;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.SearchManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -42,7 +40,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -65,8 +62,6 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
@@ -75,13 +70,9 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
-import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
-import com.watea.radio_upnp.service.AndroidUpnpService;
 import com.watea.radio_upnp.service.NetworkProxy;
-import com.watea.radio_upnp.upnp.Device;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -91,7 +82,6 @@ import java.io.PrintWriter;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 public class MainActivity extends AppCompatActivity {
   static final int SLEEP_MIN = 5;
@@ -109,61 +99,12 @@ public class MainActivity extends AppCompatActivity {
         put(DonationFragment.class, R.id.action_donate);
       }
     };
-  private final AndroidUpnpService.Listener androidUpnpServiceListener = new AndroidUpnpService.Listener() {
-    @Override
-    public void onFatalError() {
-      runSafelyOnUiThread(() -> tell(R.string.upnp_error));
-    }
-
-    @Override
-    public void onDeviceAdd(@NonNull Device device) {
-      if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
-        onNewSelectedDevice(device);
-      }
-    }
-
-    @Override
-    public void onDeviceRemove(@NonNull Device device) {
-      if ((upnpService != null) && (upnpService.getSelectedDevice() == device)) {
-        onNewSelectedDevice(null);
-      }
-    }
-
-    @Override
-    public void onSelectedDeviceChange(@Nullable Device previousDevice, @Nullable Device device) {
-      onNewSelectedDevice(device);
-    }
-  };
-  private final ServiceConnection upnpConnection = new ServiceConnection() {
-    @Override
-    public void onServiceConnected(ComponentName componentName, IBinder service) {
-      upnpService = (AndroidUpnpService.UpnpService) service;
-      if (upnpService != null) {
-        // Set listeners
-        upnpDevicesAdapter.setUpnpService(upnpService);
-        upnpService.addListener(androidUpnpServiceListener);
-        upnpService.search();
-      }
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-      if (upnpService != null) {
-        // Clear UPnP stuff
-        upnpService.clearListeners();
-        upnpService = null;
-      }
-      // No more devices
-      upnpDevicesAdapter.setUpnpService(null);
-    }
-  };
   private DrawerLayout drawerLayout;
   private ActionBarDrawerToggle drawerToggle;
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
   @Nullable
   private AlertDialog loadingAlertDialog = null;
-  private AlertDialog upnpAlertDialog;
   private AlertDialog aboutAlertDialog;
   private AlertDialog sleepAlertDialog;
   private UserHint toolbarUserHint;
@@ -174,14 +115,10 @@ public class MainActivity extends AppCompatActivity {
   private AlarmController alarmController;
   private SettingsController settingsController;
   private ImportExportController importExportController;
+  private UpnpController upnpController;
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
-  @Nullable
-  private AndroidUpnpService.UpnpService upnpService = null;
-  private UpnpDevicesAdapter upnpDevicesAdapter;
   private NetworkProxy networkProxy;
-  @Nullable
-  private Consumer<Bitmap> upnpIconConsumer = null;
 
   public static int getStarResource(boolean isPreferred) {
     return isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp;
@@ -286,30 +223,8 @@ public class MainActivity extends AppCompatActivity {
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
-    // Specific UPnP devices dialog
-    final AlertDialog.Builder upnpAlertDialogBuilder = new AlertDialog.Builder(this);
-    final View upnpView = LayoutInflater.from(upnpAlertDialogBuilder.getContext()).inflate(R.layout.view_upnp, null);
-    final RecyclerView devicesRecyclerView = upnpView.findViewById(R.id.devices_recycler_view);
-    devicesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-    upnpDevicesAdapter = new UpnpDevicesAdapter(
-      getThemeAttributeColor(this, android.R.attr.textColorHighlight),
-      upnpView.findViewById(R.id.devices_default_linear_layout),
-      device -> {
-        if (device == null) {
-          tell(R.string.no_dlna_selection);
-        } else {
-          tell(getResources().getString(R.string.dlna_selection) + device.getDisplayString());
-          final Radio radio = playerController.getCurrentRadio();
-          if (radio != null) {
-            startReading(radio);
-          }
-        }
-        upnpAlertDialog.dismiss();
-      });
-    devicesRecyclerView.setAdapter(upnpDevicesAdapter);
-    upnpAlertDialog = upnpAlertDialogBuilder
-      .setView(upnpView)
-      .create();
+    // UPnP
+    upnpController = new UpnpController(this);
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Set fragment if context is not restored by Android
@@ -354,9 +269,7 @@ public class MainActivity extends AppCompatActivity {
   protected void onStop() {
     super.onStop();
     // Release UPnP service
-    unbindService(upnpConnection);
-    // Force disconnection to release resources
-    upnpConnection.onServiceDisconnected(null);
+    upnpController.onActivityStop();
     // Clear AlarmController call
     alarmController.onActivityStop();
   }
@@ -375,9 +288,7 @@ public class MainActivity extends AppCompatActivity {
     // Finalize donations whose payment completed while app was not listening
     DonationFragment.consumePendingPurchases(this);
     // Bind to UPnP service
-    if (!bindService(new Intent(this, AndroidUpnpService.class), upnpConnection, BIND_AUTO_CREATE)) {
-      Log.e(LOG_TAG, "Internal failure; AndroidUpnpService not bound");
-    }
+    upnpController.onActivityStart();
     // AlarmController init
     alarmController.onActivityStart();
   }
@@ -486,34 +397,15 @@ public class MainActivity extends AppCompatActivity {
     checkNavigationMenu(navigationMenuCheckedId);
   }
 
-  void onUpnp() {
-    if (CastManager.getInstance().hasCastSession()) {
-      tell(R.string.cast_already_running);
-    } else {
-      upnpAlertDialog.show();
-    }
-  }
-
-  void setUpnpIconConsumer(@Nullable Consumer<Bitmap> upnpIconConsumer) {
-    this.upnpIconConsumer = upnpIconConsumer;
-    // Update icon if needed
-    if (upnpService != null) {
-      onNewSelectedDevice(upnpService.getSelectedDevice());
-    }
-  }
-
   @NonNull
   PlayerController getPlayerController() {
     assert playerController != null;
     return playerController;
   }
 
-  void resetSelectedDevice() {
-    if (upnpService == null) {
-      Log.e(LOG_TAG, "resetSelectedDevice: internal failure, upnpService not defined");
-      return;
-    }
-    upnpService.setSelectedDeviceIdentity(null);
+  @NonNull
+  UpnpController getUpnpController() {
+    return upnpController;
   }
 
   @NonNull
@@ -588,19 +480,6 @@ public class MainActivity extends AppCompatActivity {
     }
     drawerLayout.closeDrawers();
     return true;
-  }
-
-  private void onNewSelectedDevice(@Nullable Device device) {
-    runSafelyOnUiThread(() -> {
-      if (upnpIconConsumer != null) {
-        if (device == null) {
-          upnpIconConsumer.accept(null);
-        } else {
-          final Bitmap icon = device.getIcon();
-          upnpIconConsumer.accept((icon == null) ? getDefaultIcon(R.drawable.ic_cast_warm) : icon);
-        }
-      }
-    });
   }
 
   private void tellReportError() {
