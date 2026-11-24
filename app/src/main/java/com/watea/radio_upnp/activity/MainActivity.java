@@ -24,15 +24,12 @@
 package com.watea.radio_upnp.activity;
 
 import static com.watea.radio_upnp.R.id;
-import static com.watea.radio_upnp.R.string;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.SearchManager;
-import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -47,7 +44,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -59,8 +55,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -89,21 +83,13 @@ import com.watea.radio_upnp.service.AndroidUpnpService;
 import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.Device;
 
-import org.json.JSONException;
-
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -187,15 +173,13 @@ public class MainActivity extends AppCompatActivity {
   private SharedPreferences sharedPreferences;
   private AlarmController alarmController;
   private SettingsController settingsController;
+  private ImportExportController importExportController;
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
   private NetworkProxy networkProxy;
-  private ActivityResultLauncher<Intent> importExportLauncher;
-  @Nullable
-  private ImportExportAction importExportAction = null;
   @Nullable
   private Consumer<Bitmap> upnpIconConsumer = null;
 
@@ -267,25 +251,8 @@ public class MainActivity extends AppCompatActivity {
     findViewById(R.id.actionbar).setOnClickListener(v -> setToolbarExpanded(!isToolbarExpanded));
     // Alarm
     alarmController = new AlarmController(this);
-    // Import/export function
-    importExportLauncher = registerForActivityResult(
-      new ActivityResultContracts.StartActivityForResult(),
-      result -> {
-        if (result.getResultCode() == RESULT_OK) {
-          final Intent data = result.getData();
-          if (data != null) {
-            final Uri uri = data.getData();
-            if (uri != null) {
-              assert importExportAction != null;
-              if (importExportAction.isImport) {
-                importFrom(uri, importExportAction.mime);
-              } else {
-                exportTo(uri, importExportAction.mime);
-              }
-            }
-          }
-        }
-      });
+    // Import/export
+    importExportController = new ImportExportController(this);
     // Set navigation drawer toggle (according to documentation)
     drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
     // Set the drawer toggle as the DrawerListener
@@ -567,6 +534,14 @@ public class MainActivity extends AppCompatActivity {
       loadingAlertDialog;
   }
 
+  void runSafelyOnUiThread(@NonNull Runnable runnable) {
+    runOnUiThread(() -> {
+      if (!isFinishing() && !isDestroyed()) {
+        runnable.run();
+      }
+    });
+  }
+
   private void tell(@NonNull Snackbar snackbar) {
     final Context dialogContext = new AlertDialog.Builder(this).getContext();
     snackbar.setTextColor(getThemeAttributeColor(dialogContext, android.R.attr.textColorPrimary)).show();
@@ -594,9 +569,9 @@ public class MainActivity extends AppCompatActivity {
       }
       sleepAlertDialog.show();
     } else if (id == R.id.action_export) {
-      exportFile();
+      importExportController.launchExport();
     } else if (id == R.id.action_import) {
-      importFile();
+      importExportController.launchImport();
     } else if (id == R.id.action_settings) {
       settingsController.show();
     } else if (id == R.id.action_about) {
@@ -695,144 +670,9 @@ public class MainActivity extends AppCompatActivity {
     navigationMenu.findItem(navigationMenuCheckedId).setChecked(true);
   }
 
-  private void safeLaunch(@NonNull Intent intent, @NonNull ActivityResultLauncher<Intent> launcher) {
-    try {
-      launcher.launch(intent);
-    } catch (ActivityNotFoundException activityNotFoundException) {
-      tell(R.string.no_file_picker_found);
-    }
-  }
-
-  private void exportFile() {
-    showImportExportDialog(
-      string.title_export,
-      R.drawable.ic_output_white_24dp,
-      R.string.export_message,
-      (dialog, which) -> {
-        importExportAction = (which == DialogInterface.BUTTON_NEUTRAL) ?
-          ImportExportAction.CSV_EXPORT : ImportExportAction.JSON_EXPORT;
-        safeLaunch(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), importExportLauncher);
-      });
-  }
-
-  private void importFile() {
-    showImportExportDialog(
-      string.title_import,
-      R.drawable.ic_exit_to_app_white_24dp,
-      R.string.import_message,
-      (dialog, which) -> {
-        final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
-          .addCategory(Intent.CATEGORY_OPENABLE);
-        if (which == DialogInterface.BUTTON_NEUTRAL) {
-          intent.setType("*/*"); // Radios.MIME_CSV MIME type is not supported
-          importExportAction = ImportExportAction.CSV_IMPORT;
-        } else {
-          intent.setType(Radios.MIME_JSON);
-          importExportAction = ImportExportAction.JSON_IMPORT;
-        }
-        safeLaunch(intent, importExportLauncher);
-      });
-  }
-
-  // Neutral button is CSV, positive is JSON
-  private void showImportExportDialog(int title, int icon, int message, @NonNull DialogInterface.OnClickListener dialogInterfaceOnClickListener) {
-    new AlertDialog.Builder(this)
-      .setTitle(title)
-      .setIcon(icon)
-      .setMessage(message)
-      .setNeutralButton(R.string.action_csv_export, dialogInterfaceOnClickListener)
-      .setPositiveButton(R.string.action_json_export, dialogInterfaceOnClickListener)
-      // Restore checked item
-      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
-      .create()
-      .show();
-  }
-
-  private void exportTo(@NonNull Uri treeUri, @NonNull String type) {
-    final List<Radio> snapshot = new ArrayList<>(Radios.getInstance());
-    new Thread(() -> {
-      try {
-        final Uri fileUri = createFileInTree(treeUri, getString(R.string.app_name), type);
-        if (fileUri == null) {
-          Log.e(LOG_TAG, "exportTo: internal failure, file not created");
-          runSafelyOnUiThread(() -> tell(R.string.export_failed_not_created));
-          return;
-        }
-        try (final OutputStream outputStream = getContentResolver().openOutputStream(fileUri)) {
-          if (outputStream == null) {
-            Log.e(LOG_TAG, "exportTo: internal failure, file not created");
-            runSafelyOnUiThread(() -> tell(R.string.export_failed));
-          } else {
-            Radios.write(snapshot, outputStream, type);
-            runSafelyOnUiThread(() -> tell(getString(R.string.export_done) + getString(R.string.app_name)));
-          }
-        }
-      } catch (JSONException | IOException exception) {
-        Log.e(LOG_TAG, "exportTo: internal failure", exception);
-        runSafelyOnUiThread(() -> tell(R.string.export_failed));
-      }
-    }).start();
-  }
-
-  private void runSafelyOnUiThread(@NonNull Runnable runnable) {
-    runOnUiThread(() -> {
-      if (!isFinishing() && !isDestroyed()) {
-        runnable.run();
-      }
-    });
-  }
-
-  @Nullable
-  private Uri createFileInTree(
-    @NonNull Uri treeUri,
-    @NonNull String fileName,
-    @NonNull String type) throws FileNotFoundException {
-    // Get the document ID of the tree URI
-    final String docId = DocumentsContract.getTreeDocumentId(treeUri);
-    // Build the document URI for the file
-    final Uri docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
-    // Important: use the document URI as the parent for the new file
-    return DocumentsContract.createDocument(getContentResolver(), docUri, type, fileName);
-  }
-
-  private void importFrom(@NonNull Uri uri, @NonNull String type) {
-    new Thread(() -> {
-      try (final InputStream inputStream = getContentResolver().openInputStream(uri)) {
-        if (inputStream == null) {
-          Log.e(LOG_TAG, "importFrom: internal failure");
-        } else {
-          Radios.getInstance().importFrom(
-            Radios.MIME_JSON.equals(type),
-            false,
-            inputStream,
-            result -> runSafelyOnUiThread(() -> tell(result ? R.string.import_successful : string.import_failed)));
-        }
-      } catch (Exception exception) {
-        Log.e(LOG_TAG, "importFrom: I/O failure", exception);
-        runSafelyOnUiThread(() -> tell(R.string.import_failed));
-      }
-    }).start();
-  }
-
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
-  }
-
-  private enum ImportExportAction {
-    JSON_IMPORT(Radios.MIME_JSON, true),
-    CSV_IMPORT(Radios.MIME_CSV, true),
-    JSON_EXPORT(Radios.MIME_JSON, false),
-    CSV_EXPORT(Radios.MIME_CSV, false);
-
-    @NonNull
-    final String mime;
-    final boolean isImport;
-
-    ImportExportAction(@NonNull String mime, boolean isImport) {
-      this.mime = mime;
-      this.isImport = isImport;
-    }
   }
 
   class UserHint {
