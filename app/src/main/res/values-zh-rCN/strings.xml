@@ -95,6 +95,8 @@
     <string name="pcm_radio_button_hint">确保与所有电台兼容</string>
     <string name="passthrough_radio_button">直通</string>
     <string name="passthrough_radio_button_hint">流原样转发；渲染器必须支持该编解码器</string>
+    <string name="Miscellaneous">其他</string>
+    <string name="play_last_radio_check_box">启动时播放上次的电台</string>
     <string name="radio_information">电台信息</string>
     <string name="system_radio_button">跟随系统</string>
     <string name="dark_radio_button">深色</string>

@@ -55,8 +55,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.NumberPicker;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -89,7 +87,6 @@ import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.AndroidUpnpService;
 import com.watea.radio_upnp.service.NetworkProxy;
-import com.watea.radio_upnp.service.RadioService;
 import com.watea.radio_upnp.upnp.Device;
 
 import org.json.JSONException;
@@ -181,7 +178,6 @@ public class MainActivity extends AppCompatActivity {
   @Nullable
   private AlertDialog loadingAlertDialog = null;
   private AlertDialog upnpAlertDialog;
-  private AlertDialog settingsAlertDialog;
   private AlertDialog aboutAlertDialog;
   private AlertDialog sleepAlertDialog;
   private UserHint toolbarUserHint;
@@ -190,10 +186,9 @@ public class MainActivity extends AppCompatActivity {
   private PlayerController playerController;
   private SharedPreferences sharedPreferences;
   private AlarmController alarmController;
+  private SettingsController settingsController;
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
-  private Theme theme = Theme.DARK;
-  private Layout layout = Layout.TILE;
   @Nullable
   private AndroidUpnpService.UpnpService upnpService = null;
   private UpnpDevicesAdapter upnpDevicesAdapter;
@@ -227,15 +222,14 @@ public class MainActivity extends AppCompatActivity {
     return drawerToggle.onOptionsItemSelected(item) || super.onOptionsItemSelected(item);
   }
 
+  public boolean isTileLayout() {
+    return settingsController.isTileLayout();
+  }
+
   @Override
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     drawerToggle.onConfigurationChanged(newConfig);
-  }
-
-  @NonNull
-  public Layout getLayout() {
-    return layout;
   }
 
   // Is called also when coming back after a "Back" exit
@@ -248,13 +242,9 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     // Fetch preferences
     sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-    // Theme
-    theme = Theme.valueOf(sharedPreferences.getString(getString(R.string.key_theme), theme.toString()));
-    setTheme(getCurrentTheme());
-    // Layout
-    layout = Layout.valueOf(sharedPreferences.getString(getString(R.string.key_layout), layout.toString()));
-    // PCM
-    final boolean isPcm = sharedPreferences.getBoolean(getString(string.key_pcm_mode), RadioService.KEY_PCM_MODE_DEFAULT);
+    // Settings
+    settingsController = new SettingsController(this);
+    setTheme(settingsController.getThemeResId());
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // Inflate view
@@ -353,45 +343,6 @@ public class MainActivity extends AppCompatActivity {
     upnpAlertDialog = upnpAlertDialogBuilder
       .setView(upnpView)
       .create();
-    // Settings dialog
-    final AlertDialog.Builder settingsAlertDialogBuilder = new AlertDialog.Builder(this);
-    final View settingsView = LayoutInflater.from(settingsAlertDialogBuilder.getContext()).inflate(R.layout.view_settings, null);
-    // Settings dialog: theme
-    final RadioGroup themeRadioGroup = settingsView.findViewById(R.id.theme_radio_group);
-    themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
-      final Theme previousTheme = theme;
-      theme = Theme.fromRadioButtonId(checkedId);
-      if (theme != previousTheme) {
-        settingsAlertDialog.dismiss();
-        recreate();
-      }
-    });
-    ((RadioButton) settingsView.findViewById(theme.radioButtonId)).setChecked(true);
-    // Settings dialog: layout
-    final RadioGroup layoutRadioGroup = settingsView.findViewById(R.id.layout_radio_group);
-    layoutRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
-      final Layout previousLayout = layout;
-      layout = (group.getCheckedRadioButtonId() == id.row_radio_button) ? Layout.ROW : Layout.TILE;
-      if (layout != previousLayout) {
-        final List<Fragment> fragments = getSupportFragmentManager().getFragments();
-        fragments.stream().filter(fragment -> fragment instanceof MainFragment).findFirst().ifPresent(mainFragment -> ((MainFragment) mainFragment).setLayoutManager());
-      }
-    });
-    final int layoutRadioButtonId = (layout == Layout.TILE) ? R.id.tile_radio_button : R.id.row_radio_button;
-    ((RadioButton) settingsView.findViewById(layoutRadioButtonId)).setChecked(true);
-    // Settings dialog: PCM
-    final RadioGroup pcmRadioGroup = settingsView.findViewById(R.id.pcm_radio_group);
-    pcmRadioGroup.setOnCheckedChangeListener((group, checkedId) ->
-      sharedPreferences.edit().putBoolean(getString(R.string.key_pcm_mode), (group.getCheckedRadioButtonId() == id.pcm_radio_button)).commit());
-    final int pcmRadioButtonId = isPcm ? R.id.pcm_radio_button : id.passthrough_radio_button;
-    ((RadioButton) settingsView.findViewById(pcmRadioButtonId)).setChecked(true);
-    settingsAlertDialog = settingsAlertDialogBuilder
-      .setTitle(string.title_settings)
-      .setIcon(R.drawable.ic_settings_white_24dp)
-      .setView(settingsView)
-      // Restore checked item
-      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
-      .create();
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Set fragment if context is not restored by Android
@@ -418,7 +369,7 @@ public class MainActivity extends AppCompatActivity {
     // PlayerController init
     playerController.onActivityCreate();
     // Auto-restart last played radio (fresh start or process kill recovery)
-    if (Radios.getLastPlayedRadioId(this) != null) {
+    if (settingsController.isPlayLastRadio() && (Radios.getLastPlayedRadioId(this) != null)) {
       playerController.enableAutoPlay();
     }
     // Intent
@@ -435,11 +386,6 @@ public class MainActivity extends AppCompatActivity {
   @Override
   protected void onStop() {
     super.onStop();
-    // Shared preferences
-    sharedPreferences.edit()
-      .putString(getString(string.key_theme), theme.toString())
-      .putString(getString(string.key_layout), layout.toString())
-      .apply();
     // Release UPnP service
     unbindService(upnpConnection);
     // Force disconnection to release resources
@@ -652,7 +598,7 @@ public class MainActivity extends AppCompatActivity {
     } else if (id == R.id.action_import) {
       importFile();
     } else if (id == R.id.action_settings) {
-      settingsAlertDialog.show();
+      settingsController.show();
     } else if (id == R.id.action_about) {
       aboutAlertDialog.show();
     } else if (id == R.id.action_log) {
@@ -680,13 +626,6 @@ public class MainActivity extends AppCompatActivity {
         }
       }
     });
-  }
-
-  private int getCurrentTheme() {
-    // Check the actual system setting
-    final int uiMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-    return (((theme == Theme.SYSTEM) && (uiMode == Configuration.UI_MODE_NIGHT_NO)) || (theme == Theme.LIGHT)) ?
-      R.style.AppTheme_Light : R.style.AppTheme_Dark;
   }
 
   private void tellReportError() {
@@ -878,30 +817,6 @@ public class MainActivity extends AppCompatActivity {
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
-  }
-
-  public enum Layout {
-    TILE, ROW
-  }
-
-  private enum Theme {
-    SYSTEM(R.id.system_radio_button), DARK(R.id.dark_radio_button), LIGHT(R.id.light_radio_button);
-
-    final int radioButtonId;
-
-    Theme(int radioButtonId) {
-      this.radioButtonId = radioButtonId;
-    }
-
-    @NonNull
-    static Theme fromRadioButtonId(int radioButtonId) {
-      for (final Theme theme : values()) {
-        if (theme.radioButtonId == radioButtonId) {
-          return theme;
-        }
-      }
-      return SYSTEM;
-    }
   }
 
   private enum ImportExportAction {

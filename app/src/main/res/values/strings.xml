@@ -110,6 +110,8 @@
     <string name="pcm_radio_button_hint">Ensures compatibility with all radios</string>
     <string name="passthrough_radio_button">Passthrough</string>
     <string name="passthrough_radio_button_hint">Stream forwarded as-is; renderer must support the codec</string>
+    <string name="Miscellaneous">Miscellaneous</string>
+    <string name="play_last_radio_check_box">Play last radio at launch</string>
     <string name="radio_information">Radio information</string>
     <string name="system_radio_button">System</string>
     <string name="dark_radio_button">Dark</string>

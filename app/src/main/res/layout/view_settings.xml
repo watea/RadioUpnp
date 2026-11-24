@@ -128,4 +128,23 @@
 
     </RadioGroup>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/textColorPrimary" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:text="@string/Miscellaneous"
+        android:textStyle="bold" />
+
+    <CheckBox
+        android:id="@+id/play_last_radio_check_box"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/app_margin"
+        android:text="@string/play_last_radio_check_box" />
+
 </LinearLayout>

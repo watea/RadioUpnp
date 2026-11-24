@@ -174,7 +174,7 @@ public class MainFragment extends MainActivityFragment {
   @SuppressLint("NotifyDataSetChanged")
   void setLayoutManager() {
     final int tileSize = getResources().getDimensionPixelSize(R.dimen.tile_size);
-    radiosRecyclerView.setLayoutManager((getMainActivity().getLayout() == MainActivity.Layout.TILE) ?
+    radiosRecyclerView.setLayoutManager(getMainActivity().isTileLayout() ?
       new VarColumnGridLayoutManager(getContext(), tileSize) :
       new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
     if (radiosMainAdapter != null) {

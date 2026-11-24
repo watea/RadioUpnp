@@ -126,24 +126,24 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
           ColorContrastChecker.isMoreThanHalfTransparent(radioBackgroundColor)) ?
           textColor : windowBackgroundColor);
       final int tileSize = context.getResources().getDimensionPixelSize(R.dimen.tile_size);
-      final boolean isTile = (getLayout() == MainActivity.Layout.TILE);
+      final boolean isTile = isTileLayout();
       radioTextView.getLayoutParams().width = isTile ? tileSize : ViewGroup.LayoutParams.MATCH_PARENT;
       radioTextView.getLayoutParams().height = isTile ? tileSize : context.getResources().getDimensionPixelSize(R.dimen.row_height);
     }
 
     @Override
     void setImage(@NonNull BitmapDrawable bitmapDrawable) {
+      final boolean isTile = isTileLayout();
       radioTextView
         .setCompoundDrawablesRelativeWithIntrinsicBounds(
-          (getLayout() == MainActivity.Layout.ROW) ? bitmapDrawable : null,
-          (getLayout() == MainActivity.Layout.TILE) ? bitmapDrawable : null,
+          isTile ? null : bitmapDrawable,
+          isTile ? bitmapDrawable : null,
           null,
           null);
     }
 
-    @NonNull
-    private MainActivity.Layout getLayout() {
-      return ((MainActivity) context).getLayout();
+    private boolean isTileLayout() {
+      return ((MainActivity) context).isTileLayout();
     }
 
     private int getDominantColor(@NonNull Bitmap bitmap) {
