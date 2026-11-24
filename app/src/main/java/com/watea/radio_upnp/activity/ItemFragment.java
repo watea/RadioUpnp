@@ -49,6 +49,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.adapter.UiUtils;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
 import com.watea.radio_upnp.service.SessionDevice;
@@ -180,7 +181,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     webPageWatcher = new UrlWatcher(webPageEditText);
     iconWatcher = new UrlWatcher(iconEditText);
     // Default icon
-    setRadioIcon((restoredBitmap == null) ? getMainActivity().getDefaultIcon() : restoredBitmap);
+    setRadioIcon((restoredBitmap == null) ? MainActivity.getDefaultIcon(requireContext()) : restoredBitmap);
   }
 
   @Override
@@ -254,7 +255,7 @@ public abstract class ItemFragment extends MainActivityFragment {
       this.editText = editText;
       this.editText.addTextChangedListener(this);
       defaultColor = this.editText.getCurrentTextColor();
-      errorColor = MainActivity.getThemeAttributeColor(requireContext(), androidx.appcompat.R.attr.colorError);
+      errorColor = UiUtils.getThemeAttributeColor(requireContext(), androidx.appcompat.R.attr.colorError);
     }
 
     @Override

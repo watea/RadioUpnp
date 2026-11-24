@@ -36,16 +36,18 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.activity.MainActivity;
 import com.watea.radio_upnp.model.Radio;
 
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.ViewHolder> {
   @NonNull
   private final CurrentRadioListenerSetter currentRadioListenerSetter;
+  @NonNull
+  private final BooleanSupplier isTileLayout;
   @Nullable
   private Radio currentRadio = null;
 
@@ -53,8 +55,10 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
     @NonNull Supplier<List<Radio>> radiosSupplier,
     @NonNull RecyclerView recyclerView,
     @NonNull Listener listener,
-    @NonNull CurrentRadioListenerSetter currentRadioListenerSetter) {
+    @NonNull CurrentRadioListenerSetter currentRadioListenerSetter,
+    @NonNull BooleanSupplier isTileLayout) {
     super(radiosSupplier, R.layout.row_radio, recyclerView, listener);
+    this.isTileLayout = isTileLayout;
     this.currentRadioListenerSetter = currentRadioListenerSetter;
     this.currentRadioListenerSetter.setListener(this::onCurrentRadioChange);
   }
@@ -122,18 +126,18 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
       final int radioBackgroundColor = (radio == currentRadio) ? backgroundColor : getDominantColor(this.radio.getIcon());
       radioTextView.setBackgroundColor(radioBackgroundColor);
       radioTextView.setTextColor(
-        (ColorContrastChecker.hasSufficientContrast(textColor, radioBackgroundColor) ||
-          ColorContrastChecker.isMoreThanHalfTransparent(radioBackgroundColor)) ?
+        (UiUtils.hasSufficientContrast(textColor, radioBackgroundColor) ||
+          UiUtils.isMoreThanHalfTransparent(radioBackgroundColor)) ?
           textColor : windowBackgroundColor);
       final int tileSize = context.getResources().getDimensionPixelSize(R.dimen.tile_size);
-      final boolean isTile = isTileLayout();
+      final boolean isTile = isTileLayout.getAsBoolean();
       radioTextView.getLayoutParams().width = isTile ? tileSize : ViewGroup.LayoutParams.MATCH_PARENT;
       radioTextView.getLayoutParams().height = isTile ? tileSize : context.getResources().getDimensionPixelSize(R.dimen.row_height);
     }
 
     @Override
     void setImage(@NonNull BitmapDrawable bitmapDrawable) {
-      final boolean isTile = isTileLayout();
+      final boolean isTile = isTileLayout.getAsBoolean();
       radioTextView
         .setCompoundDrawablesRelativeWithIntrinsicBounds(
           isTile ? null : bitmapDrawable,
@@ -142,16 +146,12 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
           null);
     }
 
-    private boolean isTileLayout() {
-      return ((MainActivity) context).isTileLayout();
-    }
-
     private int getDominantColor(@NonNull Bitmap bitmap) {
       return Radio.createScaledBitmap(bitmap, 1).getPixel(0, 0);
     }
 
     private int getTextViewColor(int color) {
-      return MainActivity.getThemeAttributeColor(radioTextView.getContext(), color);
+      return UiUtils.getThemeAttributeColor(radioTextView.getContext(), color);
     }
   }
 }

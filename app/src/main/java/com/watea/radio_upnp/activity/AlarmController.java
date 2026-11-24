@@ -50,6 +50,7 @@ import androidx.appcompat.widget.SwitchCompat;
 
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.AlarmService;
 
 class AlarmController {
@@ -70,7 +71,7 @@ class AlarmController {
   @NonNull
   private final AlertDialog alertDialog;
   @NonNull
-  private final MainActivity.UserHint batteryOptimisationUserHint;
+  private final UserHint batteryOptimisationUserHint;
   @NonNull
   private final TimePicker.OnTimeChangedListener timePickerOnTimeChangedListener;
   private final ServiceConnection alarmConnection = new ServiceConnection() {
@@ -100,9 +101,8 @@ class AlarmController {
   AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
     // Build alert dialogs
-    batteryOptimisationUserHint = mainActivity
-      .new UserHint(R.string.key_battery_optimization_press_got_it, R.string.battery_optimization);
-    final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this.mainActivity);
+    batteryOptimisationUserHint = new UserHint(mainActivity, R.string.key_battery_optimization_press_got_it, R.string.battery_optimization);
+    final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mainActivity);
     final View view = LayoutInflater.from(alertDialogBuilder.getContext()).inflate(R.layout.view_alarm, null);
     timePicker = view.findViewById(R.id.timePicker);
     timePicker.setIs24HourView(true);
@@ -142,7 +142,7 @@ class AlarmController {
       .setIcon(R.drawable.ic_alarm_white_24dp)
       .setView(view)
       // Restore checked item
-      .setOnDismissListener(dialogInterface -> this.mainActivity.checkNavigationMenu())
+      .setOnDismissListener(dialogInterface -> mainActivity.checkNavigationMenu())
       .create();
   }
 
@@ -157,9 +157,9 @@ class AlarmController {
       mainActivity.showWarningOverlay(mainActivity.getString(R.string.alarm_not_allowed));
       return;
     }
-    radio = alarmService.isStarted() ? alarmService.getRadio() : mainActivity.getLastPlayedRadio();
+    radio = alarmService.isStarted() ? alarmService.getRadio() : Radios.getInstance().getLastPlayedRadio(mainActivity);
     final boolean isPossible = (radio != null);
-    imageView.setImageBitmap(isPossible ? radio.getIcon() : mainActivity.getDefaultIcon());
+    imageView.setImageBitmap(isPossible ? radio.getIcon() : MainActivity.getDefaultIcon(mainActivity));
     textView.setText(isPossible ? radio.getName() : mainActivity.getString(R.string.no_radio_available));
     final int days = alarmService.getDays();
     for (int i = 0; i < dayButtons.length; i++) {

@@ -45,6 +45,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosMainAdapter;
+import com.watea.radio_upnp.adapter.UiUtils;
 import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
@@ -54,7 +55,7 @@ public class MainFragment extends MainActivityFragment {
     @Override
     public void onClick(@NonNull Radio radio) {
       if (getNetworkProxy().isDeviceOnline()) {
-        getMainActivity().startReading(radio);
+        getMainActivity().getPlayerController().startReading(radio);
         radioLongPressUserHint.show();
       } else {
         tell(R.string.no_internet);
@@ -80,9 +81,9 @@ public class MainFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private MenuItem upnpMenuItem;
   private MenuItem preferredMenuItem;
-  private MainActivity.UserHint radioLongPressUserHint;
-  private MainActivity.UserHint dlnaEnableUserHint;
-  private MainActivity.UserHint preferredRadiosUserHint;
+  private UserHint radioLongPressUserHint;
+  private UserHint dlnaEnableUserHint;
+  private UserHint preferredRadiosUserHint;
   @Nullable
   private RadiosMainAdapter radiosMainAdapter = null;
   private RecyclerView radiosRecyclerView;
@@ -161,14 +162,12 @@ public class MainFragment extends MainActivityFragment {
       Radios.getInstance()::getActuallySelectedRadios,
       radiosRecyclerView,
       radiosMainAdapterListener,
-      getMainActivity().getPlayerController());
+      getMainActivity().getPlayerController(),
+      getMainActivity()::isTileLayout);
     // Build alert dialogs
-    radioLongPressUserHint = getMainActivity()
-      .new UserHint(R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);
-    dlnaEnableUserHint = getMainActivity()
-      .new UserHint(R.string.key_dlna_enable_got_it, R.string.dlna_enable);
-    preferredRadiosUserHint = getMainActivity()
-      .new UserHint(R.string.key_preferred_radios_got_it, R.string.preferred_radios);
+    radioLongPressUserHint = new UserHint(getMainActivity(), R.string.key_radio_long_press_got_it, R.string.radio_long_press, 2);
+    dlnaEnableUserHint = new UserHint(getMainActivity(), R.string.key_dlna_enable_got_it, R.string.dlna_enable);
+    preferredRadiosUserHint = new UserHint(getMainActivity(), R.string.key_preferred_radios_got_it, R.string.preferred_radios);
   }
 
   @SuppressLint("NotifyDataSetChanged")
@@ -235,7 +234,7 @@ public class MainFragment extends MainActivityFragment {
 
   private void setPreferredMenuItem() {
     preferredMenuItem.setIcon(
-      MainActivity.getStarResource(Radios.isPreferred()));
+      UiUtils.getStarResource(Radios.isPreferred()));
   }
 
   private static class VarColumnGridLayoutManager extends GridLayoutManager {

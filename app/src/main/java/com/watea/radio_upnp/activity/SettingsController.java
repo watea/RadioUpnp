@@ -37,6 +37,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioService;
 
 class SettingsController {
@@ -50,7 +51,7 @@ class SettingsController {
 
   SettingsController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
-    sharedPreferences = mainActivity.getSharedPreferences();
+    sharedPreferences = Radios.getAppPreferences(mainActivity);
   }
 
   int getThemeResId() {

@@ -41,6 +41,7 @@ import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
 
+import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.NetworkProxy;
 
 // Upper class for fragments of the main activity
@@ -123,7 +124,7 @@ public abstract class MainActivityFragment extends Fragment {
 
   @NonNull
   SharedPreferences getSharedPreferences() {
-    return getMainActivity().getSharedPreferences();
+    return Radios.getAppPreferences(requireContext());
   }
 
   @NonNull

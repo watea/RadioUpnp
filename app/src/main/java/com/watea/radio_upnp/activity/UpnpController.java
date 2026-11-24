@@ -42,6 +42,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.watea.radio_upnp.R;
+import com.watea.radio_upnp.adapter.UiUtils;
 import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
@@ -54,6 +55,8 @@ class UpnpController {
   private static final String LOG_TAG = UpnpController.class.getSimpleName();
   @NonNull
   private final MainActivity mainActivity;
+  @NonNull
+  private final PlayerController playerController;
   @NonNull
   private final UpnpDevicesAdapter upnpDevicesAdapter;
   @NonNull
@@ -112,14 +115,15 @@ class UpnpController {
   private Consumer<Bitmap> iconConsumer = null;
 
   @SuppressLint("InflateParams")
-  UpnpController(@NonNull MainActivity mainActivity) {
+  UpnpController(@NonNull MainActivity mainActivity, @NonNull PlayerController playerController) {
     this.mainActivity = mainActivity;
+    this.playerController = playerController;
     final AlertDialog.Builder builder = new AlertDialog.Builder(mainActivity);
     final View view = LayoutInflater.from(builder.getContext()).inflate(R.layout.view_upnp, null);
     final RecyclerView devicesRecyclerView = view.findViewById(R.id.devices_recycler_view);
     devicesRecyclerView.setLayoutManager(new LinearLayoutManager(mainActivity));
     upnpDevicesAdapter = new UpnpDevicesAdapter(
-      MainActivity.getThemeAttributeColor(mainActivity, android.R.attr.textColorHighlight),
+      UiUtils.getThemeAttributeColor(mainActivity, android.R.attr.textColorHighlight),
       view.findViewById(R.id.devices_default_linear_layout),
       this::onDeviceSelected);
     devicesRecyclerView.setAdapter(upnpDevicesAdapter);
@@ -169,9 +173,9 @@ class UpnpController {
       mainActivity.tell(R.string.no_dlna_selection);
     } else {
       mainActivity.tell(mainActivity.getString(R.string.dlna_selection) + device.getDisplayString());
-      final Radio radio = mainActivity.getPlayerController().getCurrentRadio();
+      final Radio radio = playerController.getCurrentRadio();
       if (radio != null) {
-        mainActivity.startReading(radio);
+        playerController.startReading(radio);
       }
     }
     alertDialog.dismiss();
@@ -184,7 +188,7 @@ class UpnpController {
           iconConsumer.accept(null);
         } else {
           final Bitmap icon = device.getIcon();
-          iconConsumer.accept((icon == null) ? mainActivity.getDefaultIcon(R.drawable.ic_cast_warm) : icon);
+          iconConsumer.accept((icon == null) ? MainActivity.getDefaultIcon(mainActivity, R.drawable.ic_cast_warm) : icon);
         }
       }
     });

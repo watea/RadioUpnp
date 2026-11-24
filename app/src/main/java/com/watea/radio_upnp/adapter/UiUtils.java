@@ -23,9 +23,29 @@
 
 package com.watea.radio_upnp.adapter;
 
+import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Color;
 
-class ColorContrastChecker {
+import androidx.annotation.NonNull;
+
+import com.watea.radio_upnp.R;
+
+public final class UiUtils {
+  private UiUtils() {
+  }
+
+  public static int getStarResource(boolean isPreferred) {
+    return isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp;
+  }
+
+  public static int getThemeAttributeColor(@NonNull Context context, int attr) {
+    final int[] attrs = {attr};
+    try (final TypedArray typedArray = context.obtainStyledAttributes(attrs)) {
+      return typedArray.getColor(0, 0);
+    }
+  }
+
   static boolean hasSufficientContrast(int color1, int color2) {
     final double luminance1 = calculateRelativeLuminance(color1);
     final double luminance2 = calculateRelativeLuminance(color2);

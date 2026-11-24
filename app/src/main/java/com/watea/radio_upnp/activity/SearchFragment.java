@@ -190,7 +190,7 @@ public class SearchFragment extends SearchRootFragment {
         Log.w(LOG_TAG, "toRadio: icon fetch error");
       }
     }
-    return new Radio(name, (icon == null) ? getMainActivity().getDefaultIcon() : icon, stream, homepageUrl);
+    return new Radio(name, (icon == null) ? MainActivity.getDefaultIcon(requireContext()) : icon, stream, homepageUrl);
   }
 
   @NonNull

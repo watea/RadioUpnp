@@ -56,6 +56,7 @@ import androidx.media3.session.SessionToken;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.RadiosMainAdapter;
+import com.watea.radio_upnp.adapter.UiUtils;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.RadioPlayer;
@@ -68,7 +69,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
+class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
   // Button tag = action to perform on next click
   private static final int TAG_ACTION_PLAY = 0;
   private static final int TAG_ACTION_PAUSE = 1;
@@ -91,11 +92,11 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   @NonNull
   private final TextView playedRadioRateTextView;
   @NonNull
-  private final MainActivity.UserHint playLongPressUserHint;
+  private final UserHint playLongPressUserHint;
   @NonNull
-  private final MainActivity.UserHint informationPressUserHint;
+  private final UserHint informationPressUserHint;
   @NonNull
-  private final MainActivity.UserHint informationSelectPressUserHint;
+  private final UserHint informationSelectPressUserHint;
   @NonNull
   private final AlertDialog playlistAlertDialog;
   @NonNull
@@ -179,16 +180,13 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   private int previousPlaybackState = Player.STATE_IDLE;
 
   @SuppressLint("ClickableViewAccessibility")
-  public PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
+  PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
     this.mainActivity = mainActivity;
     // Build alert dialogs
-    playLongPressUserHint = this.mainActivity
-      .new UserHint(R.string.key_play_long_press_got_it, R.string.play_long_press);
-    informationPressUserHint = this.mainActivity
-      .new UserHint(R.string.key_information_press_got_it, R.string.information_press, 40);
-    informationSelectPressUserHint = this.mainActivity
-      .new UserHint(R.string.key_information_select_press_got_it, R.string.information_select_press, 2);
-    final AlertDialog.Builder playlistAlertDialogBuilder = new AlertDialog.Builder(this.mainActivity);
+    playLongPressUserHint = new UserHint(mainActivity, R.string.key_play_long_press_got_it, R.string.play_long_press);
+    informationPressUserHint = new UserHint(mainActivity, R.string.key_information_press_got_it, R.string.information_press, 40);
+    informationSelectPressUserHint = new UserHint(mainActivity, R.string.key_information_select_press_got_it, R.string.information_select_press, 2);
+    final AlertDialog.Builder playlistAlertDialogBuilder = new AlertDialog.Builder(mainActivity);
     final SimpleAdapter playlistAdapter = new SimpleAdapter(
       playlistAlertDialogBuilder.getContext(),
       playInformations,
@@ -246,7 +244,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     playedRadioRateTextView = view.findViewById(R.id.played_radio_rate_text_view);
     progressBar = view.findViewById(R.id.progress_bar);
     playImageButton = view.findViewById(R.id.play_image_button);
-    final GestureDetector gestureDetector = new GestureDetector(this.mainActivity, new GestureDetector.SimpleOnGestureListener() {
+    final GestureDetector gestureDetector = new GestureDetector(mainActivity, new GestureDetector.SimpleOnGestureListener() {
       @Override
       public boolean onSingleTapConfirmed(@NonNull MotionEvent e) {
         onPlayClick();
@@ -374,7 +372,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
         // Start only if no media item is loaded (never started)
         final MediaItem currentItem = mediaController.getCurrentMediaItem();
         if (currentItem == null) {
-          final Radio radio = mainActivity.getLastPlayedRadio();
+          final Radio radio = Radios.getInstance().getLastPlayedRadio(mainActivity);
           if (radio != null) {
             startReading(radio);
           }
@@ -428,7 +426,7 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
     final Bundle sessionExtras = mediaController.getSessionExtras();
     final boolean isSleepSet = sessionExtras.getBoolean(mainActivity.getString(R.string.key_sleep_set), false);
     final String key = mainActivity.getString(R.string.key_sleep);
-    final int sleep = mainActivity.getSharedPreferences().getInt(key, MainActivity.SLEEP_MIN);
+    final int sleep = Radios.getAppPreferences(mainActivity).getInt(key, MainActivity.SLEEP_MIN);
     final Bundle bundle = new Bundle();
     bundle.putInt(key, sleep);
     // Action only possible if sleep is set or currently playing (tag = pause = playing)
@@ -526,6 +524,6 @@ public class PlayerController implements RadiosMainAdapter.CurrentRadioListenerS
   }
 
   private void setPreferredButton(boolean isPreferred) {
-    preferredImageButton.setImageResource(MainActivity.getStarResource(isPreferred));
+    preferredImageButton.setImageResource(UiUtils.getStarResource(isPreferred));
   }
 }

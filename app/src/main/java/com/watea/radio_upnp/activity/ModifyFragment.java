@@ -92,6 +92,7 @@ public class ModifyFragment extends MainActivityFragment {
     radiosModifyAdapter = new RadiosModifyAdapter(
       radiosRecyclerView,
       radiosModifyAdapterListener,
-      (NestedScrollView) container.findViewById(R.id.content_frame).getParent());
+      (NestedScrollView) container.findViewById(R.id.content_frame).getParent(),
+      () -> getMainActivity().setToolbarExpanded(false));
   }
 }

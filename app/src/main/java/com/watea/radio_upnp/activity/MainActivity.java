@@ -33,7 +33,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -70,7 +69,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.watea.radio_upnp.BuildConfig;
 import com.watea.radio_upnp.R;
-import com.watea.radio_upnp.model.Radio;
+import com.watea.radio_upnp.adapter.UiUtils;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.NetworkProxy;
 
@@ -120,20 +119,14 @@ public class MainActivity extends AppCompatActivity {
   private int navigationMenuCheckedId;
   private NetworkProxy networkProxy;
 
-  public static int getStarResource(boolean isPreferred) {
-    return isPreferred ? R.drawable.ic_star_white_24dp : R.drawable.ic_star_border_white_24dp;
+  @NonNull
+  static Bitmap getDefaultIcon(@NonNull Context context, int id) {
+    return BitmapFactory.decodeResource(context.getResources(), id);
   }
 
-  public static int getThemeAttributeColor(@NonNull Context context, int attr) {
-    final int[] attrs = {attr};
-    try (final TypedArray typedArray = context.obtainStyledAttributes(attrs)) {
-      return typedArray.getColor(0, 0);
-    }
-  }
-
-  // With animation
-  public void setToolbarExpanded(boolean isExpanded) {
-    appBarLayout.setExpanded(isExpanded, true);
+  @NonNull
+  static Bitmap getDefaultIcon(@NonNull Context context) {
+    return getDefaultIcon(context, R.drawable.ic_radio_gray);
   }
 
   @Override
@@ -141,10 +134,6 @@ public class MainActivity extends AppCompatActivity {
     // Pass the event to ActionBarDrawerToggle, if it returns
     // true, then it has handled the app icon touch event
     return drawerToggle.onOptionsItemSelected(item) || super.onOptionsItemSelected(item);
-  }
-
-  public boolean isTileLayout() {
-    return settingsController.isTileLayout();
   }
 
   @Override
@@ -162,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
     Radios.setInstance(this, getLoadingAlertDialog());
     super.onCreate(savedInstanceState);
     // Fetch preferences
-    sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+    sharedPreferences = Radios.getAppPreferences(this);
     // Settings
     settingsController = new SettingsController(this);
     setTheme(settingsController.getThemeResId());
@@ -178,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
     assert getSupportActionBar() != null;
     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     // AppBarLayout and Toolbar
-    toolbarUserHint = new UserHint(R.string.key_toolbar_got_it, R.string.toolbar_press, 50);
+    toolbarUserHint = new UserHint(this, R.string.key_toolbar_got_it, R.string.toolbar_press, 50);
     (appBarLayout = findViewById(R.id.appbar_layout)).addOnOffsetChangedListener(
       (localAppBarLayout, verticalOffset) -> {
         isToolbarExpanded = (verticalOffset == 0);
@@ -224,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
     // UPnP
-    upnpController = new UpnpController(this);
+    upnpController = new UpnpController(this, playerController);
     // FAB
     floatingActionButton = findViewById(R.id.floating_action_button);
     // Set fragment if context is not restored by Android
@@ -310,19 +299,13 @@ public class MainActivity extends AppCompatActivity {
     }
   }
 
-  @NonNull
-  SharedPreferences getSharedPreferences() {
-    return sharedPreferences;
+  // With animation
+  void setToolbarExpanded(boolean isExpanded) {
+    appBarLayout.setExpanded(isExpanded, true);
   }
 
-  @NonNull
-  Bitmap getDefaultIcon(int id) {
-    return BitmapFactory.decodeResource(getResources(), id);
-  }
-
-  @NonNull
-  Bitmap getDefaultIcon() {
-    return getDefaultIcon(R.drawable.ic_radio_gray);
+  boolean isTileLayout() {
+    return settingsController.isTileLayout();
   }
 
   void onFragmentResume(@NonNull MainActivityFragment mainActivityFragment) {
@@ -353,19 +336,6 @@ public class MainActivity extends AppCompatActivity {
     tell(Snackbar.make(getWindow().getDecorView().getRootView(), message, Snackbar.LENGTH_LONG));
   }
 
-  void showWarningOverlay(@NonNull String message) {
-    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-  }
-
-  void startReading(@NonNull Radio radio) {
-    playerController.startReading(radio);
-  }
-
-  @Nullable
-  Radio getLastPlayedRadio() {
-    return Radios.getInstance().getLastPlayedRadio(this);
-  }
-
   @NonNull
   Fragment setFragment(@NonNull Class<? extends Fragment> fragmentClass) {
     final Fragment currentFragment = getCurrentFragment();
@@ -391,10 +361,6 @@ public class MainActivity extends AppCompatActivity {
   NetworkProxy getNetworkProxy() {
     assert networkProxy != null;
     return networkProxy;
-  }
-
-  void checkNavigationMenu() {
-    checkNavigationMenu(navigationMenuCheckedId);
   }
 
   @NonNull
@@ -426,6 +392,10 @@ public class MainActivity extends AppCompatActivity {
       loadingAlertDialog;
   }
 
+  void showWarningOverlay(@NonNull String message) {
+    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+  }
+
   void runSafelyOnUiThread(@NonNull Runnable runnable) {
     runOnUiThread(() -> {
       if (!isFinishing() && !isDestroyed()) {
@@ -434,9 +404,13 @@ public class MainActivity extends AppCompatActivity {
     });
   }
 
+  void checkNavigationMenu() {
+    checkNavigationMenu(navigationMenuCheckedId);
+  }
+
   private void tell(@NonNull Snackbar snackbar) {
     final Context dialogContext = new AlertDialog.Builder(this).getContext();
-    snackbar.setTextColor(getThemeAttributeColor(dialogContext, android.R.attr.textColorPrimary)).show();
+    snackbar.setTextColor(UiUtils.getThemeAttributeColor(dialogContext, android.R.attr.textColorPrimary)).show();
   }
 
   // Voice search (empty query matches first radio) or shortcut
@@ -552,36 +526,5 @@ public class MainActivity extends AppCompatActivity {
   @Nullable
   private Fragment getCurrentFragment() {
     return getSupportFragmentManager().findFragmentById(R.id.content_frame);
-  }
-
-  class UserHint {
-    @NonNull
-    private final AlertDialog alertDialog;
-    private final int delay;
-    private boolean gotIt;
-    private int count = 0;
-
-    UserHint(int key, int message, int delay) {
-      this.delay = delay;
-      gotIt = sharedPreferences.getBoolean(getString(key), false);
-      alertDialog = new AlertDialog.Builder(MainActivity.this)
-        .setMessage(message)
-        .setPositiveButton(
-          R.string.action_got_it,
-          (dialogInterface, i) ->
-            sharedPreferences.edit().putBoolean(getString(key), (gotIt = true)).apply())
-        .create();
-    }
-
-    UserHint(int key, int message) {
-      this(key, message, 0);
-    }
-
-    void show() {
-      count = (count < delay) ? count + 1 : count;
-      if (!alertDialog.isShowing() && !gotIt && (count >= delay)) {
-        alertDialog.show();
-      }
-    }
   }
 }
