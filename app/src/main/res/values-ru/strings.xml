@@ -106,6 +106,7 @@
     <string name="loading_radios">Загрузка, пожалуйста, подождите&#8230;</string>
     <string name="battery_optimization">Если будильник не срабатывает, отключите оптимизацию батареи. Это может отличаться в зависимости от вашего устройства.</string>
     <string name="cast_already_running">UPnP нельзя использовать, когда открыта сессия Google Cast.</string>
+    <string name="local_network_permission_required">Для поиска и использования устройств UPnP требуется доступ к локальной сети.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Избранные радиостанции</string>
     <string name="title_main">Воспроизведение</string>

@@ -121,6 +121,7 @@
     <string name="loading_radios">Loading, please wait&#8230;</string>
     <string name="battery_optimization">If the alarm doesn’t work, please disable any battery optimizations. This may vary depending on your device.</string>
     <string name="cast_already_running">UPnP cannot be used when a Google Cast session is open.</string>
+    <string name="local_network_permission_required">Local network access is required to find and use UPnP devices.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

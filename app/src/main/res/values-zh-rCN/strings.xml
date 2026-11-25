@@ -106,6 +106,7 @@
     <string name="loading_radios">正在加载，请稍候&#8230;</string>
     <string name="battery_optimization">如果闹钟不工作，请禁用任何电池优化。这因设备而异。</string>
     <string name="cast_already_running">当 Google Cast 会话开启时无法使用 UPnP。</string>
+    <string name="local_network_permission_required">需要本地网络访问权限才能查找和使用 UPnP 设备。</string>
     <!-- Menu titles -->
     <string name="title_preferred">收藏电台</string>
     <string name="title_main">播放</string>

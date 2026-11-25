@@ -25,16 +25,21 @@ package com.watea.radio_upnp.activity;
 
 import static android.content.Context.BIND_AUTO_CREATE;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -61,6 +66,8 @@ class UpnpController {
   private final UpnpDevicesAdapter upnpDevicesAdapter;
   @NonNull
   private final AlertDialog alertDialog;
+  @NonNull
+  private final ActivityResultLauncher<String> localNetworkPermissionLauncher;
   private final AndroidUpnpService.Listener androidUpnpServiceListener = new AndroidUpnpService.Listener() {
     @Override
     public void onFatalError() {
@@ -114,10 +121,23 @@ class UpnpController {
   @Nullable
   private Consumer<Bitmap> iconConsumer = null;
 
+  // Must be called before activity is started
   @SuppressLint("InflateParams")
   UpnpController(@NonNull MainActivity mainActivity, @NonNull PlayerController playerController) {
     this.mainActivity = mainActivity;
     this.playerController = playerController;
+    localNetworkPermissionLauncher = mainActivity.registerForActivityResult(
+      new ActivityResultContracts.RequestPermission(),
+      isGranted -> {
+        // Previous search failed
+        if (isGranted && (upnpService != null)) {
+          upnpService.search();
+        }
+      });
+    // Also required by Cast: receivers fetch the stream from the local server
+    if (!hasLocalNetworkPermission()) {
+      localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK);
+    }
     final AlertDialog.Builder builder = new AlertDialog.Builder(mainActivity);
     final View view = LayoutInflater.from(builder.getContext()).inflate(R.layout.view_upnp, null);
     final RecyclerView devicesRecyclerView = view.findViewById(R.id.devices_recycler_view);
@@ -147,8 +167,11 @@ class UpnpController {
   void showDialog() {
     if (CastManager.getInstance().hasCastSession()) {
       mainActivity.tell(R.string.cast_already_running);
-    } else {
+    } else if (hasLocalNetworkPermission()) {
       alertDialog.show();
+    } else {
+      mainActivity.tell(R.string.local_network_permission_required);
+      localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK);
     }
   }
 
@@ -166,6 +189,11 @@ class UpnpController {
       return;
     }
     upnpService.setSelectedDeviceIdentity(null);
+  }
+
+  private boolean hasLocalNetworkPermission() {
+    return (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) ||
+      (mainActivity.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED);
   }
 
   private void onDeviceSelected(@Nullable Device device) {
