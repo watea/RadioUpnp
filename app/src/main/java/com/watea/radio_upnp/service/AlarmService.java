@@ -41,6 +41,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -54,8 +55,8 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
-import androidx.media3.common.MediaItem;
 import androidx.media3.session.MediaController;
+import androidx.media3.session.SessionCommand;
 import androidx.media3.session.SessionToken;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -420,8 +421,9 @@ public class AlarmService extends Service {
           Log.e(LOG_TAG, "launch: mediaController is null");
         } else {
           Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
-          mediaController.setMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
-          mediaController.play();
+          final Bundle args = new Bundle();
+          args.putString(getString(R.string.key_alarm_radio), radio.getId());
+          mediaController.sendCustomCommand(new SessionCommand(RadioService.ACTION_ALARM_PLAY, Bundle.EMPTY), args);
           releaseController();
           return;
         }

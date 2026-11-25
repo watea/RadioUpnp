@@ -56,6 +56,7 @@ public class RadioService extends MediaLibraryService {
   public static final boolean KEY_PCM_MODE_DEFAULT = true;
   public static final String ACTION_SLEEP_SET = "ACTION_SLEEP_SET";
   public static final String ACTION_SLEEP_CANCEL = "ACTION_SLEEP_CANCEL";
+  public static final String ACTION_ALARM_PLAY = "ACTION_ALARM_PLAY";
   private static final String LOG_TAG = RadioService.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private final ServiceConnection upnpConnection = new ServiceConnection() {
@@ -320,7 +321,7 @@ public class RadioService extends MediaLibraryService {
     radioPlayer = new RadioPlayer(radioPlayerCommands, getString(R.string.remote));
     final NotificationChannels notificationChannels = new NotificationChannels(this, LOG_TAG);
     sleepController = new SleepController(notificationChannels, sleepControllerListener);
-    mediaLibrarySessionCallback = new MediaLibrarySessionCallback(this, sleepController);
+    mediaLibrarySessionCallback = new MediaLibrarySessionCallback(this, sleepController, radio -> play(radio, true));
     mediaLibrarySession = new MediaLibraryService.MediaLibrarySession.Builder(this, radioPlayer, mediaLibrarySessionCallback)
       .setSessionActivity(notificationChannels.getContentIntent())
       .build();
@@ -422,6 +423,10 @@ public class RadioService extends MediaLibraryService {
   }
 
   private void play(@NonNull Radio radio) {
+    play(radio, false);
+  }
+
+  private void play(@NonNull Radio radio, boolean isAlarm) {
     Log.d(LOG_TAG, "play: " + radio.getName() + " => " + radio.getUri());
     Radios.setLastPlayedRadioId(this, radio.getId());
     final Radio lastRadio = (sessionDevice == null) ? null : sessionDevice.getRadio();
@@ -429,7 +434,7 @@ public class RadioService extends MediaLibraryService {
       sessionDevice.release();
     }
     sleepController.release();
-    sessionDevice = createSessionDevice(radio);
+    sessionDevice = createSessionDevice(radio, isAlarm);
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.set(radio, sessionDevice.isRemote(), (radio == lastRadio));
     sessionDevice.launch();
@@ -473,7 +478,7 @@ public class RadioService extends MediaLibraryService {
 
   // UPnP or Cast not accepted if environment not OK: force local processing
   @NonNull
-  private SessionDevice createSessionDevice(@NonNull Radio radio) {
+  private SessionDevice createSessionDevice(@NonNull Radio radio, boolean isAlarm) {
     SessionDevice result = null;
     if (!isAndroidAutoConnected && (streamServer != null) && new NetworkProxy(this).isOnLan()) {
       final Device upnpSelectedDevice = (upnpService == null) ? null : upnpService.getActiveSelectedDevice();
@@ -500,7 +505,8 @@ public class RadioService extends MediaLibraryService {
       result = new LocalSessionDevice(
         this,
         sessionDeviceListener,
-        radio);
+        radio,
+        isAlarm);
     }
     Log.d(LOG_TAG, "createSessionDevice: " + result.getClass().getSimpleName() + " - " + result.getLockKey());
     return result;

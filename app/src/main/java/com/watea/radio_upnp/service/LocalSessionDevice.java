@@ -27,7 +27,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Handler;
@@ -35,6 +34,8 @@ import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.media3.common.AudioAttributes;
+import androidx.media3.common.C;
 import androidx.media3.exoplayer.ExoPlayer;
 
 import com.watea.radio_upnp.model.Radio;
@@ -46,10 +47,6 @@ class LocalSessionDevice extends SessionDevice {
   private static final float MEDIA_VOLUME_DUCK = 0.2f;
   private static final IntentFilter AUDIO_NOISY_INTENT_FILTER =
     new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-  private static final AudioAttributes PLAYBACK_ATTRIBUTES = new AudioAttributes.Builder()
-    .setUsage(AudioAttributes.USAGE_MEDIA)
-    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-    .build();
   @NonNull
   private final AudioManager audioManager;
   @NonNull
@@ -68,8 +65,15 @@ class LocalSessionDevice extends SessionDevice {
   LocalSessionDevice(
     @NonNull Context context,
     @NonNull Listener listener,
-    @NonNull Radio radio) {
+    @NonNull Radio radio,
+    boolean isAlarm) {
     super(context, Mode.LOCAL, listener, radio);
+    // Android 17 mutes background playback without while-in-use FGS; alarm usage is exempted
+    final AudioAttributes audioAttributes = new AudioAttributes.Builder()
+      .setUsage(isAlarm ? C.USAGE_ALARM : C.USAGE_MEDIA)
+      .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+      .build();
+    exoPlayer.setAudioAttributes(audioAttributes, false);
     audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
     final AudioManager.OnAudioFocusChangeListener audioManagerOnAudioFocusChangeListener = focusChange -> {
       Log.d(LOG_TAG, "onAudioFocusChange: " + focusChange);
@@ -99,7 +103,7 @@ class LocalSessionDevice extends SessionDevice {
       }
     };
     audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-      .setAudioAttributes(PLAYBACK_ATTRIBUTES)
+      .setAudioAttributes(audioAttributes.getPlatformAudioAttributes())
       .setOnAudioFocusChangeListener(audioManagerOnAudioFocusChangeListener, HANDLER)
       .build();
   }

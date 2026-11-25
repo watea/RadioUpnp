@@ -56,6 +56,7 @@ import com.watea.radio_upnp.model.Radios;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 // RadioService session callback: library browsing, item resolution and custom commands
 class MediaLibrarySessionCallback implements MediaLibrarySession.Callback {
@@ -64,11 +65,13 @@ class MediaLibrarySessionCallback implements MediaLibrarySession.Callback {
   private static final String RECENT_ROOT_ID = "recent_root_id"; // Playback resumption: last played radio
   private final Context context;
   private final SleepController sleepController;
+  private final Consumer<Radio> alarmPlayer;
   private final SettableFuture<Void> radiosInitFuture = SettableFuture.create(); // Completed at radios init; browse requests received before wait on it
 
-  MediaLibrarySessionCallback(@NonNull Context context, @NonNull SleepController sleepController) {
+  MediaLibrarySessionCallback(@NonNull Context context, @NonNull SleepController sleepController, @NonNull Consumer<Radio> alarmPlayer) {
     this.context = context;
     this.sleepController = sleepController;
+    this.alarmPlayer = alarmPlayer;
   }
 
   @NonNull
@@ -126,6 +129,7 @@ class MediaLibrarySessionCallback implements MediaLibrarySession.Callback {
       .add(SessionCommand.COMMAND_CODE_LIBRARY_UNSUBSCRIBE)
       .add(new SessionCommand(RadioService.ACTION_SLEEP_SET, Bundle.EMPTY))
       .add(new SessionCommand(RadioService.ACTION_SLEEP_CANCEL, Bundle.EMPTY))
+      .add(new SessionCommand(RadioService.ACTION_ALARM_PLAY, Bundle.EMPTY))
       .build();
     return MediaSession.ConnectionResult.accept(sessionCommands, new Player.Commands.Builder().addAllCommands().build());
   }
@@ -185,6 +189,14 @@ class MediaLibrarySessionCallback implements MediaLibrarySession.Callback {
         break;
       case RadioService.ACTION_SLEEP_CANCEL:
         sleepController.release();
+        break;
+      case RadioService.ACTION_ALARM_PLAY:
+        final Radio radio = Radios.getInstance().getRadioFromId(args.getString(context.getString(R.string.key_alarm_radio), ""));
+        if (radio == null) {
+          Log.e(LOG_TAG, "onCustomCommand: alarm radio not found");
+        } else {
+          alarmPlayer.accept(radio);
+        }
         break;
       default:
         Log.e(LOG_TAG, "onCustomCommand: unknown action: " + customCommand.customAction);
