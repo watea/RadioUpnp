@@ -47,7 +47,7 @@ public class OpenDonationFragment extends MainActivityFragment {
   @Override
   @NonNull
   View.OnClickListener getFloatingActionButtonOnClickListener() {
-    return v -> startActivity(getMainActivity().getNewSendIntent());
+    return v -> startActivity(ReportController.getNewSendIntent());
   }
 
   @Override

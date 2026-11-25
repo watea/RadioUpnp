@@ -30,11 +30,7 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -50,7 +46,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -67,18 +62,11 @@ import com.watea.radio_upnp.adapter.UiUtils;
 import com.watea.radio_upnp.model.Radios;
 import com.watea.radio_upnp.service.NetworkProxy;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
-  private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<>() {
       {
@@ -104,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
   private AlarmController alarmController;
   private SettingsController settingsController;
   private ImportExportController importExportController;
+  private ReportController reportController;
   private UpnpController upnpController;
   private boolean isToolbarExpanded = true;
   private int navigationMenuCheckedId;
@@ -168,6 +157,7 @@ public class MainActivity extends AppCompatActivity {
     alarmController = new AlarmController(this);
     // Import/export
     importExportController = new ImportExportController(this);
+    reportController = new ReportController(this);
     // Set navigation drawer toggle (according to documentation)
     drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.drawer_open, R.string.drawer_close);
     // Set the drawer toggle as the DrawerListener
@@ -348,13 +338,6 @@ public class MainActivity extends AppCompatActivity {
     return upnpController;
   }
 
-  @NonNull
-  Intent getNewSendIntent() {
-    return new Intent(Intent.ACTION_SEND)
-      .setType("message/rfc822")
-      .putExtra(Intent.EXTRA_EMAIL, new String[]{"fr.watea@gmail.com"});
-  }
-
   // Builds load dialog if necessary
   @NonNull
   AlertDialog getLoadingAlertDialog() {
@@ -412,7 +395,7 @@ public class MainActivity extends AppCompatActivity {
     } else if (id == R.id.action_about) {
       aboutAlertDialog.show();
     } else if (id == R.id.action_log) {
-      sendLogcatMail();
+      reportController.send();
     } else {
       // Shall not fail to find!
       for (final Map.Entry<Class<? extends Fragment>, Integer> entry : FRAGMENT_MENU_IDS.entrySet()) {
@@ -423,68 +406,6 @@ public class MainActivity extends AppCompatActivity {
     }
     drawerLayout.closeDrawers();
     return true;
-  }
-
-  private void tellReportError() {
-    tell(R.string.report_error);
-    checkNavigationMenu();
-  }
-
-  private void sendLogcatMail() {
-    new Thread(() -> {
-      final File logFile = new File(getFilesDir(), "logcat.txt");
-      final String[] command = {"logcat", "-d", "-b", "all", "-v", "threadtime", "*:V"};
-      try {
-        final Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
-        try {
-          try (final PrintWriter writer = new PrintWriter(new FileOutputStream(logFile));
-               final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            // --- Device info ---
-            writer.println("===== DEVICE INFO =====");
-            writer.println("App version : " + BuildConfig.VERSION_NAME);
-            writer.println("Android     : " + Build.VERSION.RELEASE);
-            writer.println("SDK         : " + Build.VERSION.SDK_INT);
-            writer.println("Device      : " + Build.MANUFACTURER + " " + Build.MODEL);
-            writer.println("Brand       : " + Build.BRAND);
-            writer.println("Board       : " + Build.BOARD);
-            writer.println("========================");
-            writer.println();
-            // --- Logcat ---
-            String line;
-            while ((line = reader.readLine()) != null) {
-              writer.println(line);
-            }
-          }
-          process.waitFor();
-        } finally {
-          process.destroy();
-        }
-        if (logFile.length() > 0) {
-          HANDLER.post(() -> {
-            try {
-              startActivity(getNewSendIntent(logFile, getPackageName()));
-            } catch (Exception exception) {
-              Log.e(LOG_TAG, "sendLogcatMail failure", exception);
-              tellReportError();
-            }
-          });
-        } else {
-          HANDLER.post(this::tellReportError);
-        }
-      } catch (Exception exception) {
-        Log.e(LOG_TAG, "sendLogcatMail failure", exception);
-        HANDLER.post(this::tellReportError);
-      }
-    }).start();
-  }
-
-  @NonNull
-  private Intent getNewSendIntent(@NonNull File logFile, @NonNull String packageName) {
-    final Uri logFileUri = FileProvider.getUriForFile(this, packageName + ".fileprovider", logFile);
-    return getNewSendIntent()
-      .putExtra(Intent.EXTRA_SUBJECT, "RadioUPnP report " + BuildConfig.VERSION_NAME + " / " + Calendar.getInstance().getTime())
-      .putExtra(Intent.EXTRA_STREAM, logFileUri)
-      .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
   }
 
   private void checkNavigationMenu(int id) {
