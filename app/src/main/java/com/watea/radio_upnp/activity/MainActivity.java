@@ -23,15 +23,10 @@
 
 package com.watea.radio_upnp.activity;
 
-import static com.watea.radio_upnp.R.id;
-
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -46,7 +41,6 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -83,11 +77,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
-  static final int SLEEP_MIN = 5;
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
-  private static final int SLEEP_MAX = 90;
-  private static final int REQUEST_CODE_POST_NOTIFICATIONS = 101;
   private static final Map<Class<? extends Fragment>, Integer> FRAGMENT_MENU_IDS =
     new HashMap<>() {
       {
@@ -105,12 +96,11 @@ public class MainActivity extends AppCompatActivity {
   @Nullable
   private AlertDialog loadingAlertDialog = null;
   private AlertDialog aboutAlertDialog;
-  private AlertDialog sleepAlertDialog;
   private UserHint toolbarUserHint;
   private CollapsingToolbarLayout actionBarLayout;
   private AppBarLayout appBarLayout;
   private PlayerController playerController;
-  private SharedPreferences sharedPreferences;
+  private SleepController sleepController;
   private AlarmController alarmController;
   private SettingsController settingsController;
   private ImportExportController importExportController;
@@ -150,8 +140,6 @@ public class MainActivity extends AppCompatActivity {
     // Must be before super.onCreate: fragment restoration calls Radios.getInstance()
     Radios.setInstance(this, getLoadingAlertDialog());
     super.onCreate(savedInstanceState);
-    // Fetch preferences
-    sharedPreferences = Radios.getAppPreferences(this);
     // Settings
     settingsController = new SettingsController(this);
     setTheme(settingsController.getThemeResId());
@@ -163,7 +151,8 @@ public class MainActivity extends AppCompatActivity {
     // ActionBar
     setSupportActionBar(findViewById(R.id.actionbar));
     actionBarLayout = findViewById(R.id.actionbar_layout);
-    playerController = new PlayerController(this, actionBarLayout);
+    sleepController = new SleepController(this);
+    playerController = new PlayerController(this, actionBarLayout, sleepController);
     assert getSupportActionBar() != null;
     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     // AppBarLayout and Toolbar
@@ -194,21 +183,6 @@ public class MainActivity extends AppCompatActivity {
       .setText(BuildConfig.VERSION_NAME);
     aboutAlertDialog = aboutAlertDialogBuilder
       .setView(aboutView)
-      // Restore checked item
-      .setOnDismissListener(dialogInterface -> checkNavigationMenu())
-      .create();
-    // Build sleep dialog
-    final AlertDialog.Builder sleepAlertDialogBuilder = new AlertDialog.Builder(this);
-    final View sleepView = LayoutInflater.from(sleepAlertDialogBuilder.getContext()).inflate(R.layout.view_sleep, null);
-    final NumberPicker minutePicker = sleepView.findViewById(id.numberPicker);
-    minutePicker.setMinValue(SLEEP_MIN);
-    minutePicker.setMaxValue(SLEEP_MAX);
-    minutePicker.setValue(sharedPreferences.getInt(getString(R.string.key_sleep), SLEEP_MIN));
-    minutePicker.setOnValueChangedListener((picker, oldVal, newVal) -> sharedPreferences.edit().putInt(getString(R.string.key_sleep), newVal).apply());
-    sleepAlertDialog = sleepAlertDialogBuilder
-      .setTitle(R.string.title_sleep)
-      .setIcon(R.drawable.ic_hourglass_bottom_white_24dp)
-      .setView(sleepView)
       // Restore checked item
       .setOnDismissListener(dialogInterface -> checkNavigationMenu())
       .create();
@@ -428,12 +402,7 @@ public class MainActivity extends AppCompatActivity {
     if (id == R.id.action_alarm) {
       alarmController.launch();
     } else if (id == R.id.action_sleep) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-          requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_POST_NOTIFICATIONS);
-        }
-      }
-      sleepAlertDialog.show();
+      sleepController.show();
     } else if (id == R.id.action_export) {
       importExportController.launchExport();
     } else if (id == R.id.action_import) {

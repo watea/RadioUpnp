@@ -50,7 +50,6 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionCommand;
 import androidx.media3.session.SessionToken;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -101,6 +100,8 @@ class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
   private final AlertDialog playlistAlertDialog;
   @NonNull
   private final MainActivity mainActivity;
+  @NonNull
+  private final SleepController sleepController;
   private final List<Map<String, String>> playInformations = new ArrayList<>();
   private final MediaController.Listener mediaControllerListener = new MediaController.Listener() {
     @Override
@@ -180,8 +181,9 @@ class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
   private int previousPlaybackState = Player.STATE_IDLE;
 
   @SuppressLint("ClickableViewAccessibility")
-  PlayerController(@NonNull MainActivity mainActivity, @NonNull View view) {
+  PlayerController(@NonNull MainActivity mainActivity, @NonNull View view, @NonNull SleepController sleepController) {
     this.mainActivity = mainActivity;
+    this.sleepController = sleepController;
     // Build alert dialogs
     playLongPressUserHint = new UserHint(mainActivity, R.string.key_play_long_press_got_it, R.string.play_long_press);
     informationPressUserHint = new UserHint(mainActivity, R.string.key_information_press_got_it, R.string.information_press, 40);
@@ -426,22 +428,8 @@ class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
       tellNotAvailableController();
       return;
     }
-    final Bundle sessionExtras = mediaController.getSessionExtras();
-    final boolean isSleepSet = sessionExtras.getBoolean(mainActivity.getString(R.string.key_sleep_set), false);
-    final String key = mainActivity.getString(R.string.key_sleep);
-    final int sleep = Radios.getAppPreferences(mainActivity).getInt(key, MainActivity.SLEEP_MIN);
-    final Bundle bundle = new Bundle();
-    bundle.putInt(key, sleep);
-    // Action only possible if sleep is set or currently playing (tag = pause = playing)
-    if (isSleepSet || (TAG_ACTION_PAUSE == (Integer) playImageButton.getTag())) {
-      final String action = isSleepSet ? RadioService.ACTION_SLEEP_CANCEL : RadioService.ACTION_SLEEP_SET;
-      mediaController.sendCustomCommand(new SessionCommand(action, Bundle.EMPTY), bundle); // Asynchronous
-      if (isSleepSet) {
-        mainActivity.tell(R.string.sleep_cancelled);
-      } else {
-        mainActivity.tell(mainActivity.getString(R.string.sleep_set, sleep));
-      }
-    }
+    // Tag pause = playing
+    sleepController.toggle(mediaController, TAG_ACTION_PAUSE == (Integer) playImageButton.getTag());
   }
 
   private void updatePlayButton() {
