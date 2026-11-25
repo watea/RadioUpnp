@@ -61,8 +61,6 @@ import java.util.concurrent.TimeUnit;
 
 @OptIn(markerClass = UnstableApi.class)
 public abstract class SessionDevice implements Player.Listener {
-  // VLC UA is universally accepted by Icecast/Shoutcast CDNs; the app name alone gets filtered
-  public static final String STREAMING_USER_AGENT = "Mozilla/5.0 (compatible; RadioUpnp)";
   private static final String LOG_TAG = SessionDevice.class.getSimpleName();
   private static final Handler HANDLER = new Handler(Looper.getMainLooper());
   private static final int CONNECTION_TIMEOUT_S = 10;
@@ -120,7 +118,7 @@ public abstract class SessionDevice implements Player.Listener {
         .connectTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
         .readTimeout(CONNECTION_TIMEOUT_S, TimeUnit.SECONDS)
         .build())
-        .setDefaultRequestProperties(Collections.singletonMap("User-Agent", STREAMING_USER_AGENT));
+        .setDefaultRequestProperties(Collections.singletonMap("User-Agent", RadioURL.USER_AGENT));
     }
   }
 
@@ -259,7 +257,7 @@ public abstract class SessionDevice implements Player.Listener {
     if (isReleased) {
       return false;
     }
-    connectionSet = radio.getConnectionSet(STREAMING_USER_AGENT);
+    connectionSet = radio.getConnectionSet(RadioURL.USER_AGENT);
     if (connectionSet == null) {
       if (isExoPlayerActive()) {
         // Pre-check failed but ExoPlayer may still connect (e.g. server rejects our probe headers)

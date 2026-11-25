@@ -505,7 +505,7 @@ public class StreamServer extends HttpServer {
       boolean isHead,
       @NonNull StreamContext streamContext) throws IOException {
       // HEAD
-      final Radio.ConnectionSet connectionSet = streamContext.getRadio().getConnectionSet(SessionDevice.STREAMING_USER_AGENT);
+      final Radio.ConnectionSet connectionSet = streamContext.getRadio().getConnectionSet(RadioURL.USER_AGENT);
       if (connectionSet == null) {
         Log.d(LOG_TAG, "PassthroughStreamHandler: upstream is not defined");
         streamContext.onDisconnected();
@@ -520,7 +520,7 @@ public class StreamServer extends HttpServer {
       final okhttp3.Response upstreamResponse;
       try {
         upstreamResponse = new RadioURL(connectionSet.getUrl()).getActualOkHttpResponse(
-          SessionDevice.STREAMING_USER_AGENT,
+          RadioURL.USER_AGENT,
           java.util.Collections.singletonMap("Icy-Metadata", "1"));
       } catch (IOException ioException) {
         Log.d(LOG_TAG, "PassthroughStreamHandler: unable to connect", ioException);

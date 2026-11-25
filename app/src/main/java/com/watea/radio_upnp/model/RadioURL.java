@@ -53,6 +53,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class RadioURL {
+  // Generic browser-like UA: some CDNs filter the bare app name or the okhttp default
+  public static final String USER_AGENT = "Mozilla/5.0 (compatible; RadioUpnp)";
   private static final String LOG_TAG = RadioURL.class.getSimpleName();
   private static final Pattern ICON_PATTERN = Pattern.compile(
     "https?://[-A-Za-z\\d+&@#%?=~_|!:,.;/]+\\.(png|jpg|jpeg|ico|gif|svg)",
@@ -178,15 +180,16 @@ public class RadioURL {
     return response;
   }
 
-  // Redirection will not be handled here
+  // null if not an http(s) URL, on HTTP error or if not an image
   @Nullable
   public Bitmap getBitmap() {
-    if (uRL == null) {
-      Log.e(LOG_TAG, "getBitmap: decoding image on null URL");
+    final HttpUrl httpUrl = (uRL == null) ? null : HttpUrl.parse(uRL.toString());
+    if (httpUrl == null) {
+      Log.d(LOG_TAG, "getBitmap: URL not supported - " + uRL);
       return null;
     }
-    try {
-      return BitmapFactory.decodeStream(uRL.openConnection().getInputStream());
+    try (final Response response = OK_HTTP_CLIENT.newCall(new Request.Builder().url(httpUrl).header("User-Agent", USER_AGENT).build()).execute()) {
+      return response.isSuccessful() ? BitmapFactory.decodeStream(response.body().byteStream()) : null;
     } catch (Exception exception) {
       Log.d(LOG_TAG, "getBitmap: error decoding image on " + uRL, exception);
       return null;

@@ -52,7 +52,6 @@ import com.watea.radio_upnp.R;
 import com.watea.radio_upnp.adapter.UiUtils;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.model.RadioURL;
-import com.watea.radio_upnp.service.SessionDevice;
 
 import java.io.File;
 import java.io.IOException;
@@ -326,7 +325,7 @@ public abstract class ItemFragment extends MainActivityFragment {
 
     @Override
     void onSearch() {
-      try (final okhttp3.Response response = new RadioURL(url).getActualOkHttpResponse(SessionDevice.STREAMING_USER_AGENT)) {
+      try (final okhttp3.Response response = new RadioURL(url).getActualOkHttpResponse(RadioURL.USER_AGENT)) {
         streamContent = RadioURL.getStreamContentType(response);
         actualUrl = response.request().url().url().toString();
       } catch (IOException ioException) {
