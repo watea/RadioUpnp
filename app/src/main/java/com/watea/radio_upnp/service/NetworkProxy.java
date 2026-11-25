@@ -25,13 +25,16 @@ package com.watea.radio_upnp.service;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.InetAddresses;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -46,6 +49,25 @@ public class NetworkProxy {
   // Shall be called after onCreate
   public NetworkProxy(@NonNull Context context) {
     connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+  }
+
+  // Literal private/link-local addresses and mDNS names only: other names would need a DNS lookup
+  @RequiresApi(api = Build.VERSION_CODES.Q)
+  public static boolean isLocalHost(@Nullable String host) {
+    if (host == null) {
+      return false;
+    }
+    if (host.endsWith(".local")) {
+      return true;
+    }
+    if (!InetAddresses.isNumericAddress(host)) {
+      return false;
+    }
+    final InetAddress address = InetAddresses.parseNumericAddress(host);
+    return address.isSiteLocalAddress() ||
+      address.isLinkLocalAddress() ||
+      // IPv6 unique local fc00::/7
+      ((address instanceof Inet6Address) && ((address.getAddress()[0] & 0xfe) == 0xfc));
   }
 
   // Local network: Wi-Fi or Ethernet

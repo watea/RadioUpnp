@@ -412,21 +412,23 @@ public class AlarmService extends Service {
 
     private void launch() {
       if (isAndroidAutoConnected) {
+        // Skipped this time only: next alarm is already set
         Log.d(LOG_TAG, "launch: Android Auto is connected => no launch");
+        releaseController();
+        return;
+      }
+      final Radio radio = binder.getRadio();
+      if (radio == null) {
+        Log.e(LOG_TAG, "launch: alarm radio is null");
+      } else if (mediaController == null) {
+        Log.e(LOG_TAG, "launch: mediaController is null");
       } else {
-        final Radio radio = binder.getRadio();
-        if (radio == null) {
-          Log.e(LOG_TAG, "launch: alarm radio is null");
-        } else if (mediaController == null) {
-          Log.e(LOG_TAG, "launch: mediaController is null");
-        } else {
-          Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
-          final Bundle args = new Bundle();
-          args.putString(getString(R.string.key_alarm_radio), radio.getId());
-          mediaController.sendCustomCommand(new SessionCommand(RadioService.ACTION_ALARM_PLAY, Bundle.EMPTY), args);
-          releaseController();
-          return;
-        }
+        Log.d(LOG_TAG, "launch: alarm on radio => " + radio.getName());
+        final Bundle args = new Bundle();
+        args.putString(getString(R.string.key_alarm_radio), radio.getId());
+        mediaController.sendCustomCommand(new SessionCommand(RadioService.ACTION_ALARM_PLAY, Bundle.EMPTY), args);
+        releaseController();
+        return;
       }
       // Something went wrong, cancel alarm
       binder.cancelAlarm();

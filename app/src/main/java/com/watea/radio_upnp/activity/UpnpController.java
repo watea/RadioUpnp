@@ -32,6 +32,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
@@ -52,6 +53,7 @@ import com.watea.radio_upnp.adapter.UpnpDevicesAdapter;
 import com.watea.radio_upnp.cast.CastManager;
 import com.watea.radio_upnp.model.Radio;
 import com.watea.radio_upnp.service.AndroidUpnpService;
+import com.watea.radio_upnp.service.NetworkProxy;
 import com.watea.radio_upnp.upnp.Device;
 
 import java.util.function.Consumer;
@@ -189,6 +191,15 @@ class UpnpController {
       return;
     }
     upnpService.setSelectedDeviceIdentity(null);
+  }
+
+  boolean checkLocalNetworkAccessFor(@NonNull Uri uri) {
+    if (hasLocalNetworkPermission() || !NetworkProxy.isLocalHost(uri.getHost())) {
+      return true;
+    }
+    mainActivity.tell(R.string.local_network_permission_required_radio);
+    localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK);
+    return false;
   }
 
   private boolean hasLocalNetworkPermission() {

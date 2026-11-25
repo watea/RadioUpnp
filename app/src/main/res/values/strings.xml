@@ -122,6 +122,7 @@
     <string name="battery_optimization">If the alarm doesn’t work, please disable any battery optimizations. This may vary depending on your device.</string>
     <string name="cast_already_running">UPnP cannot be used when a Google Cast session is open.</string>
     <string name="local_network_permission_required">Local network access is required to find and use UPnP devices.</string>
+    <string name="local_network_permission_required_radio">Local network access is required to play this radio.</string>
     <!-- Menu titles -->
     <string name="title_preferred">Preferred radios</string>
     <string name="title_main">Play</string>

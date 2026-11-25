@@ -348,7 +348,7 @@ class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
   void startReading(@NonNull Radio radio) {
     if (mediaController == null) {
       mainActivity.tell(R.string.radio_connection_waiting);
-    } else {
+    } else if (mainActivity.getUpnpController().checkLocalNetworkAccessFor(radio.getUri())) {
       mediaController.setMediaItem(new MediaItem.Builder().setMediaId(radio.getId()).build());
       mediaController.play();
     }
@@ -403,7 +403,10 @@ class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
       return;
     }
     if (tag == TAG_ACTION_PLAY) {
-      mediaController.play();
+      final Radio radio = getCurrentRadio();
+      if ((radio == null) || mainActivity.getUpnpController().checkLocalNetworkAccessFor(radio.getUri())) {
+        mediaController.play();
+      }
     } else if (tag == TAG_ACTION_PAUSE) {
       mediaController.pause();
       playLongPressUserHint.show();
