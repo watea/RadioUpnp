@@ -178,11 +178,6 @@ class LocalSessionDevice extends SessionDevice {
     pause();
   }
 
-  @Override
-  void setVolume(float volume) {
-    exoPlayer.setVolume(volume);
-  }
-
   // Runs on main thread — audio focus requested here for thread safety
   @Override
   void startExoPlayer() {
@@ -203,6 +198,10 @@ class LocalSessionDevice extends SessionDevice {
       allowRewind();
     }
     super.onState(state);
+  }
+
+  private void setVolume(float volume) {
+    exoPlayer.setVolume(volume);
   }
 
   private boolean requestAudioFocus() {

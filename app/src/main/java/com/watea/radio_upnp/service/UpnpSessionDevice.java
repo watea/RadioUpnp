@@ -219,11 +219,6 @@ class UpnpSessionDevice extends RemoteSessionDevice {
     return false;
   }
 
-  // Not implemented
-  @Override
-  void setVolume(float volume) {
-  }
-
   private void launchPlay(int sampleRate, int channelCount, int bitsPerSample) {
     if (isLaunched) {
       return;

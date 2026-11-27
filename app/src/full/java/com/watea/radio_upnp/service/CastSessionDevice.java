@@ -179,16 +179,6 @@ public class CastSessionDevice extends RemoteSessionDevice {
     return false;
   }
 
-  @Override
-  void setVolume(float volume) {
-    try {
-      castSession.setVolume(volume); // 0.0 to 1.0
-      currentVolume = volume;
-    } catch (IOException iOException) {
-      Log.e(LOG_TAG, "Failed to set volume", iOException);
-    }
-  }
-
   private synchronized void reportCurrentVolume() {
     try {
       currentVolume = castSession.getVolume();

@@ -163,8 +163,6 @@ public abstract class SessionDevice implements Player.Listener {
 
   abstract void adjustVolume(int direction);
 
-  abstract void setVolume(float volume);
-
   boolean isPlayingOrBuffering() {
     return state.isPlayingOrBuffering();
   }
