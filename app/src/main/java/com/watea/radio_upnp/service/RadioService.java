@@ -433,7 +433,7 @@ public class RadioService extends MediaLibraryService {
     if (sessionDevice != null) {
       sessionDevice.release();
     }
-    sleepController.release();
+    releaseResources();
     sessionDevice = createSessionDevice(radio, isAlarm);
     mediaLibrarySession.setSessionExtras(new Bundle());
     radioPlayer.set(radio, sessionDevice.isRemote(), (radio == lastRadio));

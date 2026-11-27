@@ -90,6 +90,9 @@ public class StreamServer extends HttpServer {
 
   void release() {
     Log.d(LOG_TAG, "release");
+    if (streamContext != null) {
+      streamContext.cancelWatchdog();
+    }
     streamContext = null;
   }
 
@@ -322,6 +325,10 @@ public class StreamServer extends HttpServer {
 
     void relaunchWatchdog() {
       watchdog.relaunch();
+    }
+
+    void cancelWatchdog() {
+      watchdog.cancel();
     }
 
     void onConnected() {
