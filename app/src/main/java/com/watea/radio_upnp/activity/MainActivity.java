@@ -30,6 +30,7 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -40,12 +41,16 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.SystemBarStyle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -131,12 +136,24 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     // Settings
     settingsController = new SettingsController(this);
-    setTheme(settingsController.getThemeResId());
+    final int themeResId = settingsController.getThemeResId();
+    setTheme(themeResId);
+    // System bars are drawn over windowBackground: icons follow the app theme, not the system one
+    final SystemBarStyle systemBarStyle = (themeResId == R.style.AppTheme_Light) ?
+      SystemBarStyle.light(Color.TRANSPARENT, Color.BLACK) :
+      SystemBarStyle.dark(Color.TRANSPARENT);
+    EdgeToEdge.enable(this, systemBarStyle, systemBarStyle);
     // Init connexion
     networkProxy = new NetworkProxy(this);
     // Inflate view
     setContentView(R.layout.activity_main);
     drawerLayout = findViewById(R.id.main_activity);
+    // Edge-to-edge: the end of the scrolled content must stay above the navigation bar
+    final View nestedScrollView = findViewById(R.id.nested_scroll_view);
+    ViewCompat.setOnApplyWindowInsetsListener(drawerLayout, (view, windowInsets) -> {
+      nestedScrollView.setPadding(0, 0, 0, windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom);
+      return windowInsets;
+    });
     // ActionBar
     setSupportActionBar(findViewById(R.id.actionbar));
     actionBarLayout = findViewById(R.id.actionbar_layout);
