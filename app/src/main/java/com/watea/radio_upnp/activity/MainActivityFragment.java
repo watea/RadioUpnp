@@ -48,9 +48,9 @@ import com.watea.radio_upnp.service.NetworkProxy;
 public abstract class MainActivityFragment extends Fragment {
   static final int DEFAULT_RESOURCE = -1;
   @Nullable
-  private View view = null;
+  private View view;
   private ViewGroup container;
-  private int yScrollPosition = 0;
+  private int yScrollPosition;
 
   static int getVisibleFrom(boolean isVisible) {
     return isVisible ? View.VISIBLE : View.INVISIBLE;

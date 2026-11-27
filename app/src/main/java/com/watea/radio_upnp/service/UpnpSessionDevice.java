@@ -85,7 +85,7 @@ class UpnpSessionDevice extends RemoteSessionDevice {
   private final Set<String> sinkProtocolInfos = new HashSet<>();
   @NonNull
   private String instanceId = "0";
-  private boolean isLaunched = false;
+  private boolean isLaunched;
 
   UpnpSessionDevice(
     @NonNull Context context,

@@ -94,9 +94,9 @@ class AlarmController {
     }
   };
   @Nullable
-  private Radio radio = null;
+  private Radio radio;
   @Nullable
-  private AlarmService.AlarmServiceBinder alarmService = null;
+  private AlarmService.AlarmServiceBinder alarmService;
 
   AlarmController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;

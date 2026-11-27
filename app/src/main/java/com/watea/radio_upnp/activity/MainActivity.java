@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
   private FloatingActionButton floatingActionButton;
   private Menu navigationMenu;
   @Nullable
-  private AlertDialog loadingAlertDialog = null;
+  private AlertDialog loadingAlertDialog;
   private AlertDialog aboutAlertDialog;
   private UserHint toolbarUserHint;
   private CollapsingToolbarLayout actionBarLayout;

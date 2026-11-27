@@ -74,7 +74,7 @@ public abstract class SessionDevice implements Player.Listener {
   // Building the SSL trust manager reads system CA certificates from disk; cached so this
   // happens once per process instead of on every SessionDevice construction (main thread included)
   @Nullable
-  private static DataSource.Factory httpDataSourceFactory = null;
+  private static DataSource.Factory httpDataSourceFactory;
   @NonNull
   final Context context;
   @NonNull
@@ -90,9 +90,9 @@ public abstract class SessionDevice implements Player.Listener {
   @NonNull
   final CapturingAudioSink capturingAudioSink;
   @Nullable
-  Radio.ConnectionSet connectionSet = null;
-  private volatile boolean isReleased = false;
-  private volatile boolean isAllowedToRewind = false;
+  Radio.ConnectionSet connectionSet;
+  private volatile boolean isReleased;
+  private volatile boolean isAllowedToRewind;
   @NonNull
   private volatile State state = State.IDLE;
 

@@ -294,20 +294,20 @@ public class RadioService extends MediaLibraryService {
       sessionDevice.adjustVolume(direction);
     }
   };
-  private boolean isAndroidAutoConnected = false;
+  private boolean isAndroidAutoConnected;
   @Nullable
-  private SessionDevice sessionDevice = null;
-  private boolean isLastRadioToLaunch = false;
+  private SessionDevice sessionDevice;
+  private boolean isLastRadioToLaunch;
   @Nullable
-  private AndroidUpnpService.UpnpService upnpService = null;
+  private AndroidUpnpService.UpnpService upnpService;
   private MediaLibrarySession mediaLibrarySession;
   private RadioPlayer radioPlayer;
   private SleepController sleepController;
   private MediaLibrarySessionCallback mediaLibrarySessionCallback;
   @Nullable
-  private StreamServer streamServer = null;
+  private StreamServer streamServer;
   @Nullable
-  private LiveData<Integer> carConnectionLiveData = null;
+  private LiveData<Integer> carConnectionLiveData;
   private CastManager castManager;
 
   @OptIn(markerClass = UnstableApi.class)

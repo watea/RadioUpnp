@@ -92,7 +92,7 @@ public class CastSessionDevice extends RemoteSessionDevice {
     }
   };
   @Nullable
-  private ScheduledExecutorService heartbeat = null;
+  private ScheduledExecutorService heartbeat;
   private double currentVolume = -1; // Unknown
 
   public CastSessionDevice(

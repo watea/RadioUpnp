@@ -48,23 +48,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 
 class ImportExportController {
   private static final String LOG_TAG = ImportExportController.class.getSimpleName();
   @NonNull
   private final MainActivity mainActivity;
-  // One launcher per action: the result callback knows its action, even after process death
+  // One launcher per action, indexed by ordinal: the result callback knows its action, even after process death
   @NonNull
-  private final Map<Action, ActivityResultLauncher<Intent>> launchers = new EnumMap<>(Action.class);
+  private final List<ActivityResultLauncher<Intent>> launchers = new ArrayList<>();
 
   // Must be called before activity is started
   ImportExportController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;
     for (final Action action : Action.values()) {
-      launchers.put(action, mainActivity.registerForActivityResult(
+      launchers.add(mainActivity.registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(),
         result -> onResult(action, result)));
     }
@@ -100,7 +98,7 @@ class ImportExportController {
         .setType((action == Action.CSV_IMPORT) ? "*/*" : action.mime) :
       new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
     try {
-      launchers.get(action).launch(intent);
+      launchers.get(action.ordinal()).launch(intent);
     } catch (ActivityNotFoundException activityNotFoundException) {
       mainActivity.tell(R.string.no_file_picker_found);
     }

@@ -39,7 +39,7 @@ import java.net.URL;
 
 public class ItemModifyFragment extends ItemFragment {
   @Nullable
-  private Radio radio = null;
+  private Radio radio;
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {

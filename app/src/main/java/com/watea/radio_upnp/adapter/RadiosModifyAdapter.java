@@ -92,7 +92,7 @@ public class RadiosModifyAdapter extends RadiosDisplayAdapter<RadiosModifyAdapte
   private class RadioItemTouchHelperCallback extends ItemTouchHelper.Callback {
     private static final int DRAG_FLAGS = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
     private static final int IDLE_FLAGS = ItemTouchHelper.START | ItemTouchHelper.END;
-    private boolean isMoved = false;
+    private boolean isMoved;
 
     @Override
     public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {

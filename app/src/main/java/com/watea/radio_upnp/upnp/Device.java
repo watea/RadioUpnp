@@ -281,22 +281,22 @@ public class Device extends Asset {
   @NonNull
   private final URL location;
   @Nullable
-  private Device currentDevice = null;
+  private Device currentDevice;
   @Nullable
-  private String deviceType = null;
+  private String deviceType;
   @Nullable
-  private String friendlyName = null;
+  private String friendlyName;
   @Nullable
-  private String modelName = null;
+  private String modelName;
   @Nullable
-  private String modelNumber = null;
+  private String modelNumber;
   @Nullable
-  private String uUID = null;
+  private String uUID;
   private boolean isAlive = true;
-  private boolean isEmbeddedDevices = false;
+  private boolean isEmbeddedDevices;
   @Nullable
-  private Bitmap icon = null;
-  private boolean isPngIcon = false;
+  private Bitmap icon;
+  private boolean isPngIcon;
 
   public Device(@NonNull SsdpService ssdpService) throws IOException, XmlPullParserException {
     this.ssdpService = ssdpService;

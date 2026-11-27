@@ -57,8 +57,8 @@ class URLService {
   private final URLConnection uRLConnection;
   private final Map<String, String> tags = new HashMap<>();
   @Nullable
-  private String content = null;
-  private boolean streamConsumed = false; // Guards against double getInputStream() calls on the same URLConnection
+  private String content;
+  private boolean streamConsumed; // Guards against double getInputStream() calls on the same URLConnection
 
   URLService(@NonNull URL uRL) throws IOException {
     uRLConnection = uRL.openConnection();

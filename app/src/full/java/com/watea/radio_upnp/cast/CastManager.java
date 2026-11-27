@@ -102,7 +102,7 @@ public class CastManager extends OpenCastManager {
   private Callback callback = new Callback() {
   };
   @Nullable
-  private CastSession castSession = null;
+  private CastSession castSession;
 
   private CastManager() {
   }

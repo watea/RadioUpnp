@@ -84,7 +84,7 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
     }
   };
   @Nullable
-  private AndroidUpnpService.UpnpService upnpService = null;
+  private AndroidUpnpService.UpnpService upnpService;
 
   public UpnpDevicesAdapter(int selectedColor, @NonNull View defaultView, @NonNull Listener listener) {
     this.selectedColor = selectedColor;
@@ -149,7 +149,7 @@ public class UpnpDevicesAdapter extends RecyclerView.Adapter<UpnpDevicesAdapter.
     private final TextView textView;
     private final int defaultColor;
     @Nullable
-    private Device device = null;
+    private Device device;
 
     protected ViewHolder(@NonNull View itemView) {
       super(itemView);

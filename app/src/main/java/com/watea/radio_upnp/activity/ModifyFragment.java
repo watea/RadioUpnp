@@ -51,7 +51,7 @@ public class ModifyFragment extends MainActivityFragment {
   };
   private FrameLayout defaultFrameLayout;
   @Nullable
-  private RadiosModifyAdapter radiosModifyAdapter = null;
+  private RadiosModifyAdapter radiosModifyAdapter;
 
   @Override
   public void onDestroy() {

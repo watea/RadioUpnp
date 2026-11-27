@@ -119,9 +119,9 @@ class UpnpController {
     }
   };
   @Nullable
-  private AndroidUpnpService.UpnpService upnpService = null;
+  private AndroidUpnpService.UpnpService upnpService;
   @Nullable
-  private Consumer<Bitmap> iconConsumer = null;
+  private Consumer<Bitmap> iconConsumer;
 
   // Must be called before activity is started
   @SuppressLint("InflateParams")

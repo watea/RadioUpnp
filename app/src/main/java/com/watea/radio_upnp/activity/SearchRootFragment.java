@@ -61,12 +61,12 @@ public abstract class SearchRootFragment extends MainActivityFragment {
   private FrameLayout defaultFrameLayout;
   private ProgressBar progressBar;
   private LinearLayout linearLayout;
-  private int searchSessionId = 0;
+  private int searchSessionId;
   @Nullable
-  private Future<?> currentSearchFuture = null;
+  private Future<?> currentSearchFuture;
   private AlertDialog searchAlertDialog;
   private RadiosSearchAdapter radiosSearchAdapter;
-  private boolean isServerAvailable = false;
+  private boolean isServerAvailable;
 
   @Override
   public void onResume() {

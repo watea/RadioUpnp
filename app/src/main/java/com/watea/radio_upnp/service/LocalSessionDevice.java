@@ -59,8 +59,8 @@ class LocalSessionDevice extends SessionDevice {
       }
     }
   };
-  private boolean audioNoisyReceiverRegistered = false;
-  private boolean playOnAudioFocus = false;
+  private boolean audioNoisyReceiverRegistered;
+  private boolean playOnAudioFocus;
 
   LocalSessionDevice(
     @NonNull Context context,

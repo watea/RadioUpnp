@@ -39,7 +39,7 @@ class SleepController {
   private final NotificationChannels notificationChannels;
   private final Listener listener;
   @Nullable
-  private ScheduledExecutorService scheduler = null;
+  private ScheduledExecutorService scheduler;
 
   SleepController(@NonNull NotificationChannels notificationChannels, @NonNull Listener listener) {
     this.notificationChannels = notificationChannels;

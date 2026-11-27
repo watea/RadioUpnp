@@ -71,8 +71,8 @@ public class RadioPlayer extends SimpleBasePlayer {
   @NonNull
   private SessionDevice.State sessionDeviceState = SessionDevice.State.IDLE;
   @Nullable
-  private SimpleBasePlayer.MediaItemData currentItem = null;
-  private boolean isRemote = false;
+  private SimpleBasePlayer.MediaItemData currentItem;
+  private boolean isRemote;
   @NonNull
   private String remoteSuffix = "";
   private int remoteVolume;

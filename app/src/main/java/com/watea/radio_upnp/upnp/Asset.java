@@ -31,7 +31,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import java.io.IOException;
 
 abstract class Asset {
-  private boolean isOnError = false;
+  private boolean isOnError;
 
   @NonNull
   protected static String getTag(@Nullable String tag) {

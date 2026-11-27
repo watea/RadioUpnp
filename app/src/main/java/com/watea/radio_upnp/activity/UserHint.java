@@ -37,7 +37,7 @@ class UserHint {
   private final AlertDialog alertDialog;
   private final int delay;
   private boolean gotIt;
-  private int count = 0;
+  private int count;
 
   // Context must be an activity (dialog)
   UserHint(@NonNull Context context, int key, int message, int delay) {

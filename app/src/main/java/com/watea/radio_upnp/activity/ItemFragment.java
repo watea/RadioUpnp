@@ -72,7 +72,7 @@ public abstract class ItemFragment extends MainActivityFragment {
   private Button iconSearchButton;
   private ProgressBar iconSearchProgressBar;
   @Nullable
-  private Bitmap restoredBitmap = null;
+  private Bitmap restoredBitmap;
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -248,7 +248,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     @NonNull
     private final EditText editText;
     @Nullable
-    URL url = null;
+    URL url;
 
     private UrlWatcher(@NonNull EditText editText) {
       this.editText = editText;
@@ -281,7 +281,7 @@ public abstract class ItemFragment extends MainActivityFragment {
     @NonNull
     private final Supplier<Bitmap> iconSupplier;
     @Nullable
-    private Bitmap icon = null;
+    private Bitmap icon;
 
     private IconSearcher(@NonNull Supplier<Bitmap> iconSupplier) {
       super();
@@ -312,9 +312,9 @@ public abstract class ItemFragment extends MainActivityFragment {
     @NonNull
     private final URL url;
     @Nullable
-    private String streamContent = null;
+    private String streamContent;
     @Nullable
-    private String actualUrl = null;
+    private String actualUrl;
 
     private UrlTester(@NonNull URL url) {
       super();

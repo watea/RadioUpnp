@@ -169,15 +169,15 @@ class PlayerController implements RadiosMainAdapter.CurrentRadioListenerSetter {
     }
   };
   @Nullable
-  private ListenableFuture<MediaController> controllerFuture = null;
+  private ListenableFuture<MediaController> controllerFuture;
   // MediaController once connected
   @Nullable
-  private MediaController mediaController = null;
+  private MediaController mediaController;
   @Nullable
-  private String pendingRadioName = null;
-  private boolean pendingAutoPlay = false;
+  private String pendingRadioName;
+  private boolean pendingAutoPlay;
   @Nullable
-  private Consumer<Radio> listener = null;
+  private Consumer<Radio> listener;
   private int previousPlaybackState = Player.STATE_IDLE;
 
   @SuppressLint("ClickableViewAccessibility")

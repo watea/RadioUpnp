@@ -47,7 +47,7 @@ class SettingsController {
   private final SharedPreferences sharedPreferences;
   // Built on first show, once activity theme is set
   @Nullable
-  private AlertDialog alertDialog = null;
+  private AlertDialog alertDialog;
 
   SettingsController(@NonNull MainActivity mainActivity) {
     this.mainActivity = mainActivity;

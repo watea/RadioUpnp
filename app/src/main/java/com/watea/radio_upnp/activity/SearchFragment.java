@@ -75,7 +75,7 @@ public class SearchFragment extends SearchRootFragment {
   private Spinner countrySpinner;
   private Spinner radioTagSpinner;
   private Spinner bitrateSpinner;
-  private int selectedBitrate = 0;
+  private int selectedBitrate;
 
   @Override
   public void onAttach(@NonNull Context context) {
@@ -263,7 +263,7 @@ public class SearchFragment extends SearchRootFragment {
     private final OkHttpClient client;
     private final Random random = new Random();
     @Nullable
-    private String lastValidHost = null; // Cache
+    private String lastValidHost; // Cache
 
     RadioBrowserClient(@NonNull Context context) {
       final String userAgent = context.getString(R.string.app_name)

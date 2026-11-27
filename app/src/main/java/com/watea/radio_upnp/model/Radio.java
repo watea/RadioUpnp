@@ -98,7 +98,7 @@ public class Radio {
   @Nullable
   private URL webPageUrl;
   @Nullable
-  private volatile ConnectionSet connectionSet = null;
+  private volatile ConnectionSet connectionSet;
   private boolean isPreferred;
 
   // icon and base64Icon are mutually exclusive, one at least not null

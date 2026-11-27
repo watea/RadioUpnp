@@ -85,7 +85,7 @@ public class MainFragment extends MainActivityFragment {
   private UserHint dlnaEnableUserHint;
   private UserHint preferredRadiosUserHint;
   @Nullable
-  private RadiosMainAdapter radiosMainAdapter = null;
+  private RadiosMainAdapter radiosMainAdapter;
   private RecyclerView radiosRecyclerView;
 
   @Override

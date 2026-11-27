@@ -62,7 +62,7 @@ public class StreamServer extends HttpServer {
   @NonNull
   private final Context context;
   @Nullable
-  private volatile StreamContext streamContext = null;
+  private volatile StreamContext streamContext;
 
   StreamServer(@NonNull Context context) throws IOException {
     this.context = context;

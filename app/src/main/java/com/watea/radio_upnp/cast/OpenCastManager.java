@@ -42,7 +42,7 @@ import java.util.function.Consumer;
 class OpenCastManager {
   private static final String LOG_TAG = OpenCastManager.class.getSimpleName();
   @Nullable
-  static OpenCastManager instance = null;
+  static OpenCastManager instance;
 
   OpenCastManager() {
   }

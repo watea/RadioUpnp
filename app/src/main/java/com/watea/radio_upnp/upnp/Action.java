@@ -39,9 +39,9 @@ public class Action extends Asset {
   private final Service service;
   private final Set<Argument> arguments = new HashSet<>();
   @Nullable
-  private Argument currentArgument = null;
+  private Argument currentArgument;
   @Nullable
-  private String name = null;
+  private String name;
 
   public Action(@NonNull Service service) {
     this.service = service;
@@ -118,9 +118,9 @@ public class Action extends Asset {
     private static final String XML_NAME = "argument";
     private static final String LOG_TAG = Argument.class.getSimpleName();
     @Nullable
-    private String name = null;
+    private String name;
     @Nullable
-    private String direction = null;
+    private String direction;
 
     @NonNull
     String getName() {

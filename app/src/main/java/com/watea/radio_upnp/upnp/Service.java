@@ -74,9 +74,9 @@ public class Service extends Asset {
   private final Set<Action> actions = new HashSet<>();
   private final Set<StateVariable> stateVariables = new HashSet<>();
   @Nullable
-  private Action currentAction = null;
+  private Action currentAction;
   @Nullable
-  private StateVariable currentStateVariable = null;
+  private StateVariable currentStateVariable;
 
   // Service does not call setOnError(); isOnError() is always false
   public Service(

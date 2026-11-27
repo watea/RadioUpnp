@@ -41,11 +41,11 @@ import androidx.annotation.Nullable;
 public class StateVariable extends Asset {
   static final String XML_NAME = "stateVariable";
   @Nullable
-  private String name = null;
+  private String name;
   @Nullable
-  private Integer minimum = null;
+  private Integer minimum;
   @Nullable
-  private Integer maximum = null;
+  private Integer maximum;
 
   // Native allowed range, when declared; false if this state variable has no allowedValueRange
   public boolean hasRange() {

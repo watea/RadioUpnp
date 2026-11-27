@@ -45,11 +45,11 @@ class CapturingAudioSink extends ForwardingAudioSink {
   private static final int PCM_BUFFER_SIZE = 100; // ~2.5s at 48000Hz stereo 16-bit (4608 bytes/chunk)
   private final LinkedBlockingQueue<byte[]> pcmBuffer = new LinkedBlockingQueue<>(PCM_BUFFER_SIZE);
   @Nullable
-  private Callback callback = null;
+  private Callback callback;
   @Nullable
-  private Pacer pacer = null;
+  private Pacer pacer;
   private volatile long byteRate = LONG_DEFAULT;
-  private volatile long lastPresentationTimeUs = 0; // Presentation time microseconds
+  private volatile long lastPresentationTimeUs; // Presentation time microseconds
 
   CapturingAudioSink(@NonNull AudioSink delegate) {
     super(delegate);
@@ -148,7 +148,7 @@ class CapturingAudioSink extends ForwardingAudioSink {
     private static final int PCM_BUFFER_LOW_THRESHOLD = 10; // ~0.25s
     private static final long ONE_SECOND_US = 1_000_000L;
     private static final long PACER_SLEEP_MIN_US = 1_000L;
-    private long bytesConsumed = 0L;
+    private long bytesConsumed;
 
     private Pacer() {
       setDaemon(true);

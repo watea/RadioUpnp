@@ -49,7 +49,7 @@ public class RadiosMainAdapter extends RadiosDisplayAdapter<RadiosMainAdapter.Vi
   @NonNull
   private final BooleanSupplier isTileLayout;
   @Nullable
-  private Radio currentRadio = null;
+  private Radio currentRadio;
 
   public RadiosMainAdapter(
     @NonNull Supplier<List<Radio>> radiosSupplier,

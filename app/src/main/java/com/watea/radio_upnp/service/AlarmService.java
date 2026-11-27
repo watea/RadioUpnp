@@ -94,16 +94,16 @@ public class AlarmService extends Service {
   };
   private String channelId;
   @Nullable
-  private ListenableFuture<MediaController> controllerFuture = null;
+  private ListenableFuture<MediaController> controllerFuture;
   @Nullable
-  private MediaController mediaController = null;
+  private MediaController mediaController;
   private SessionToken sessionToken;
   private AlarmManager alarmManager;
   private ConnectivityManager connectivityManager;
-  private boolean isStarted = false;
-  private boolean isAndroidAutoConnected = false;
+  private boolean isStarted;
+  private boolean isAndroidAutoConnected;
   @Nullable
-  private CarConnection carConnection = null;
+  private CarConnection carConnection;
 
   // Calendar.DAY_OF_WEEK of day at position in locale order
   public static int getDayOfWeek(int position) {
@@ -296,7 +296,7 @@ public class AlarmService extends Service {
 
   public class AlarmServiceBinder extends android.os.Binder {
     @Nullable
-    private Listener listener = null;
+    private Listener listener;
 
     public void setListener(@Nullable Listener listener) {
       this.listener = listener;
