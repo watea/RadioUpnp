@@ -90,10 +90,11 @@ public class StreamServer extends HttpServer {
 
   void release() {
     Log.d(LOG_TAG, "release");
+    final StreamContext streamContext = this.streamContext;
     if (streamContext != null) {
       streamContext.cancelWatchdog();
     }
-    streamContext = null;
+    this.streamContext = null;
   }
 
   // Must be called early before any session is started.
@@ -407,6 +408,7 @@ public class StreamServer extends HttpServer {
       @NonNull StreamContext streamContext) throws IOException {
       // HEAD
       response.addHeader(Response.CONTENT_LENGTH, String.valueOf(Long.MAX_VALUE)); // Fake length for streaming PCM
+      response.addHeader("Accept-Ranges", "none");
       sendDlnaResponse(response, streamContext.getPcmMime(), streamContext);
       if (isHead) {
         return;
