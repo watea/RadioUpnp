@@ -10,8 +10,8 @@ android {
         applicationId = 'com.watea.radio_upnp'
         minSdk = 26
         targetSdk = 37
-        versionCode = 302036
-        versionName = '3.02.036'
+        versionCode = 302037
+        versionName = '3.02.037'
     }
 
     buildTypes {
